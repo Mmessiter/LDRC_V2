@@ -222,6 +222,12 @@ t8.txt="Rate 1"
 @shot own_cli_exec_refused
 @cli exec_nofile
 @shot own_cli_exec_nofile
+@cli exec_pick
+@shot own_cli_exec_pick
+@cli exec_pick_next
+@shot own_cli_exec_pick_next
+@cli exec_pick_ask
+@shot own_cli_exec_pick_ask
 
 # ---- "Connecting Bluetooth" over the Rotorflight menu (src/ble_device.h pipeNoticeDraw)
 page RFView

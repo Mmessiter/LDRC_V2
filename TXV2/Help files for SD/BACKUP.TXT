@@ -36,11 +36,15 @@ It needs the model on, the USB cable from the receiver to the|
 flight controller, the safety on, the motor off, and the screen's|
 Bluetooth joined (opening the Rotorflight page joins it).||
 EXECUTE DIFF:|
-Sends every command in this model's newest diff file to the|
+Sends every command in one of this model's diff files to the|
 flight controller's command line, then saves: the flight|
 controller restarts with those settings.|
+With more than one diff, they are listed by date, newest first|
+(six to a page: '<' and '>' turn the pages). Touch the one to|
+send. 'OK' leaves with nothing sent.|
 You are asked first, with the file's name and its number of|
-commands. Commands the flight controller refuses are counted|
+commands. 'Cancel' goes back to the list.|
+Commands the flight controller refuses are counted|
 and shown; the rest are saved all the same.|
 It needs the same as 'Diff to card'.||
 EDITS WITHOUT THE MODEL:|

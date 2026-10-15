@@ -8,7 +8,9 @@
 // WiFi page has them), the usual commands as buttons, "Diff to card" (diff all, kept on the screen's card as a text
 // file the configurator can replay), and the two ways out. Opened from the Rotorflight menu ("Command line ...") for
 // the console; from the Backup page for a job on its own: "Diff to card", or "Execute diff" (1.11.42, Malcolm, 10 Oct:
-// the newest diff file of the model, every command of it sent to the command line, then saved - a restore from text).
+// the newest diff file of the model, every command of it sent to the command line, then saved - a restore from text;
+// 1.11.74, Malcolm 15 Oct: "If it collects many diff files, can I select which to execute?" - with more than one, the
+// model's diffs are listed, newest first, and the pilot touches the one to execute).
 //
 // This file is the thinking: which page shows, what is on it, what a touch does, the job's steps. It is portable and
 // tested on the Mac (hmi/test_cli) against a make-believe receiver; the pipe, the card, the clock and the drawing are
@@ -74,7 +76,7 @@ public:
     std::string wantsToLeaveWith() const;     // for the record: "save" / "exit" / ""
 
 private:
-    enum Page { PG_NONE, PG_CONSOLE, PG_KEYS, PG_NOTE };
+    enum Page { PG_NONE, PG_CONSOLE, PG_KEYS, PG_NOTE, PG_PICK };
     enum Step { ST_IDLE, ST_OPENING, ST_COMMAND, ST_DIFF, ST_EXEC, ST_LEAVING };
     void go(Page p);
     void build();
@@ -94,6 +96,7 @@ private:
     void left(const std::string &how);      // the command line is closed on the receiver, or given up on (how = "" when the receiver said so)
     std::string fileName();
     void execNext();                          // Execute diff: the next command of the file, or the save
+    void execAsk(const std::string &file);    // Execute diff: that file read, and "Execute <name>?" asked
 
     CliHost &host_; Page page_; Step step_; WifiScene scene_; std::vector<WifiItem> next_;
     std::vector<std::string> lines_; int top_; bool follow_;
@@ -107,6 +110,7 @@ private:
     bool batchOpen_;                                          // (B53) Execute diff: "batch start" has gone and no "batch end" after it - Rotorflight refuses a save while a batch with errors is open
     bool ownCmd_ = false;                                     // (B53) the command out is the page's own "batch end", not one of the file's
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
+    std::vector<std::string> picks_; size_t pickFirst_;       // (1.11.74) Execute diff: the model's diffs, newest first, and the first on the glass
     std::string pending_, diffText_, savedAs_;
     std::string diffError_;                                   // (1.11.70) what the flight controller reported in the diff saved: said in the note
     std::string noteL1_, noteL2_, noteL3_, noteL4_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;
@@ -126,6 +130,8 @@ std::string cliModelPrefix(const std::string &model);                           
 long long cliFileKey(const std::string &path, const std::string &prefix);
 long long cliTopKey(const std::string &model, const std::vector<std::string> &files);   // the largest key among the model's files (0 = none)
 std::string cliNewest(const std::string &model, const std::vector<std::string> &files);   // the newest of the model's files ("" = none)
+void cliModelDiffs(const std::string &model, const std::vector<std::string> &files, std::vector<std::string> &out);   // (1.11.74) all the model's files, newest first
+std::string cliDiffWhen(const std::string &path);      // (1.11.74) "15 Oct 2026  15:48" from a file's stamp; "" for a name with none (made with no clock)
 bool cliNewer(const std::string &a, const std::string &b, const std::string &prefix);  // of two of a model's files (prefix = "/rfdiff/" + cliModelPrefix), is a the newer? (by cliFileKey)
 // The commands of a diff file: every line that is not empty and not a comment; save / exit / reboot left out (the save is the job's own)
 void cliCommands(const std::string &text, std::vector<std::string> &out);

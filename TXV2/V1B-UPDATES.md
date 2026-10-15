@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Execute diff: choose which (screen 1.11.74, Teensy B103 unchanged, 15 Oct 2026)
+
+Malcolm (about to fly and tune the Havok and the 770, a Diff to card after each session): "If it collects many diff files,
+can I select which to execute?" It could not: Execute diff always took the model's newest. Now, with more than one, the
+model's diffs are listed by date, newest first ("newest" by the first), six to a page with '<' and '>'; touching one asks
+"Execute <name>?" as before, and 'Cancel' there goes back to the list (the same page of it); 'OK' leaves with nothing sent.
+One diff: asked at once, as before. A diff made with no clock shows its file name. Help: BACKUP.TXT. Host test: test_cli
+(211 checks: the list, an older diff executed, the pages, the dates; mutation-checked).
+
 ## A box of two items is one box (screen 1.11.73, Teensy B103 unchanged, 15 Oct 2026)
 
 Malcolm (the batteries "good I checked"): "But one box is made to appear as 2 smaller ones. I think one box is better - with

@@ -1,7 +1,10 @@
 // LdrcCli - the command line page's thinking (see LdrcCli.h).
 #include "LdrcCli.h"
+#include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <utility>
 
 namespace ldrc {
 
@@ -88,6 +91,33 @@ std::string cliNewest(const std::string &model, const std::vector<std::string> &
     }
     return best;
 }
+void cliModelDiffs(const std::string &model, const std::vector<std::string> &files, std::vector<std::string> &out) {
+    const std::string pre = "/rfdiff/" + cliModelPrefix(model);
+    std::vector<std::pair<long long, std::string> > found;
+    for (auto &f0 : files) {
+        const std::string f = cliInFolder(f0);
+        const long long k = cliFileKey(f, pre);
+        if (k >= 0) found.push_back(std::make_pair(k, f));
+    }
+    std::sort(found.begin(), found.end(), [](const std::pair<long long, std::string> &a, const std::pair<long long, std::string> &b) { return a.first > b.first; });
+    out.clear();
+    for (auto &kv : found) out.push_back(kv.second);
+}
+std::string cliDiffWhen(const std::string &path) {
+    // the stamp is the name's last 15 characters before the dot: "2026-10-15_1548"
+    const size_t dot = path.rfind('.');
+    if (dot == std::string::npos || dot < 15) return "";
+    const std::string t = path.substr(dot - 15, 15);
+    for (size_t i = 0; i < t.size(); ++i) {
+        const bool sep = i == 4 || i == 7 || i == 10;
+        if (sep ? t[i] != (i == 10 ? '_' : '-') : (t[i] < '0' || t[i] > '9')) return "";
+    }
+    static const char *MONTHS[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+    const int month = atoi(t.substr(5, 2).c_str()), day = atoi(t.substr(8, 2).c_str());
+    if (month < 1 || month > 12 || day < 1 || day > 31) return "";
+    char b[40]; snprintf(b, sizeof b, "%d %s %s  %s:%s", day, MONTHS[month - 1], t.substr(0, 4).c_str(), t.substr(11, 2).c_str(), t.substr(13, 2).c_str());
+    return b;
+}
 void cliCommands(const std::string &text, std::vector<std::string> &out) {
     out.clear();
     std::vector<std::string> ls; cliLines(text, ls);
@@ -155,8 +185,9 @@ void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std
 
 // ------------------------------------------------------------------ the pages: what is where
 // The screen is 800 x 480. Ids: 1.. buttons, 60.. the console and its line, 90.. the keys' row, 100.. keys.
-enum { ID_CLOSE = 1, ID_CANCEL, ID_SEND, ID_NOTE1, ID_NOTE2,
-       ID_LOWER = 90, ID_UPPER, ID_SYMBOLS, ID_SPACE, ID_DELETE, ID_KEY = 100 };
+enum { ID_CLOSE = 1, ID_CANCEL, ID_SEND, ID_NOTE1, ID_NOTE2, ID_PREV, ID_NEXT,
+       ID_LOWER = 90, ID_UPPER, ID_SYMBOLS, ID_SPACE, ID_DELETE, ID_KEY = 100, ID_PICK = 300 };
+static const size_t PICK_ROWS = 6;                                   // (the WiFi page's list: six rows of 58 from y 64, above the buttons' row)
 static const char *LAYERS[3][4] = {
     { "1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm._=" },
     { "1234567890", "QWERTYUIOP", "ASDFGHJKL-", "ZXCVBNM._=" },
@@ -165,10 +196,10 @@ static const int CON_X = 14, CON_Y = 64, CON_W = 772, CON_H = 338;   // the cons
 
 CliPage::CliPage(CliHost &host)
     : host_(host), page_(PG_NONE), step_(ST_IDLE), top_(0), follow_(true), layer_(0), job_(0), cliOpen_(false), leaveSave_(false), closeAfter_(false), closing_(false), changed_(false), waitUntil_(0), waitMs_(0), wasReady_(false), more_(false), moreAt_(0), moreSince_(0), moreLines_(0),
-      requested_(false), batchOpen_(false), execAt_(0), sent_(0), refused_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
+      requested_(false), batchOpen_(false), execAt_(0), sent_(0), refused_(0), pickFirst_(0), noteBad_(false), noteFrom_(0), down_(false), pressed_(0), lastX_(0), lastY_(0), downY_(0), dragTop_(0), dragged_(false), seenDown_(0), repeatAt_(0), repeated_(false), serial_(1), askedAt_(0) {}
 
 std::string CliPage::pageName() const {
-    static const char *names[] = { "", "console", "keys", "note" };
+    static const char *names[] = { "", "console", "keys", "note", "pick" };
     return names[page_];
 }
 std::string CliPage::wantsToLeaveWith() const { return step_ == ST_LEAVING ? (leaveSave_ ? "save" : "exit") : ""; }
@@ -221,6 +252,25 @@ void CliPage::build() {
         add(WifiItem::KEY, ID_SYMBOLS, 221, 408, 108, 70, "#+="); last().strong = true; last().good = layer_ == 2;
         add(WifiItem::KEY, ID_SPACE, 331, 408, 248, 70, "Space"); last().strong = true;
         add(WifiItem::BUTTON, ID_SEND, 581, 408, 218, 70, "Send"); last().strong = true; last().enabled = !typed_.empty();
+        break;
+    }
+    case PG_PICK: {
+        // 1.11.74 (Malcolm, 15 Oct: "If it collects many diff files, can I select which to execute?"): the model's diffs,
+        // newest first, six at a time, as the WiFi page lists networks; a touch on one asks "Execute ...?" (Cancel there comes
+        // back here); OK leaves with nothing done.
+        add(WifiItem::TITLE, CLI_ID_TITLE, 16, 6, 768, 50, "Execute which diff?");
+        for (size_t i = 0; i < PICK_ROWS && pickFirst_ + i < picks_.size(); ++i) {
+            const std::string &f = picks_[pickFirst_ + i];
+            std::string when = cliDiffWhen(f);
+            if (when.empty()) when = f.substr(f.rfind('/') + 1);    // (made with no clock: its name)
+            add(WifiItem::ROW, ID_PICK + (int) (pickFirst_ + i), 14, 64 + (int) i * 58, 772, 54, when);
+            last().strong = true; if (pickFirst_ + i == 0) last().note = "newest";
+        }
+        if (picks_.size() > PICK_ROWS) {
+            add(WifiItem::BUTTON, ID_PREV, 408, 414, 86, 56, "<"); last().enabled = pickFirst_ > 0;
+            add(WifiItem::BUTTON, ID_NEXT, 502, 414, 86, 56, ">"); last().enabled = pickFirst_ + PICK_ROWS < picks_.size();
+        }
+        add(WifiItem::BUTTON, ID_CLOSE, 605, 414, 180, 56, "OK"); last().strong = true;
         break;
     }
     case PG_NOTE: {
@@ -286,10 +336,22 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
     closeAfter_ = true;
 }
 
+void CliPage::execAsk(const std::string &file) {
+    execFile_ = file; exec_.clear();
+    std::string text;
+    if (!host_.load(execFile_, text)) { note("Could not read", execFile_, "", "OK", "", true); closeAfter_ = true; return; }
+    cliCommands(text, exec_);
+    if (exec_.empty()) { note("Nothing to execute in", execFile_, "(no commands in it).", "OK", "", true); closeAfter_ = true; return; }
+    say("Execute " + execFile_ + ": " + std::to_string(exec_.size()) + " commands");
+    char l2[80]; snprintf(l2, sizeof l2, "Its %u commands go to the flight controller's command line,", (unsigned) exec_.size());
+    note("Execute " + execFile_.substr(execFile_.rfind('/') + 1) + "?", l2, "then save: it restarts with those settings.", "Execute", "Cancel", false);
+}
+
 // ------------------------------------------------------------------ open, close, the steps
 void CliPage::open(int job) {
     job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; waitPath_.clear(); waitUntil_ = 0; jobFailed_.clear(); more_ = false; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
     pending_.clear(); diffText_.clear(); savedAs_.clear(); diffError_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear(); requested_ = false; batchOpen_ = false;
+    picks_.clear(); pickFirst_ = 0;
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Put the safety on and the motor off first.", "", "OK", "", true); closeAfter_ = true; return; }
     if (host_.mainBoardBusy()) {                                     // (B52) the main board's backup, restore or write has the pipe; a save or exit would restart the flight controller under it
         page_ = PG_CONSOLE;
@@ -306,19 +368,14 @@ void CliPage::open(int job) {
     if (job == CLI_EXECUTE) {
         const std::string model = host_.modelName();
         std::vector<std::string> files; host_.listDiffs(files);
-        execFile_ = cliNewest(model, files);
-        std::string text;
-        if (execFile_.empty()) {                                     // (1.11.50: what it looked for, and what is there - Malcolm, 10 Oct: Execute found no file after a Diff to card)
+        cliModelDiffs(model, files, picks_);
+        if (picks_.empty()) {                                        // (1.11.50: what it looked for, and what is there - Malcolm, 10 Oct: Execute found no file after a Diff to card)
             std::string there = files.empty() ? "The folder /rfdiff is empty." : "There: " + files[0].substr(files[0].rfind('/') + 1) + (files.size() > 1 ? " and " + std::to_string(files.size() - 1) + " more" : "");
             note("No diff of " + (model.empty() ? std::string("this model") : model) + " on the screen's card.", "Press Diff to card to make one.", "Looked for /rfdiff/" + cliModelPrefix(model) + "...txt", "OK", "", true, there);   // (what to do first, what was looked for after)
             closeAfter_ = true; return;
         }
-        if (!host_.load(execFile_, text)) { note("Could not read", execFile_, "", "OK", "", true); closeAfter_ = true; return; }
-        cliCommands(text, exec_);
-        if (exec_.empty()) { note("Nothing to execute in", execFile_, "(no commands in it).", "OK", "", true); closeAfter_ = true; return; }
-        say("Execute " + execFile_ + ": " + std::to_string(exec_.size()) + " commands");
-        char l2[80]; snprintf(l2, sizeof l2, "Its %u commands go to the flight controller's command line,", (unsigned) exec_.size());
-        note("Execute " + execFile_.substr(execFile_.rfind('/') + 1) + "?", l2, "then save: it restarts with those settings.", "Execute", "Cancel", false);
+        if (picks_.size() > 1) { go(PG_PICK); return; }              // (1.11.74) more than one: the pilot chooses
+        execAsk(picks_[0]);
         return;
     }
     if (job == CLI_TO_CARD) { say("Diff to card: asking the flight controller for diff all ..."); send("diff all", ST_DIFF); }
@@ -592,12 +649,22 @@ void CliPage::act(int id) {
         key(id); return;
     }
     case PG_NOTE: {
-        if (id == ID_NOTE2) { if (noteB1_ == "Execute") { close(); return; } go(PG_CONSOLE); return; }   // "Cancel" / "Stay"
+        if (id == ID_NOTE2) {                                          // "Cancel" / "Stay"
+            if (noteB1_ == "Execute") { if (picks_.size() > 1) { exec_.clear(); execFile_.clear(); go(PG_PICK); return; } close(); return; }   // (1.11.74: back to the list to choose again)
+            go(PG_CONSOLE); return;
+        }
         if (closeAfter_) { close(); return; }
         if (noteB1_ == "Execute") { go(PG_CONSOLE); execNext(); return; }
         if (noteB1_ == "Leave") { go(PG_CONSOLE); closing_ = true; leave(false); return; }
         if (noteB1_ == "Leave anyway") { go(PG_CONSOLE); closing_ = true; left("the receiver did not answer"); return; }   // (1.11.56)
         go(PG_CONSOLE); return;
+    }
+    case PG_PICK: {
+        if (id == ID_CLOSE) { close(); return; }
+        if (id == ID_PREV) { pickFirst_ = pickFirst_ >= PICK_ROWS ? pickFirst_ - PICK_ROWS : 0; go(PG_PICK); return; }
+        if (id == ID_NEXT) { if (pickFirst_ + PICK_ROWS < picks_.size()) pickFirst_ += PICK_ROWS; go(PG_PICK); return; }
+        if (id >= ID_PICK && (size_t) (id - ID_PICK) < picks_.size()) { execAsk(picks_[(size_t) (id - ID_PICK)]); return; }
+        break;
     }
     case PG_NONE: break;
     }

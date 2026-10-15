@@ -13,6 +13,7 @@
 //   @pics STATE      choose first mine page2 pressed ask_delete deleted receive receive_nowifi receive_flying receiving
 //                    received upload_failed saving opening
 //   @cli STATE       opening console scrolled longreply keys keys_empty keys_symbols leave nopipe armed refused refused_linked
+//                    ... exec_pick exec_pick_next exec_pick_ask (1.11.74: the list of the model's diffs)
 //                    diffcard diffcard_saved diffcard_failed exec_ask exec_running exec_done exec_refused exec_nofile gone
 //   @link STATE      working done failed
 //   @banner TEXT     the two-second banner along the top, saying TEXT
@@ -272,7 +273,7 @@ static ldrc::CliPage cliPage(cliHost);
 static void cliRun(int ms) { for (int i = 0; i < ms; i += 50) { cliHost.t += 50; cliPage.poll(); } }
 static bool cliTap(const std::string &text, bool console = false) {
     for (auto &it : cliPage.scene().items) {
-        const bool want = console ? it.id == ldrc::CLI_ID_FIELD : it.text == text && (it.kind == ldrc::WifiItem::BUTTON || it.kind == ldrc::WifiItem::KEY);
+        const bool want = console ? it.id == ldrc::CLI_ID_FIELD : it.text == text && (it.kind == ldrc::WifiItem::BUTTON || it.kind == ldrc::WifiItem::KEY || (it.kind == ldrc::WifiItem::ROW && it.id != ldrc::CLI_ID_CONSOLE));
         if (!want) continue;
         cliPage.touch(true, it.x + it.w / 2, it.y + it.h / 2); cliHost.t += 200; cliPage.touch(false, 0, 0); cliHost.t += 100; cliPage.poll();
         return true;
@@ -291,6 +292,8 @@ static void cliShot(const std::string &state) {
     if (state == "opening" || state == "diffcard") cliHost.hold = true;
     if (state.rfind("exec_", 0) == 0 && state != "exec_nofile") { std::string t = RF_DIFF; cliHost.card[DIFF_FILE] = t; }
     if (state == "exec_nofile") cliHost.card["/rfdiff/Goblin_700_2026-10-09_2010.txt"] = "# version\r\n";
+    if (state.rfind("exec_pick", 0) == 0)                                 // (1.11.74) a fortnight of tuning: eight diffs of the model, one a day
+        for (int d = 2; d <= 9; ++d) { char n[64]; snprintf(n, sizeof n, "/rfdiff/RAW_420_MCM_2026-10-%02d_%02d%02d.txt", d, 9 + d, 5 * d); cliHost.card[n] = RF_DIFF; }
     if (state == "exec_refused") cliHost.card["refuse_one"] = "1";
     if (state == "exec_running") cliHost.holdAfter = 14;
     if (state == "longreply") cliHost.card["slow"] = "1";
@@ -307,6 +310,8 @@ static void cliShot(const std::string &state) {
     if (state == "keys" || state == "keys_symbols" || state == "keys_empty") { cliTap("", true); if (state != "keys_empty") for (char c : std::string("set gov_headspeed = 24")) cliTap(c == ' ' ? "Space" : std::string(1, c)); }
     if (state == "keys_symbols") cliTap("#+=");
     if (state == "exec_running" || state == "exec_done" || state == "exec_refused") { cliTap("Execute"); cliRun(3000); }
+    if (state == "exec_pick_next") cliTap(">");
+    if (state == "exec_pick_ask") cliTap("8 Oct 2026  17:40");
     if (!cliPage.showing()) { fprintf(stderr, "render: the command line page closed (%s)\n", state.c_str()); return; }
     cliFrame(cliPage.scene());
 }
