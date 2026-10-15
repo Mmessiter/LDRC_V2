@@ -24,8 +24,12 @@
 
 namespace ldrc {
 
-enum FlightItem : uint8_t { FL_NONE = 0, FL_TIMER, FL_RXBAT, FL_TXBAT, FL_LINK, FL_FPS, FL_RPM, FL_ESC, FL_AMPS, FL_MAH,
-                            FL_BANK, FL_RATE, FL_MOTOR, FL_CLOCK, FL_MODEL, FL_IMAGE, FL_BARS8, FL_BARS16, FL_ITEMS };
+// (1.11.70, Malcolm: the flight battery and the transmitter battery "should be combined into a single option with the
+// flight battery at the top"; and "another option which shows the state of AMS ... and the state of trimall"): FL_BATTS and
+// FL_AMSTRIM are boxes of two parts. A definition that still says "rxbat" or "txbat" is read as FL_BATTS (and a "txbat"
+// beside an "rxbat" as FL_AMSTRIM, the box it frees: FlightConfig::load).
+enum FlightItem : uint8_t { FL_NONE = 0, FL_TIMER, FL_BATTS, FL_LINK, FL_FPS, FL_RPM, FL_ESC, FL_AMPS, FL_MAH,
+                            FL_BANK, FL_RATE, FL_MOTOR, FL_AMSTRIM, FL_CLOCK, FL_MODEL, FL_IMAGE, FL_BARS8, FL_BARS16, FL_ITEMS };
 // (the settings keep the items' keys, not these numbers: a new item can go anywhere in the list)
 const char *flightItemName(int item);                  // the chooser's words: "Flight battery"
 const char *flightItemKey(int item);                   // the settings' words: "rxbat"
@@ -33,6 +37,11 @@ int flightItemByKey(const std::string &key);           // FL_NONE if not known
 const char *flightItemReference(int item);             // the widest value it can be expected to show ("88:88"; "" for none, the bars)
 const char *flightItemUnit(int item);                  // what follows its number ("V"; "" for none)
 bool flightItemIsWords(int item);                      // it shows words, not a number (the bank, the rate, the model, the motor)
+bool flightItemHasParts(int item);                     // a box of two parts, one above the other (the batteries; AMS and trims)
+const char *flightPartName(int item, int part);        // part 0 the upper, 1 the lower: "Flight battery", "TX battery"
+const char *flightPartShort(int item, int part);       // the same in a part's one-row form: "Flight", "TX"
+const char *flightPartReference(int item, int part);   // the widest value a part can be expected to show ("88.88", "OFF")
+const char *flightPartUnit(int item, int part);
 
 // The front page as the main board last wrote it. A box it shows only when it has news (the head speed, the current)
 // counts only while it is shown.
@@ -54,6 +63,9 @@ struct FlightValue {
     std::vector<uint8_t> bars;                         // channel bars (Malcolm, 10-03: "Channel bars (first 8 or all 16)"): each 0..100, 50 = centre, as the front page has them
     bool coloured = false; uint16_t face = 0, ink = 0; // the box takes these colours whatever its theme (1.9.13: the Motor box in the safety's colours, as the original front page's button)
     std::string image;                                 // the model's picture (Malcolm, 10-04: "can we add to the available box options 'model image'"): the front page's, by the name the main board gave it
+    // A box of two parts (1.11.70): the upper part is label, big, unit, small and state above; the lower part these. tag: a
+    // short word on the name's line, at its right ("62 %"; under the name in a part's one-row form)
+    bool twoPart = false; std::string label2, big2, unit2, small2; FlightState state2 = FS_NORMAL; std::string tag, tag2;
 };
 FlightValue flightValue(int item, FlightSource &src);
 // A warning the front page shows, for the flight screen's strip whatever its boxes: "Battery LOW", or no link in flight.
@@ -102,7 +114,7 @@ struct FlightConfig {
     uint8_t when = FW_FLYING, layout = FLIGHT_DEFAULT_LAYOUT;   // (when: unused since 1.9.8, see above)
     bool stayOn = true;                                // while it shows, the main board's screen saver is told "someone is here"
     uint8_t manual = FM_NONE;                          // the pilot's choice (Original screen / Defined screen), kept across a switch-off
-    uint8_t items[FLIGHT_MAX_BOXES] = { FL_TIMER, FL_RXBAT, FL_RPM, FL_LINK, FL_ESC, FL_MAH, FL_AMPS, FL_TXBAT, FL_BANK };
+    uint8_t items[FLIGHT_MAX_BOXES] = { FL_TIMER, FL_BATTS, FL_RPM, FL_LINK, FL_ESC, FL_MAH, FL_AMPS, FL_AMSTRIM, FL_BANK };
     // Each box's theme: 0 the screens' (it follows the Themes page), k the Themes page's theme k (its panel colour and its
     // text colour). Amber and red still take over a box whose value needs a look.
     uint8_t boxTheme[FLIGHT_MAX_BOXES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -128,7 +140,15 @@ static const int FLIGHT_NUMBER_FONT = 1, FLIGHT_UNIT_FONT = 0, FLIGHT_MAX_SCALE 
 // 64-pixel font, the same for every value it can show (worked out from the widest), and the same in boxes of one size.
 // own: drawn in face and ink (a theme of its own), else in the screens' theme
 struct FlightTile { int id = 0; FlightRect r; int item = FL_NONE; FlightValue v; bool pressed = false; uint32_t serial = 0; uint8_t textFont = 2; int16_t scale = 16;
-                    uint8_t colour = 0; bool own = false; uint16_t face = 0, ink = 0; };
+                    uint8_t colour = 0; bool own = false; uint16_t face = 0, ink = 0;
+                    int16_t scale2 = 16; };                 // (1.11.70) a box of two parts: scale its upper part's number, scale2 its lower's
+// A box of two parts (1.11.70): two boxes in one, 6 px apart, the upper the taller. A part has its name above its number
+// (24 px letters; 28 in a big part), its tag at the right of the name, its small line below where it is 130 px tall - or,
+// where that gives the bigger number, a short name on the left (its tag under it if there is room) and the number beside
+// it. The sizing (flightSizeTiles) and the drawing use the same sums.
+void flightSplit(const FlightRect &r, FlightRect &upper, FlightRect &lower);
+struct FlightPartPlan { int font = 2; bool row = false, small = false, tagBelow = false; int column = 0; FlightRect number; };
+FlightPartPlan flightPartPlan(const FlightRect &p, int item, int part, FlightFonts *f);
 // layout: a choice of box sizes, drawn as its boxes. swatch: a colour to touch, drawn in face with its name in ink.
 // label: words on the page, not a button.
 struct FlightButton { int id = 0; FlightRect r; std::string text; bool chosen = false, pressed = false; uint32_t serial = 0; int8_t layout = -1;

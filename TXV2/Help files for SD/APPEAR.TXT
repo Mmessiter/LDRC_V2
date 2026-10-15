@@ -37,10 +37,10 @@ The same tabs are on the defined front screen itself, so|
 switching while you fly is one touch. There, on the ground, hold|
 a box for two seconds to open its chooser there and then.||
 BOXES:|
-Touch a box to choose what it shows: Timer, Flight battery,|
-TX battery, Link, Frame rate, Head speed, ESC temperature,|
-Current, Capacity used, Bank, Rate, Motor, Clock, Model name,|
-Model image, Channels 1-8, Channels 1-16 or Nothing.|
+Touch a box to choose what it shows: Timer, Batteries (flight|
+and transmitter), Link, Frame rate, Head speed, ESC temperature,|
+Current, Capacity used, Bank, Rate, Motor, AMS and trims, Clock,|
+Model name, Model image, Channels 1-8, Channels 1-16 or Nothing.|
 Touch a choice and it is made at once.|
 'OK' goes back with no change.|
 A choice another box already shows is darker and carries that|

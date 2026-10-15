@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Batteries in one box, AMS and trims, a diff with an error saved (screen 1.11.70, Teensy B102 unchanged, 15 Oct 2026)
+
+Malcolm: the flight battery and the TX battery "should be combined into a single option with the flight battery at the
+top", and "We need another option which shows the state of AMS ... and the state of trimall". Two box options on the
+defined front screens, each a box of two parts. Batteries: the flight battery above, the transmitter's below, each with
+its voltage per cell, its per cent by its name, and its own warning colour; a big box adds the total. AMS and trims: AMS on
+or off, as the front page says it ("no model ID" when the model has no receiver ID yet), and the trims "All banks" or
+"This bank". A part too short for its name above its number has a short name beside it; the flight battery's number is
+never the smaller. Screens defined before keep working: the batteries where the flight battery was, AMS and trims where
+the TX battery was. Help: FLIGHT.TXT and APPEAR.TXT.
+
+Malcolm: "An old bug has returned. Cannot save diff to card" (117 lines, "# version" ... "save", "an ###ERROR in it"). Not
+the old cause: Rotorflight writes "###ERROR IN diff: CORRUPTED CONFIG: name = value" into a whole diff for a setting it
+holds out of range, and the screen refused any diff with an error in it. Now such a diff is saved (Execute diff leaves the
+line out: it is a comment) and the note says what the flight controller reported. Host tests: test_flight, test_cli.
+
 ## The front screen's switch copied at once, its choice one byte (screen 1.11.69, Teensy B102 unchanged, 15 Oct 2026)
 
 Malcolm of 1.11.68: "Still flickers." His screen said every switch had used the kept drawing (8 switches, none drawn
@@ -197,6 +213,7 @@ and the byte is written just after the panel's frame end, in the blank before th
 at once, as every other page change is (Malcolm: "Maybe we should simply use the other method?"): no quiet frame, whose
 long blank might itself show. The defined screen is still drawn ahead and kept (1.11.68). /status "quiet" adds stores and
 store_max. Host test: test_flight's choiceKey (a switch writes no definition; a real change still does).
+Malcolm, the same afternoon: "Fixed !!!!!!! Bravissimo!!!!!"
 
 ## The defined front screen kept drawn (screen 1.11.68, Teensy B102 unchanged, 15 Oct 2026)
 

@@ -114,14 +114,27 @@ bool cliDiffWhole(const std::vector<std::string> &lines) {
     // 1.11.55 (Malcolm's photo, 10 Oct: 347 lines, first "# version", last "save", "batch end NO"): a Rotorflight 4.6 diff all
     // begins "# version" (the receiver drops the echoed command) and ENDS WITH "save", not "batch end" - so the end is not
     // asked for. The receiver (0.9.883) sends 200 only once the flight controller's prompt is back: that is what says the
-    // reply is whole. Here: a diff's head, and no error in it.
-    bool head = false;
+    // reply is whole. Here: a diff's head, and settings in it. (1.11.70: an ###ERROR line in it no longer refuses it - see
+    // LdrcCli.h; a reply that is only the command and an error has no settings, and is still no diff.)
+    bool head = false, settings = false;
     for (size_t i = 0; i < lines.size(); ++i) {
         const std::string &l = lines[i];
         if (i < 5 && (l.find("diff") != std::string::npos || l.find("# version") != std::string::npos)) head = true;
-        if (l.find("###ERROR") != std::string::npos) return false;
+        if (l == "batch start" || l == "save" || l.rfind("set ", 0) == 0 || l.rfind("feature ", 0) == 0 || l.rfind("board_name", 0) == 0) settings = true;
     }
-    return head && lines.size() >= 3;
+    return head && settings && lines.size() >= 3;
+}
+void cliDiffErrors(const std::vector<std::string> &lines, std::vector<std::string> &out) {
+    out.clear();
+    for (auto &l : lines) if (l.find("###ERROR") != std::string::npos) out.push_back(l);
+}
+std::string cliErrorWords(const std::string &line) {
+    std::string t = line;
+    while (!t.empty() && (t[0] == '#' || t[0] == ' ')) t.erase(0, 1);
+    while (!t.empty() && (t.back() == '#' || t.back() == ' ' || t.back() == '\r')) t.pop_back();
+    const size_t c = t.find("CORRUPTED CONFIG: ");                     // (Rotorflight's cli.c: a value its table has no word for)
+    if (c != std::string::npos) return "a setting out of range: " + t.substr(c + 18);
+    return t;
 }
 void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out) {
     out.clear();
@@ -276,7 +289,7 @@ void CliPage::refusal(const std::string &why) {                   // (the receiv
 // ------------------------------------------------------------------ open, close, the steps
 void CliPage::open(int job) {
     job_ = job; cliOpen_ = false; closeAfter_ = false; closing_ = false; changed_ = false; step_ = ST_IDLE; waitPath_.clear(); waitUntil_ = 0; jobFailed_.clear(); more_ = false; lines_.clear(); top_ = 0; follow_ = true; typed_.clear(); layer_ = 0;
-    pending_.clear(); diffText_.clear(); savedAs_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear(); requested_ = false; batchOpen_ = false;
+    pending_.clear(); diffText_.clear(); savedAs_.clear(); diffError_.clear(); down_ = false; pressed_ = 0; exec_.clear(); execAt_ = 0; sent_ = 0; refused_ = 0; execFile_.clear(); requested_ = false; batchOpen_ = false;
     if (host_.armed()) { page_ = PG_CONSOLE; note("Not while the model could be flying.", "Put the safety on and the motor off first.", "", "OK", "", true); closeAfter_ = true; return; }
     if (host_.mainBoardBusy()) {                                     // (B52) the main board's backup, restore or write has the pipe; a save or exit would restart the flight controller under it
         page_ = PG_CONSOLE;
@@ -367,6 +380,9 @@ void CliPage::left(const std::string &how) {
         note(job_ == CLI_TO_CARD ? "Diff to card: NOT saved." : job_ == CLI_EXECUTE ? "Execute diff: NOT done, nothing saved." : "The command line did not answer.", w[0], w[1], "OK", "", true, w[2]);
         closeAfter_ = true; return;
     }
+    if (job_ == CLI_TO_CARD && !savedAs_.empty() && !diffError_.empty()) {   // (1.11.70) saved, with what the flight controller reported in it
+        note("Saved on the screen's card as", savedAs_, "The flight controller reported", "OK", "", true, diffError_); closeAfter_ = true; return;
+    }
     if (job_ == CLI_TO_CARD && !savedAs_.empty()) { note("Saved on the screen's card as", savedAs_, sure ? "The flight controller is restarting (nothing changed)." : "(" + how + ": nothing changed on the model)", "OK", "", false); closeAfter_ = true; return; }
     if (job_ == CLI_EXECUTE && leaveSave_ && !exec_.empty()) {
         char l1[80]; snprintf(l1, sizeof l1, "Executed: %d commands sent, %d refused.", sent_, refused_);
@@ -449,9 +465,12 @@ void CliPage::finish(bool ok, const std::string &body, const std::string &err) {
             say("Could not save " + name + ": " + errf); print(body); build(); return;
         }
         savedAs_ = name;
+        { std::vector<std::string> errs; cliDiffErrors(ls, errs);      // (1.11.70) kept in the file (comments to Execute diff); said
+          if (!errs.empty()) diffError_ = cliErrorWords(errs[0]) + (errs.size() > 1 ? " (and " + std::to_string(errs.size() - 1) + " more in the file)" : ""); }
         char b[80]; snprintf(b, sizeof b, "Saved: %s (%u lines)", name.c_str(), (unsigned) ls.size());
-        if (job_ != CLI_TO_CARD) { print(body); say(b); build(); return; }
-        say(b); leave(false);                                       // the job: and out again (the FC restarts; nothing was changed)
+        if (job_ != CLI_TO_CARD) { print(body); say(b); if (!diffError_.empty()) say("The flight controller reported " + diffError_); build(); return; }
+        say(b); if (!diffError_.empty()) say("The flight controller reported " + diffError_);
+        leave(false);                                               // the job: and out again (the FC restarts; nothing was changed)
         return;
     }
     print(body);                                                    // a command's reply

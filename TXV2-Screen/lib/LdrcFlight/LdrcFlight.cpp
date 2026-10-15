@@ -5,18 +5,32 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
+#include <algorithm>
 
 namespace ldrc {
 
 // ------------------------------------------------------------------ the things a box can show
 // ref: the widest value it is expected to show (its number's size in a box is worked out from this, so the number does
 // not jump as the value changes); unit: what follows the number.
+// (a box of two parts has no ref of its own: its parts' are below)
 static const struct { const char *key, *name, *ref, *unit; } ITEMS[FL_ITEMS] = {
-    { "none", "Nothing", "", "" }, { "timer", "Timer", "88:88", "" }, { "rxbat", "Flight battery", "88.88", "V" },
-    { "txbat", "TX battery", "88.88", "V" }, { "link", "Link", "100", "%" }, { "fps", "Frame rate", "888", "fps" }, { "rpm", "Head speed", "8888", "RPM" },
+    { "none", "Nothing", "", "" }, { "timer", "Timer", "88:88", "" }, { "batts", "Batteries", "", "" },
+    { "link", "Link", "100", "%" }, { "fps", "Frame rate", "888", "fps" }, { "rpm", "Head speed", "8888", "RPM" },
     { "esc", "ESC temperature", "188", "\xB0" "C" }, { "amps", "Current", "88.8", "A" }, { "mah", "Capacity used", "8888", "mAh" },
-    { "bank", "Bank", "Bank 8", "" }, { "rate", "Rate", "Rate 8", "" }, { "motor", "Motor", "OFF", "" }, { "clock", "Clock", "88:88", "" },
-    { "model", "Model name", "RAW 420 MCM", "" }, { "image", "Model image", "", "" }, { "bars8", "Channels 1-8", "", "" }, { "bars16", "Channels 1-16", "", "" } };
+    { "bank", "Bank", "Bank 8", "" }, { "rate", "Rate", "Rate 8", "" }, { "motor", "Motor", "OFF", "" }, { "amstrim", "AMS and trims", "", "" },
+    { "clock", "Clock", "88:88", "" }, { "model", "Model name", "RAW 420 MCM", "" }, { "image", "Model image", "", "" },
+    { "bars8", "Channels 1-8", "", "" }, { "bars16", "Channels 1-16", "", "" } };
+// The two parts of each box of two (1.11.70): the upper first. The trims' widest words: "This bank" (and "All banks").
+static const struct { int item; const char *name, *shortName, *ref, *unit, *tagRef; } PARTS[] = {
+    { FL_BATTS, "Flight battery", "Flight", "88.88", "V", "100 %" }, { FL_BATTS, "TX battery", "TX", "88.88", "V", "100 %" },
+    { FL_AMSTRIM, "AMS", "AMS", "OFF", "", "" }, { FL_AMSTRIM, "Trims", "Trims", "This bank", "", "" } };
+bool flightItemHasParts(int item) { return item == FL_BATTS || item == FL_AMSTRIM; }
+static int partIndex(int item, int part) { for (int i = 0; i < (int) (sizeof(PARTS) / sizeof(PARTS[0])); i += 2) if (PARTS[i].item == item) return i + (part ? 1 : 0); return -1; }
+const char *flightPartName(int item, int part) { const int i = partIndex(item, part); return i < 0 ? "" : PARTS[i].name; }
+const char *flightPartShort(int item, int part) { const int i = partIndex(item, part); return i < 0 ? "" : PARTS[i].shortName; }
+static const char *partTagRef(int item, int part) { const int i = partIndex(item, part); return i < 0 ? "" : PARTS[i].tagRef; }
+const char *flightPartReference(int item, int part) { const int i = partIndex(item, part); return i < 0 ? "" : PARTS[i].ref; }
+const char *flightPartUnit(int item, int part) { const int i = partIndex(item, part); return i < 0 ? "" : PARTS[i].unit; }
 const char *flightItemName(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].name : ITEMS[0].name; }
 const char *flightItemKey(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].key : ITEMS[0].key; }
 const char *flightItemReference(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].ref : ""; }
@@ -24,6 +38,7 @@ const char *flightItemUnit(int item) { return item > 0 && item < FL_ITEMS ? ITEM
 bool flightItemIsWords(int item) { return item == FL_BANK || item == FL_RATE || item == FL_MODEL || item == FL_MOTOR; }
 int flightItemByKey(const std::string &key) {
     for (int i = 0; i < FL_ITEMS; ++i) if (key == ITEMS[i].key) return i;
+    if (key == "rxbat" || key == "txbat") return FL_BATTS;     // (before 1.11.70: a box for each battery)
     return FL_NONE;
 }
 
@@ -65,24 +80,46 @@ FlightValue flightValue(int item, FlightSource &src) {
     const bool linked = src.linked();
     auto unknown = [&](const char *small) { v.big = "--"; v.small = small ? small : ""; v.state = FS_STALE; };
     auto noModel = [&]() { return src.flying() ? "no link" : "no model"; };   // (in flight the model is there: it is the link that is not)
-    float a = 0, b = 0;
+    float a = 0;
     switch (item) {
     case FL_NONE: v.label = ""; v.state = FS_EMPTY; break;
     case FL_TIMER:
         v.big = flightTimer(src.number("Hours", 0), src.number("Mins", 0), src.number("Secs", 0));
         break;
-    case FL_RXBAT: case FL_TXBAT: {
-        const bool rx = item == FL_RXBAT;
-        if (rx && !linked) { unknown(noModel()); break; }
-        if (!flightBattery(src.text(rx ? "RXBV" : "TXBV"), a, b)) { unknown(nullptr); break; }
-        const long pct = src.number(rx ? "JRX" : "JTX", -1);
-        // the cell big, the whole pack below, named (1.10.9, Malcolm 10-06: "make the PER CELL voltage big, and the total
-        // voltage smaller"). The small line says "total" so it cannot be read as the cell (10-04: "per cell  7.82 V" below
-        // a big number had read as if the total were per cell).
-        v.big = fmt("%.2f", b); v.unit = "V";
-        v.small = fmt("%.2f V total", a) + (pct >= 0 && pct <= 100 ? "  " + fmt("%.0f %%", (double) pct) : "");
-        if (pct >= 0 && pct <= 20) v.state = FS_ALARM; else if (pct >= 0 && pct <= 40) v.state = FS_WARN;
-        // (the front page's "Battery LOW" is for either battery: it turns the strip red, not this box)
+    case FL_BATTS: {                                   // (1.11.70) the flight battery above, the transmitter's below: two parts of one box
+        v.twoPart = true; v.label = flightPartName(item, 0); v.label2 = flightPartName(item, 1);
+        // each as the boxes of one battery were: the cell big, the whole pack below, named (1.10.9, Malcolm 10-06: "make the
+        // PER CELL voltage big, and the total voltage smaller"). The small line says "total" so it cannot be read as the
+        // cell (10-04: "per cell  7.82 V" below a big number had read as if the total were per cell).
+        // The percentage is the part's tag, at the right of its name (or under it), so it is there in every size of box.
+        auto battery = [&](bool rx, std::string &big, std::string &unit, std::string &small, std::string &tag, FlightState &state) {
+            float t = 0, c = 0;
+            if (rx && !linked) { big = "--"; tag = noModel(); state = FS_STALE; return; }
+            if (!flightBattery(src.text(rx ? "RXBV" : "TXBV"), t, c)) { big = "--"; state = FS_STALE; return; }
+            const long pct = src.number(rx ? "JRX" : "JTX", -1);
+            big = fmt("%.2f", c); unit = "V";
+            small = fmt("%.2f V total", t);
+            if (pct >= 0 && pct <= 100) tag = fmt("%.0f %%", (double) pct);
+            state = pct >= 0 && pct <= 20 ? FS_ALARM : pct >= 0 && pct <= 40 ? FS_WARN : FS_NORMAL;
+            // (the front page's "Battery LOW" is for either battery: it turns the strip red, not this box)
+        };
+        battery(true, v.big, v.unit, v.small, v.tag, v.state);
+        battery(false, v.big2, v.unit2, v.small2, v.tag2, v.state2);
+        break;
+    }
+    case FL_AMSTRIM: {                                 // (1.11.70) AMS above, the trims below, as the main board words them on the front page
+        v.twoPart = true; v.label = flightPartName(item, 0); v.label2 = flightPartName(item, 1);
+        // "AMS is on", "AMS is off"; "[AMS is on]": on, but the model in use has no receiver ID kept yet (Telemetry.h ShowAMS)
+        const std::string ams = src.text("ams");
+        if (ams.find("off") != std::string::npos) v.big = "OFF";
+        else if (ams.find("on") != std::string::npos) { v.big = "ON"; if (ams.find('[') != std::string::npos) v.tag = "no model ID"; }
+        else { v.big = "--"; v.state = FS_STALE; }
+        // "Trims: all banks", "Trims: this bank" (whether a trim moves every bank's: CopyTrimsToAll); the page's own "TrimAll
+        // is on" until the main board writes it
+        const std::string tr = src.text("trall");
+        if (tr.find("this") != std::string::npos || tr.find("off") != std::string::npos) v.big2 = "This bank";
+        else if (tr.find("all") != std::string::npos || tr.find("on") != std::string::npos) v.big2 = "All banks";
+        else { v.big2 = "--"; v.state2 = FS_STALE; }
         break;
     }
     case FL_LINK: {
@@ -215,12 +252,18 @@ bool FlightConfig::load(const std::string &s) {
     if (w > FW_ALWAYS || so > 1) return false;
     c.when = (uint8_t) w; c.stayOn = so == 1;
     std::string l = list; size_t at = 0; int i = 0;
+    bool rxbat = false; int txbatAt[FLIGHT_MAX_BOXES], txbats = 0;
     while (i < FLIGHT_MAX_BOXES && at <= l.size()) {
         size_t e = l.find(',', at); if (e == std::string::npos) e = l.size();
-        c.items[i++] = (uint8_t) flightItemByKey(l.substr(at, e - at));
+        const std::string key = l.substr(at, e - at);
+        if (key == "rxbat") rxbat = true; else if (key == "txbat") txbatAt[txbats++] = i;
+        c.items[i++] = (uint8_t) flightItemByKey(key);
         at = e + 1;
     }
     for (; i < FLIGHT_MAX_BOXES; ++i) c.items[i] = FL_NONE;
+    // (1.11.70) a definition from before, with a box for each battery: the batteries' box where the flight battery's was,
+    // and the box the transmitter's had shows AMS and trims (the other new box), not the batteries twice
+    if (rxbat) for (int k = 0; k < txbats; ++k) c.items[txbatAt[k]] = FL_AMSTRIM;
     eachToken(s, " c:", FLIGHT_MAX_BOXES, [&](int k, const std::string &t) {   // (1.7.4: a name; 1.7.5: a pair's number): the theme with that panel colour
         if (t.empty()) return;
         if (t.find_first_not_of("0123456789") == std::string::npos) { const int n = atoi(t.c_str()); if (n >= 1 && n <= 12) c.boxTheme[k] = themeOf(OLD_PAIRS[n - 1][0]); }
@@ -277,9 +320,46 @@ std::vector<FlightRect> flightLayout(int layout, const FlightRect &a, int gap) {
 // Each box's letters: its number as big as the box allows for the widest value its thing is expected to show, at most
 // three times the 64-pixel font; boxes of one size alike (the smallest of theirs); the name and the small line bigger in a
 // big box. (Box size linked to font size: Malcolm, 10-04.)
+void flightSplit(const FlightRect &r, FlightRect &upper, FlightRect &lower) {
+    const int gap = 6, hu = (r.h - gap) * 58 / 100;
+    upper = FlightRect(r.x, r.y, r.w, hu); lower = FlightRect(r.x, r.y + hu + gap, r.w, r.h - hu - gap);
+}
+// A part's number: as big as its area allows for the widest it is expected to show, at most three times the 64-pixel font
+static int16_t partScale(const FlightRect &a, const char *ref, const char *unit, FlightFonts *f) {
+    if (!f || a.w <= 0 || a.h <= 0) return 0;
+    int s = a.h * 16 / f->height(FLIGHT_NUMBER_FONT);
+    const int refW = f->width(FLIGHT_NUMBER_FONT, ref) + (*unit ? 8 + f->width(FLIGHT_UNIT_FONT, unit) : 0);
+    if (refW > 0 && a.w * 16 / refW < s) s = a.w * 16 / refW;
+    return (int16_t) (s < 0 ? 0 : s > FLIGHT_MAX_SCALE ? FLIGHT_MAX_SCALE : s);
+}
+FlightPartPlan flightPartPlan(const FlightRect &p, int item, int part, FlightFonts *f) {
+    FlightPartPlan st, rw;                                             // the two forms; the one with the bigger number is taken
+    st.font = rw.font = p.h >= 180 && p.w >= 240 ? 6 : 2;
+    const int nameH = f ? f->height(st.font) : 24;
+    st.small = p.h >= 130;                                            // (the small line only where there is room for it)
+    const int top = p.y + 8 + nameH, bottom = p.y + p.h - 8 - (st.small ? nameH : 0);
+    st.number = FlightRect(p.x + FLIGHT_PAD, top, p.w - 2 * FLIGHT_PAD, bottom > top ? bottom - top : 0);
+    rw.row = true;                                                    // the short name on the left, its tag under it if both lines fit
+    int col = f ? f->width(rw.font, flightPartShort(item, part)) : 60;
+    rw.tagBelow = p.h >= 2 * nameH + 8 && *partTagRef(item, part);
+    if (rw.tagBelow && f) col = std::max(col, f->width(rw.font, partTagRef(item, part)));
+    if (col + 12 > p.w / 2) col = p.w / 2 - 12;                       // (the number keeps half the part at least)
+    rw.column = col;
+    rw.number = FlightRect(p.x + 10 + col + 12, p.y + 4, p.w - 20 - col - 12, p.h - 8);
+    const char *ref = flightPartReference(item, part), *unit = flightPartUnit(item, part);
+    const int sS = st.number.h >= 20 ? partScale(st.number, ref, unit, f) : -1, sR = partScale(rw.number, ref, unit, f);
+    return sR > sS ? rw : st;
+}
 void flightSizeTiles(std::vector<FlightTile> &tiles, FlightFonts *f) {
     for (auto &t : tiles) t.textFont = t.r.h >= 240 && t.r.w >= 240 ? 6 : 2;
     if (!f) return;
+    for (auto &t : tiles) {                                           // (1.11.70) a box of two parts: each part's number for itself
+        if (!flightItemHasParts(t.item)) continue;
+        FlightRect up, low; flightSplit(t.r, up, low);
+        t.scale = partScale(flightPartPlan(up, t.item, 0, f).number, flightPartReference(t.item, 0), flightPartUnit(t.item, 0), f);
+        t.scale2 = partScale(flightPartPlan(low, t.item, 1, f).number, flightPartReference(t.item, 1), flightPartUnit(t.item, 1), f);
+        if (t.item == FL_BATTS && t.scale2 > t.scale) t.scale2 = t.scale;   // (the flight battery at the top is never the smaller)
+    }
     for (auto &t : tiles) {
         const char *ref = flightItemReference(t.item), *unit = flightItemUnit(t.item);
         if (!*ref) continue;
@@ -426,6 +506,7 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
     flightSizeTiles(sc.tiles, fonts);
     for (auto &t : sc.tiles) {
         uint32_t h = hashOf(t.v.label, 2166136261u); h = hashOf(t.v.big, h); h = hashOf(t.v.unit, h); h = hashOf(t.v.small, h); h = hashOf(t.v.image, h);
+        if (t.v.twoPart) { h = hashOf(t.v.label2, h); h = hashOf(t.v.big2, h); h = hashOf(t.v.unit2, h); h = hashOf(t.v.small2, h); h = hashOf(t.v.tag, h); h = hashOf(t.v.tag2, h); h = (h ^ (uint32_t) t.v.state2) * 16777619u; }
         for (uint8_t b : t.v.bars) h = (h ^ b) * 16777619u;
         if (t.own) h = ((h ^ t.face) * 16777619u) ^ t.ink;
         t.serial = (h ^ ((uint32_t) t.v.state << 24) ^ ((uint32_t) t.item << 16) ^ ((uint32_t) t.colour << 8)) + (t.pressed ? 7u : 0u);

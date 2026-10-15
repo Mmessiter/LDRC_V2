@@ -1,0 +1,51 @@
+# Boxes of two parts (screen 1.11.70, Malcolm 15 Oct: the batteries "combined into a single option with the flight
+# battery at the top"; "another option which shows the state of AMS ... and the state of trimall"). In every size of box:
+# the parts' names, numbers and small lines, a part's own warning colour, and the short parts' one-row form.
+Screen_Background=21
+@model 1
+page FrontView
+ModelName.txt="SAB Havoc"
+t4.txt="Bank 1"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+RXBV.txt="22.80V (3.80V per cell)"
+JRX.val=62
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+vis Quality,1
+Quality.val=97
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis Warning,1
+Warning.txt="ESC: 52.3"
+vis StillConnected,1
+StillConnected.txt="Amps: 12.4"
+vis wb,1
+wb.txt="mAh: 345"
+bt0.txt="Motor is OFF"
+DateTime.txt="15 Oct. 2026 14:31:07"
+ams.txt="AMS is on"
+trall.txt="Trims: all banks"
+@flying 0
+@theme navy
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,amstrim
+@shot fparts_grid6
+@flight f2 w1 grid9 s1 timer,batts,rpm,link,esc,mah,amps,amstrim,bank
+@shot fparts_grid9
+@flight f2 w1 grid4 s1 batts,timer,amstrim,link
+@shot fparts_grid4
+@flight f2 w1 big6 s1 batts,timer,amstrim,link,esc,rpm,mah
+@shot fparts_big6
+@flight f2 w1 one s1 batts
+@shot fparts_one
+JTX.val=30
+ams.txt="[AMS is on]"
+trall.txt="Trims: this bank"
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,amstrim
+@shot fparts_grid6_txlow
+@flight f2 w1 big4 s1 batts,timer,amstrim,link,esc
+@shot fparts_big4_txlow
+@theme white
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,amstrim
+@shot fparts_white

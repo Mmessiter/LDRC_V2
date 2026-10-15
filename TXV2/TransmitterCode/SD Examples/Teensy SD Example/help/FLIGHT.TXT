@@ -18,14 +18,18 @@ it means the motor is off.)||
 WARNING COLOURS:|
 A box turns amber or red, with a white frame, when its value|
 needs a look:|
-- Battery: amber at 40 per cent or less, red at 20 or less.|
+- Batteries: each part amber at 40 per cent or less, red at 20.|
 - Link: amber below 75 per cent, red below 50.|
 - ESC temperature: amber from 80 degrees, red from 95.|
 The top line turns red for BATTERY LOW, or for NO LINK in|
 flight (the Link box then says LOST).||
 WHAT THE BOXES SHOW:|
-A battery box: the voltage per cell, big; under it, the total|
-voltage and the per cent.|
+Batteries: the flight battery above, the transmitter's below,|
+each with its voltage per cell (big) and its per cent. A big box|
+adds the total voltage.|
+AMS and trims: AMS (automatic model selection) on or off, and|
+whether a trim moves the trims of every bank or of this bank.|
+'no model ID' beside AMS: this model has no receiver ID yet.|
 A box shows -- when there is nothing to show. Its small line|
 says 'no model' on the ground, or 'no link' in flight.|
 Head speed, current, capacity used and|

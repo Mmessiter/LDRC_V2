@@ -108,6 +108,7 @@ private:
     bool ownCmd_ = false;                                     // (B53) the command out is the page's own "batch end", not one of the file's
     std::vector<std::string> exec_; size_t execAt_; int sent_, refused_; std::string execFile_;
     std::string pending_, diffText_, savedAs_;
+    std::string diffError_;                                   // (1.11.70) what the flight controller reported in the diff saved: said in the note
     std::string noteL1_, noteL2_, noteL3_, noteL4_, noteB1_, noteB2_; bool noteBad_; int noteFrom_;
     bool down_; int pressed_; int lastX_, lastY_, downY_, dragTop_; bool dragged_; uint32_t seenDown_, repeatAt_; bool repeated_;
     uint32_t serial_, askedAt_;
@@ -129,9 +130,15 @@ bool cliNewer(const std::string &a, const std::string &b, const std::string &pre
 // The commands of a diff file: every line that is not empty and not a comment; save / exit / reboot left out (the save is the job's own)
 void cliCommands(const std::string &text, std::vector<std::string> &out);
 bool cliReadOnly(const std::string &cmd);
-// A reply that is a diff: "diff" or "# version" in its first lines and no ###ERROR (1.11.55: a Rotorflight 4.6 diff all ends
-// with "save", not "batch end"; the receiver's 200 is what says the reply is whole)
-bool cliDiffWhole(const std::vector<std::string> &lines);   // a command that changes nothing: diff, dump, get, status, version, help and their like
+// A reply that is a diff: "diff" or "# version" in its first lines, and settings in it (a set, batch start, a save...)
+// (1.11.55: a Rotorflight 4.6 diff all ends with "save", not "batch end"; the receiver's 200 is what says the reply is whole).
+// (1.11.70, Malcolm 15 Oct: "Cannot save diff to card" - 117 lines, "# version" ... "save", "an ###ERROR in it") An ###ERROR
+// line does not stop a diff being one: Rotorflight prints "###ERROR IN diff: CORRUPTED CONFIG: name = value" for a setting it
+// holds out of range and carries on. The diff is kept (the line is a comment to Execute diff) and the error is said.
+bool cliDiffWhole(const std::vector<std::string> &lines);
+void cliDiffErrors(const std::vector<std::string> &lines, std::vector<std::string> &out);   // its ###ERROR lines
+std::string cliErrorWords(const std::string &line);   // one in plain words: "a setting out of range: gov_mode = 7"
+// a command that changes nothing: diff, dump, get, status, version, help and their like
 // Words wrapped at spaces into lines of at most `width` characters (a word longer than that is cut), at most `most` lines; the rest ends in " ..."
 void cliWrap(const std::string &text, size_t width, size_t most, std::vector<std::string> &out);
 

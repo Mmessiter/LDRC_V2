@@ -140,6 +140,44 @@ static bool flImage(const ldrc::FlightRect &a, const std::string &fromTeensy) {
 }
 
 // One box: its name at the top, the number big in the middle with its unit, a small line at the bottom.
+// (1.11.70) A part of a box of two (the batteries: flight above, transmitter below; AMS above, trims below): drawn as a box of
+// its own, in the box's theme, amber or red by its own state. ldrc::flightPartPlan says where its name, number and small
+// line go - the sizing (flightSizeTiles) used the same sums.
+static void flPart(const ldrc::FlightRect &p, const ldrc::FlightTile &t, int part, const std::string &label, const std::string &big,
+                   const std::string &unit, const std::string &small, const std::string &tag, ldrc::FlightState state, int scale, bool setup) {
+    using namespace ldrc;
+    const bool own = t.own;
+    uint16_t face = own ? t.face : FL_FACE, ink = own ? t.ink : FL_INK, soft = own ? ldrc::themeBlend(t.ink, t.face, 72) : FL_SOFT;
+    const uint16_t edge = own ? ldrc::themeBlend(t.ink, t.face, 30) : FL_EDGE;
+    if (state == FS_WARN) { face = FL_AMBER; ink = 0x0000; soft = 0x0000; }
+    else if (state == FS_ALARM) { face = FL_RED; ink = 0xFFFF; soft = 0xFFFF; }
+    if (t.pressed) face = shade(face, ldrc::themeIsLight(face) ? -20 : -30);
+    gfx->fillRoundRect(p.x, p.y, p.w, p.h, 10, face);
+    if (state == FS_WARN || state == FS_ALARM)                    // (as a box: a thick white frame with the colour)
+        for (int k = 0; k < 4; ++k) gfx->drawRoundRect(p.x + k, p.y + k, p.w - 2 * k, p.h - 2 * k, 10 - k, 0xFFFF);
+    else gfx->drawRoundRect(p.x, p.y, p.w, p.h, 10, setup ? FL_SOFT : edge);
+    const bool lightFace = ldrc::themeIsLight(face);
+    const uint16_t dim = own || lightFace ? soft : FL_DIM;
+    const uint16_t valueInk = state == FS_STALE ? dim : state == FS_GOOD ? (lightFace ? ink : FL_GREEN) : ink;
+    const FlightPartPlan pl = flightPartPlan(p, t.item, part, &flightFonts);
+    const int nameH = fontHeight(pl.font), wpad = 10;
+    flClip(FlightRect(p.x + 2, p.y + 2, p.w - 4, p.h - 4));
+    if (pl.row) {                                                 // the short name on the left, its tag under it (both lines, centred together)
+        const std::string nm = flCut(flightPartShort(t.item, part), pl.font, pl.column);
+        const bool two = pl.tagBelow && !tag.empty() && textWidth(pl.font, tag) <= pl.column;
+        const int y0 = p.y + (p.h - nameH * (two ? 2 : 1)) / 2;
+        flText(p.x + wpad, y0, pl.font, soft, nm);
+        if (two) flText(p.x + wpad, y0 + nameH, pl.font, soft, tag);
+    } else {                                                      // the name above, its tag at the right of the same line
+        const int tw = tag.empty() ? 0 : textWidth(pl.font, tag);
+        if (tw) flText(p.x + p.w - wpad - tw, p.y + 8, pl.font, soft, tag);
+        flText(p.x + wpad, p.y + 8, pl.font, soft, flCut(label, pl.font, p.w - 2 * wpad - (tw ? tw + 12 : 0)));
+    }
+    if (!pl.row && pl.small && !small.empty()) flText(p.x + wpad, p.y + p.h - nameH - 8, pl.font, soft, flCut(small, pl.font, p.w - 2 * wpad));
+    flNumber(pl.number, big, unit, scale, valueInk, state == FS_STALE ? FL_DIM : soft);
+    flUnclip();
+}
+
 static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
     using namespace ldrc;
     const FlightRect &r = t.r; const FlightValue &v = t.v;
@@ -152,6 +190,12 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
             flText(r.x + (r.w - textWidth(6, s)) / 2, r.y + (r.h - fontHeight(6)) / 2, 6, FL_DIM, s);
             flUnclip();
         }
+        return;
+    }
+    if (v.twoPart) {                                              // (1.11.70) two boxes in one, the upper the taller
+        FlightRect up, low; flightSplit(r, up, low);
+        flPart(up, t, 0, v.label, v.big, v.unit, v.small, v.tag, v.state, t.scale, setup);
+        flPart(low, t, 1, v.label2, v.big2, v.unit2, v.small2, v.tag2, v.state2, t.scale2, setup);
         return;
     }
     // its own theme (a panel colour and a text colour), else the screens' theme; the quieter words a
