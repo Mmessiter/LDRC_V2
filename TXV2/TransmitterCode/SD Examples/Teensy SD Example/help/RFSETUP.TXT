@@ -27,4 +27,11 @@ MAIN GEAR RATIO:|
 Motor turns for one turn of the main rotor, such as 10.3.|
 A Version 1 receiver uses it to work out the head speed.|
 A Version 2 receiver does not: Rotorflight sends the head speed.|
-With a Version 2 receiver, set it in Rotorflight's Configurator.|
+With a Version 2 receiver, set Rotorflight's own gear ratio on|
+'Model basics ...' (its second page), not here.||
+MODEL BASICS:|
+'Model basics ...' opens two pages for a new model's set-up:|
+swash type, which way the rotor turns, tail type, ESC signal|
+and brand, motor pole count, and the main and tail gear ratios.|
+They need the model (or its backup on the card).|
+A 'Save' there restarts the flight controller.|

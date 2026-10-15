@@ -371,6 +371,18 @@ FLASHMEM bool BakOfflineAnswer(uint8_t fn, const uint8_t *data, int len) // true
         BakReply(200, "");
         return true;
     }
+    if (fn == 222 && len >= 28)
+    { // B99: the motor setup: a 222 has no motor-count byte - patched into the 131 image around its byte 6 (the first 6 bytes, then the 22 after it)
+        char img[80];
+        const int have = BakGet("131", img, sizeof(img));
+        BytesToHex(data, 28, hex, sizeof(hex));
+        if (have >= 58) { memcpy(img, hex, 12); memcpy(img + 14, hex + 12, 44); }
+        else { memcpy(img, hex, 12); memcpy(img + 12, "01", 2); memcpy(img + 14, hex + 12, 44); img[58] = 0; }   // (no image yet: one motor)
+        if (!BakSet("131", img)) { BakReply(507, "the backup file is full"); return true; }
+        BakMarkEdit("131");
+        BakReply(200, "");
+        return true;
+    }
     const uint8_t rfn = BakReadOfWrite(fn);
     if (rfn && len > 0)
     { // a write: into the file
@@ -1131,7 +1143,7 @@ FLASHMEM static void BakEditsText(char *out, size_t n)
     for (char *p = strtok(e, ","); p; p = strtok(nullptr, ","))
     {
         const int fn = atoi(p); const char *dot = strchr(p, '.');
-        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "mixer" : fn == 174 ? "mixer input" : fn == 112 ? "PIDs" : fn == 94 ? "adv. PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : fn == 34 ? "switches" : fn == 52 ? "adjustments" : fn == 32 ? "battery" : fn == 80 ? "black box" : fn == 240 ? "level trims" : fn == 56 ? "voltage sensor" : fn == 40 ? "current sensor" : p;
+        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "mixer" : fn == 174 ? "mixer input" : fn == 112 ? "PIDs" : fn == 94 ? "adv. PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : fn == 34 ? "switches" : fn == 52 ? "adjustments" : fn == 32 ? "battery" : fn == 80 ? "black box" : fn == 240 ? "level trims" : fn == 56 ? "voltage sensor" : fn == 40 ? "current sensor" : fn == 131 ? "motor and gear ratio" : fn == 123 ? "ESC telemetry" : p;
         char w[40];
         if (dot && fn != 174 && fn != 154) snprintf(w, sizeof(w), "%s bank %d", name, atoi(dot + 1) + 1); else snprintf(w, sizeof(w), "%s", name);
         if (out[0]) strncat(out, ", ", n - strlen(out) - 1);

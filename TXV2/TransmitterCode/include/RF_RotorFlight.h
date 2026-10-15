@@ -87,7 +87,7 @@ FLASHMEM void RotorFlightEnd() // OK on the menu: to the front page (B56: the fi
     ZeroDataScreen();        // clear the screen data because editing Rotorflight parameters may have created misleading comms gaps
     GotoFrontView();
 }
-FLASHMEM void EndRFSettingsView() // OK on the settings page: the fields read back, the model saved, back to the menu
+FLASHMEM void RFSettingsGather() // B99: the settings page's fields read back and the model saved (its OK, and the way on to Model basics)
 {
     char temp[15];
     // Nextion serial can carry stale bytes after heavy MSP traffic, so GetText may fail silently.
@@ -118,6 +118,10 @@ FLASHMEM void EndRFSettingsView() // OK on the settings page: the fields read ba
             LinkRatesToBanks = (bool)sw; // ClaudeFix-2-7-2026 ignore a comms-error 65535 (would have saved as 'true')
     }
     SaveOneModel(ModelNumber); // save the model including gear ratio and arming channel
+}
+FLASHMEM void EndRFSettingsView() // OK on the settings page: the fields read back, the model saved, back to the menu
+{
+    RFSettingsGather();
     RotorFlightStart();
 }
 // **********************************************************************************************************/

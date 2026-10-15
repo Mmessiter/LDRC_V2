@@ -168,6 +168,7 @@
 #include "RF_Switches.h" // B77: the switches (modes), over the pipe
 #include "RF_CopyBank.h" // B78: copy a bank, over the pipe
 #include "RF_FcSetup.h" // B88: battery, black box, calibrate, and why it will not arm, over the pipe
+#include "RF_Basics.h" // B99: the model basics (swashplate type, rotor direction, tail type, motor protocol, ESC brand, poles, gear ratios), over the pipe
 #include "RF_Rates_Advanced.h"
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
@@ -3055,7 +3056,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 183 // One more than final one
+#define LASTFUNCTION1 194 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3240,7 +3241,18 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     BenchAxisTapped,         // 179 the axis tapped (roll / pitch)
     BenchWasEdited,          // 180 the angle or the gauge's reading tapped (the keypad)
     BenchHoldTapped,         // 181 Hold swash / Release
-    BenchSuggestTapped       // 182 the suggested calibration tapped
+    BenchSuggestTapped,      // 182 the suggested calibration tapped
+    StartBasicsView,         // 183 B99: the settings page's Model basics ...
+    EndBasicsView,           // 184 OK (either page)
+    SaveBasics,              // 185 Save
+    BasicsSwashTapped,       // 186 Swash type
+    BasicsDirectionTapped,   // 187 Rotor turns
+    BasicsTailTapped,        // 188 Tail type
+    BasicsProtocolTapped,    // 189 ESC signal (the motor protocol)
+    BasicsEscTapped,         // 190 ESC brand (the telemetry protocol)
+    BasicsWasEdited,         // 191 a number typed (poles, the gear ratios)
+    StartBasics2View,        // 192 Next > (the gear ratios)
+    EndBasics2View           // 193 < Previous
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -5029,6 +5041,7 @@ void FASTRUN ManageTransmitter()
     RescuePoll();      // B50: a Rotorflight rescue read or save in progress, over the pipe
     ServoPoll();       // B55: the servos page, likewise
     TravelPoll();      // B57: the travel extents pages
+    BasicsPoll();      // B99: the model basics pages
     FilterPoll();      // B58: the filters page
     AdjustPoll();      // B72: the adjustments page
     SwitchPoll();      // B77: the switches page

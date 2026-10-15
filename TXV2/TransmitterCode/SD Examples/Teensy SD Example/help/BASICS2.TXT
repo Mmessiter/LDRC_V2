@@ -1,0 +1,21 @@
+The gear ratios, as the configurator's two numbers each:|
+how many turns the rotor makes for how many of the motor|
+(or tail). With the pole count, they give the true head|
+speed the governor holds and the transmitter shows.||
+Tap a number to type it. Whole numbers are the teeth:|
+pinion 10 : main gear 102. Decimals work too: 1 : 10.2|
+is the same ratio. Direct drive is 1 : 1.|
+Two-stage belt and gear drives (SAB Goblin, RAW, Black|
+Thunder): motor pulley x pinion : big pulley x main gear,|
+for example 21x19 : 60x68 = 399 : 4080.||
+Main gear ratio: rotor : motor. Backwards (102 : 10) makes|
+the rotor 'faster' than the motor, and the governor sits at|
+minimum throttle: 'Save' warns before writing that.|
+Tail gear ratio: rotor : tail, usually 1 : 4 to 1 : 5.5.|
+Only the tail-speed readout and the tail's vibration filters|
+use it. Two-stage (SAB): tail pulley x pinion : front tail|
+pulley x main gear, for example 25x19 : 37x68 = 475 : 2516.||
+'Save' writes both pages, stores them, restarts the flight|
+controller and reads them back. It asks first.|
+'< Previous' goes back to the first page, changes kept.|
+'OK' leaves; if a change was not saved, it asks first.|

@@ -39,7 +39,9 @@ It needs the USB cable between receiver and flight controller.|
 'Battery ...', 'Black box ...' and 'Calibrate ...':|
 the flight pack, the flight recorder and the level.|
 'Settings ...': 'Link rates and banks', the Rotorflight version,|
-the arming channel and the main gear ratio.|
+the arming channel and the main gear ratio; and 'Model basics|
+...': swashplate type, rotor direction, tail type, ESC signal|
+and brand, motor poles and gear ratios (a new model's set-up).|
 'OK' goes back to the front page.||
 THE ARMING LINE:|
 The line under the buttons says whether the model will arm:|

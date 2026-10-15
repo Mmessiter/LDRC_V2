@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Model basics on the transmitter (V2 B99, screen 1.11.62, 15 Oct 2026)
+
+Malcolm: "Perhaps now I'll be able to complete the Havoc setup without using my phone or the configurator?" - "Yes if we
+have available flash!" The values the Mixer pages only told, and the phone app's First-time basics set, on two pages
+reached from the Rotorflight settings page's new `Model basics ...` button (`include/RF_Basics.h`, screen pages 77 and 78,
+`hmi/basics_pages.py`): Swash type, Rotor turns, Tail type (MSP 42/43 bytes 5, 0, 1), ESC signal (the motor protocol:
+PWM, OneShot125, DShot150/300/600, Off) and Motor pole count (MSP 131 read, 29 bytes; 222 write, 28 - no motor-count
+byte), ESC brand (the ESC telemetry protocol, MSP 123/216, 14 brands; "?" on a flight controller without ESC telemetry),
+and the main and tail gear ratios as the configurator's two numbers each (teeth, or turns with a decimal: 1 and 10.2 =
+10 : 102). Save writes 43, 222, 216, stores, RESTARTS the flight controller (these apply at its start) and reads it all
+back once it answers (the filters page's recipe); a backwards main ratio is warned about first (the Goblin's governor at
+minimum throttle). Offline the backup is edited and nothing restarts (`RF_Backup.h`: a 222 patches the 131 image; the
+edits are named). Help BASICS.TXT and BASICS2.TXT new; RFSETUP, RFLIGHT, TRAVEL and TRAVEL3 point there. Host test
+`dev/test_basics`. Teensy flash is not the limit (code 393 kB of 8 MB; the pages are files on the card).
+
 ## The bench measure on the Mixer pages (V2 B98, screen 1.11.61, 15 Oct 2026)
 
 Malcolm: "travel extents is not yet available from our transmitter. Can we add it?" The Mixer pages (B57/B66) already

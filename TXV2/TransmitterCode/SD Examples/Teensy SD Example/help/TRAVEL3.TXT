@@ -8,8 +8,8 @@ Mixer pages, after a question.|
 the bench measure (a pitch gauge check), changes kept.|
 'OK' leaves; if a change was not saved, it asks first.||
 Tail rotor type shows what the flight controller has (Variable|
-pitch, Motorised or Bi-directional). It is set in the|
-configurator, and the rows below change with it.|
+pitch, Motorised or Bi-directional). To change it: 'Settings|
+...', then 'Model basics ...'. The rows below change with it.|
 Yaw reversed: green = reversed (the configurator's Yaw control|
 direction). Check on the bench which way the tail moves.|
 Yaw calibration [%]: how much of a full stick reaches the tail|

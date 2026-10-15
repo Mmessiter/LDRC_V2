@@ -20,7 +20,8 @@ and tail move: check them on the bench, blades off.|
 'OK' leaves; if a change was not saved, it asks first.||
 MAIN ROTOR SETTINGS:|
 Swashplate type and Main rotor direction show what the flight|
-controller has. They are set in the configurator.|
+controller has. To change them: 'Settings ...', then|
+'Model basics ...' (the flight controller restarts).|
 Aileron, Elevator and Collective reversed: the configurator's|
 Control direction, Normal or Reverse (green = reversed).|
 Use one when that control moves the wrong way.|

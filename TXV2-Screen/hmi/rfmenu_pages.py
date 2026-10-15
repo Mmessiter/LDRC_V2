@@ -33,7 +33,8 @@ add(settings, comp(by['t0'], txt='Rotorflight settings'))
 # the pilot's word for it - the help already says gear ratio - in its keypad's question too)
 ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Main gear ratio', 'Main gear ratio'))
 # B90: four rows lay out compact (rescue_pages.compact_plan): a card their size, centred on the background picture, the rows in the larger font
-plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b4', 'OK', 82)])
+# B99: "Model basics ..." beside OK - the swashplate type, rotor direction, tail type, ESC signal and brand, poles, gear ratios (hmi/basics_pages.py)
+plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b5', 'Model basics ...', 183), ('b4', 'OK', 82)])
 add(settings, comp(by['card'], x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3]))
 header(settings, model='')
 add(settings, comp(by['va0']))
@@ -51,7 +52,7 @@ for r, (lab, val, words, klabel) in enumerate(ROWS):
             v['c'] = dict(v['c'], bco=rp.PALE[0], pco=0); v['a'] = dict(v['a'], style=0)
     add(settings, v)
 for nm, txt, x, y, w, code in plan['btn']:
-    ok = comp(by['b4'], x=x, y=y, w=w, h=rp.C_BTN_H); ok['ev'] = {'r': 'va0.val=82<<8\nprint va0.val'}; add(settings, ok)
+    bt = comp(by['b4'], n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); bt['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(settings, bt)
 page61 = {'name': 'RFSetupView', 'id': 61, 'w': 800, 'h': 480, 'bg': menu['bg'], 'nav': menu['nav'], 'ev': {'preinitialize': 'RFSetupView.pic=Screen_Background'}, 'comps': settings}
 json.dump(page61, open(os.path.join(PAGES, '61.json'), 'w'), indent=1)
 
