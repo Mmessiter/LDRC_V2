@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.64"
+#define SCREEN_VERSION "1.11.65"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -201,6 +201,10 @@ static inline uint16_t blend565(uint16_t bg, uint16_t fg, int a) {   // a = 1..6
     return (uint16_t) ((((br * (7 - a) + fr * a) / 7) << 11) | (((bg6 * (7 - a) + fg6 * a) / 7) << 5) | ((bb * (7 - a) + fb * a) / 7));
 }
 static void drawGlyphs(int x, int y, int fontId, uint16_t col, const std::string &s) {
+    // (15 Oct 2026, 1.11.65: only font NEXTION_FONT_BITS_KEEP, 6, keeps its 1-bpp table in flash - nextion_fonts.h; ~120 kB
+    // of the screen's flash back. A font whose smooth table did not come off the card draws in that one: legible, if not
+    // its own size. Without the card there are no pages at all, so this is the boot line and the screen's own pages.)
+    if (!aaBits[fontIdx(fontId)] && !fontFor(fontId)->bits) fontId = NEXTION_FONT_BITS_KEEP;
     const NextionFont *f = fontFor(fontId);
     const int h = f->height, fi = fontIdx(fontId);
     if (y >= clipY1 || y + h <= clipY0) return;

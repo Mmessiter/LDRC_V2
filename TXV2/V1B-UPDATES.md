@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Room in the screen's flash: the fonts come from the card (screen 1.11.65, Teensy B102 unchanged, 15 Oct 2026)
+
+Malcolm: "I wonder if there's any more that can be shifted onto the SD card or into the Teensy?", then "Ok let's do that
+now". The screen's flash was 95.6 % full: about 600 kB is WiFi, Bluetooth, the secure downloads and networking, which must
+stay with the radios; the background pictures were already on the card, read only when used. But it carried 137 kB of
+1-bit copies of its seven fonts - only the fallback for when the card's smooth fonts (/hmi/fontN_aa.bin) cannot be read,
+and without the card there are no pages at all. Now only font 6 keeps its copy (the boot line and the screen's own pages
+use it); any other font without its smooth table draws in font 6. The screen's flash: 1,757,961 of 1,966,080 bytes, 89.4 %,
+208,119 bytes free (it was 85,531). Pages draw pixel for pixel as before. (The next room, about 96 kB more, would be the
+unused storage partition - but that needs each screen flashed once by USB cable.)
+
 ## The phone app's words, Save now, and a save into the right bank only (V2 B102, screen 1.11.64, 15 Oct 2026)
 
 Malcolm: "I vastly prefer the terminology in the iPhone app. Travel extents. Etc. ... let us use the same terminology that we

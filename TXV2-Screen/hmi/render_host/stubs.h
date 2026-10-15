@@ -1,7 +1,7 @@
 // What the drawing code needs from the parts of main.cpp that render.cpp leaves out (the transmitter's state, the
 // backlight, audio, the radios): a main board that has never said what it is doing, so every button with a rule is usable.
 static int txStatus = -1; static const int TX_MODEL = 4, TX_RADIOS_OFF = 32;   // (lib/LdrcUpdate/TxState.h)
-struct TxStub { bool armed = false; const char *motorText(bool) { return nullptr; } } tx;
+struct TxStub { bool armed = false; bool binding = false; const char *motorText(bool) { return nullptr; } } tx;   // (binding: B95's word, src/flight_source.h)
 static int sysDim = 100; static int rtcDim = 0; static uint32_t rtcDimMagic = 0; static const uint32_t RTC_DIM_MAGIC = 0x4C44494D;
 static bool blDark = false, quietActive = false;
 static void backlight(int) {} static bool updHoldsLight() { return false; } static void applyRadios(const char *) {}
