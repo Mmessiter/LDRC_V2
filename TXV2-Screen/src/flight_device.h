@@ -50,6 +50,7 @@ static void flightTouch(bool pressed, int x, int y, uint32_t now) {
 }
 static void flightPoll() {
     static uint32_t drawnLayout = 0, lastBuild = 0, lastPoke = 0; static int wasWho = 0;
+    static bool flightDrawWaits = false; static QuietJob flightDrawJob;   // (1.11.67) a whole drawing waiting for the panel's quiet time
     static std::map<int, uint32_t> drawn; static std::string drawnStrip;
     const uint32_t now = millis();
     if (flightRequested) {
@@ -83,20 +84,26 @@ static void flightPoll() {
     }
     const int who = !layerFree || blank ? 0 : flight.setupOpen() ? FLIGHT_SETUP_WHO : flight.showing() ? FLIGHT_WHO : 0;
     if (who) {
-        if (who == wasWho && now - lastBuild < 50) return;      // twenty times a second is plenty: the main board writes the front page ten times a second
+        if (who == wasWho && !flightDrawWaits && now - lastBuild < 50) return;   // twenty times a second is plenty: the main board writes the front page ten times a second
         lastBuild = now;
         flight.themeFace = theme.panel(); flight.themeInk = theme.ink();   // the screens' theme, and the twelve on offer (a box's choice)
         for (int k = 0; k < ldrc::THEME_COUNT; ++k) { flight.palPanels[k] = theme.panels[k]; flight.palInks[k] = theme.inks[k]; }
         const ldrc::FlightScene &sc = flight.scene(flightSrc, &flightFonts);
         const std::string strip = sc.title + "|" + sc.left + "|" + sc.middle + "|" + sc.right + "|" + sc.hint + "|" + sc.alert;
         if (who != wasWho || sc.layout != drawnLayout) {
+            // (1.11.67) the whole screen is drawn afresh in the panel's quiet time (src/main.cpp quietTurn), and copied to the
+            // glass in the next: the fill and every box are PSRAM traffic that took scan time from the picture being shown
+            if (!quietTurn(flightDrawJob)) { flightDrawWaits = true; return; }
+            flightDrawWaits = false;
+            const uint32_t d0 = micros();
             { TopDraw on; flightDrawAll(sc); }
+            quietDone(flightDrawJob, micros() - d0, true);
             drawn.clear();
             for (auto &t : sc.tiles) drawn[t.id] = t.serial;
             for (auto &b : sc.buttons) drawn[b.id] = b.serial;
             drawnLayout = sc.layout; drawnStrip = strip;
             topX = 0; topY = 0; topW = W; topH = H; topWho = who; topOn = true;
-            dirty(0, 0, W, H); touchPainted = true;
+            dirty(0, 0, W, H); touchPainted = true; quietSwitch = true;
         } else {
             if (strip != drawnStrip) {
                 { TopDraw on; flightDrawStrip(sc); }
@@ -127,8 +134,10 @@ static void flightPoll() {
         flPicForget();                                          // (the model's picture: read afresh next time)
         if (topWho == wasWho) { topOn = false; topWho = 0; }    // (unless another page of ours has the layer now)
         dirty(0, 0, W, H); touchPainted = true;                 // the page, as the main board has drawn it meanwhile (a page of ours in our place covers less of the glass)
+        if (topWho == 0) quietSwitch = true;                    // (back to the main board's own page: shown in the panel's quiet time)
         drawn.clear(); drawnLayout = 0;
     }
+    if (!who) flightDrawWaits = false;                          // (a drawing that was waiting and is no longer wanted)
     wasWho = who;
 }
 static void flightPageLoaded() { if (page.name == "FrontView" || flight.setupOpen() || flightUp()) flightPoll(); }

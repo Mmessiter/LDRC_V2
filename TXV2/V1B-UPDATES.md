@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The front screen's switch in the panel's quiet time (screen 1.11.67, Teensy B102 unchanged, 15 Oct 2026)
+
+Malcolm of 1.11.66: "It's slightly worse." Why: copying the whole screen takes 43 ms on his screen (measured 29 Sep),
+longer than the panel's own scan of a frame (41 ms). Started at the frame's start, the copy was overtaken by the scan
+part-way down every time (new picture above, old below, for a frame), and it took memory time from the scan. Now the
+switch asks the panel for one quiet frame: the old picture is shown as usual, then the frame runs on blank for 45 ms
+(1024 lines instead of 504, the most its registers allow, all after the picture), and the switch is copied in that blank,
+while the panel reads nothing. The next frame shows the new screen whole. The defined screen's own first drawing gets a
+quiet frame too, and its copy the next one. Nothing waits in a loop: the screen goes on answering the Teensy meanwhile.
+Back to the original screen takes about 0.1 s, to the defined one about 0.2 s. /status says how it went ("quiet"). Host
+test: hmi/test_quiet, a simulated panel (524 checks: never half old and half new, never copying while a picture is read).
+
 ## The front screen's switch without the flicker (screen 1.11.66, Teensy B102 unchanged, 15 Oct 2026)
 
 Malcolm: "When switching from defined screen to original screen, or back again, there is a little flicker of the screen".
