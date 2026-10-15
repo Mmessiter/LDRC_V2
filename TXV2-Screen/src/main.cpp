@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.65"
+#define SCREEN_VERSION "1.11.66"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -65,12 +65,28 @@ static int topX = 40, topY = 36, topW = 720, topH = 408;      // the part of the
 // Copy a finished rectangle from the canvas to the panel: one move per component, so nothing is ever seen
 // half-drawn (the help text flashed white on every scroll step), and the panel's PSRAM buffer is written
 // back from the CPU cache for its DMA.
-static void present(int x, int y, int w, int h) {
-    if (!pageFb || !screenFb || pageFb == screenFb) return;
-    if (x < 0) { w += x; x = 0; } if (y < 0) { h += y; y = 0; }
-    if (x + w > W) w = W - x; if (y + h > H) h = H - y;
-    if (w <= 0 || h <= 0) return;
-    const bool over = topOn && topFb && x < topX + topW && x + w > topX && y < topY + topH && y + h > topY;
+// The panel's frame end (1.11.66, Malcolm 15 Oct: "When switching from defined screen to original screen, or back again,
+// there is a little flicker"). A whole-screen change is a 768 kB copy into the buffer the panel's DMA is scanning (one
+// frame each 43 ms at 10 MHz): started anywhere in the frame, the scan met it half done - the old picture below, the new
+// above - and the copy's PSRAM traffic could starve the scan (1.11.58's bands with gaps, unsynchronised, only made the
+// change-over longer). So a big change now waits for the frame's end and is copied from the top down a row at a time,
+// paced to a row every 50 us: always ahead of the scan (85.5 us a row) and leaving the panel its share of PSRAM. The hook:
+// IDF 4.4's RGB driver calls on_frame_trans_done from its VSYNC interrupt; Arduino_GFX 1.3.8 keeps the panel private, so
+// the standard explicit-instantiation route reaches the member (no change to the library). Until the hook has fired,
+// present() copies at once, as before.
+template <typename Tag, typename Tag::type M> struct PanelRob { friend typename Tag::type panelMember(Tag) { return M; } };
+struct RgbPanelTag { typedef esp_rgb_panel_t *Arduino_ESP32RGBPanel::*type; friend type panelMember(RgbPanelTag); };
+template struct PanelRob<RgbPanelTag, &Arduino_ESP32RGBPanel::_rgb_panel>;
+static volatile uint32_t frameEnds = 0;
+static bool IRAM_ATTR onFrameEnd(esp_lcd_panel_handle_t, esp_lcd_rgb_panel_event_data_t *, void *) { frameEnds = frameEnds + 1; return false; }
+static void hookFrameEnd() {
+    esp_rgb_panel_t *p = panel->*panelMember(RgbPanelTag());
+    if (!p) return;
+    p->user_ctx = nullptr;
+    p->on_frame_trans_done = onFrameEnd;
+}
+static uint32_t perfSyncedN = 0, perfSyncWaitUs = 0;   // (the perf line: big changes copied from a frame's end, and the wait for it)
+static void copyRows(int x, int y, int w, int h, bool over) {
     for (int yy = 0; yy < h; ++yy) {
         const int row = y + yy;
         if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
@@ -80,6 +96,26 @@ static void present(int x, int y, int w, int h) {
             if (x + w > b) memcpy(screenFb + row * W + b, pageFb + row * W + b, (x + w - b) * 2);
         } else memcpy(screenFb + row * W + x, pageFb + row * W + x, w * 2);
     }
+}
+static void present(int x, int y, int w, int h) {
+    if (!pageFb || !screenFb || pageFb == screenFb) return;
+    if (x < 0) { w += x; x = 0; } if (y < 0) { h += y; y = 0; }
+    if (x + w > W) w = W - x; if (y + h > H) h = H - y;
+    if (w <= 0 || h <= 0) return;
+    const bool over = topOn && topFb && x < topX + topW && x + w > topX && y < topY + topH && y + h > topY;
+    if (frameEnds && (long) w * h >= (long) W * H * 9 / 10) {          // a whole-screen change (a page, the front screen's switch): from the frame's end
+        // (only these: the front screen's numbers and bars, many small changes merged, never wait for a frame)
+        const uint32_t f0 = frameEnds, t0 = micros();
+        while (frameEnds == f0 && micros() - t0 < 50000) { }           // (one frame at most: 43 ms)
+        const uint32_t s = micros(); perfSyncWaitUs += s - t0; perfSyncedN++;
+        for (int r = 0; r < h; ++r) {
+            copyRows(x, y + r, w, 1, over);
+            if ((r & 7) == 7 || r == h - 1) { const int r0 = r & ~7; Cache_WriteBack_Addr((uint32_t) (screenFb + (y + r0) * W + x), (uint32_t) (((r - r0) * W + w) * 2)); }
+            while (micros() - s < (uint32_t) (r + 1) * 50) { }          // (a row every 50 us at most; nothing touches PSRAM while it waits)
+        }
+        return;
+    }
+    copyRows(x, y, w, h, over);
     Cache_WriteBack_Addr((uint32_t) (screenFb + y * W + x), (uint32_t) (((h - 1) * W + w) * 2));
 }
 // What has changed on the canvas and is waiting to be shown: a short list of rectangles, merged only when
@@ -2058,10 +2094,11 @@ static void webBegin() {
         web.send(200, "text/plain", "ok");
     });
     doorOn("/perf", HTTP_GET, []() {                     // counters since the last read
-        char b[600]; snprintf(b, sizeof(b), "{\"cmds\":%lu,\"handle_us\":%lu,\"presents\":%lu,\"present_us\":%lu,\"present_px\":%lu,\"fill_full\":%lu,\"fill_inc\":%lu,\"skipped\":%lu,\"rx_max\":%d,\"loop_max_ms\":%lu,\"odd\":%lu}",
+        char b[600]; snprintf(b, sizeof(b), "{\"cmds\":%lu,\"handle_us\":%lu,\"presents\":%lu,\"present_us\":%lu,\"present_px\":%lu,\"fill_full\":%lu,\"fill_inc\":%lu,\"skipped\":%lu,\"rx_max\":%d,\"loop_max_ms\":%lu,\"odd\":%lu,\"frame_ends\":%lu,\"synced\":%lu,\"sync_wait_us\":%lu}",
                               (unsigned long) perfCmds, (unsigned long) perfHandleUs, (unsigned long) perfPresentN, (unsigned long) perfPresentUs, (unsigned long) perfPresentPx,
-                              (unsigned long) perfFillFull, (unsigned long) perfFillInc, (unsigned long) perfSkipped, perfRxMax, (unsigned long) perfLoopMaxMs, (unsigned long) badCount);
-        perfCmds = perfHandleUs = perfPresentN = perfPresentUs = perfPresentPx = perfFillFull = perfFillInc = perfSkipped = perfLoopMaxMs = 0; perfRxMax = 0;
+                              (unsigned long) perfFillFull, (unsigned long) perfFillInc, (unsigned long) perfSkipped, perfRxMax, (unsigned long) perfLoopMaxMs, (unsigned long) badCount,
+                              (unsigned long) frameEnds, (unsigned long) perfSyncedN, (unsigned long) perfSyncWaitUs);   // (1.11.66: frame_ends grows 23 a second once the hook works)
+        perfCmds = perfHandleUs = perfPresentN = perfPresentUs = perfPresentPx = perfFillFull = perfFillInc = perfSkipped = perfLoopMaxMs = 0; perfRxMax = 0; perfSyncedN = perfSyncWaitUs = 0;
         std::string out = b; out.pop_back(); out += ",\"max_us\":{";
         for (int i = 0; i < 7; ++i) { char e[40]; snprintf(e, sizeof(e), "%s\"%s\":%lu", i ? "," : "", phaseName[i], (unsigned long) phaseMax[i]); out += e; phaseMax[i] = 0; }
         out += "}}";
@@ -2609,6 +2646,7 @@ void setup() {
     themeLoad();                                           // the pilot's colours, before anything is drawn
     pinMode(LCD_BL, OUTPUT); ledcSetup(1, 20000, 8); ledcAttachPin(LCD_BL, 1); blSet(0);   // dark: see "The backlight" above
     screen->begin(); screen->fillScreen(0); screenFb = screen->getFramebuffer();
+    hookFrameEnd();   // (1.11.66: big changes copied from the panel's frame end)
     if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) { gfx = canvas; fbNow = canvas->getFramebuffer(); canvas->fillScreen(0); } else fbNow = screenFb;
     pageFb = fbNow;
     Wire.begin(TP_SDA, TP_SCL);

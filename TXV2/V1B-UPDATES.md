@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The front screen's switch without the flicker (screen 1.11.66, Teensy B102 unchanged, 15 Oct 2026)
+
+Malcolm: "When switching from defined screen to original screen, or back again, there is a little flicker of the screen".
+The switch is one copy of the whole screen (768 kB) into the buffer the panel is showing, which it reads afresh every
+43 ms. Started anywhere in that time, the panel caught the copy half done (new picture above, old below), and the copy's
+memory traffic could make it slip sideways. Now a whole-screen change waits for the end of the panel's frame (a hook on
+its frame interrupt) and is copied from the top down a row at a time, never faster than a row each 50 microseconds - ahead
+of the panel, which takes 85.5 a row, and leaving it time to read. Everything else is copied at once, as before.
+(1.11.58's try, bands with pauses but not timed to the frame, only lengthened the change-over.)
+
 ## Room in the screen's flash: the fonts come from the card (screen 1.11.65, Teensy B102 unchanged, 15 Oct 2026)
 
 Malcolm: "I wonder if there's any more that can be shifted onto the SD card or into the Teensy?", then "Ok let's do that
