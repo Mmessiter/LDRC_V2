@@ -7,7 +7,7 @@ Screen_Background=8
 @model 1
 page TravelView
 t11.txt="Black Thunder 2"
-t9.txt="Bank 1"
+t9.txt="All banks"
 vis b3,0
 vis busy,1
 busy.txt="Reading from the flight controller ..."

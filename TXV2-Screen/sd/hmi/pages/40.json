@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "PID (Rotorflight)",
+   "txt": "PIDs (Rotorflight)",
    "a": {
     "style": 0,
     "key": 255,
@@ -174,7 +174,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Axis",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -727,7 +727,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:PID.TXT\"\nLogView.t0.txt=\"PID (Rotorflight) help\"\nLogView.return.txt=\"PIDView\""
+    "r": "print \"HelpView:PID.TXT\"\nLogView.t0.txt=\"PIDs (Rotorflight) help\"\nLogView.return.txt=\"PIDView\""
    }
   },
   {
@@ -1031,7 +1031,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "HSI offset",
+   "txt": "HSI gain",
    "a": {
     "style": 0,
     "key": 255,
@@ -1071,7 +1071,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"HSI offset Roll\"\nva0.val=20<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll HSI gain\"\nva0.val=20<<8\nprint va0.val"
    }
   },
   {
@@ -1102,7 +1102,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"HSI offset Pitch\"\nva0.val=20<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch HSI gain\"\nva0.val=20<<8\nprint va0.val"
    }
   },
   {

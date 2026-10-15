@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 31,
+   "x": 33,
    "y": 100,
-   "w": 738,
+   "w": 733,
    "h": 338,
    "font": 6,
    "sta": 1,
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 47,
+   "x": 49,
    "y": 116,
-   "w": 371,
+   "w": 366,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 47,
+   "x": 49,
    "y": 166,
-   "w": 255,
+   "w": 250,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -218,7 +218,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cells (0 = automatic)",
+   "txt": "Cell count (0 = auto)",
    "a": {
     "style": 0,
     "key": 255,
@@ -235,7 +235,7 @@
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 308,
+   "x": 305,
    "y": 166,
    "w": 110,
    "h": 42,
@@ -258,7 +258,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Cells\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Cell count (0 = automatic)\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -266,9 +266,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 47,
+   "x": 49,
    "y": 216,
-   "w": 255,
+   "w": 250,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -277,7 +277,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Capacity [mAh]",
+   "txt": "Capacity (mAh)",
    "a": {
     "style": 0,
     "key": 255,
@@ -294,7 +294,7 @@
    "i": 11,
    "t": "text",
    "g": "g",
-   "x": 308,
+   "x": 305,
    "y": 216,
    "w": 110,
    "h": 42,
@@ -317,7 +317,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Capacity mAh\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Capacity (mAh)\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -325,7 +325,7 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 47,
+   "x": 49,
    "y": 266,
    "w": 160,
    "h": 42,
@@ -353,9 +353,9 @@
    "i": 13,
    "t": "text",
    "g": "g",
-   "x": 213,
+   "x": 215,
    "y": 266,
-   "w": 205,
+   "w": 200,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -384,7 +384,7 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 47,
+   "x": 49,
    "y": 316,
    "w": 160,
    "h": 42,
@@ -412,9 +412,9 @@
    "i": 15,
    "t": "text",
    "g": "g",
-   "x": 213,
+   "x": 215,
    "y": 316,
-   "w": 205,
+   "w": 200,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -443,7 +443,7 @@
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 438,
+   "x": 435,
    "y": 116,
    "w": 315,
    "h": 42,
@@ -454,7 +454,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Each cell [V]",
+   "txt": "Cell voltages (V)",
    "a": {
     "style": 0,
     "key": 255,
@@ -471,7 +471,7 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 438,
+   "x": 435,
    "y": 166,
    "w": 199,
    "h": 42,
@@ -499,7 +499,7 @@
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 640,
    "y": 166,
    "w": 110,
    "h": 42,
@@ -522,7 +522,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Full cell volts\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Full cell voltage (V)\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -530,7 +530,7 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 438,
+   "x": 435,
    "y": 216,
    "w": 199,
    "h": 42,
@@ -558,7 +558,7 @@
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 640,
    "y": 216,
    "w": 110,
    "h": 42,
@@ -581,7 +581,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Warning cell volts\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Warning voltage (V)\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -589,7 +589,7 @@
    "i": 21,
    "t": "text",
    "g": "g",
-   "x": 438,
+   "x": 435,
    "y": 266,
    "w": 199,
    "h": 42,
@@ -617,7 +617,7 @@
    "i": 22,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 640,
    "y": 266,
    "w": 110,
    "h": 42,
@@ -640,7 +640,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Empty cell volts\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Empty cell voltage (V)\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -648,7 +648,7 @@
    "i": 23,
    "t": "text",
    "g": "g",
-   "x": 438,
+   "x": 435,
    "y": 316,
    "w": 199,
    "h": 42,
@@ -676,7 +676,7 @@
    "i": 24,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 640,
    "y": 316,
    "w": 110,
    "h": 42,
@@ -699,7 +699,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Highest cell volts\"\nva0.val=158<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Highest cell voltage (V)\"\nva0.val=158<<8\nprint va0.val"
    }
   },
   {
@@ -707,7 +707,7 @@
    "i": 25,
    "t": "button",
    "g": "l",
-   "x": 249,
+   "x": 246,
    "y": 372,
    "w": 160,
    "h": 50,
@@ -739,7 +739,7 @@
    "i": 26,
    "t": "button",
    "g": "l",
-   "x": 421,
+   "x": 418,
    "y": 372,
    "w": 160,
    "h": 50,
@@ -771,7 +771,7 @@
    "i": 27,
    "t": "button",
    "g": "l",
-   "x": 593,
+   "x": 590,
    "y": 372,
    "w": 160,
    "h": 50,
@@ -803,7 +803,7 @@
    "i": 28,
    "t": "text",
    "g": "l",
-   "x": 110,
+   "x": 109,
    "y": 207,
    "w": 580,
    "h": 124,

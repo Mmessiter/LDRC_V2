@@ -45,7 +45,7 @@ vis b3,0
 b3.txt="Save"
 # tm0 tick -> AddWords (first visit since power-on: n14=0, n28=0)
 GovMode.txt="(Mode 0 = Off)"
-ThrMode.txt="(Type 0 = Normal)"
+ThrMode.txt="0 - NORMAL"
 @shot 5_busy
 n14.val=3
 n15.val=20
@@ -77,7 +77,7 @@ n27.pco=0
 n28.pco=0
 n29.pco=0
 n30.pco=0
-GovMode.txt="(Mode 3 = Electric)"
+GovMode.txt="3 - ELECTRIC"
 @shot 5_open
 # pilot edits Handover (screen keyboard), Teensy Gov_Global_Were_Edited :463
 n15.val=25
@@ -137,7 +137,7 @@ n22.val=65535
 n28.val=255
 n29.val=255
 n30.val=255
-GovMode.txt="(Mode 3 = Electric)"
+GovMode.txt="3 - ELECTRIC"
 ThrMode.txt="(Type 2 = Function)"
 @shot 5_long_busy
 vis t4,0
@@ -170,8 +170,8 @@ t4.txt="No Bluetooth to the receiver: NOT read. Close the phone app if it is run
 # ---- Keep a copy: SaveToLocalGovGLOBAL RF_Governor_Global.h:306 "Keeping a copy on the card ..." (the longest)
 page RFGovViewGlbl
 t27.txt="RAW 420 MCM"
-GovMode.txt="(Mode 3 = Electric)"
-ThrMode.txt="(Type 0 = Normal)"
+GovMode.txt="3 - ELECTRIC"
+ThrMode.txt="0 - NORMAL"
 t4.txt="Keeping a copy on the card ..."
 vis t4,1
 vis b1,0

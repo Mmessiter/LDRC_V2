@@ -174,7 +174,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Axis",
+   "txt": "",
    "a": {
     "style": 0,
     "key": 255,
@@ -258,7 +258,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Exponential",
+   "txt": "Expo",
    "a": {
     "style": 0,
     "key": 255,
@@ -908,7 +908,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Rates + ...",
+   "txt": "Dynamics ...",
    "val": 0,
    "a": {
     "style": 4,

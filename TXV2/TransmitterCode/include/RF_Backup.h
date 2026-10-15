@@ -724,22 +724,22 @@ struct BakRestoreItem { const char *label; uint8_t readFn; int8_t bank; int8_t i
 static const BakRestoreItem BAK_RESTORE[] = {
     // (the per-bank ones are made in code: 112->202, 94->95, 148->149, 146->147 per PID bank; 111->204 per rates bank)
     {"governor global", 142, -1, -1, 143, BK_WHOLE},
-    {"mixer", 42, -1, -1, 43, BK_WHOLE},
-    {"mixer input roll", 174, -1, 1, 171, BK_INDEXED}, {"mixer input pitch", 174, -1, 2, 171, BK_INDEXED},
-    {"mixer input yaw", 174, -1, 3, 171, BK_INDEXED}, {"mixer input collective", 174, -1, 4, 171, BK_INDEXED},
+    {"travel extents (limits & trims)", 42, -1, -1, 43, BK_WHOLE},   // (15 Oct: the phone app's backup words)
+    {"travel extents (roll)", 174, -1, 1, 171, BK_INDEXED}, {"travel extents (pitch)", 174, -1, 2, 171, BK_INDEXED},
+    {"travel extents (yaw)", 174, -1, 3, 171, BK_INDEXED}, {"travel extents (collective)", 174, -1, 4, 171, BK_INDEXED},
     {"servos", 120, -1, -1, 212, BK_SERVOS},
     {"mixer rules", 172, -1, -1, 173, BK_RULES},
-    {"motor and gear ratio", 131, -1, -1, 222, BK_MOTOR},
-    {"blackbox", 80, -1, -1, 81, BK_BLACKBOX},
+    {"motor & gear ratio", 131, -1, -1, 222, BK_MOTOR},
+    {"black box setup", 80, -1, -1, 81, BK_BLACKBOX},
     {"name", 10, -1, -1, 11, BK_WHOLE}, {"features", 36, -1, -1, 37, BK_WHOLE}, {"board alignment", 38, -1, -1, 39, BK_WHOLE},
     {"arming", 61, -1, -1, 62, BK_WHOLE}, {"level trims", 240, -1, -1, 239, BK_WHOLE}, {"sensors", 96, -1, -1, 97, BK_WHOLE},
     {"gyro alignment", 126, -1, -1, 220, BK_WHOLE}, {"channel map", 64, -1, -1, 65, BK_WHOLE}, {"receiver setup", 44, -1, -1, 45, BK_WHOLE},
-    {"stick centre and travel", 66, -1, -1, 67, BK_WHOLE}, {"failsafe", 75, -1, -1, 76, BK_WHOLE}, {"RSSI", 50, -1, -1, 51, BK_WHOLE},
+    {"stick centre & travel", 66, -1, -1, 67, BK_WHOLE}, {"failsafe", 75, -1, -1, 76, BK_WHOLE}, {"RSSI", 50, -1, -1, 51, BK_WHOLE},
     {"telemetry sensors", 73, -1, -1, 74, BK_TELEM}, {"gyro filters", 92, -1, -1, 93, BK_WHOLE}, {"battery", 32, -1, -1, 33, BK_WHOLE},
     {"ESC telemetry", 123, -1, -1, 216, BK_WHOLE},
     {"RPM notches roll", 154, -1, 0, 155, BK_INDEXED}, {"RPM notches pitch", 154, -1, 1, 155, BK_INDEXED}, {"RPM notches yaw", 154, -1, 2, 155, BK_INDEXED},
     {"voltage meters", 56, -1, -1, 57, BK_METERS}, {"current meters", 40, -1, -1, 41, BK_METERS},
-    {"modes", 34, -1, -1, 35, BK_MODES},
+    {"switches", 34, -1, -1, 35, BK_MODES},
     {"failsafe values", 77, -1, -1, 78, BK_FAILSAFE},
     {"adjustments", 52, -1, -1, 53, BK_ADJ}};   // (B78: 42 lines of 14 bytes, one write each; needs the USB cable - skipped without it)
 static const int BAK_RESTORE_N = sizeof(BAK_RESTORE) / sizeof(BAK_RESTORE[0]);
@@ -1143,7 +1143,7 @@ FLASHMEM static void BakEditsText(char *out, size_t n)
     for (char *p = strtok(e, ","); p; p = strtok(nullptr, ","))
     {
         const int fn = atoi(p); const char *dot = strchr(p, '.');
-        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "mixer" : fn == 174 ? "mixer input" : fn == 112 ? "PIDs" : fn == 94 ? "adv. PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : fn == 34 ? "switches" : fn == 52 ? "adjustments" : fn == 32 ? "battery" : fn == 80 ? "black box" : fn == 240 ? "level trims" : fn == 56 ? "voltage sensor" : fn == 40 ? "current sensor" : fn == 131 ? "motor and gear ratio" : fn == 123 ? "ESC telemetry" : p;
+        const char *name = fn == 92 ? "filters" : fn == 36 ? "features" : fn == 146 ? "rescue" : fn == 120 ? "servos" : fn == 42 ? "travel extents" : fn == 174 ? "travel extents (inputs)" : fn == 112 ? "PIDs" : fn == 94 ? "advanced PIDs" : fn == 111 ? "rates" : fn == 148 ? "governor" : fn == 142 ? "governor global" : fn == 34 ? "switches" : fn == 52 ? "adjustments" : fn == 32 ? "battery" : fn == 80 ? "black box" : fn == 240 ? "level trims" : fn == 56 ? "voltage sensor" : fn == 40 ? "current sensor" : fn == 131 ? "motor and gear ratio" : fn == 123 ? "ESC telemetry" : p;
         char w[40];
         if (dot && fn != 174 && fn != 154) snprintf(w, sizeof(w), "%s bank %d", name, atoi(dot + 1) + 1); else snprintf(w, sizeof(w), "%s", name);
         if (out[0]) strncat(out, ", ", n - strlen(out) - 1);
@@ -1199,7 +1199,7 @@ FLASHMEM void WriteEdits()
     if (BakJob != BAK_JOB_NONE) return;
     char e[160], q[220];
     BakEditsText(e, sizeof(e));
-    snprintf(q, sizeof(q), "Write the edits made without the model\r\n(%.70s)\r\nto the flight controller?", e);
+    snprintf(q, sizeof(q), "Send the edits made without the model\r\n(%.70s)\r\nto the flight controller?", e);
     if (!GetConfirmation((char *)"page RFBackUpView", q)) { BakShowPage(); return; }
     BakShowPage();
     BakStart(BAK_JOB_EDITS);
@@ -1207,7 +1207,7 @@ FLASHMEM void WriteEdits()
 FLASHMEM void DiscardEdits()
 {
     if (BakJob != BAK_JOB_NONE || !BakEditsWaiting()) return;
-    if (!GetConfirmation((char *)"page RFBackUpView", (char *)"Forget the edits waiting?\r\nWrite edits will not send them, but\r\nthe backup keeps their values\r\nuntil the next Back up.")) { BakShowPage(); return; }
+    if (!GetConfirmation((char *)"page RFBackUpView", (char *)"Discard the edits waiting?\r\nSend to model will not send them, but\r\nthe backup keeps their values\r\nuntil the next Back up.")) { BakShowPage(); return; }
     BakLoad(ModelName);   // (the file again: the edits as read ... then they are let go with their values? No: the values stay, the marks go)
     BakClearEdits(); BakSave();
     BakShowPage();

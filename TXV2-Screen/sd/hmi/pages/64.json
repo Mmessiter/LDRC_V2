@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Gyro filters (Rotorflight)",
+   "txt": "Filters (Rotorflight)",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 29,
+   "x": 25,
    "y": 74,
-   "w": 741,
+   "w": 749,
    "h": 390,
    "font": 6,
    "sta": 1,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:FILTERS.TXT\"\nLogView.t0.txt=\"Gyro filters (Rotorflight) help\"\nLogView.return.txt=\"FilterView\""
+    "r": "print \"HelpView:FILTERS.TXT\"\nLogView.t0.txt=\"Filters (Rotorflight) help\"\nLogView.return.txt=\"FilterView\""
    }
   },
   {
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 90,
-   "w": 361,
+   "w": 365,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 127,
-   "w": 245,
+   "w": 249,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -263,9 +263,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 164,
-   "w": 245,
+   "w": 249,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -322,9 +322,9 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 201,
-   "w": 245,
+   "w": 249,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -333,7 +333,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cutoff frequency [Hz]",
+   "txt": "Cutoff frequency (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -373,7 +373,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Lowpass cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Lowpass cutoff frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -381,9 +381,9 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 238,
-   "w": 361,
+   "w": 365,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -409,9 +409,9 @@
    "i": 15,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 275,
-   "w": 245,
+   "w": 249,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -465,9 +465,9 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 312,
-   "w": 245,
+   "w": 249,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -524,9 +524,9 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 349,
-   "w": 245,
+   "w": 249,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -535,7 +535,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Minimum frequency [Hz]",
+   "txt": "Minimum frequency (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -575,7 +575,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"RPM filter minimum [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"RPM filter minimum frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -585,7 +585,7 @@
    "g": "g",
    "x": 426,
    "y": 90,
-   "w": 328,
+   "w": 332,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -613,7 +613,7 @@
    "g": "g",
    "x": 426,
    "y": 127,
-   "w": 212,
+   "w": 216,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -638,7 +638,7 @@
    "n": "tn6",
    "t": "switch",
    "g": "g",
-   "x": 659,
+   "x": 663,
    "y": 127,
    "w": 80,
    "h": 34,
@@ -669,7 +669,7 @@
    "g": "g",
    "x": 426,
    "y": 164,
-   "w": 212,
+   "w": 216,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -695,7 +695,7 @@
    "i": 25,
    "t": "text",
    "g": "g",
-   "x": 644,
+   "x": 648,
    "y": 164,
    "w": 110,
    "h": 35,
@@ -728,7 +728,7 @@
    "g": "g",
    "x": 426,
    "y": 201,
-   "w": 212,
+   "w": 216,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -754,7 +754,7 @@
    "i": 27,
    "t": "text",
    "g": "g",
-   "x": 644,
+   "x": 648,
    "y": 201,
    "w": 110,
    "h": 35,
@@ -787,7 +787,7 @@
    "g": "g",
    "x": 426,
    "y": 238,
-   "w": 212,
+   "w": 216,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -796,7 +796,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Notch minimum [Hz]",
+   "txt": "Notch minimum (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -813,7 +813,7 @@
    "i": 29,
    "t": "text",
    "g": "g",
-   "x": 644,
+   "x": 648,
    "y": 238,
    "w": 110,
    "h": 35,
@@ -836,7 +836,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch minimum [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Notch minimum frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -846,7 +846,7 @@
    "g": "g",
    "x": 426,
    "y": 275,
-   "w": 212,
+   "w": 216,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -855,7 +855,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Notch maximum [Hz]",
+   "txt": "Notch maximum (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -872,7 +872,7 @@
    "i": 31,
    "t": "text",
    "g": "g",
-   "x": 644,
+   "x": 648,
    "y": 275,
    "w": 110,
    "h": 35,
@@ -895,7 +895,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch maximum [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Notch maximum frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -903,7 +903,7 @@
    "i": 32,
    "t": "button",
    "g": "l",
-   "x": 250,
+   "x": 254,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -935,7 +935,7 @@
    "i": 33,
    "t": "button",
    "g": "l",
-   "x": 422,
+   "x": 426,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -967,7 +967,7 @@
    "i": 34,
    "t": "button",
    "g": "l",
-   "x": 594,
+   "x": 598,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -999,9 +999,9 @@
    "i": 35,
    "t": "text",
    "g": "l",
-   "x": 45,
+   "x": 41,
    "y": 237,
-   "w": 593,
+   "w": 601,
    "h": 74,
    "font": 2,
    "sta": 1,

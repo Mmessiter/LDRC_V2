@@ -83,6 +83,7 @@ FLASHMEM void SaveRatesLocalBank()
     }
 }
 // ************************************************************************************************************/
+FLASHMEM static void RatesQueueWrite();   // (B102: below)
 FLASHMEM void SendEditedRates()
 {
     if (!RfLive()) // Model not connected so save to local RATES
@@ -98,23 +99,12 @@ FLASHMEM void SendEditedRates()
             return;
         }
     }
-    Rates_Were_Edited = false;
     BlockBankChanges = true;
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);                                  // allow LOTS of time for screen to update BEFORE sending another Nextion command
     RatesMsg((char *)"Sending edited rates ...", Gray); // Show sending message
     ReadEditedRateValues();                             // read the edited RATES from the screen;
-    Wait_for_Advanced_Rates_to_Be_Sent_Too = false;     // this flag tells the Ack payload parser not to wait until these have been sent before allowing bank changes again because rates changes can cause problems if a bank change happens while they are being sent
-    AddParameterstoQueue(GET_SECOND_6_RATES_VALUES);    // SECOND MUST BE QUEUED FIRST!!! Send RATES 7-12 values from TX to RX
-    AddParameterstoQueue(GET_FIRST_7_RATES_VALUES);     // SECOND MUST BE QUEUED FIRST!!! Send RATES 1-6 values from TX to RX
-    HideRATESMsg();                                     // ...because this queue is a LIFO stack
-    SendCommand((char *)"vis b3,0");                    // hide "Send" button
-    PlaySound(BEEPCOMPLETE);                            // let user know we're done
-    if (RfValueWasCut)
-    { // B07
-        DisplayRatesValues(1, MAX_RATES_BYTES);
-        RfCutNote("page RatesView");
-    }
+    BankCheck(true, DualRateInUse, RatesQueueWrite, "page RatesView");   // B102: into this rates bank, or not at all (the edited flag stays until then)
 }
 // ************************************************************************************************************/
 FLASHMEM char *FixDecimalDisplay(char *temp, float ThisValue, uint8_t i, size_t tempSize) // this function removes trailing zeros and decimal point if not needed and also rounds to 2 decimal places if needed
@@ -239,6 +229,34 @@ FLASHMEM void ShowRatesLocalBank()
 }
 // ******************************************************************************************************************************/
 
+// B102: the read, and the write once the flight controller is known to be on this rates bank (PipeHttp.h BankCheck)
+FLASHMEM static void RatesAskValues()
+{
+    if (CurrentView != RATESVIEW_RF) { BlockBankChanges = false; return; }
+    RATES_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await RATES values
+    Reading_RATES_Now = true;                // This tells the Ack payload parser to get RATES values
+    AddParameterstoQueue(SEND_RATES_VALUES); // Request RATES values from RX
+    RATES_Start_Time = millis();             // record start time as it's not long
+}
+FLASHMEM static void RatesQueueWrite()
+{
+    Rates_Were_Edited = false;
+    Wait_for_Advanced_Rates_to_Be_Sent_Too = false;     // this flag tells the Ack payload parser not to wait until these have been sent before allowing bank changes again because rates changes can cause problems if a bank change happens while they are being sent
+    AddParameterstoQueue(GET_SECOND_6_RATES_VALUES);    // SECOND MUST BE QUEUED FIRST!!! Send RATES 7-12 values from TX to RX
+    AddParameterstoQueue(GET_FIRST_7_RATES_VALUES);     // SECOND MUST BE QUEUED FIRST!!! Send RATES 1-6 values from TX to RX
+    if (CurrentView == RATESVIEW_RF)
+    {
+        HideRATESMsg();                                 // ...because this queue is a LIFO stack
+        SendCommand((char *)"vis b3,0");                // hide "Send" button
+    }
+    PlaySound(BEEPCOMPLETE);                            // let user know we're done
+    if (RfValueWasCut && CurrentView == RATESVIEW_RF)
+    { // B07
+        DisplayRatesValues(1, MAX_RATES_BYTES);
+        RfCutNote("page RatesView");
+    }
+    RfSavedThenLeave(RATESVIEW_RF);                     // B102: OK's "Save now?" closes the page once saved
+}
 FLASHMEM void ShowRatesBank()
 {
     if (CurrentView == RATESVIEW_RF) // Must be in RATES view
@@ -268,11 +286,8 @@ FLASHMEM void ShowRatesBank()
         }
         RatesMsg(buf, Gray);
         BlockBankChanges = true;
-        RATES_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await RATES values
-        Reading_RATES_Now = true;                // This tells the Ack payload parser to get RATES values
-        AddParameterstoQueue(SEND_RATES_VALUES); // Request RATES values from RX
-        RATES_Start_Time = millis();             // record start time as it's not long
         Rates_Were_Edited = false;               // reset edited flag
+        RatesAskValues();
     }
 }
 // ******************************************************************************************************************************/
@@ -283,12 +298,12 @@ FLASHMEM void Modify_Labels_For_RATES_View()
         return;
     if (RatesTypeIsRf23(Rate_Values[0])) // B08: by the bank's type, not the firmware
     {
-        SendText((char *)"t4", (char *)"Axis"); // the configurator says Axis (RF 2.2) or Rates (RF 2.3): the rows are the axes either way
+        SendText((char *)"t4", (char *)""); // (15 Oct: the phone app's corner is empty; it said Axis)
         SendText((char *)"t5", (char *)"Rate");
         SendText((char *)"t6", (char *)"Shape");
     }else{
-        SendText((char *)"t4", (char *)"Axis"); // in RF v2.2 this is called Axis but in RF v2.3 it's called Rates so change label accordingly
-        SendText((char *)"t5", (char *)"Centre rate");
+        SendText((char *)"t4", (char *)"");
+        SendText((char *)"t5", (char *)"Centre");   // (the phone app's word)
         SendText((char *)"t6", (char *)"Max rate");
     }
 }
@@ -314,8 +329,7 @@ FLASHMEM void EndRFRatesView()
 {
     if (Rates_Were_Edited)
     {
-        if (!GetConfirmation((char *)"page RatesView", (char *)"Discard the edited rates?"))
-            return;
+        if (!RfSaveFirst("page RatesView", "The edited rates are", SendEditedRates, EndRFRatesView, &Rates_Were_Edited)) return;   // B102: "Save now?"
     }
     Rates_Were_Edited = false;
     RotorFlightStart();

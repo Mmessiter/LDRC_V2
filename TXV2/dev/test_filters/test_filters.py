@@ -31,8 +31,9 @@ static void SendCommand(char *c) { std::string s(c); cmds.push_back(s); if (s.rf
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendValue(char *n, int v) { fields[n] = v ? "Yes" : "No"; }   // (a switch: its val, read back here as the word it stands for)
 static void GetText(char *n, char *buf, int max) { strncpy(buf, fields[n].c_str(), max); buf[max] = 0; }
-static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; }
-static bool GetConfirmation(char *page, char *prompt) { return confirmAnswer; }
+static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
+static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; RfLeaveAfterSave = false; }   // (B102: as Utilities.h)
+static bool GetConfirmation(char *page, char *prompt) { if (!confirmAnswer) RfLeaveAfterSave = false; return confirmAnswer; }   // (B102: a No keeps the page, as Utilities.h)
 static void PlaySound(int) { ++sounds; }
 static int rfStarts = 0; static void RotorFlightStart() { ++rfStarts; }
 static bool RfNeedsModel(char *, int) { return false; }
@@ -53,6 +54,12 @@ static void WrU16(uint8_t *b, int o, long v) { if (v < 0) v = 0; if (v > 65535) 
 static long FieldNumber(const char *name, long lo, long hi) { char t[24] = ""; GetText((char *)name, t, 23); long v = strtol(t, nullptr, 10); return v < lo ? lo : v > hi ? hi : v; }
 static int FieldTenths(const char *name, int lo, int hi) { char t[24] = ""; GetText((char *)name, t, 23); const float f = (float)atof(t); int v = (int)(f * 10.0f + (f >= 0 ? 0.5f : -0.5f)); return v < lo ? lo : v > hi ? hi : v; }
 #define RF_FILTERS_TEST
+// B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave (include/RF_SaveNow.h) over a fake question: Discard
+// unless saveNowAnswer is 1; and the bank check (PipeHttp.h BankCheck) as without a pipe: the write goes
+static int saveNowAnswer = 0, saveNowAsked = 0;
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -130,10 +137,14 @@ int main() {
     CHECK(FltStep == FLT_WAIT);
     for (int i = 0; i < 8 && FltStep != FLT_IDLE; ++i) { now += 6000; FilterPoll(); if (FltStep == FLT_VERIFY_FEAT) { repReady = false; repLate = true; FilterPoll(); } }
     CHECK(FltStep == FLT_IDLE && boxes == 1 && lastBox.find("has not come back") != std::string::npos);
-    // 6. OK with an edit asks; No keeps the page, Yes leaves
+    // 6. OK with an edit (B102): "Save now?" - Discard leaves without saving; Save saves, and the page closes once it has
     openPage(BOTH); fields["tn2"] = "80"; FilterWasEdited();
-    confirmAnswer = false; rfStarts = 0; EndFilterView(); CHECK(rfStarts == 0 && fields["tn2"] == "80" && Flt_Was_Edited);
-    confirmAnswer = true; EndFilterView(); CHECK(rfStarts == 1 && !Flt_Was_Edited);
+    saveNowAnswer = 0; rfStarts = 0; EndFilterView(); CHECK(saveNowAsked == 1 && rfStarts == 1 && !Flt_Was_Edited);
+    openPage(BOTH); fields["tn2"] = "80"; FilterWasEdited(); saveNowAnswer = 1; confirmAnswer = true; rfStarts = 0; EndFilterView();
+    CHECK(saveNowAsked == 2 && rfStarts == 0 && FltStep != FLT_IDLE && RfLeaveAfterSave);
+    for (int i = 0; i < 40 && FltStep != FLT_IDLE; ++i) { reply(200, {}); FilterPoll(); now += 100; }
+    CHECK(FltStep == FLT_IDLE && rfStarts == 1 && !Flt_Was_Edited && !RfLeaveAfterSave);
+    saveNowAnswer = 0;
     // 7. the expert page's Enables: a notch on gets the configurator's defaults, off zeroes it; the dynamic cutoff likewise
     openPage(BOTH); StartFilter2View();
     FilterNotch1Tapped(); CHECK(fields["tn6"] == "Yes" && RdU16(FltWant, 7) == 400 && RdU16(FltWant, 9) == 300 && vis["tn7"] == 1);

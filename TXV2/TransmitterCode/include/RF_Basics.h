@@ -34,7 +34,7 @@ static bool BasPortsHave = false, BasPortsEdited = false;
 static char BasBoard[24] = "";                         // the board's name (MSP 4), for the sockets' letters
 static uint32_t BasFeat = 0;                           // the features read before a save (36), written back with the bits the ports need (37)
 static const uint32_t F_MSP = 1, F_GPS = 2, F_SPORT = 32, F_RX = 64, F_BLACKBOX = 128, F_ESC = 1024;   // io/serial.h function bits
-static const char *const BasPortWords[7] PROGMEM = {"None", "ESC telemetry", "GPS", "Dongle (MSP 115200)", "Telemetry (S.Port)", "Blackbox", "Other (as set)"};   // a tap steps 0-5 round; 6 is told
+static const char *const BasPortWords[7] PROGMEM = {"Nothing", "ESC telemetry", "GPS", "Dongle on a wire (MSP)", "Telemetry out: S.Port", "Blackbox logger", "As it is"};   // a tap steps 0-5 round; 6 is told (15 Oct: the phone app's words)
 static const uint32_t BasPortMasks[6] PROGMEM = {0, F_ESC, F_GPS, F_MSP, F_SPORT, F_BLACKBOX};
 enum { BAS_IDLE = 0, BAS_READ_MIX, BAS_READ_MOT, BAS_READ_ESC, BAS_READ_BOARD, BAS_READ_PORTS, BAS_WRITE_MIX, BAS_WRITE_MOT, BAS_WRITE_ESC, BAS_WRITE_PORTS, BAS_READ_FEAT, BAS_WRITE_FEAT, BAS_STORE, BAS_REBOOT, BAS_WAIT, BAS_VERIFY_MIX, BAS_VERIFY_MOT, BAS_VERIFY_ESC, BAS_VERIFY_PORTS };
 static int BasStep = BAS_IDLE, BasReq = 0, BasTries = 0;
@@ -42,7 +42,7 @@ static uint32_t BasMsgUntil = 0, BasWaitUntil = 0;
 static const char *const BasSwashWords[7] PROGMEM = {"None", "Direct", "CCPM 120 deg", "CCPM 135 deg", "CCPM 140 deg", "FPM 90 deg L", "FPM 90 deg V"};   // (the configurator's, as RF_Travel.h tells them)
 static const char *const BasTailWords[3] PROGMEM = {"Variable pitch", "Motorised", "Bi-directional"};
 static const uint8_t BasProtoCodes[6] PROGMEM = {0, 1, 5, 6, 7, 10};   // Rotorflight's motorPwmProtocol: PWM, ONESHOT125, DSHOT150, DSHOT300, DSHOT600, DISABLED (the phone's list)
-static const char *const BasProtoWords[6] PROGMEM = {"PWM (most heli ESCs)", "OneShot125", "DShot150", "DShot300", "DShot600", "Off"};
+static const char *const BasProtoWords[6] PROGMEM = {"Normal PWM (most heli ESCs)", "OneShot125", "DShot150", "DShot300", "DShot600", "Off (disabled)"};   // (the phone app's words)
 static const char *const BasEscWords[14] PROGMEM = {"None", "BLHeli32", "Hobbywing V4", "Hobbywing V5", "Scorpion", "Kontronik", "OMP Hobby", "ZTW", "APD", "OpenYGE", "FLYROTOR", "Graupner", "XDFly", "Record"};   // esc_sensor_protocol 0-13
 
 FLASHMEM static const char *BasPageWord() { return CurrentView == PORTSVIEW ? "page PortsView" : CurrentView == BASICS2VIEW ? "page Basics2View" : "page BasicsView"; }
@@ -116,8 +116,8 @@ FLASHMEM static void BasPortLabel(int id, char *out, size_t n)
 {
     const char *sock = BasSocket(id);
     if (id >= 40) snprintf(out, n, "LPUART %d", id - 39);
-    else if (id >= 30) snprintf(out, n, "Soft %d", id - 29);   // (soft serial; the label box fits "Port A (4)")
-    else if (sock) snprintf(out, n, "%s (%d)", sock, id + 1);
+    else if (id >= 30) snprintf(out, n, "Soft serial %d", id - 29);   // (the phone app's names; the label box fits "TELEM (UART 2)")
+    else if (sock) snprintf(out, n, "%s (UART %d)", sock, id + 1);
     else snprintf(out, n, "UART %d", id + 1);
 }
 FLASHMEM static int BasPortChoice(const uint8_t *p) // 0-5 one of ours, 6 other, 7 the receiver's own link
@@ -137,7 +137,7 @@ FLASHMEM static void BasShowPortRow(int row)
     BasPortLabel(p[0], lab, sizeof(lab));
     snprintf(nm, sizeof(nm), "ltn%d", row); SendText(nm, lab);
     const int c = BasPortChoice(p);
-    snprintf(nm, sizeof(nm), "tn%d", row); SendText(nm, (char *)(c == 7 ? "Receiver (this link)" : BasPortWords[c]));
+    snprintf(nm, sizeof(nm), "tn%d", row); SendText(nm, (char *)(c == 7 ? "Receiver" : BasPortWords[c]));   // (the receiver's own link: locked)
 }
 FLASHMEM static void BasShowPage3()
 {
@@ -231,6 +231,7 @@ FLASHMEM static void BasSaved() // the end of a save: the page as the flight con
     BasBusy(BasSame ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
     BasMsgUntil = millis() + 4000;
     PlaySound(BEEPCOMPLETE);
+    RfSavedThenLeave(CurrentView);   // B102: OK's "Save now?" closes the page once saved
 }
 FLASHMEM static void BasAskAgain() // after the restart: the flight controller is asked until it answers (5 s first, then every 2.5 s, five times)
 {
@@ -263,7 +264,7 @@ FLASHMEM void BasicsPoll()
         BasReq = MspAsk(131, nullptr, 0); BasStep = BAS_READ_MOT;
         return;
     case BAS_READ_MOT:
-        if (!ok || !BasTake(BasMot, BAS_MOT_BYTES)) { BasFail("Could not read the motor setup"); return; }
+        if (!ok || !BasTake(BasMot, BAS_MOT_BYTES)) { BasFail("Could not read the motor & ESC settings"); return; }
         BasReq = MspAsk(123, nullptr, 0); BasStep = BAS_READ_ESC;
         return;
     case BAS_READ_ESC:
@@ -301,7 +302,7 @@ FLASHMEM void BasicsPoll()
         return;
     }
     case BAS_WRITE_MOT:
-        if (!ok) { BasFail("Not written (motor setup)"); return; }
+        if (!ok) { BasFail("Not written (motor & ESC)"); return; }
         if (BasEscHave) { BasReq = MspAsk(216, BasEscWant, BAS_ESC_BYTES); BasStep = BAS_WRITE_ESC; return; }
         if (BasPortsEdited) { BasReq = MspAsk(55, BasPortsWant, BasPortsN * BAS_PORT_BYTES); BasStep = BAS_WRITE_PORTS; return; }
         BasReq = MspAsk(250, nullptr, 0); BasStep = BAS_STORE;
@@ -345,7 +346,7 @@ FLASHMEM void BasicsPoll()
         BasReq = MspAsk(131, nullptr, 0); BasStep = BAS_VERIFY_MOT;
         return;
     case BAS_VERIFY_MOT:
-        if (!ok || !BasTake(BasMot, BAS_MOT_BYTES)) { BasFail("Could not read back the motor setup"); return; }
+        if (!ok || !BasTake(BasMot, BAS_MOT_BYTES)) { BasFail("Could not read back the motor & ESC settings"); return; }
         BasReq = MspAsk(123, nullptr, 0); BasStep = BAS_VERIFY_ESC;
         return;
     case BAS_VERIFY_ESC:
@@ -390,18 +391,15 @@ FLASHMEM void StartBasicsView() // the settings page's "Model basics ..."
     BasPageHead();
     BasRead();
 }
+void SaveBasics();
+FLASHMEM static void BasSaveNow() { BasPageHead(); BasShow(); SaveBasics(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndBasicsView() // OK on any of the four pages: back to the menu
 {
     EscCalStop();   // (B100: a throttle hold on page 4 let go first)
     if (Bas_Was_Edited)
     {
         BasGather();   // (B59) before the question's page takes the fields away
-        if (!GetConfirmation((char *)BasPageWord(), (char *)"Discard the edited basics?"))
-        {
-            BasPageHead();
-            BasShow();
-            return;
-        }
+        if (!RfSaveFirst(BasPageWord(), "The edited basics are", BasSaveNow, EndBasicsView, &Bas_Was_Edited)) return;   // B102
     }
     BasStep = BAS_IDLE;
     Bas_Was_Edited = false;

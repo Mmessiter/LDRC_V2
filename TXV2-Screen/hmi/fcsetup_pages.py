@@ -15,15 +15,15 @@ import rescue_pages as rp
 rp.series_begin()   # (B91: the battery and its sensors, one island)
 rp.page(72, 'BatteryView', 'Battery (Rotorflight)', [
     ('h0', 'Flight pack', 0, 0, 'head', 0),
-    ('tn0', 'Cells (0 = automatic)', 0, 1, 'num', 158, 'Cells'),
-    ('tn1', 'Capacity [mAh]', 0, 2, 'num', 158, 'Capacity mAh'),
-    ('tn2', 'Voltage from', 0, 3, 'wide', 159, 'ESC telemetry'),
-    ('tn3', 'Current from', 0, 4, 'wide', 160, 'ESC telemetry'),
-    ('h1', 'Each cell [V]', 1, 0, 'head', 0),
-    ('tn4', 'Full', 1, 1, 'num', 158, 'Full cell volts'),
-    ('tn5', 'Warning', 1, 2, 'num', 158, 'Warning cell volts'),
-    ('tn6', 'Empty', 1, 3, 'num', 158, 'Empty cell volts'),
-    ('tn7', 'Highest allowed', 1, 4, 'num', 158, 'Highest cell volts'),
+    ('tn0', 'Cell count (0 = auto)', 0, 1, 'num', 158, 'Cell count (0 = automatic)'),   # (15 Oct 2026: the phone app's words)
+    ('tn1', 'Capacity (mAh)', 0, 2, 'num', 158),
+    ('tn2', 'Voltage from', 0, 3, 'wide', 159, 'FC pads (ADC)'),      # (the phone's "Voltage comes from" would need the smaller rows)
+    ('tn3', 'Current from', 0, 4, 'wide', 160, 'FC pads (ADC)'),
+    ('h1', 'Cell voltages (V)', 1, 0, 'head', 0),
+    ('tn4', 'Full', 1, 1, 'num', 158, 'Full cell voltage (V)'),
+    ('tn5', 'Warning', 1, 2, 'num', 158, 'Warning voltage (V)'),
+    ('tn6', 'Empty', 1, 3, 'num', 158, 'Empty cell voltage (V)'),
+    ('tn7', 'Highest allowed', 1, 4, 'num', 158, 'Highest cell voltage (V)'),
 ], [('b2', 'Sensors >', 0, 0, 176), ('b3', 'Save', 0, 0, 157), ('b1', 'OK', 0, 0, 156)], 'BATTERY.TXT')
 rp.page(75, 'BatSensorsView', 'Battery sensors (FC pads)', [
     ('h2', 'Voltage sensor', 0, 0, 'head', 0),
@@ -34,25 +34,25 @@ rp.page(75, 'BatSensorsView', 'Battery sensors (FC pads)', [
 ], [('b2', '< Battery', 0, 0, 177), ('b3', 'Save', 0, 0, 157), ('b1', 'OK', 0, 0, 156)], 'BATTERY.TXT')
 rp.series_end()
 rp.page(73, 'BlackboxView', 'Black box (Rotorflight)', [
-    ('h0', 'Recording', 0, 0, 'head', 0),
+    ('h0', 'When to record', 0, 0, 'head', 0),
     ('tn0', 'When', 0, 1, 'wide', 165, 'Whenever armed'),        # (B91: the longest words each box shows - BbModeWord, BbDevWord, BbShow -
-    ('tn1', 'Where', 0, 2, 'wide', 166, 'Serial logger'),         #  so the column is wide enough for them: Malcolm, 10 Oct, of "Armed + swi...")
+    ('tn1', 'Where', 0, 2, 'wide', 166, 'Serial port (logger)'),         #  so the column is wide enough for them: Malcolm, 10 Oct, of "Armed + swi...")
     ('tn2', 'How often', 0, 3, 'wide', 167, '1 in 128 (8000/s)'),
-    ('tn3', 'After disarm [s]', 0, 4, 'num', 164, 'Seconds after disarm'),
+    ('tn3', 'Keep after disarm (s)', 0, 4, 'num', 164, 'Keep recording after disarm (s)'),
     ('tn4', 'Overwrite oldest', 1, 3, 'switch', 168),            # (polish, 10 Oct: with the memory it acts on, under its two lines; in the
                                                                   #  list where it was, so every part keeps its id - hmi/polish/rftools.py
                                                                   #  gives its label the Memory shade and puts Erase all logs under it)
     ('h1', 'Memory', 1, 0, 'head', 0),
     ('tn5', '', 1, 1, 'info', 0, 'No memory chip on board'),      # (BbShowMemory's longest: "125.3 of 125.3 MB used", "Connect the model to see")
     ('tn6', '', 1, 2, 'info', 0, 'Full: erase before flying'),
-], [('b2', 'Erase all logs', 0, 0, 169), ('b3', 'Save', 0, 0, 163), ('b1', 'OK', 0, 0, 162)], 'BLACKBOX.TXT', busy_rect=(110, 336, 580, 70))   # (meant: the erase's progress below the rows - but an island's centred box wins in rescue_pages.page(), so it is over the middle; reported, 10 Oct)
+], [('b2', 'Erase all flight logs', 0, 0, 169), ('b3', 'Save', 0, 0, 163), ('b1', 'OK', 0, 0, 162)], 'BLACKBOX.TXT', busy_rect=(110, 336, 580, 70))   # (meant: the erase's progress below the rows - but an island's centred box wins in rescue_pages.page(), so it is over the middle; reported, 10 Oct)
 rp.page(74, 'LevelView', 'Calibrate (Rotorflight)', [
     ('h0', 'Level (accelerometer)', 0, 0, 'head', 0),
     ('tn0', '', 0, 1, 'info', 0, 'Roll -12.3   Pitch -12.3 deg'),
     ('tn1', '', 0, 2, 'info', 0, 'Not level: level it, then Calibrate'),
     ('h1', 'Level trims', 1, 0, 'head', 0),
-    ('tn2', 'Pitch trim [deg]', 1, 1, 'num', 174, 'Pitch trim degrees'),
-    ('tn3', 'Roll trim [deg]', 1, 2, 'num', 174, 'Roll trim degrees'),
+    ('tn2', 'Pitch trim (deg)', 1, 1, 'num', 174, 'Level trim pitch (deg)'),
+    ('tn3', 'Roll trim (deg)', 1, 2, 'num', 174, 'Level trim roll (deg)'),
 ], [('b2', 'Calibrate level', 0, 0, 172), ('b3', 'Save', 0, 0, 173), ('b1', 'OK', 0, 0, 171)], 'RFCALIB.TXT')
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
 have = {x['id'] for x in idx['pages']}

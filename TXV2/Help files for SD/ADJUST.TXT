@@ -1,10 +1,12 @@
 Make a knob or a switch on this transmitter change a Rotorflight|
-setting in flight (the Configurator's Adjustments tab). Each adjustment|
-is one setting, worked by one channel.||
+setting in flight. Each adjustment is one setting, worked by|
+one channel.|
+The phone app has the same on its 'In-flight adjustments'|
+page (the Configurator: its Adjustments tab).||
 It needs the model connected, with the safety on,|
 and a Version 2 receiver with Bluetooth.|
-It also needs the USB-C cable from the receiver to the flight controller|
-('USB cable' at the top left).|
+It also needs the USB-C cable from the receiver to the flight|
+controller ('USB cable' at the top left).|
 Rotorflight cannot send adjustments over the receiver's lead.|
 Without the cable, the page says so and goes back.|
 With no model, the page shows the backup on the card,|
@@ -27,36 +29,39 @@ A rate (top rotation speed) is in degrees per second,|
 as on the Rates page.|
 The box on the right says when it works: tap it for 'in bank 1',|
 'in bank 2' and so on, then 'in any bank'.|
-The bank box needs a 'PID bank switch (1 to 6)' adjustment: it tells|
-Rotorflight which bank the switch has chosen.|
+'set elsewhere': its condition was made some other way.|
+It is kept as it is until you tap the box.|
+The bank box needs a 'Bank (Profile) selector' adjustment:|
+it tells Rotorflight which bank the switch has chosen.|
 Without one, every adjustment works in every bank.|
-The list here does not offer one. If the model has none, choose|
-its 'Bank (Profile)' switch on the phone app's 'Transmitter|
-channels' page.|
-A bank switch is the bank itself, so it has no bank box.||
+The list here does not offer one. If the model has none,|
+choose its 'Bank (Profile)' channel on the phone app's|
+'Transmitter channels' page.|
+A bank selector is the bank itself, so it has no bank box.||
 KIND AND CHANNEL:|
 Tap the box under 'Changes' to step to the next kind:|
 Knob: the travel between the round ends sets the value, from the|
 low end value to the high end value.|
 Switch, 2, 3 or 4 positions: each position sets its own value.|
-Step up / down: a three-position switch. Up adds the step, down|
-takes it away, and the centre holds. The value stays between the|
-lowest and the highest value.|
+Step adjustment: a three-position switch. Up adds the step,|
+down takes it away, and the centre holds. The value stays|
+between the lowest and the highest value.|
 Tap the channel box for the next channel, 6 to 16.|
 (Channel 6 is AUX1 in Rotorflight.)||
 THE BAR:|
 The bar is the channel's travel, 875 to 2125 microseconds (us).|
 A real switch spans about 988 to 2012.|
-The marker line (white, edged in black) is where the channel is now:|
-this transmitter's output, as the flight controller sees it.|
+The marker line (white, edged in black) shows where the|
+channel is now: this transmitter's output, as the flight|
+controller sees it.|
 The line under the bar says what that gives.|
 Knob: tap the left half of its zone for the low end value,|
 or the right half for the high end value.|
 Drag the round ends to set its travel.|
-Switch: tap the first or last zone to type its value. The zones between|
-are spaced evenly, and each zone shows its value.|
+Switch: tap the first or last zone to type its value.|
+The zones between are spaced evenly, and each shows its value.|
 Drag the round ends to the switch's two end positions.|
-Step up / down: tap an outer zone to type the step.|
+Step adjustment: tap an outer zone to type the step.|
 Tap the grey middle zone's left half for the lowest value,|
 or its right half for the highest.|
 Drag the round dividers to where up and down start.|
@@ -65,29 +70,34 @@ A knob's high end value must be above its low end value.|
 'Save' refuses otherwise.|
 If your switch or knob works the other way round,|
 reverse the channel.||
-THE BANK SWITCH:|
-A bank switch ('PID bank switch' or 'Rates bank switch') is matched|
-to this transmitter's banks, so there is nothing to drag.|
-Its kind box then says, for example,|
+THE BANK SELECTOR:|
+A bank selector ('Bank (Profile) selector' or 'Rates selector')|
+is matched to this transmitter's banks, so there is nothing|
+to drag. Its kind box then says, for example,|
 'Banks 1 to 4 of this transmitter'.|
 Each bank sends its own value on the bank channel.|
 The values rise from bank 1.|
-The transmitter picks the travel whose even divisions give each bank|
-its own zone, with the most room to spare.|
-A bank switch that already does that is left alone.|
+The transmitter picks the travel whose even divisions give|
+each bank its own zone, with the most room to spare.|
+A bank selector that already does that is left alone.|
 Flip through the banks: the line under the bar shows each bank's|
 value, and says so if Rotorflight would pick another bank.|
 When no travel can tell the banks apart, the hint says so.|
-Tap the kind box for why. Then space the banks' values on that channel|
-more evenly in Model setup.||
+Tap the kind box for why. Then space the banks' values on that|
+channel more evenly in Model setup.||
 SAVE AND OK:|
-'Save' appears once something is changed. It writes only the lines|
-that changed, stores them, and reads them all back to check.|
+'Save' appears once something is changed.|
+It writes only the lines that changed, stores them,|
+and reads them all back to check.|
 A note that starts 'Press Save:' means the page has put something|
 right. Press 'Save' to keep it. This happens for:|
-a bank switch that did not follow this transmitter's banks;|
-an extra bank switch line (it would fight the first);|
-a switch in the old form, one line per position. Rotorflight applies|
-those only once per power-up. A switch is now one line, its travel|
-mapped onto the values, so it works at every change.||
-'OK' leaves; if a change was not saved, it asks first.|
+a bank selector that did not follow this transmitter's banks;|
+an extra bank selector line (it would fight the first);|
+a switch in the old form, one line per position.|
+Rotorflight applies those only once per power-up.|
+A switch is now one line, its travel mapped onto the values,|
+so it works at every change.||
+'OK' leaves. With unsaved changes it asks 'Save now?':|
+'Save' saves them, and the page closes once saved;|
+'Discard' leaves without saving.|
+A 'Press Save:' note after that save keeps the page open.|

@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Rotorflight options",
+   "txt": "Rotorflight",
    "a": {
     "style": 0,
     "key": 255,
@@ -103,7 +103,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:RFLIGHT.TXT\"\nLogView.t0.txt=\"Rotorflight options help\"\nLogView.return.txt=\"RFView\"\n// 54938 =  button colour"
+    "r": "print \"HelpView:RFLIGHT.TXT\"\nLogView.t0.txt=\"Rotorflight help\"\nLogView.return.txt=\"RFView\"\n// 54938 =  button colour"
    }
   },
   {
@@ -380,7 +380,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Mixer ...",
+   "txt": "Travel extents ...",
    "val": 0,
    "a": {
     "style": 4,
@@ -731,7 +731,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Backup / Restore ...",
+   "txt": "Backup & restore ...",
    "val": 0,
    "a": {
     "style": 4,

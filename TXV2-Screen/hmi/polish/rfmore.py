@@ -50,7 +50,7 @@ def strip_clear_of_title(pg, title_w):
 def all_banks(pg):
     """Design system: a page's default text is what the main board writes there (a screen-only restart shows it). The
     filters and the calibration are the same for every bank: the main board writes "All banks" (RF_Filters.h:134,
-    RF_FcSetup.h:573), not the generator's "Bank 1"."""
+    RF_FcSetup.h:573; since 15 Oct 2026 the servos and the travel extents too), not the generator's "Bank 1"."""
     put(pg, 't9', txt='All banks')
 
 def rescue1(pg):
@@ -60,9 +60,13 @@ def rescue1(pg):
     message_box(pg, 'ltn4', 2, PITCH, right=lab['x'] + lab['w'])
 
 def rescue2(pg):
-    # rfmore.0: "Hold height" (110 px in font 2, RF_Rescue.h:32) was cut to "Hold he..." in a 100-px box: the six value
-    # boxes 130 wide, so they still line up
-    widen_values(pg, ['tn0', 'tn1', 'tn2', 'tn3', 'tn4', 'tn5'], 130)
+    # rfmore.0: "Hold height" (110 px in font 2, RF_Rescue.h:32) was cut to "Hold he..." in a 100-px box. Since 15 Oct 2026
+    # the modes are the phone app's ("Level & hold height", 185 px): the six value boxes 205 wide, so they still line up,
+    # the labels as wide as the generator made them, and the column centred again on the card
+    card, lw, vw = comp(pg, 'card'), comp(pg, 'ltn0')['w'], 205
+    lx = card['x'] + (card['w'] - (lw + 6 + vw)) // 2
+    for n in ('tn0', 'tn1', 'tn2', 'tn3', 'tn4', 'tn5'):
+        put(pg, 'l' + n, x=lx, w=lw); put(pg, n, x=lx + lw + 6, w=vw)
     # the message box over rows 4 and 5 (the two fields it covered before), across the island
     message_box(pg, 'ltn4', 2, PITCH)
 
@@ -90,6 +94,7 @@ def filters2(pg):
     message_box(pg, 'h0', 2, 37, right=lab['x'] + lab['w'])
 
 def mixer1(pg):
+    all_banks(pg)   # (15 Oct 2026: the travel extents are the same in every bank, RF_Travel.h writes "All banks")
     # The told rows i0/i1 hold the main board's whole line (RF_Travel.h:57-59). Today's "Main Rotor Direction:
     # Counter-clockwise" is 392 px, the sentence-case "Main rotor direction: Counter-clockwise" 380, the polish's
     # "Main rotor direction: Anticlockwise" 332: the trims column only as wide as its words need (the generator's rule,
@@ -115,13 +120,17 @@ def mixer1(pg):
     message_box(pg, 'ltn7', 2, PITCH)
 
 def servos(pg):
-    # the title the main board writes, "Servo 8 of 8 (Rotorflight)" (RF_Servos.h:30), is 342 px in font 0
-    strip_clear_of_title(pg, 342)
+    all_banks(pg)   # (15 Oct 2026: the main board writes "All banks" here too, RF_Servos.h StartServoView)
+    # the title the main board writes, "Servo 8 of 8 (swashplate)" (RF_Servos.h ServoTitle, the phone app's servo roles since
+    # 15 Oct 2026; "(Rotorflight)" before), is 348 px in font 0
+    strip_clear_of_title(pg, 348)
 
 def mixer2(pg):
-    # "Mixer: main rotor geometry" is 374 px in font 0: the name stopped 3 px before it
-    strip_clear_of_title(pg, 374)
-    # The heading "Main rotor geometry" said the title again ("Mixer: main rotor geometry"): parked, and the rows on the
+    all_banks(pg)
+    # "Travel extents: swash" (15 Oct 2026, the phone app's words; it was "Mixer: main rotor geometry", 374 px) is 301 px in
+    # font 0: the strip keeps its full 200 px
+    strip_clear_of_title(pg, 301)
+    # The heading "Main rotor geometry" said the title again (then "Mixer: main rotor geometry"): parked, and the rows on the
     # series' grid (mixer1) from the first row - seven rows of the Rescue page's size now fit where eight small ones stood
     park(pg, 'h0')
     left = [['ltn%d' % i, 'tn%d' % i] for i in range(7)]
@@ -131,13 +140,15 @@ def mixer2(pg):
     message_box(pg, 'ltn3', 2, PITCH)
 
 def mixer3(pg):
-    # The heading "Tail rotor settings" said the title again ("Mixer: tail rotor"): parked, the rows on the series' grid
+    all_banks(pg)
+    # The heading "Tail rotor settings" said the title again (then "Mixer: tail rotor", now "Travel extents: tail"): parked, the rows on the series' grid
     park(pg, 'h0')
     regrid(pg, [['i0']] + [['ltn%d' % i, 'tn%d' % i] for i in range(6)], comp(pg, 'card')['y'] + 16)
     # the message box over rows 3 and 4 (the yaw calibration and CW limit, which it covered before)
     message_box(pg, 'ltn2', 2, PITCH)
 
 def mixer4(pg):
+    all_banks(pg)
     # B98 (15 Oct 2026): the bench measure, made in the Mixer series' small row like its three elders: the same grid as
     # theirs (mixer1-3), the told status line first; the message box ("Holding the swash ...", "Releasing ...") over rows
     # 2 and 3 (the angle and the gauge's reading), across the island

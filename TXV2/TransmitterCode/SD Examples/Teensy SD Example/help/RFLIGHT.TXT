@@ -3,7 +3,8 @@ Rotorflight (2.2 or later), at the field, with no laptop.||
 A NEW HELICOPTER:|
 Set it up with the phone app: 'Rotorflight', 'Wizards',|
 'New helicopter' takes you through every step.|
-Or do the basics here: 'Settings ...', then 'Model basics ...'.|
+Or do the basics here: 'Settings ...', then|
+'First-time basics ...'.|
 Only putting Rotorflight onto the flight controller needs a|
 computer, with Rotorflight's Configurator.||
 BEFORE YOU START:|
@@ -12,12 +13,16 @@ If the safety is off or the motor is on, this page warns you.|
 The pages that change the flight controller will not work|
 while the model could be armed.|
 The model needs a Version 2 receiver: these pages use Bluetooth.|
-Back up each setup you are happy with: 'Backup / Restore ...'.||
+Back up each setup you are happy with: 'Backup & restore ...'.||
 HOW THE PAGES WORK:|
 Each page reads the flight controller's values as it opens.|
 Touch a box, type the new value, then press 'Save'.|
 The values are written to the flight controller,|
 read back to check, and stored.|
+'OK' with edits not saved asks 'Save now?'.|
+'Save' saves them, then the page closes.|
+'Discard' leaves without saving.|
+If the save is refused or fails, your edits stay on the page.|
 Every page has its own 'Help'.||
 BANKS:|
 The top left shows the bank and the rate in use.|
@@ -26,17 +31,19 @@ The bank switch chooses the bank for 'PIDs ...',|
 The 'Rates' switch chooses the rate for 'Rates ...'.|
 With 'Link rates and banks' on ('Settings ...'),|
 the bank switch chooses the rate too.|
-Each 'Advanced ...' page follows the switch of its main page.||
+'PID + ...' and 'Dynamics ...' follow their main page's switch.|
+A 'Save' on the PIDs, rates or governor pages goes only into the|
+transmitter's bank. If the flight controller is on another bank|
+('Bank 2 / FC 1'), nothing is written: check the switch set-up.||
 THE BUTTONS:|
 'PIDs ...' and 'Rates ...': the tuning of each bank.|
-Each has an 'Advanced ...' page: 'PID +' and 'Rates +'.|
+Each has a second page: 'PID + ...' and 'Dynamics ...'.|
 'Governor ...': the head speed and the governor.|
 It needs Rotorflight 2.3.|
 'Rescue ...': what happens when you flick the rescue switch.|
-'Servos ...', 'Mixer ...' and 'Filters ...': the servos,|
-the swash and tail mixer, and the gyro filters.|
-'Mixer' is the phone app's 'Travel extents': how far the|
-swash and tail move, and a bench measure for a pitch gauge.|
+'Servos ...' and 'Travel extents ...': the servos, and how far|
+the swash and tail move, with a bench measure for a pitch gauge.|
+'Filters ...': gyro smoothing and the vibration notches.|
 'Adjustments ...': a knob or switch changes a setting in flight.|
 It needs the USB cable between receiver and flight controller.|
 'Switches ...': what each switch makes the flight controller do.|
@@ -44,10 +51,10 @@ It needs the USB cable between receiver and flight controller.|
 'Battery ...', 'Black box ...' and 'Calibrate ...':|
 the flight pack, the flight recorder and the level.|
 'Settings ...': 'Link rates and banks', the Rotorflight version,|
-the arming channel and the main gear ratio; and 'Model basics|
-...': swashplate type, rotor direction, tail type, ESC signal|
-and brand, motor poles, gear ratios, the ports and the ESC|
-throttle calibration (a new model's whole set-up).|
+the arming channel and 'Gear ratio (V1 receiver)'; and|
+'First-time basics ...': swash type, rotor direction, tail type,|
+ESC signal and brand, motor poles, gear ratios, the ports and|
+the ESC throttle calibration (a new model's whole set-up).|
 'OK' goes back to the front page.||
 THE ARMING LINE:|
 The line under the buttons says whether the model will arm:|
@@ -80,7 +87,7 @@ Either one restarts the flight controller.|
 If you changed something and did not type save, it asks first.|
 The model cannot arm while the command line is open.||
 BACKUP AND RESTORE:|
-'Backup / Restore ...' keeps the model's Rotorflight tune and|
+'Backup & restore ...' keeps the model's Rotorflight tune and|
 set-up (not ports, LED, GPS or ESC) on the transmitter's card,|
 and puts it back.|
 It can also keep the settings as text ('Diff to card')|
@@ -91,7 +98,7 @@ The box left of 'OK' then says 'From the backup file'.|
 Your edits wait in the backup.|
 When the model is next connected and you open this page,|
 it asks once to write them to the model.|
-To send them later, use 'Write edits' on 'Backup / Restore ...'.|
+To send them later: 'Send to model' on 'Backup & restore ...'.|
 With no backup, 'PIDs ...', 'Rates ...' and 'Governor ...'|
 show an older copy kept in the model's file.|
 A 'Save' there changes only that copy.|

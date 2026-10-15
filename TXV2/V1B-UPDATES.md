@@ -186,6 +186,49 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The phone app's words, Save now, and a save into the right bank only (V2 B102, screen 1.11.64, 15 Oct 2026)
+
+Malcolm: "I vastly prefer the terminology in the iPhone app. Travel extents. Etc. ... let us use the same terminology that we
+used in the phone app for consistency." Seven read-only reviews matched every word of the transmitter's Rotorflight pages to
+the phone app's page for the same setting (by MSP command and byte), and the pages, the main board's words and the help now
+use the phone's: the menu is "Rotorflight"; "Mixer" is **Travel extents** (pages "Travel extents", ": swash", ": tail",
+"Bench measure"; Cyclic gain, Collective gain, Up/down balance, Swash trims, Tail travel stick right/left, Tail motor
+min/max/idle, Rudder reversed); Model basics is **First-time basics** (with "Gear ratio", "Ports" - "Port A (UART 4)",
+Nothing / Dongle on a wire (MSP) / Telemetry out: S.Port / Blackbox logger / As it is / Receiver - and "Throttle
+calibration"); PID + is "PID + (advanced)" in the phone's plain words (wind-up relief, correction cap, response speed, D and
+boost smoothing, yaw stop firmness, yaw push ...); Rates + is "Rates: dynamics" (Stick sharpening, Fast-move headroom,
+Stick-centre quieting ...), "Expo", the rates types "4 - ACTUAL"; the governor's Headspeed, Tail-torque, Anticipate, Speed
+change, Quick restart, "3 - ELECTRIC"; Rescue's Flip upright if inverted, Levelling and Flip strength, Max turn rate,
+"Level & climb" / "Level & hold height"; Servos' Centre (subtrim), Travel limit, Throw, Update rate, Slow-motion, the
+servo's role in its title; Filters, Battery, Black box, Copy a bank ("Flight tuning", "Rates & dynamics", "Adjust for
+head speed"), Switch actions, the adjustments' "Bank (Profile) selector", Backup & restore ("Send to model", "Discard
+edits"). Units in the phone's round brackets; ASCII only (the screen draws a page file's UTF-8 byte by byte, so "deg" and
+"us", not the degree and micro signs). The settings page's own "Main gear ratio" (a V1 receiver's) is "Gear ratio (V1
+receiver)", no longer the same name as Rotorflight's. Where a phone word would not fit, the page keeps its shorter one
+(ESC brand, Voltage from, Overwrite oldest) and the keypad's question carries the phone's in full. The Travel extents and
+Servos pages say "All banks" (they are the same in every bank). The page builder (rescue_pages.py) has a per-page
+wide_cap for the ports' longer socket names; the polish's ev_title takes earlier forms of a keypad question.
+
+**Save now.** Malcolm: "If a user forgets to hit save and instead hits OK, ... the message box ... should offer the option
+save now? To save clicks." OK with unsaved edits on any Rotorflight page now asks "The edited ... are not saved. Save
+now?" on the message box's own two buttons, Save and Discard (`Utilities.h` GetSaveOrDiscard, `RF_SaveNow.h`): Save saves,
+and the page closes by itself once the save has worked (each page's "Saved" calls RfSavedThenLeave); a refusal, a failure
+or a No to the save's own question keeps the page open with the edits; Discard leaves as before. (PID + and Rates: dynamics
+used to go to the front page on a discard; now to the Rotorflight page, as without edits.)
+
+**A save into the transmitter's bank only.** Malcolm: "Setting a different headspeed for different banks on the transmitter
+successfully wrote banks one and three but not two" - his transmitter's set-up, since put right; but the receiver writes
+the Version 1 word pages (PIDs, PID +, rates, dynamics, governor) into whichever bank the flight controller is on, so bank
+2's values had gone into another bank, said only by "Bank 2 / FC 1". Now each of those saves first asks the flight
+controller which bank it is on (MSP 101 byte 23, or 25 for a rates bank: `PipeHttp.h` BankCheck) and writes only into the
+transmitter's; else nothing is written and the message names both banks. (It does not put the flight controller on the
+transmitter's bank: that would hide a wrong set-up until the switch is flipped in flight.)
+
+**The arming line's last reason.** Rotorflight 4.6 has 26 arming flags, the arm switch last (bit 25, MSP 101 byte 16 says
+how many); the table had an "override" there, so "Arm switch on too soon" showed as "A servo or motor override is on". The
+reply's last flag is now always the arm switch. Host tests: test_pipe (bank check) 10 new, test_fcsetup 49, test_basics 61,
+test_filters 88 (OK's Save now), and the words in the others.
+
 ## The help points to the phone app, not the Configurator (V2 B101, screen 1.11.63, 15 Oct 2026)
 
 Malcolm, on the Rotorflight options help: "This help says start with the configurator. Maybe it should suggest the phone

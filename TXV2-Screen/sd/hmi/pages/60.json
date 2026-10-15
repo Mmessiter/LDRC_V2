@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 40,
+   "x": 30,
    "y": 100,
-   "w": 719,
+   "w": 740,
    "h": 338,
    "font": 6,
    "sta": 1,
@@ -81,7 +81,7 @@
    "g": "g",
    "x": 10,
    "y": 4,
-   "w": 199,
+   "w": 196,
    "h": 25,
    "font": 2,
    "sta": 1,
@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank 1",
+   "txt": "All banks",
    "a": {
     "style": 0,
     "key": 255,
@@ -109,7 +109,7 @@
    "g": "g",
    "x": 10,
    "y": 30,
-   "w": 199,
+   "w": 196,
    "h": 25,
    "font": 2,
    "sta": 1,
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 56,
+   "x": 46,
    "y": 116,
-   "w": 184,
+   "w": 205,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -190,7 +190,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Centre [us]",
+   "txt": "Centre (subtrim)",
    "a": {
     "style": 0,
     "key": 255,
@@ -207,7 +207,7 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 246,
+   "x": 257,
    "y": 116,
    "w": 110,
    "h": 42,
@@ -230,7 +230,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Centre [us]\"\nva0.val=76<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Centre (subtrim) (us)\"\nva0.val=76<<8\nprint va0.val"
    }
   },
   {
@@ -238,9 +238,9 @@
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 56,
+   "x": 46,
    "y": 166,
-   "w": 184,
+   "w": 205,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -249,7 +249,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Min [us]",
+   "txt": "Travel limit low",
    "a": {
     "style": 0,
     "key": 255,
@@ -266,7 +266,7 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 246,
+   "x": 257,
    "y": 166,
    "w": 110,
    "h": 42,
@@ -289,7 +289,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Min [us]\"\nva0.val=76<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Travel limit, low side (us)\"\nva0.val=76<<8\nprint va0.val"
    }
   },
   {
@@ -297,9 +297,9 @@
    "i": 11,
    "t": "text",
    "g": "g",
-   "x": 56,
+   "x": 46,
    "y": 216,
-   "w": 184,
+   "w": 205,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -308,7 +308,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Max [us]",
+   "txt": "Travel limit high",
    "a": {
     "style": 0,
     "key": 255,
@@ -325,7 +325,7 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 246,
+   "x": 257,
    "y": 216,
    "w": 110,
    "h": 42,
@@ -348,7 +348,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Max [us]\"\nva0.val=76<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Travel limit, high side (us)\"\nva0.val=76<<8\nprint va0.val"
    }
   },
   {
@@ -356,9 +356,9 @@
    "i": 13,
    "t": "text",
    "g": "g",
-   "x": 56,
+   "x": 46,
    "y": 266,
-   "w": 184,
+   "w": 205,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -367,7 +367,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Scale neg [us]",
+   "txt": "Throw low side",
    "a": {
     "style": 0,
     "key": 255,
@@ -384,7 +384,7 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 246,
+   "x": 257,
    "y": 266,
    "w": 110,
    "h": 42,
@@ -407,7 +407,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Scale neg [us]\"\nva0.val=76<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Throw for full input, low side (us)\"\nva0.val=76<<8\nprint va0.val"
    }
   },
   {
@@ -415,9 +415,9 @@
    "i": 15,
    "t": "text",
    "g": "g",
-   "x": 56,
+   "x": 46,
    "y": 316,
-   "w": 184,
+   "w": 205,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -426,7 +426,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Scale pos [us]",
+   "txt": "Throw high side",
    "a": {
     "style": 0,
     "key": 255,
@@ -443,7 +443,7 @@
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 246,
+   "x": 257,
    "y": 316,
    "w": 110,
    "h": 42,
@@ -466,7 +466,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Scale pos [us]\"\nva0.val=76<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Throw for full input, high side (us)\"\nva0.val=76<<8\nprint va0.val"
    }
   },
   {
@@ -474,7 +474,7 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 376,
+   "x": 387,
    "y": 116,
    "w": 251,
    "h": 42,
@@ -485,7 +485,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Rate [Hz]",
+   "txt": "Update rate (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -502,7 +502,7 @@
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 633,
+   "x": 644,
    "y": 116,
    "w": 110,
    "h": 42,
@@ -525,7 +525,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Rate [Hz]\"\nva0.val=76<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Update rate (Hz)\"\nva0.val=76<<8\nprint va0.val"
    }
   },
   {
@@ -533,7 +533,7 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 376,
+   "x": 387,
    "y": 166,
    "w": 251,
    "h": 42,
@@ -544,7 +544,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Speed [ms]",
+   "txt": "Slow-motion (ms)",
    "a": {
     "style": 0,
     "key": 255,
@@ -561,7 +561,7 @@
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 633,
+   "x": 644,
    "y": 166,
    "w": 110,
    "h": 42,
@@ -584,7 +584,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Speed [ms]\"\nva0.val=76<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Slow-motion time (ms)\"\nva0.val=76<<8\nprint va0.val"
    }
   },
   {
@@ -592,7 +592,7 @@
    "i": 21,
    "t": "text",
    "g": "g",
-   "x": 376,
+   "x": 387,
    "y": 216,
    "w": 251,
    "h": 42,
@@ -603,7 +603,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Reverse",
+   "txt": "Reversed",
    "a": {
     "style": 0,
     "key": 255,
@@ -619,7 +619,7 @@
    "n": "tn7",
    "t": "switch",
    "g": "g",
-   "x": 648,
+   "x": 659,
    "y": 220,
    "w": 80,
    "h": 34,
@@ -648,7 +648,7 @@
    "i": 23,
    "t": "text",
    "g": "g",
-   "x": 376,
+   "x": 387,
    "y": 266,
    "w": 251,
    "h": 42,
@@ -675,7 +675,7 @@
    "n": "tn8",
    "t": "switch",
    "g": "g",
-   "x": 648,
+   "x": 659,
    "y": 270,
    "w": 80,
    "h": 34,
@@ -704,7 +704,7 @@
    "i": 25,
    "t": "button",
    "g": "l",
-   "x": 67,
+   "x": 78,
    "y": 372,
    "w": 160,
    "h": 50,
@@ -736,7 +736,7 @@
    "i": 26,
    "t": "button",
    "g": "l",
-   "x": 239,
+   "x": 250,
    "y": 372,
    "w": 160,
    "h": 50,
@@ -768,7 +768,7 @@
    "i": 27,
    "t": "button",
    "g": "l",
-   "x": 411,
+   "x": 422,
    "y": 372,
    "w": 160,
    "h": 50,
@@ -800,7 +800,7 @@
    "i": 28,
    "t": "button",
    "g": "l",
-   "x": 583,
+   "x": 594,
    "y": 372,
    "w": 160,
    "h": 50,
@@ -832,7 +832,7 @@
    "i": 29,
    "t": "text",
    "g": "l",
-   "x": 109,
+   "x": 110,
    "y": 207,
    "w": 580,
    "h": 124,

@@ -206,6 +206,28 @@ FLASHMEM void FixHeading()
 }
 
 // ====================================================
+// B102: the read, and the write once the flight controller is known to be on this bank (PipeHttp.h BankCheck)
+FLASHMEM static void GovAskValues()
+{
+    if (CurrentView != RFGOVERNORVIEW_PROFILE) { BlockBankChanges = false; return; }
+    GOV_Send_Duration = GOV_PROFILE_WAIT_TIME;
+    Reading_GOV_Now = true;
+    AddParameterstoQueue(SEND_GOV_VALUES);
+    GOV_Start_Time = millis();
+}
+FLASHMEM static void GovQueueWrite()
+{
+    // Queue in reverse order — LIFO executes PROFILE1 first, PROFILE2 second
+    AddParameterstoQueue(SEND_GOV_WRITE_PROFILE2); // executes 2nd
+    AddParameterstoQueue(SEND_GOV_WRITE_PROFILE1); // executes 1st
+    GOVS_PROFILE_Were_Edited = false;
+    BlockBankChanges = false;
+    if (CurrentView == RFGOVERNORVIEW_PROFILE) { SendCommand((char *)"vis b3,0"); HideGOVMsg(); }   // hide Save button
+    PlaySound(BEEPCOMPLETE);
+    RfSavedThenLeave(RFGOVERNORVIEW_PROFILE);   // B102: OK's "Save now?" closes the page once saved
+}
+
+// ====================================================
 FLASHMEM void ShowGOVBank()
 {
     if (CurrentView == RFGOVERNORVIEW_PROFILE)
@@ -242,12 +264,9 @@ FLASHMEM void ShowGOVBank()
         GOV_Loaded = false; // B41: until the whole set has come (transceiver.h BlockItemSeen)
         BlockBankChanges = true;
         ShowGOVMsg(buf, Gray);
-        GOV_Send_Duration = GOV_PROFILE_WAIT_TIME;
-        Reading_GOV_Now = true;
-        AddParameterstoQueue(SEND_GOV_VALUES);
         GOVS_PROFILE_Were_Edited = false;
         SendCommand((char *)"vis b3,0"); // hide Save button
-        GOV_Start_Time = millis();
+        GovAskValues();
     }
 }
 
@@ -286,17 +305,15 @@ FLASHMEM void Start_RF_Governor()
 }
 
 // ====================================================
+FLASHMEM void Save_RF_Governor();
 FLASHMEM void End_RF_Governor()
 {
     if (GOVS_PROFILE_Were_Edited)
     {
-        if (GetConfirmation((char *)"page RFGovView", (char *)"Discard edited governor values?"))
-        {
-            GOVS_PROFILE_Were_Edited = false;
-            AddParameterstoQueue(MSP_ENABLE_TELEMETRY);
-            RotorFlightStart();
-        }
-        // if user says No, stay on page
+        if (!RfSaveFirst("page RFGovView", "The edited governor values are", Save_RF_Governor, End_RF_Governor, &GOVS_PROFILE_Were_Edited)) return;   // B102: "Save now?"
+        GOVS_PROFILE_Were_Edited = false;   // (Discard)
+        AddParameterstoQueue(MSP_ENABLE_TELEMETRY);
+        RotorFlightStart();
     }
     else
     {
@@ -327,15 +344,10 @@ FLASHMEM void SendEditedGovValues()
 
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);
-    LoadGovWritePayload(); // read all 14 profile fields from Nextion
-
-    // Queue in reverse order — LIFO executes PROFILE1 first, PROFILE2 second
-    AddParameterstoQueue(SEND_GOV_WRITE_PROFILE2); // executes 2nd
-    AddParameterstoQueue(SEND_GOV_WRITE_PROFILE1); // executes 1st
-
-    GOVS_PROFILE_Were_Edited = false;
-    SendCommand((char *)"vis b3,0"); // hide Save button
-    PlaySound(BEEPCOMPLETE);
+    LoadGovWritePayload(); // read all 14 profile fields from Nextion (now: what the screen shows is what goes)
+    ShowGOVMsg((char *)"Saving governor values ...", Gray);
+    BlockBankChanges = true;
+    BankCheck(false, Bank, GovQueueWrite, "page RFGovView");   // B102: into this bank, or not at all (PipeHttp.h)
 }
 
 // ====================================================

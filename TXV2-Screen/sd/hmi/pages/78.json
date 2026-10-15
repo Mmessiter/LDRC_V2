@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Model basics: gear ratios",
+   "txt": "Gear ratio",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 46,
+   "x": 45,
    "y": 75,
-   "w": 708,
+   "w": 710,
    "h": 388,
    "font": 6,
    "sta": 1,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:BASICS2.TXT\"\nLogView.t0.txt=\"Model basics: gear ratios help\"\nLogView.return.txt=\"Basics2View\""
+    "r": "print \"HelpView:BASICS2.TXT\"\nLogView.t0.txt=\"Gear ratio help\"\nLogView.return.txt=\"Basics2View\""
    }
   },
   {
@@ -415,7 +415,7 @@
    "i": 15,
    "t": "button",
    "g": "l",
-   "x": 62,
+   "x": 63,
    "y": 397,
    "w": 160,
    "h": 50,
@@ -447,7 +447,7 @@
    "i": 16,
    "t": "button",
    "g": "l",
-   "x": 234,
+   "x": 235,
    "y": 397,
    "w": 160,
    "h": 50,
@@ -479,7 +479,7 @@
    "i": 17,
    "t": "button",
    "g": "l",
-   "x": 406,
+   "x": 407,
    "y": 397,
    "w": 160,
    "h": 50,
@@ -511,7 +511,7 @@
    "i": 18,
    "t": "button",
    "g": "l",
-   "x": 578,
+   "x": 579,
    "y": 397,
    "w": 160,
    "h": 50,

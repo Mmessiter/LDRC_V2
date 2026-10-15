@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Mixer (Rotorflight)",
+   "txt": "Travel extents",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 24,
+   "x": 26,
    "y": 74,
-   "w": 752,
+   "w": 747,
    "h": 390,
    "font": 6,
    "sta": 1,
@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank 1",
+   "txt": "All banks",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:TRAVEL.TXT\"\nLogView.t0.txt=\"Mixer (Rotorflight) help\"\nLogView.return.txt=\"TravelView\""
+    "r": "print \"HelpView:TRAVEL.TXT\"\nLogView.t0.txt=\"Travel extents help\"\nLogView.return.txt=\"TravelView\""
    }
   },
   {
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 90,
-   "w": 398,
+   "w": 390,
    "h": 36,
    "font": 6,
    "sta": 1,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 130,
-   "w": 398,
+   "w": 390,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -235,9 +235,9 @@
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 170,
-   "w": 398,
+   "w": 390,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -263,9 +263,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 210,
-   "w": 292,
+   "w": 284,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -290,7 +290,7 @@
    "n": "tn6",
    "t": "switch",
    "g": "g",
-   "x": 348,
+   "x": 342,
    "y": 211,
    "w": 80,
    "h": 34,
@@ -319,9 +319,9 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 250,
-   "w": 292,
+   "w": 284,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -346,7 +346,7 @@
    "n": "tn7",
    "t": "switch",
    "g": "g",
-   "x": 348,
+   "x": 342,
    "y": 251,
    "w": 80,
    "h": 34,
@@ -375,9 +375,9 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 290,
-   "w": 292,
+   "w": 284,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -402,7 +402,7 @@
    "n": "tn8",
    "t": "switch",
    "g": "g",
-   "x": 348,
+   "x": 342,
    "y": 291,
    "w": 80,
    "h": 34,
@@ -431,9 +431,9 @@
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 458,
+   "x": 452,
    "y": 90,
-   "w": 301,
+   "w": 305,
    "h": 36,
    "font": 6,
    "sta": 1,
@@ -442,7 +442,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Swashplate trims",
+   "txt": "Swash trims (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -459,9 +459,9 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 458,
+   "x": 452,
    "y": 130,
-   "w": 195,
+   "w": 199,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -470,7 +470,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Roll trim [%]",
+   "txt": "Roll trim (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -487,7 +487,7 @@
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 659,
+   "x": 657,
    "y": 130,
    "w": 100,
    "h": 36,
@@ -510,7 +510,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll trim [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll trim (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -518,9 +518,9 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 458,
+   "x": 452,
    "y": 170,
-   "w": 195,
+   "w": 199,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -529,7 +529,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Pitch trim [%]",
+   "txt": "Pitch trim (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -546,7 +546,7 @@
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 659,
+   "x": 657,
    "y": 170,
    "w": 100,
    "h": 36,
@@ -569,7 +569,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch trim [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch trim (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -577,9 +577,9 @@
    "i": 21,
    "t": "text",
    "g": "g",
-   "x": 458,
+   "x": 452,
    "y": 210,
-   "w": 195,
+   "w": 199,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -588,7 +588,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Collective trim [%]",
+   "txt": "Collective trim (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -605,7 +605,7 @@
    "i": 22,
    "t": "text",
    "g": "g",
-   "x": 659,
+   "x": 657,
    "y": 210,
    "w": 100,
    "h": 36,
@@ -628,7 +628,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective trim [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective trim (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -636,7 +636,7 @@
    "i": 23,
    "t": "button",
    "g": "l",
-   "x": 256,
+   "x": 253,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -668,7 +668,7 @@
    "i": 24,
    "t": "button",
    "g": "l",
-   "x": 428,
+   "x": 425,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -700,7 +700,7 @@
    "i": 25,
    "t": "button",
    "g": "l",
-   "x": 600,
+   "x": 597,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -732,9 +732,9 @@
    "i": 26,
    "t": "text",
    "g": "l",
-   "x": 40,
+   "x": 42,
    "y": 248,
-   "w": 720,
+   "w": 715,
    "h": 80,
    "font": 2,
    "sta": 1,

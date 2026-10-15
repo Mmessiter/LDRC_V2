@@ -1,33 +1,34 @@
-Set up the flight controller's flight recorder. The settings are|
-the same in every bank ('All banks' at the top left).||
+Set up the flight controller's flight recorder. The settings|
+are the same in every bank ('All banks' at the top left).||
 It needs the model connected, with the safety on,|
 and a Version 2 receiver with Bluetooth.|
 With no model, the page shows the backup on the card.|
 'Save' then changes the backup.|
 The change is offered to the model when it next connects.|
-The memory lines and 'Erase all logs' need the model.||
-Tap the box beside 'When', 'Where' or 'How often' to step through|
-its choices. Tap the seconds to type a number.||
+The memory lines and 'Erase all flight logs' need the model.||
+Tap the box beside 'When', 'Where' or 'How often' to step|
+through its choices. Tap the seconds to type a number.||
 WHEN:|
 Whenever armed: records every flight, no switch needed.|
 While switch on: records while the Black box switch is on.|
-Armed + switch: records when armed with that switch on.|
+Armed + switch on: records when armed with that switch on.|
 Never: turns it off.|
-The two switch choices need a 'Black box recording' switch on the|
-'Switches ...' page. 'Save' asks if there is none.||
+The two switch choices need a 'Black box recording' switch on|
+the 'Switches ...' page. 'Save' asks if there is none.||
 WHERE:|
 FC memory: the flight controller's own memory chip, the usual|
 choice. Its size shows under 'Memory' (16 MB on many boards).|
-SD card and Serial logger: for boards that have them.|
+SD card and Serial port (logger): for boards that have them.|
 Nowhere: only when 'When' is Never. 'Save' refuses otherwise.||
 HOW OFTEN:|
-One record every so many control loops: 1 in 1, 2, 4 and so on up|
-to 128. The brackets show how many records a second.|
-1 in 8 is plenty for tuning and governor problems; 1 in 1 or 2 for|
-vibration hunting, but the memory fills that much faster.|
+'Every loop', or 1 in 2, 4 and so on up to 128 control loops.|
+The brackets show how many records a second.|
+1 in 8 is plenty for tuning and governor problems; every loop|
+or 1 in 2 for vibration hunting, but the memory fills that|
+much faster.|
 'Where' and 'How often' apply when the flight controller starts.|
 With the model connected, a save that changes them restarts it.||
-AFTER DISARM:|
+KEEP AFTER DISARM (s):|
 Seconds of recording after you disarm, 0 to 60.|
 They keep the landing in the log.||
 MEMORY:|
@@ -35,12 +36,13 @@ How much of the memory chip is used, and whether it is ready to|
 record. It says 'Full: erase before flying' at 95 %.|
 Overwrite oldest on: when full, it wipes the oldest flight.|
 Overwrite oldest off: when full, recording stops.|
-'Erase all logs' asks, then deletes every flight log for good.|
+'Erase all flight logs' asks, then deletes every log for good.|
 The flight controller beeps while it erases (10 to 60 seconds).|
 To keep the logs, first download them with the Configurator.||
 SAVE AND OK:|
 'Save' appears once something is changed.|
 It writes, stores and reads back.|
-If it says 'Not all saved', the flight controller was recording or|
-erasing: wait, then save again.|
-'OK' leaves; if a change was not saved, it asks first.|
+If it says 'Not all saved', the flight controller was|
+recording or erasing: wait, then save again.|
+'OK' leaves. With a change not saved it asks 'Save now?':|
+'Save' saves, then leaves; 'Discard' leaves without saving.|

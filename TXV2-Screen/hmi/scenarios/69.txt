@@ -21,7 +21,7 @@ busy.txt="Reading the switches ..."
 vis busy,0
 @shot 69_none
 # the arm switch (always the first shown) and its hint
-t0.txt="Switch 1 of 5"
+t0.txt="Switch action 1 of 5"
 tn0.txt="Arm - motor enable (ARM)"
 tn1.txt="Channel 5: Gear"
 bar.kind=1
@@ -34,7 +34,7 @@ tn8.txt="OFF: 988 us"
 hint.txt="Safety switch: the ON zone must reach 2012 us, but not 988 us."
 @shot 69_arm
 # the longest action, switched on
-t0.txt="Switch 20 of 20"
+t0.txt="Switch action 20 of 20"
 tn0.txt="Stick commands off (STICK COMMANDS DISABLE)"
 tn1.txt="Channel 16: AUX11"
 bar.d0=1300

@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Rates + (Rotorflight)",
+   "txt": "Rates: dynamics",
    "a": {
     "style": 0,
     "key": 255,
@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Response time [ms]",
+   "txt": "Response time (ms)",
    "a": {
     "style": 0,
     "key": 255,
@@ -118,7 +118,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Setpoint boost gain",
+   "txt": "Stick sharpening (boost gain)",
    "a": {
     "style": 0,
     "key": 255,
@@ -146,7 +146,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Setpoint boost cutoff [Hz]",
+   "txt": "Sharpening smoothing (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -326,7 +326,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll response time [ms]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll response time (ms)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -357,7 +357,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch response time [ms]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch response time (ms)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -388,7 +388,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw response time [ms]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw response time (ms)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -419,7 +419,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective response time [ms]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective response time (ms)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -450,7 +450,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll boost gain\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll stick sharpening (boost gain)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -481,7 +481,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch boost gain\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch stick sharpening (boost gain)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -512,7 +512,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw boost gain\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw stick sharpening (boost gain)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -543,7 +543,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective boost gain\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective stick sharpening\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -574,7 +574,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Roll boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Roll sharpening smoothing (Hz)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -605,7 +605,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Pitch boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Pitch sharpening smoothing (Hz)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -636,7 +636,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw sharpening smoothing (Hz)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -667,7 +667,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective boost cutoff [Hz]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective sharpening smoothing (Hz)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -727,7 +727,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:RATES_A.TXT\"\nLogView.t0.txt=\"Rates + (Rotorflight) help\"\nLogView.return.txt=\"Rates_A_View\""
+    "r": "print \"HelpView:RATES_A.TXT\"\nLogView.t0.txt=\"Rates: dynamics help\"\nLogView.return.txt=\"Rates_A_View\""
    }
   },
   {
@@ -862,7 +862,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw dynamic ceiling gain\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw fast-move headroom (ceiling)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -893,7 +893,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw dynamic deadband gain\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw stick-centre quieting\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {
@@ -912,7 +912,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Dynamic ceiling gain",
+   "txt": "Fast-move headroom",
    "a": {
     "style": 0,
     "key": 255,
@@ -940,7 +940,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Dynamic deadband gain",
+   "txt": "Stick-centre quieting",
    "a": {
     "style": 0,
     "key": 255,
@@ -968,7 +968,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Dynamic deadband filter [Hz]",
+   "txt": "Quieting smoothing (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -1008,7 +1008,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw deadband filter [Hz]\"\nva0.val=30<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Yaw quieting smoothing (Hz)\"\nva0.val=30<<8\nprint va0.val"
    }
   },
   {

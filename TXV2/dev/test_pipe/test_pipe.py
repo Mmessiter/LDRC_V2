@@ -249,4 +249,61 @@ int main() {
 cpp3 = os.path.join(d, 't3.cpp'); open(cpp3, 'w').write(prog3)
 r = subprocess.run(['clang++', '-std=c++11', '-Wall', '-o', os.path.join(d, 't3'), cpp3], capture_output=True, text=True)
 if r.returncode: print(r.stderr); sys.exit(1)
-sys.exit(subprocess.run([os.path.join(d, 't3')]).returncode)
+if subprocess.run([os.path.join(d, 't3')]).returncode: sys.exit(1)
+
+# B102: a save into the transmitter's bank only. The real BankCheck / BankCheckTick of PipeHttp.h over a fake pipe: the write
+# goes when the flight controller's bank (MSP 101 byte 23, or 25 for the rates) is the transmitter's; it is refused, and says
+# why, when it is another, when the flight controller does not answer, or answers short; with no pipe, or no model (the backup
+# file), it goes as before.
+mbc = re.search(r'static void \(\*BcThen\)\(\) = nullptr;.*?\nFLASHMEM static void BankCheckTick\(\)\n\{.*?\n\}\n', hsrc, re.S)
+assert mbc, 'BankCheck not found'
+prog4 = r"""
+#include <cstdio>
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#define FLASHMEM
+#define WHAHWHAHMSG 1
+static int PipeState = 2, boxes = 0, thens = 0, asks = 0, lastAskFn = -1, FcPidBank = 0, FcRateBank = 0, shows = 0;
+static bool BoundFlag = true, ModelMatched = true, offline = false, BlockBankChanges = true, FcBankPending = true, late = false, ready = false;
+static std::string lastBox;
+static int PipeRepCode = 200, reqId = 0, nBytes = 26; static uint8_t reply[40];
+static void MsgBox(char *, char *m) { ++boxes; lastBox = m; }
+static void PlaySound(int) {}
+static bool BakOffline() { return offline; }
+static void FcBankShow() { ++shows; }
+static int MspAsk(uint8_t fn, const uint8_t *, int) { ++asks; lastAskFn = fn; ready = false; return ++reqId; }
+static bool PipeReplyReady(int id) { return ready && id == reqId; }
+static bool PipeReplyLate() { return late; }
+static int PipeReplyBytes(uint8_t *out, int max) { const int n = nBytes < max ? nBytes : max; memcpy(out, reply, n); return n; }
+static void Then() { ++thens; }
+""" + mbc.group(0) + r"""
+static int checks = 0, fails = 0;
+#define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
+static void answer(int pidBank, int rateBank) { memset(reply, 0, sizeof reply); reply[23] = (uint8_t)(pidBank - 1); reply[25] = (uint8_t)(rateBank - 1); ready = true; BankCheckTick(); }
+int main() {
+    // the flight controller on the transmitter's bank: the write goes (one question, the bank shown)
+    BankCheck(false, 2, Then, "page RFGovView"); CHECK(asks == 1 && lastAskFn == 101 && thens == 0 && !FcBankPending);
+    BankCheckTick(); CHECK(thens == 0);                                  // (no answer yet)
+    answer(2, 1); CHECK(thens == 1 && boxes == 0 && FcPidBank == 2 && FcRateBank == 1 && shows == 1);
+    // on another bank: refused, and says which; nothing goes, the bank changes free again
+    BlockBankChanges = true; BankCheck(false, 2, Then, "page RFGovView"); answer(1, 1);
+    CHECK(thens == 1 && boxes == 1 && lastBox.find("bank 1, the transmitter on bank 2") != std::string::npos && !BlockBankChanges);
+    // the rates: byte 25 against the transmitter's rates bank
+    BankCheck(true, 3, Then, "page RatesView"); answer(1, 3); CHECK(thens == 2 && boxes == 1);
+    BankCheck(true, 3, Then, "page RatesView"); answer(3, 2); CHECK(thens == 2 && boxes == 2 && lastBox.find("rates 2, the transmitter on rates 3") != std::string::npos);
+    // no answer in time, or a short one: refused
+    BankCheck(false, 1, Then, "page PIDView"); late = true; BankCheckTick(); late = false; CHECK(thens == 2 && boxes == 3 && lastBox.find("not say which bank") != std::string::npos);
+    nBytes = 20; BankCheck(false, 1, Then, "page PIDView"); answer(1, 1); nBytes = 26; CHECK(thens == 2 && boxes == 4);
+    // no pipe, or the model's backup file: as before, at once, nothing asked
+    asks = 0; PipeState = 1; BankCheck(false, 1, Then, "page PIDView"); CHECK(thens == 3 && asks == 0);
+    PipeState = 2; offline = true; BankCheck(false, 1, Then, "page PIDView"); CHECK(thens == 4 && asks == 0); offline = false;
+    printf("test_pipe (bank check): %d checks, %d failures\n", checks, fails);
+    return fails ? 1 : 0;
+}
+"""
+cpp4 = os.path.join(d, 't4.cpp'); open(cpp4, 'w').write(prog4)
+r = subprocess.run(['clang++', '-std=c++11', '-Wall', '-o', os.path.join(d, 't4'), cpp4], capture_output=True, text=True)
+if r.returncode: print(r.stderr); sys.exit(1)
+if subprocess.run([os.path.join(d, 't4')]).returncode: sys.exit(1)

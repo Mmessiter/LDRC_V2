@@ -113,7 +113,7 @@ int main() {
     fcLog.clear(); CopyBankNow();
     // (the FC "forgets" the copy of PID+: the fake copies, then we spoil the target after the copy)
     for (int i = 0; i < 80 && CbStep != CB_IDLE; ++i) { CopyBankPoll(); now += 50; if (CbStep == CB_STORE) adv[1] = rep("00", 43); }
-    CHECK(lastBox.find("but read back DIFFERENT: PID+") != std::string::npos);
+    CHECK(lastBox.find("but read back DIFFERENT: PID +") != std::string::npos);
     // 8. B44: a copy that fails part way puts the flight controller back on the transmitter's banks before the box (B45: the
     // bank switch is held meanwhile: CopyBankRunning)
     CbFrom = 0; CbTo = 1; CbFlight = true; CbGov = true; CbRates = true; CbAdj = false; adv[0] = rep("3C", 43); refuse183 = true;

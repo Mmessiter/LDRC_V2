@@ -183,7 +183,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Head speed [rpm]",
+   "txt": "Headspeed (rpm)",
    "a": {
     "style": 0,
     "key": 255,
@@ -245,7 +245,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "F gain",
+   "txt": "F gain (feed-forward)",
    "a": {
     "style": 0,
     "key": 255,
@@ -276,7 +276,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "TTA gain",
+   "txt": "Tail-torque strength",
    "a": {
     "style": 0,
     "key": 255,
@@ -307,7 +307,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "TTA limit [%]",
+   "txt": "Tail-torque limit (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -338,7 +338,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Max throttle [%]",
+   "txt": "Max throttle (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -369,7 +369,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Min throttle [%]",
+   "txt": "Min throttle (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -400,7 +400,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Fallback drop [%]",
+   "txt": "Fall-back drop (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -431,7 +431,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Yaw weight",
+   "txt": "Anticipate yaw",
    "a": {
     "style": 0,
     "key": 255,
@@ -462,7 +462,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cyclic weight",
+   "txt": "Anticipate cyclic",
    "a": {
     "style": 0,
     "key": 255,
@@ -493,7 +493,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Collective weight",
+   "txt": "Anticipate collective",
    "a": {
     "style": 0,
     "key": 255,
@@ -700,7 +700,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Head speed [rpm]\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Headspeed (rpm)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -855,7 +855,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"F gain\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"F gain (feed-forward)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -886,7 +886,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"TTA gain\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Tail-torque assist strength (TTA gain)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -917,7 +917,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"TTA limit [%]\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Tail-torque assist limit (%)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -948,7 +948,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Max throttle [%]\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Max throttle (%)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -979,7 +979,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Min throttle [%]\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Min throttle (%)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -1010,7 +1010,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Fallback drop [%]\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Throttle drop if RPM signal lost (%)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -1041,7 +1041,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw weight\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Anticipate yaw moves (yaw weight)\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -1072,7 +1072,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Cyclic weight\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Anticipate cyclic moves\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {
@@ -1103,7 +1103,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective weight\"\nva0.val=53<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Anticipate collective moves\"\nva0.val=53<<8\nprint va0.val"
    }
   },
   {

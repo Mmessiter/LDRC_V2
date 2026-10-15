@@ -31,6 +31,7 @@ FLASHMEM void ShowRFBank()
 // **********************************************************************************************************/
 FLASHMEM void RotorFlightStart()
 {
+    RfLeaveAfterSave = false;   // B102: no page's "Save now?" is pending once the menu is open
     char Vbuf[15];
 
     if (MotorEnabled || !SafetyON)

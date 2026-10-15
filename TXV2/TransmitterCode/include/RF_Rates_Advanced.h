@@ -86,6 +86,29 @@ FLASHMEM void ShowLocalRatesAdvancedBank()
 }
 
 // ************************************************************************************************************/
+// B102: the read, and the write once the flight controller is known to be on this rates bank (PipeHttp.h BankCheck)
+FLASHMEM static void RatesAdvAskValues()
+{
+    if (CurrentView != RATESADVANCEDVIEW) { BlockBankChanges = false; return; }
+    Rates_Advanced_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await RATES values
+    Reading_RATES_Advanced_Now = true;                // This tells the Ack payload parser to
+    AddParameterstoQueue(SEND_RATES_ADVANCED_VALUES); // Request RATES values from RX
+    RATES_Advanced_Start_Time = millis();             // record start time as it's not long
+}
+FLASHMEM static void RatesAdvQueueWrite()
+{
+    Rates_Advanced_Were_Edited = false;
+    AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_SECOND_8); // Send RATES ADVANCED values from TX to RX
+    AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_FIRST_7);  // Send RATES ADVANCED values from TX to RX ...because this queue is a LIFO stack
+    if (CurrentView == RATESADVANCEDVIEW) Hide_Advanced_Rates_Msg();   // SECOND MUST BE QUEUED FIRST!!!  because this queue is a LIFO stack
+    PlaySound(BEEPCOMPLETE);                                  // let user know we're done
+    if (RfValueWasCut && CurrentView == RATESADVANCEDVIEW)
+    { // B07
+        Display_Advanced_Rates_Values(0, MAX_RATES_ADVANCED_BYTES);
+        RfCutNote("page Rates_A_View");
+    }
+    RfSavedThenLeave(RATESADVANCEDVIEW);                      // B102: OK's "Save now?" closes the page once saved
+}
 FLASHMEM void ShowRatesAdvancedBank()
 {
     if (CurrentView != RATESADVANCEDVIEW) // Must be in  RATESADVANCEDVIEW
@@ -120,12 +143,9 @@ FLASHMEM void ShowRatesAdvancedBank()
         }
     }
     RatesAdvancedMsg(buf, Gray);
-    Rates_Advanced_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await RATES values
-    Reading_RATES_Advanced_Now = true;                // This tells the Ack payload parser to
     BlockBankChanges = true;                  // block bank changes while we do this
-    AddParameterstoQueue(SEND_RATES_ADVANCED_VALUES); // Request RATES values from RX
-    RATES_Advanced_Start_Time = millis();             // record start time as it's not long
     Rates_Advanced_Were_Edited = false;               // reset edited flag
+    RatesAdvAskValues();
 }
 
 // **********************************************************************************************************/
@@ -152,8 +172,9 @@ FLASHMEM void EndRatesAdvancedView()
 {
     if (Rates_Advanced_Were_Edited)
     {
-        if (GetConfirmation((char *)"page Rates_A_View", (char *)"Discard edited values?"))
-            GotoFrontView();
+        if (!RfSaveFirst("page Rates_A_View", "The edited dynamics are", SendEditedRatesAdvanced, EndRatesAdvancedView, &Rates_Advanced_Were_Edited)) return;   // B102: "Save now?"
+        Rates_Advanced_Were_Edited = false;   // (Discard: back to the Rotorflight page, as without edits - it went to the front page)
+        RotorFlightStart();
     }
     else
     {
@@ -201,9 +222,9 @@ FLASHMEM void SaveLocalRatesAdvancedBank()
 // **********************************************************************************************************/
 FLASHMEM void SendEditedRatesAdvanced()
 {
-    Rates_Advanced_Were_Edited = false;
     if (!(RfLive())) // Model not connected so save to local Advanced RATES
     {
+        Rates_Advanced_Were_Edited = false;
         SaveLocalRatesAdvancedBank();
         return;
     }
@@ -218,16 +239,8 @@ FLASHMEM void SendEditedRatesAdvanced()
     PlaySound(BEEPMIDDLE);
     BlockBankChanges = true;
     DelayWithDog(100);                                           //  allow LOTS of time for screen to update BEFORE sending another Nextion command
-    RatesAdvancedMsg((char *)"Sending edited advanced rates ...", Gray); // Show sending message
+    RatesAdvancedMsg((char *)"Sending edited dynamics ...", Gray); // Show sending message
     ReadRatesAdvanced();
-    AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_SECOND_8); // Send RATES ADVANCED values from TX to RX
-    AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_FIRST_7);  // Send RATES ADVANCED values from TX to RX ...because this queue is a LIFO stack
-    Hide_Advanced_Rates_Msg();                                // SECOND MUST BE QUEUED FIRST!!!  because this queue is a LIFO stack
-    PlaySound(BEEPCOMPLETE);                                  // let user know we're done
-    if (RfValueWasCut)
-    { // B07
-        Display_Advanced_Rates_Values(0, MAX_RATES_ADVANCED_BYTES);
-        RfCutNote("page Rates_A_View");
-    }
+    BankCheck(true, DualRateInUse, RatesAdvQueueWrite, "page Rates_A_View");   // B102: into this rates bank, or not at all (the edited flag stays until then)
 }
 #endif // RATESRF_ADVANCED_H

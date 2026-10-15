@@ -5,7 +5,7 @@ Screen_Background=8
 @model 1
 page Travel2View
 t11.txt="Black Thunder 2"
-t9.txt="Bank 1"
+t9.txt="All banks"
 vis b3,0
 tn0.txt="86.5"
 tn1.txt="100.0"

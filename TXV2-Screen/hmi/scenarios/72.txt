@@ -14,7 +14,7 @@ vis busy,0
 tn0.txt="12"
 tn1.txt="5000"
 tn2.txt="ESC telemetry"
-tn3.txt="FC pads"
+tn3.txt="FC pads (ADC)"
 tn4.txt="4.20"
 tn5.txt="3.50"
 tn6.txt="3.30"

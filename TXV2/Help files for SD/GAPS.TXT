@@ -32,4 +32,4 @@ Gaps while the 'PID (Rotorflight)' page is open are|
 neither counted nor logged.||
 'Clear', on the Telemetry page, sets the counts back to zero.|
 They also start again a few seconds after each connection, and|
-when you press 'OK' on 'Rotorflight options'.|
+when you press 'OK' on the 'Rotorflight' page.|

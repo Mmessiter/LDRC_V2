@@ -53,8 +53,10 @@ def ev_title(pg, name, key, old, new):
     """Change the WORDS of a help-viewer title or keypad question inside an event (LogView.t0.txt / keybdA.t1.txt / keybdB.t1.txt).
     Refuses anything else. Idempotent: if `new` is already there nothing happens."""
     c = comp(pg, name); s = c['ev'][key]
+    olds = tuple(old) if isinstance(old, (list, tuple)) else (old,)   # (15 Oct 2026: words renamed twice - the first old, then the polish's)
     for target in ('LogView.t0.txt=', 'keybdA.t1.txt=', 'keybdB.t1.txt='):
         if f'{target}"{new}"' in s: return
-        if f'{target}"{old}"' in s:
-            c['ev'][key] = s.replace(f'{target}"{old}"', f'{target}"{new}"'); return
+        for o in olds:
+            if f'{target}"{o}"' in s:
+                c['ev'][key] = s.replace(f'{target}"{o}"', f'{target}"{new}"'); return
     raise KeyError(f"{pg['name']}.{name}: no title {old!r} in its {key} event")

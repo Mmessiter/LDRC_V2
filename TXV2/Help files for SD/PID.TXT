@@ -13,20 +13,26 @@ To check a save, move the switch away and back.|
 The page reads the values again.|
 If the page says nothing came back, do the same,|
 or leave the page and open it again.|
-Two numbers at the top left, such as 'Bank 3 / FC 2':|
-the flight controller is on bank 2, not your switch's bank 3.|
-The page shows and saves bank 2.||
+'Save' writes only into the transmitter's bank.|
+'Bank 2 / FC 1' at the top left: the flight controller is on|
+bank 1. The page shows bank 1, but 'Save' writes nothing, and|
+a message says so. Check the bank switch's set-up.|
+(The check needs Bluetooth joined.)||
 THE COLUMNS:|
 P: how hard it corrects. Too much gives a fast wobble.|
 I: how firmly it holds against drift and wind.|
 D: damping, against overshoot.|
-FF (feedforward): answers the stick at once.|
+FF (feed-forward): answers the stick at once.|
 Boost: an extra kick on quick stick moves.|
-HSI offset: Roll and Pitch only.|
-In the Configurator, FF is F, Boost is B and HSI offset is O.||
-'Advanced ...' opens 'PID +' for the same bank.|
-'OK' goes back to the Rotorflight options.|
-Both ask first if you have unsaved changes.|
+HSI gain: Roll and Pitch only. How strongly the automatic|
+trim builds up in fast forward flight. How far that trim|
+may go is the 'trim cap (HSI)' on 'PID + (advanced)'.|
+In the Configurator, FF is F, Boost is B and HSI gain is O.||
+'PID + ...' opens 'PID + (advanced)' for the same bank.|
+It asks first if you have unsaved changes.|
+'OK' goes back to the 'Rotorflight' page.|
+With unsaved changes it asks 'Save now?': 'Save' saves them,|
+and the page closes once saved; 'Discard' leaves without saving.|
 The page opens only with the safety on.|
 With no model connected, it shows the model's backup|
-(see the Rotorflight options help).|
+(see the help on the 'Rotorflight' page).|

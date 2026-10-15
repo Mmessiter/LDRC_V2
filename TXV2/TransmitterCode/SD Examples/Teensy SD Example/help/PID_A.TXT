@@ -1,5 +1,7 @@
 The rest of the flight controller's PID settings, for the bank|
-shown at the top left (the Profiles tab of the Configurator).|
+shown at the top left. The names are the phone app's.|
+Rotorflight's own names are in brackets below|
+(in the Configurator: the Profiles tab).|
 Most models fly well on Rotorflight's own values.|
 Change one only when you know why.||
 TO CHANGE THEM:|
@@ -19,13 +21,46 @@ To check a save, move the switch away and back.|
 The page reads the values again.|
 If the page says nothing came back, do the same,|
 or leave the page and open it again.|
-'Bank 3 / FC 2' at the top left: the flight controller|
-is on bank 2, so the page shows and saves bank 2.||
+'Save' writes only into the transmitter's bank.|
+'Bank 2 / FC 1' at the top left: the flight controller is on|
+bank 1. The page shows bank 1, but 'Save' writes nothing, and|
+a message says so. Check the bank switch's set-up.|
+(The check needs Bluetooth joined.)||
+THE SETTINGS:|
+Piro compensation: a switch. Touch it to turn it on or off.|
+Relax on the ground (ground error decay): on the ground,|
+built-up corrections drain away, so the swash does not lean.|
+Roll, Pitch and Yaw each have:|
+- wind-up relief (I-term relax cutoff): holds back the I term|
+in fast moves, so it cannot snap back. Lower: more relief.|
+- correction cap (error limit): the biggest error, in degrees,|
+that it will try to wind away.|
+- response speed (bandwidth, Hz): higher is crisper,|
+but more sensitive to vibration.|
+- D smoothing (D-term cutoff, Hz): lower it if servos buzz|
+or run hot.|
+- boost smoothing (B-term cutoff, Hz): the filter on Boost.|
+Roll and Pitch trim cap (HSI offset limit): the most the|
+automatic trim may add in fast forward flight, in degrees.|
+How strongly it builds up is 'HSI gain' on the PIDs page.|
+Yaw stop firmness CW and CCW (CW and CCW stop gain): how|
+firmly a yaw stops when you centre the stick.|
+Raise the side that wags or bounces.|
+Yaw precomp smoothing (precomp cutoff, Hz): smoothing of the|
+yaw pushes below.|
+Yaw push from cyclic and from collective (cyclic and|
+collective FF gain): tail added as that load rises, before|
+the nose can swing. Collective is the main one.|
+Yaw push from speed-ups (inertia precomp gain): tail added|
+while the rotor speeds up or slows down.|
+Speed-up push smoothing (inertia precomp cutoff, Hz):|
+smoothing of that push.||
 THE NUMBERS:|
-'Piro compensation' is a switch: touch it to turn it on or off.|
-'Ground error decay' and 'Inertia precomp cutoff' have|
+'Relax on the ground' and 'Speed-up push smoothing' have|
 one decimal place (0.0 to 25.5).|
 All the others are whole numbers, 0 to 255.||
-'OK' leaves the page. It asks first if you have unsaved changes.|
+'OK' leaves the page. With unsaved changes it asks 'Save now?':|
+'Save' saves them, and the page closes once saved;|
+'Discard' leaves without saving.|
 With no model connected the page shows the model's backup|
-(see the Rotorflight options help).|
+(see the help on the 'Rotorflight' page).|

@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Backup (Rotorflight)",
+   "txt": "Backup & restore",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:BACKUP.TXT\"\nLogView.t0.txt=\"Backup (Rotorflight) help\"\nLogView.return.txt=\"RFBackUpView\""
+    "r": "print \"HelpView:BACKUP.TXT\"\nLogView.t0.txt=\"Backup & restore help\"\nLogView.return.txt=\"RFBackUpView\""
    }
   },
   {
@@ -340,7 +340,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Write edits",
+   "txt": "Send to model",
    "val": 0,
    "a": {
     "style": 4,
@@ -372,7 +372,7 @@
     "bco": 54938,
     "pco2": 65535
    },
-   "txt": "Forget edits",
+   "txt": "Discard edits",
    "val": 0,
    "a": {
     "style": 4,

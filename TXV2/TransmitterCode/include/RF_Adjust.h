@@ -31,7 +31,7 @@ static const int ADJ_RMIN = 875, ADJ_RMAX = 2125;
 static const int ADJ_NAMES = 82;
 // Rotorflight's adjustment functions, 0..81, as the configurator names them (the phone page's LABELS)
 static const char *const AdjNames[ADJ_NAMES] PROGMEM = {
-    "(nothing)", "Rates bank switch (1 to 6)", "PID bank switch (1 to 6)", "Led profile", "Battery profile",
+    "(nothing)", "Rates selector", "Bank (Profile) selector", "Led profile", "Battery profile",   // (fn 1-2: the phone app's Switches page words, 15 Oct)
     "Pitch rate curve shape (Shape)", "Roll rate curve shape (Shape)", "Yaw rate curve shape (Shape)",
     "Pitch top rotation speed (Rate)", "Roll top rotation speed (Rate)", "Yaw top rotation speed (Rate)",
     "Pitch expo", "Roll expo", "Yaw expo",
@@ -564,7 +564,7 @@ FLASHMEM static void AdjLive() // the chosen channel's position, from this trans
             if (!AdjBankFitted[AdjAt] && AdjFitBankRow(AdjAt))
             { // a bank seen for the first time shows the line as it is cannot follow this transmitter: the ends re-fitted
                 AdjEdited(); AdjShow();
-                AdjBusy("Press Save: the bank switch now matches this transmitter's banks."); AdjMsgUntil = millis() + 6000;
+                AdjBusy("Press Save: the bank selector now matches this transmitter's banks."); AdjMsgUntil = millis() + 6000;
                 return;
             }
             if (wasRight != AdjBankFitted[AdjAt]) { AdjShow(); return; }
@@ -608,11 +608,11 @@ FLASHMEM static void AdjShow()
     char b[48];
     AdjText("tn0", AdjNames[r.fn < ADJ_NAMES ? r.fn : 0]);
     const int bank = AdjCondToBank(r, AdjBk);
-    if (bank > 0) snprintf(b, sizeof(b), "in bank %d", bank); else snprintf(b, sizeof(b), "%s", bank < 0 ? "in bank ?" : "in any bank");
+    if (bank > 0) snprintf(b, sizeof(b), "in bank %d", bank); else snprintf(b, sizeof(b), "%s", bank < 0 ? "set elsewhere" : "in any bank");
     AdjText("tn3", b);
     AdjVis("tn3", r.fn > 2);   // (B76, Malcolm: a bank switch IS the bank - no bank box for it)
     if (r.kind == AK_SWITCH && (r.fn == 1 || r.fn == 2) && AdjBankFitted[AdjAt]) snprintf(b, sizeof(b), "Banks 1 to %d of this transmitter", r.n);
-    else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Switch, %d positions", r.n); else snprintf(b, sizeof(b), "%s", r.kind == AK_KNOB ? "Knob" : "Step up / down");
+    else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Switch, %d positions", r.n); else snprintf(b, sizeof(b), "%s", r.kind == AK_KNOB ? "Knob" : "Step adjustment");
     AdjText("tn2", b);
     const int ch = r.ch + 6;
     snprintf(b, sizeof(b), "Channel %d: %s", ch, (ch >= 1 && ch <= CHANNELSUSED) ? ChannelNames[ch - 1] : "?");
@@ -786,9 +786,9 @@ FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> row
         if (AdjFitBankRow(i)) refit = true;
     }
     AdjTakeNote[0] = 0;
-    if (dups) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: %d extra bank switch line%s removed (they fight).", dups, dups == 1 ? "" : "s");
+    if (dups) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: %d extra bank selector line%s removed (they fight).", dups, dups == 1 ? "" : "s");
     else if (legacy) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: %d switch%s put right (old once-only form).", legacy, legacy == 1 ? "" : "es");
-    else if (refit) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: the bank switch now matches this transmitter's banks.");
+    else if (refit) snprintf(AdjTakeNote, sizeof(AdjTakeNote), "Press Save: the bank selector now matches this transmitter's banks.");
 }
 FLASHMEM static int AdjLinesToWrite(AdjLine *L) // the rows, back in raw units
 {
@@ -877,7 +877,7 @@ FLASHMEM void AdjustPoll()
     case ADJ_READ:
     {
         if (again) { ++AdjTries; AdjReq = MspAsk(52, nullptr, 0); return; }
-        if (!ok) { AdjFail("Adjustments need the USB cable from the receiver\r\nto the flight controller", true); return; }
+        if (!ok) { AdjFail("In-flight adjustments need the USB cable", true); return; }   // (the receiver's own words follow: the message box shows 180 characters)
         const int n = PipeReplyBytes(AdjImg, sizeof(AdjImg));
         if (n < 14) { snprintf(PipeRepBody, sizeof(PipeRepBody), "only %d bytes came (Rotorflight sends 588)", n); AdjFail("Could not read the adjustments", true); return; }
         AdjTakeRows(AdjImg, n);
@@ -915,6 +915,7 @@ FLASHMEM void AdjustPoll()
         AdjBusy(AdjTakeNote[0] ? AdjTakeNote : same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         AdjMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        if (!Adj_Was_Edited) RfSavedThenLeave(ADJUSTVIEW); else RfLeaveAfterSave = false;   // B102 (a note asks for another Save: the page stays)
         return;
     }
     case ADJ_NOW_STATUS:
@@ -958,7 +959,7 @@ FLASHMEM void AdjustPoll()
 FLASHMEM void StartAdjustView() // the menu's Adjustments ...
 {
     char why[120];
-    if (!(BoundFlag && ModelMatched) && !BakOffline()) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page RFView", (char *)"Adjustments need the model connected,\r\nwith the USB cable from the receiver\r\nto the flight controller - or a backup\r\nmade with the cable in."); return; }
+    if (!(BoundFlag && ModelMatched) && !BakOffline()) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page RFView", (char *)"In-flight adjustments need the model\r\nconnected, with the USB cable from the\r\nreceiver to the flight controller - or a\r\nbackup made with the cable in."); return; }
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
         PlaySound(WHAHWHAHMSG);
@@ -973,13 +974,15 @@ FLASHMEM void StartAdjustView() // the menu's Adjustments ...
     AdjShow();
     AdjRead();
 }
+void SaveAdjustments();
+FLASHMEM static void AdjSaveNow() { AdjHead(); AdjShow(); SaveAdjustments(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndAdjustView() // OK
 {
     if (AdjStep_ != ADJ_IDLE && AdjStep_ != ADJ_NOW_STATUS && AdjStep_ != ADJ_NOW_READ) return;   // (a save runs: wait for it)
     if (Adj_Was_Edited)
     {
         AdjGather();
-        if (!GetConfirmation((char *)"page AdjustView", (char *)"Discard the edited adjustments?")) { AdjHead(); AdjShow(); return; }
+        if (!RfSaveFirst("page AdjustView", "The edited adjustments are", AdjSaveNow, EndAdjustView, &Adj_Was_Edited)) return;   // B102
     }
     AdjStep_ = ADJ_IDLE; Adj_Was_Edited = false;
     RotorFlightStart();
@@ -1084,7 +1087,7 @@ FLASHMEM void AdjustBankTapped() // Any -> 1 -> 2 ... -> Any, among the banks th
     AdjRow &r = AdjRows[AdjAt];
     if (!AdjBk.have)
     {
-        MsgBox((char *)"page AdjustView", (char *)"No bank switch is set up here: add a\r\n'PID bank switch (1 to 6)' adjustment\r\nfirst. Until then every adjustment\r\nholds in every bank.");
+        MsgBox((char *)"page AdjustView", (char *)"No bank selector is set up: choose the\r\n'Bank (Profile)' channel on the phone\r\napp's Transmitter channels page first.\r\nUntil then every adjustment holds in\r\nevery bank.");
         AdjHead(); AdjShow(); return;
     }
     int bank = AdjCondToBank(r, AdjBk);

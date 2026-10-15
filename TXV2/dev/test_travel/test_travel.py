@@ -73,6 +73,13 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     }
     fcReply(404, "unknown"); return PipeReqId;
 }
+// B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave (include/RF_SaveNow.h) over a fake question: Discard
+// unless saveNowAnswer is 1; and the bank check (PipeHttp.h BankCheck) as without a pipe: the write goes
+static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
+static int saveNowAnswer = 0, saveNowAsked = 0;
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -99,7 +106,7 @@ int main() {
     run();
     { auto d = dataOf(191); CHECK(d.size() == 3 && d[0] == "019B02" && d[1] == "020000" && d[2] == "040000"); }
     CHECK(BenchHeld && ov[1] == 667 && ov[2] == 0 && ov[4] == 0 && TravStep == TRV_IDLE && cmd("vis busy,0"));
-    CHECK(fields["i0"] == "HELD: roll at 8.0 deg (gyros bypassed)" && fields["b2"] == "Release" && BenchHeldUntil == now - 50 * 1 + 5UL * 60 * 1000 - 0 || BenchHeldUntil > now);
+    CHECK(fields["i0"] == "SWASH HELD: Roll at 8.0 deg (gyros bypassed)" && fields["b2"] == "Release" && BenchHeldUntil == now - 50 * 1 + 5UL * 60 * 1000 - 0 || BenchHeldUntil > now);
     // a second tap while the hold runs is ignored; OK and < Previous while busy are ignored too
     fcLog.clear(); BenchHoldTapped(); run(); CHECK(writes(191) == 3 && overridesOff());   // (that tap was Release: the hold let go)
     CHECK(!BenchHeld && fields["b2"] == "Hold swash" && fields["i0"] == "Motor off, blades clear: it moves the swash");
@@ -108,7 +115,7 @@ int main() {
     fields["tn1"] = "-12"; fcLog.clear(); BenchAxisTapped();
     CHECK(fields["tn0"] == "Pitch (elevator)" && TravStep == TRV_HOLD); run();
     { auto d = dataOf(191); CHECK(d.size() == 3 && d[0] == "010000" && d[1] == "0218FC" && d[2] == "040000"); }
-    CHECK(BenchHeld && ov[1] == 0 && ov[2] == -1000 && fields["i0"] == "HELD: pitch at -12.0 deg (gyros bypassed)" && fields["tn1"] == "-12.0");
+    CHECK(BenchHeld && ov[1] == 0 && ov[2] == -1000 && fields["i0"] == "SWASH HELD: Pitch at -12.0 deg (gyros bypassed)" && fields["tn1"] == "-12.0");
     // ---- 4. the suggested calibration: 86.5 x 8 / 5.6 = 123.6, into the box, Save shown
     fields["tn1"] = "8"; fields["tn2"] = "5.6"; cmds.clear(); boxes = 0;
     BenchSuggestTapped();
@@ -121,7 +128,7 @@ int main() {
     CHECK(ins[1][0] == 1236 && ins[2][0] == 1236 && ins[3][0] == 1000 && ins[4][0] == 1000 && ins[1][2] == 1000 && !Trav_Was_Edited && !TravPage4Edited);
     CHECK(fields["busy"] == "Saved, and read back the same." && BenchHeld && ov[2] == -1000 && fields["tn3"] == "123.6");
     run(100);   // (the 4-s message gone, the page shown again, still held)
-    CHECK(fields["i0"] == "HELD: pitch at -12.0 deg (gyros bypassed)" && fields["b2"] == "Release");
+    CHECK(fields["i0"] == "SWASH HELD: Pitch at -12.0 deg (gyros bypassed)" && fields["b2"] == "Release");
     // ---- 6. the hold's own end: five minutes
     fcLog.clear(); now += 5UL * 60 * 1000; run();
     { auto d = dataOf(191); CHECK(d.size() == 3 && d[0] == "01C509" && d[1] == "02C509" && d[2] == "04C509"); }

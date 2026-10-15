@@ -11,29 +11,35 @@ The values are written to the flight controller,|
 read back to check, and stored.|
 'Save' is refused while the model could be armed.||
 GOOD TO KNOW:|
-Save before you move the switch or press 'Global ...':|
-unsaved changes are lost.|
+Save before you move the switch: unsaved changes are lost.|
+'Global ...' asks first if you have unsaved changes.|
 To check a save, move the switch away and back.|
 The page reads the values again.|
 If the page says nothing came back, do the same,|
 or leave the page and open it again.|
-'Bank 3 / FC 2' at the top left: the flight controller|
-is on bank 2, so the page shows and saves bank 2.||
+'Save' writes only into the transmitter's bank.|
+'Bank 2 / FC 1' at the top left: the flight controller is on|
+bank 1. The page shows bank 1, but 'Save' writes nothing, and|
+a message says so. Check the bank switch's set-up.|
+(The check needs Bluetooth joined.)||
 THE VALUES:|
-Head speed [rpm]: the head speed this bank holds.|
+Headspeed (rpm): the head speed this bank holds.|
 Master gain: the overall strength. It scales P, I, D and F.|
 P, I and D gain: how the governor corrects a head speed error.|
-F gain: the strength of the three weights below.|
-TTA gain and TTA limit [%]: tail torque assist.|
-The head speed may rise to help the tail in hard yaw.|
-The limit is the most it may rise.|
-Max throttle and Min throttle [%]: the most and the least|
+F gain (feed-forward): the strength of the three 'Anticipate'|
+values.|
+Tail-torque strength (TTA gain) and Tail-torque limit (%):|
+tail torque assist (TTA). The head speed may rise to help the|
+tail in hard yaw. The limit is the most it may rise.|
+Max throttle (%) and Min throttle (%): the most and the least|
 throttle the governor may use.|
-Fallback drop [%]: how much the throttle drops if the head|
+Fall-back drop (%): how much the throttle drops if the head|
 speed signal is lost (0 to 50).|
-Yaw, Cyclic and Collective weight: how much each stick adds|
+Anticipate yaw, Anticipate cyclic and Anticipate collective|
+(yaw, cyclic and collective weight): how much each stick adds|
 throttle before the load arrives.||
-'OK' goes back to the Rotorflight options.|
-It asks first if you have unsaved changes.|
+'OK' goes back to the 'Rotorflight' page.|
+With unsaved changes it asks 'Save now?': 'Save' saves them,|
+and the page closes once saved; 'Discard' leaves without saving.|
 With no model connected the page shows the model's backup|
-(see the Rotorflight options help).|
+(see the help on the 'Rotorflight' page).|

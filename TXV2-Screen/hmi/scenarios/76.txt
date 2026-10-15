@@ -6,7 +6,7 @@ Screen_Background=8
 @model 1
 page Travel4View
 t11.txt="Black Thunder 2"
-t9.txt="Bank 1"
+t9.txt="All banks"
 vis b3,0
 tn0.txt="Roll (aileron)"
 tn1.txt="8.0"
@@ -16,7 +16,7 @@ tn4.txt="tap"
 i0.txt="Motor off, blades clear: it moves the swash"
 b2.txt="Hold swash"
 @shot 76_ready
-i0.txt="HELD: pitch at -12.0 deg (gyros bypassed)"
+i0.txt="SWASH HELD: Pitch at -12.0 deg (gyros bypassed)"
 b2.txt="Release"
 tn0.txt="Pitch (elevator)"
 tn1.txt="-12.0"

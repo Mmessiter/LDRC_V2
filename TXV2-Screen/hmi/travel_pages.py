@@ -20,45 +20,45 @@ rp.series_begin()   # (B91: one island, one size of row, for the series)
 # hmi/polish/rfmore.py gives page 1's left column the room for today's 392-px "Main Rotor Direction: Counter-clockwise",
 # which this column rule cannot fit beside the trims); keypad questions that fit the keypad's 297-px title with their unit,
 # the tail's limits without one (degrees on a variable-pitch tail, per cent on a motorised one: RF_Travel.h relabels them)
-rp.page(62, 'TravelView', 'Mixer (Rotorflight)', [
+rp.page(62, 'TravelView', 'Travel extents', [
     ('h0', 'Main rotor settings', 0, 0, 'head', 0),
     ('i0', 'Swashplate type', 0, 1, 'info', 0, 'Swashplate Type: CCPM 120 deg'),
     ('i1', 'Main rotor direction', 0, 2, 'info', 0, 'Main rotor direction: Anticlockwise'),
     ('tn6', 'Aileron reversed', 0, 3, 'switch', 87), ('tn7', 'Elevator reversed', 0, 4, 'switch', 88),
     ('tn8', 'Collective reversed', 0, 5, 'switch', 89),
-    ('h1', 'Swashplate trims', 1, 0, 'head', 0),
-    ('tn9', 'Roll trim [%]', 1, 1, 'num', 86), ('tn10', 'Pitch trim [%]', 1, 2, 'num', 86), ('tn11', 'Collective trim [%]', 1, 3, 'num', 86),
+    ('h1', 'Swash trims (%)', 1, 0, 'head', 0),
+    ('tn9', 'Roll trim (%)', 1, 1, 'num', 86), ('tn10', 'Pitch trim (%)', 1, 2, 'num', 86), ('tn11', 'Collective trim (%)', 1, 3, 'num', 86),
 ], [('b3', 'Save', 14, 180, 85), ('b2', 'Next >', 408, 180, 90), ('b1', 'OK', 605, 180, 84)], 'TRAVEL.TXT')
-rp.page(63, 'Travel2View', 'Mixer: main rotor geometry', [
+rp.page(63, 'Travel2View', 'Travel extents: swash', [
     ('h0', 'Main rotor geometry', 0, 0, 'head', 0),
-    ('tn0', 'Cyclic calibration [%]', 0, 1, 'num', 86), ('tn1', 'Collective calibration [%]', 0, 2, 'num', 86),
-    ('tn2', 'Geometry correction [%]', 0, 3, 'num', 86),
-    ('tn3', 'Cyclic pitch limit [deg]', 0, 4, 'num', 86, 'Cyclic blade pitch limit [deg]'),
-    ('tn4', 'Collective pitch limit [deg]', 0, 5, 'num', 86),
-    ('tn5', 'Total pitch limit [deg]', 0, 6, 'num', 86, 'Total blade pitch limit [deg]'),
-    ('tn6', 'Swash phase angle [deg]', 0, 7, 'num', 86, 'Swashplate phase angle [deg]'),
-    ('tn7', 'Positive tilt corr. [%]', 1, 1, 'num', 86, 'Positive tilt correction [%]'),
-    ('tn8', 'Negative tilt corr. [%]', 1, 2, 'num', 86, 'Negative tilt correction [%]'),
+    ('tn0', 'Cyclic gain (%)', 0, 1, 'num', 86), ('tn1', 'Collective gain (%)', 0, 2, 'num', 86),
+    ('tn2', 'Up/down balance (%)', 0, 3, 'num', 86, 'Collective up/down balance (%)'),
+    ('tn3', 'Cyclic pitch limit (deg)', 0, 4, 'num', 86),
+    ('tn4', 'Collective pitch limit (deg)', 0, 5, 'num', 86),
+    ('tn5', 'Total pitch limit (deg)', 0, 6, 'num', 86, 'Total pitch limit (deg, 0 = off)'),
+    ('tn6', 'Swash phase angle (deg)', 0, 7, 'num', 86),
+    ('tn7', 'Tilt correction + (%)', 1, 1, 'num', 86, 'Positive tilt correction (%)'),
+    ('tn8', 'Tilt correction - (%)', 1, 2, 'num', 86, 'Negative tilt correction (%)'),
 ], [('b3', 'Save', 14, 180, 85), ('b4', '< Previous', 208, 180, 91), ('b2', 'Next >', 402, 180, 109), ('b1', 'OK', 596, 180, 84)], 'TRAVEL2.TXT')
-rp.page(66, 'Travel3View', 'Mixer: tail rotor', [
+rp.page(66, 'Travel3View', 'Travel extents: tail', [
     ('h0', 'Tail rotor settings', 0, 0, 'head', 0),
     ('i0', 'Tail rotor type', 0, 1, 'info', 0, 'Tail rotor type: Variable pitch'),
-    ('tn0', 'Yaw reversed', 0, 2, 'switch', 108),
-    ('tn1', 'Yaw centre trim [deg]', 0, 3, 'num', 86, 'Yaw centre'), ('tn2', 'Yaw calibration [%]', 0, 4, 'num', 86),
-    ('tn3', 'Yaw limit CW [deg]', 0, 5, 'num', 86, 'Yaw limit CW'),
-    ('tn4', 'Yaw limit CCW [deg]', 0, 6, 'num', 86, 'Yaw limit CCW'),
-    ('tn5', 'Motor idle throttle [%]', 0, 7, 'num', 86),
+    ('tn0', 'Rudder reversed', 0, 2, 'switch', 108),
+    ('tn1', 'Tail centre trim (deg)', 0, 3, 'num', 86, 'Tail centre trim'), ('tn2', 'Tail gain (%)', 0, 4, 'num', 86),
+    ('tn3', 'Tail travel, stick right (deg)', 0, 5, 'num', 86, 'Tail travel, stick right'),
+    ('tn4', 'Tail travel, stick left (deg)', 0, 6, 'num', 86, 'Tail travel, stick left'),
+    ('tn5', 'Tail motor idle (%)', 0, 7, 'num', 86),
 ], [('b3', 'Save', 14, 180, 85), ('b4', '< Previous', 208, 180, 110), ('b2', 'Next >', 402, 180, 178), ('b1', 'OK', 596, 180, 84)], 'TRAVEL3.TXT')
 # B98: the told row i0 is the status line the main board writes (RF_Travel.h BenchStatus: the longest is the HELD line
 # below); b2 is the one button whose words it changes, "Hold swash" or "Release"; the axis row is 'wide' for "Pitch
 # (elevator)"; the suggested calibration row is a tap ("tap" until worked out)
-rp.page(76, 'Travel4View', 'Mixer: bench measure', [
-    ('i0', 'Motor off, blades clear: it moves the swash', 0, 0, 'info', 0, 'HELD: pitch at -12.0 deg (gyros bypassed)'),
+rp.page(76, 'Travel4View', 'Bench measure', [
+    ('i0', 'Motor off, blades clear: it moves the swash', 0, 0, 'info', 0, 'SWASH HELD: Pitch at -12.0 deg (gyros bypassed)'),
     ('tn0', 'Axis', 0, 1, 'wide', 179, 'Pitch (elevator)'),
-    ('tn1', 'Hold angle [deg]', 0, 2, 'num', 180),
-    ('tn2', 'Gauge reads [deg]', 0, 3, 'num', 180),
-    ('tn3', 'Cyclic calibration [%]', 0, 4, 'num', 86),
-    ('tn4', 'Suggested calibration [%]', 0, 5, 'cycle', 182),
+    ('tn1', 'Angle (deg)', 0, 2, 'num', 180),
+    ('tn2', 'Peak gauge reading (deg)', 0, 3, 'num', 180),
+    ('tn3', 'Cyclic gain (%)', 0, 4, 'num', 86),
+    ('tn4', 'Suggested gain (%)', 0, 5, 'cycle', 182),
 ], [('b3', 'Save', 14, 180, 85), ('b2', 'Hold swash', 208, 180, 181), ('b4', '< Previous', 402, 180, 110), ('b1', 'OK', 596, 180, 84)], 'TRAVEL4.TXT')
 rp.series_end()
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))

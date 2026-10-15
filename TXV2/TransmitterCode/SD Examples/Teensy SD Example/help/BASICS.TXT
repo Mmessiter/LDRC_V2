@@ -1,29 +1,31 @@
-The model's basics: what kind of helicopter the flight|
+First-time basics: what kind of helicopter the flight|
 controller is flying, and how it talks to the ESC.|
-The phone app calls these 'First-time basics'; in the|
-configurator they are on the Mixer and Motor tabs.||
-Set them once, when a model is new. The Mixer pages show|
-the first three but do not change them.||
+The ESC and motor rows are as on the phone app's|
+'First-time basics' page. (Configurator: Mixer and Motors tabs.)||
+Set them once, when a model is new. 'Travel extents ...'|
+shows the first three but does not change them.||
 Tap a choice to step to the next one; tap a number to type.|
 'Save' appears once something is changed. It writes all the|
-Model basics pages, stores them, then RESTARTS the flight|
+First-time basics pages, stores them, then RESTARTS the flight|
 controller (these take effect when it starts) and reads them|
-back:|
-allow a few seconds. It asks first.|
-'Next >' goes on to the gear ratios, then the ports, then the|
-ESC throttle calibration, changes kept.|
-'OK' leaves; if a change was not saved, it asks first.||
+back: allow a few seconds. It asks first.|
+'Next >' goes on to 'Gear ratio', then 'Ports', then|
+'Throttle calibration', changes kept.|
+'OK' leaves. With a change not saved it asks 'Save now?':|
+'Save' saves, then leaves; 'Discard' leaves without saving.||
 Swash type: None, Direct, CCPM 120, 135 or 140 degrees,|
-FPM 90 L or V. The configurator's Swashplate type.|
+FPM 90 L or V. (Configurator: Swashplate type.)|
 Rotor turns: Clockwise or Anticlockwise, seen from above.|
-The configurator's Main rotor direction.|
+(Configurator: Main rotor direction.)|
 Tail type: Variable pitch, Motorised or Bi-directional.|
-The configurator's Tail rotor type.|
+(Configurator: Tail rotor type.)|
 ESC signal: how the throttle is SENT, not the brand.|
 Helicopter ESCs (Scorpion, Kontronik, YGE, Hobbywing) use|
-PWM; DShot is for drone-style ESCs. Off disables the motor.|
+'Normal PWM'; DShot is for drone-style ESCs.|
+'Off (disabled)' disables the motor.|
 ESC brand: the telemetry language on the ESC's telemetry|
-wire (Scorpion, Kontronik, Hobbywing V4 or V5, OpenYGE ...).|
+wire (Scorpion, Kontronik, Hobbywing V4 or V5, OpenYGE ...);|
+the phone app calls it 'ESC telemetry protocol'.|
 None if no telemetry wire is connected. '?' means this|
 flight controller has no ESC telemetry.|
 Motor pole count: the magnets in the motor bell (2 to 64,|

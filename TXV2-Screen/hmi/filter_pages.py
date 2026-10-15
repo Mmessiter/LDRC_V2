@@ -11,33 +11,34 @@ import rescue_pages as rp
 # 98 RPM strength, 99 lowpass 1 enable, 100 RPM filter enable, 101 dynamic filter enable, 102 next page, 103 previous page,
 # 104 lowpass 2 enable, 105 dynamic cutoff enable, 106 notch 1 enable, 107 notch 2 enable
 rp.series_begin()   # (B91: one island, one size of row, for the series)
-# Polish (10 Oct 2026): the configurator's names in sentence case and British spelling ("Centre"); the colours by filter
+# Polish (10 Oct 2026): sentence case and British spelling ("Centre"); since 15 Oct 2026 the phone app's words (Malcolm:
+# "use the same terminology that we used in the phone app"), units in round brackets; the colours by filter
 # family across both pages and the wider value boxes ("2nd order") are in hmi/polish/rfmore.py
-rp.page(64, 'FilterView', 'Gyro filters (Rotorflight)', [
+rp.page(64, 'FilterView', 'Filters (Rotorflight)', [
     ('h0', 'Lowpass filter', 0, 0, 'head', 0),
     ('tn0', 'Enable', 0, 1, 'switch', 99), ('tn1', 'Filter type', 0, 2, 'cycle', 96),
-    ('tn2', 'Cutoff frequency [Hz]', 0, 3, 'num', 95, 'Lowpass cutoff [Hz]'),
+    ('tn2', 'Cutoff frequency (Hz)', 0, 3, 'num', 95, 'Lowpass cutoff frequency (Hz)'),
     ('h1', 'RPM filter', 0, 4, 'head', 0),
     ('tn3', 'Enable', 0, 5, 'switch', 100), ('tn4', 'Strength', 0, 6, 'cycle', 98),
-    ('tn5', 'Minimum frequency [Hz]', 0, 7, 'num', 95, 'RPM filter minimum [Hz]'),
+    ('tn5', 'Minimum frequency (Hz)', 0, 7, 'num', 95, 'RPM filter minimum frequency (Hz)'),
     ('h2', 'Dynamic filter', 1, 0, 'head', 0),
     ('tn6', 'Enable', 1, 1, 'switch', 101), ('tn7', 'Notch count', 1, 2, 'num', 95),
-    ('tn8', 'Notch Q', 1, 3, 'num', 95), ('tn9', 'Notch minimum [Hz]', 1, 4, 'num', 95),
-    ('tn10', 'Notch maximum [Hz]', 1, 5, 'num', 95),
+    ('tn8', 'Notch Q', 1, 3, 'num', 95), ('tn9', 'Notch minimum (Hz)', 1, 4, 'num', 95, 'Notch minimum frequency (Hz)'),
+    ('tn10', 'Notch maximum (Hz)', 1, 5, 'num', 95, 'Notch maximum frequency (Hz)'),
 ], [('b3', 'Save', 14, 180, 94), ('b2', 'Next >', 408, 180, 102), ('b1', 'OK', 605, 180, 93)], 'FILTERS.TXT')
-rp.page(65, 'Filter2View', 'Gyro filters: expert', [   # in the configurator's expert order (Malcolm, 8 Oct: "grouped differently"): lowpass 1's dynamic cutoff, lowpass 2, the notches
-    ('h1', 'Lowpass 1: dynamic cutoff', 0, 0, 'head', 0),
-    ('tn3', 'Enable', 0, 1, 'switch', 105), ('tn4', 'Min cutoff [Hz]', 0, 2, 'num', 95, 'Dynamic min cutoff [Hz]'),
-    ('tn5', 'Max cutoff [Hz]', 0, 3, 'num', 95, 'Dynamic max cutoff [Hz]'),
+rp.page(65, 'Filter2View', 'Filters: expert mode', [   # in the configurator's expert order (Malcolm, 8 Oct: "grouped differently"): lowpass 1's dynamic cutoff, lowpass 2, the notches
+    ('h1', 'Dynamic cutoff (lowpass 1)', 0, 0, 'head', 0),
+    ('tn3', 'Enable', 0, 1, 'switch', 105), ('tn4', 'Min cutoff (Hz)', 0, 2, 'num', 95, 'Min cutoff frequency (Hz)'),
+    ('tn5', 'Max cutoff (Hz)', 0, 3, 'num', 95, 'Max cutoff frequency (Hz)'),
     ('h0', 'Lowpass filter 2', 0, 4, 'head', 0),
     ('tn0', 'Enable', 0, 5, 'switch', 104), ('tn1', 'Filter type', 0, 6, 'cycle', 97),
-    ('tn2', 'Cutoff frequency [Hz]', 0, 7, 'num', 95, 'Lowpass 2 cutoff [Hz]'),
+    ('tn2', 'Cutoff frequency (Hz)', 0, 7, 'num', 95, 'Lowpass 2 cutoff frequency (Hz)'),
     ('h2', 'Notch filter 1', 1, 0, 'head', 0),
-    ('tn6', 'Enable', 1, 1, 'switch', 106), ('tn7', 'Centre frequency [Hz]', 1, 2, 'num', 95, 'Notch 1 centre [Hz]'),
-    ('tn8', 'Cutoff frequency [Hz]', 1, 3, 'num', 95, 'Notch 1 cutoff [Hz]'),
+    ('tn6', 'Enable', 1, 1, 'switch', 106), ('tn7', 'Centre frequency (Hz)', 1, 2, 'num', 95, 'Notch 1 centre frequency (Hz)'),
+    ('tn8', 'Cutoff frequency (Hz)', 1, 3, 'num', 95, 'Notch 1 cutoff frequency (Hz)'),
     ('h3', 'Notch filter 2', 1, 4, 'head', 0),
-    ('tn9', 'Enable', 1, 5, 'switch', 107), ('tn10', 'Centre frequency [Hz]', 1, 6, 'num', 95, 'Notch 2 centre [Hz]'),
-    ('tn11', 'Cutoff frequency [Hz]', 1, 7, 'num', 95, 'Notch 2 cutoff [Hz]'),
+    ('tn9', 'Enable', 1, 5, 'switch', 107), ('tn10', 'Centre frequency (Hz)', 1, 6, 'num', 95, 'Notch 2 centre frequency (Hz)'),
+    ('tn11', 'Cutoff frequency (Hz)', 1, 7, 'num', 95, 'Notch 2 cutoff frequency (Hz)'),
 ], [('b3', 'Save', 14, 180, 94), ('b2', '< Previous', 408, 180, 103), ('b1', 'OK', 605, 180, 93)], 'FILTERS2.TXT')
 rp.series_end()
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))

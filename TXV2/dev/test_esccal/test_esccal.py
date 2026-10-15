@@ -62,12 +62,12 @@ int main() {
     CHECK(CurrentView == ESCCALVIEW && cmd("page EscCalView") && fields["t9"] == "All banks" && fields["tn3"] == "Ready: tap Full throttle to begin" && fields["b2"] == "Full throttle");
     // ---- 2. the hold: asked, then 195 at 1000 renewed about every 350 ms
     asked = 0; EscCalTapped();
-    CHECK(asked == 1 && lastBox.find("Blades off") != std::string::npos && EcalState == ECAL_FULL && sends(1000) == 1 && fields["tn3"] == "FULL THROTTLE held: plug the battery in" && fields["b2"] == "Minimum");
+    CHECK(asked == 1 && lastBox.find("Blades OFF") != std::string::npos && EcalState == ECAL_FULL && sends(1000) == 1 && fields["tn3"] == "FULL THROTTLE held: plug the flight battery in" && fields["b2"] == "Minimum");
     run(2000);
     { const int n = sends(1000); CHECK(n >= 5 && n <= 8); bool spaced = true; for (size_t i = 1; i < sent.size(); ++i) if (sent[i].at - sent[i - 1].at < 300) spaced = false; CHECK(spaced); }
     // ---- 3. Minimum: the override off (0), the beeps awaited, Calibrated after 3 s
     sounds = 0; EscCalTapped();
-    CHECK(EcalState == ECAL_MIN && sends(0) == 1 && fields["tn3"] == "MINIMUM: wait for the beeps" && fields["b2"] == "Full throttle");
+    CHECK(EcalState == ECAL_MIN && sends(0) == 1 && fields["tn3"] == "MINIMUM: wait for the confirmation beeps" && fields["b2"] == "Full throttle");
     run(2000); CHECK(EcalState == ECAL_MIN); run(1200);
     CHECK(EcalState == ECAL_DONE && fields["tn3"] == "Calibrated: unplug the battery" && sounds == 1);
     { const int before = sends(1000); run(1000); CHECK(sends(1000) == before); }   // (nothing renewed once done)

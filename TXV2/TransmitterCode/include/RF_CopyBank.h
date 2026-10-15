@@ -165,7 +165,7 @@ FLASHMEM void CopyBankPoll()
         CbAsk(94, nullptr, 0, CB_SRC_ADV);
         return;
     case CB_SRC_ADV:
-        if (!ok || (CbSrcAdvN = CbBytes(CbSrcAdv, sizeof(CbSrcAdv))) < 10) { CbFail("Could not read the source PID+"); return; }
+        if (!ok || (CbSrcAdvN = CbBytes(CbSrcAdv, sizeof(CbSrcAdv))) < 10) { CbFail("Could not read the source PID +"); return; }
         CbAsk(146, nullptr, 0, CB_SRC_RESC);
         return;
     case CB_SRC_RESC:
@@ -270,7 +270,7 @@ FLASHMEM void CopyBankPoll()
     case CB_V_ADV:
     {
         uint8_t b[64]; const int n = ok ? CbBytes(b, sizeof(b)) : 0;
-        if (!CbSameBytes(b, n, CbSrcAdv, CbSrcAdvN)) strncat(CbBad, "PID+ ", sizeof(CbBad) - strlen(CbBad) - 1);
+        if (!CbSameBytes(b, n, CbSrcAdv, CbSrcAdvN)) strncat(CbBad, "PID + ", sizeof(CbBad) - strlen(CbBad) - 1);
         CbAsk(146, nullptr, 0, CB_V_RESC);
         return;
     }

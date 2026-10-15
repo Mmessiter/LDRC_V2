@@ -97,7 +97,7 @@ static bool BatHave = false, Bat_Was_Edited = false, BatSame = true;
 enum { BAT_IDLE = 0, BAT_READ, BAT_READ_VM, BAT_READ_CM, BAT_WRITE, BAT_WRITE_VM, BAT_WRITE_CM, BAT_STORE, BAT_VERIFY, BAT_VERIFY_VM, BAT_VERIFY_CM };
 static int BatStep = BAT_IDLE, BatReq = 0;
 static uint32_t BatMsgUntil = 0;
-static const char *const BatSourceWords[4] = {"None", "FC pads", "ESC telemetry", "FBUS"};   // Rotorflight 4.6 battery.c: NONE, ADC, ESC, FBUS
+static const char *const BatSourceWords[4] = {"Nowhere", "FC pads (ADC)", "ESC telemetry", "FBUS"};   // (15 Oct: the phone app's words)   // Rotorflight 4.6 battery.c: NONE, ADC, ESC, FBUS
 FLASHMEM static bool BatVmThere() { return VmN >= 9 && VmWant[0] >= 1; }   // the first voltage meter whole: [1] 7, [2] id, [3] type, [4-5] scale, [6-7] divider, [8] divmul
 FLASHMEM static bool BatCmThere() { return CmN >= 8 && CmWant[0] >= 1; }   // the first current meter whole: [1] 6, [2] id, [3] type, [4-5] scale, [6-7] offset
 FLASHMEM static bool BatVmShown() { return BatWant[3] == 1 && BatVmThere(); }
@@ -265,6 +265,7 @@ FLASHMEM void BatteryPoll()
         FsBusy(BatSame ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         BatMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        RfSavedThenLeave(CurrentView);   // B102: OK's "Save now?" closes the page once saved
         return;
     }
     default:
@@ -283,13 +284,15 @@ FLASHMEM void StartBatteryView() // the menu's Battery ...
     FsBusy("Reading from the flight controller ...");
     BatReq = MspAsk(32, nullptr, 0); BatStep = BAT_READ;
 }
+void SaveBattery();
+FLASHMEM static void BatSaveNow() { BatHead(); BatShow(); SaveBattery(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndBatteryView() // OK
 {
     if (BatStep != BAT_IDLE) return;   // (a save runs: wait for it)
     if (Bat_Was_Edited)
     {
         BatGather();
-        if (!GetConfirmation((char *)BatPage(), (char *)"Discard the edited battery values?")) { BatHead(); BatShow(); return; }
+        if (!RfSaveFirst(BatPage(), "The edited battery values are", BatSaveNow, EndBatteryView, &Bat_Was_Edited)) return;   // B102
     }
     Bat_Was_Edited = false;
     RotorFlightStart();
@@ -335,8 +338,8 @@ static int BbStep = BB_IDLE, BbReq = 0, BbTries = 0;
 static uint32_t BbMsgUntil = 0, BbWaitUntil = 0, BbEraseStart = 0;
 static const uint8_t BB_MODE_ORDER[4] = {2, 3, 1, 0}, BB_DEV_ORDER[4] = {1, 2, 3, 0};
 static const uint16_t BB_DENOMS[8] = {1, 2, 4, 8, 16, 32, 64, 128};
-FLASHMEM static const char *BbModeWord(uint8_t m) { return m == 2 ? "Whenever armed" : m == 3 ? "While switch on" : m == 1 ? "Armed + switch" : "Never"; }
-FLASHMEM static const char *BbDevWord(uint8_t d) { return d == 1 ? "FC memory" : d == 2 ? "SD card" : d == 3 ? "Serial logger" : "Nowhere"; }
+FLASHMEM static const char *BbModeWord(uint8_t m) { return m == 2 ? "Whenever armed" : m == 3 ? "While switch on" : m == 1 ? "Armed + switch on" : "Never"; }
+FLASHMEM static const char *BbDevWord(uint8_t d) { return d == 1 ? "FC memory" : d == 2 ? "SD card" : d == 3 ? "Serial port (logger)" : "Nowhere"; }
 FLASHMEM static void BbHead()
 {
     SendText((char *)"t11", ModelName);
@@ -367,7 +370,9 @@ FLASHMEM static void BbShow()
     SendText((char *)"tn0", (char *)BbModeWord(BbWant[2]));
     SendText((char *)"tn1", (char *)BbDevWord(BbWant[1]));
     const uint16_t d = RdU16(BbWant, 3);
-    if (BbPidUs && d) snprintf(b, sizeof(b), "1 in %u (%lu/s)", (unsigned)d, (unsigned long)(1000000UL / BbPidUs / d));
+    if (d == 1 && BbPidUs) snprintf(b, sizeof(b), "Every loop (%lu/s)", (unsigned long)(1000000UL / BbPidUs));   // (the phone app's words for 1 in 1)
+    else if (d == 1) snprintf(b, sizeof(b), "Every loop");
+    else if (BbPidUs && d) snprintf(b, sizeof(b), "1 in %u (%lu/s)", (unsigned)d, (unsigned long)(1000000UL / BbPidUs / d));
     else snprintf(b, sizeof(b), "1 in %u loops", (unsigned)d);
     SendText((char *)"tn2", b);
     FsNum("tn3", BbWant[12]);
@@ -383,6 +388,7 @@ FLASHMEM static void BbDone(const char *msg, bool good)
     FsBusy(msg);
     BbMsgUntil = millis() + 5000;
     PlaySound(good ? BEEPCOMPLETE : WHAHWHAHMSG);
+    if (good && !Bb_Was_Edited) RfSavedThenLeave(BLACKBOXVIEW); else RfLeaveAfterSave = false;   // B102: OK's "Save now?"
 }
 FLASHMEM void BlackboxPoll()
 {
@@ -503,13 +509,15 @@ FLASHMEM void StartBlackboxView() // the menu's Black box ...
     FsBusy("Reading from the flight controller ...");
     BbReq = MspAsk(101, nullptr, 0); BbStep = BB_STATUS;
 }
+void SaveBlackbox();
+FLASHMEM static void BbSaveNow() { BbHead(); BbShow(); SaveBlackbox(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndBlackboxView() // OK
 {
     if (BbStep != BB_IDLE) return;   // (a save or an erase runs: wait for it)
     if (Bb_Was_Edited)
     {
         BbGather();
-        if (!GetConfirmation((char *)"page BlackboxView", (char *)"Discard the edited black box setup?")) { BbHead(); BbShow(); return; }
+        if (!RfSaveFirst("page BlackboxView", "The edited black box setup is", BbSaveNow, EndBlackboxView, &Bb_Was_Edited)) return;   // B102
     }
     Bb_Was_Edited = false;
     RotorFlightStart();
@@ -679,6 +687,7 @@ FLASHMEM void CalibratePoll()
         FsBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         CalMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        RfSavedThenLeave(LEVELVIEW);   // B102: OK's "Save now?" closes the page once saved
         return;
     }
     default:
@@ -697,13 +706,15 @@ FLASHMEM void StartCalibrateView() // the menu's Calibrate ...
     FsBusy("Reading from the flight controller ...");
     CalReq = MspAsk(240, nullptr, 0); CalStep = CAL_READ;
 }
+void SaveLevelTrims();
+FLASHMEM static void CalSaveNow() { CalHead(); CalShow(); SaveLevelTrims(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndCalibrateView() // OK
 {
     if (CalStep != CAL_IDLE && CalStep != CAL_ATT) return;   // (a calibration or a save runs: wait for it)
     if (Cal_Was_Edited)
     {
         CalGather();
-        if (!GetConfirmation((char *)"page LevelView", (char *)"Discard the edited level trims?")) { CalHead(); CalShow(); return; }
+        if (!RfSaveFirst("page LevelView", "The edited level trims are", CalSaveNow, EndCalibrateView, &Cal_Was_Edited)) return;   // B102
     }
     CalStep = CAL_IDLE; Cal_Was_Edited = false;
     RotorFlightStart();
@@ -728,16 +739,17 @@ FLASHMEM void SaveLevelTrims()
 }
 
 // ---------------------------------------------------------------- WHY IT WILL NOT ARM (the menu's line)
-// Rotorflight 4.6 runtime_config.h armingDisableFlags_e, bit by bit, the most critical first, in plain words (each short:
-// the whole list goes in one message box)
+// Rotorflight runtime_config.h armingDisableFlags_e, bit by bit, the most critical first, in plain words (each short:
+// the whole list goes in one message box). 4.6 has 26 (0-25, the arm switch last); 25 here is for a firmware with an
+// override flag before the arm switch, 26 the arm switch (the reply's last flag is moved there). Words as the phone app's.
 static const char *const ArmWhy[27] PROGMEM = {
     "No gyro: its sensor is not working", "Failsafe is active", "No signal from the receiver", "Link back with the arm switch on",
-    "The failsafe switch is on", "Governor: no head-speed signal", "No RPM signal (ESC telemetry)", "Throttle is not at idle",
-    "Tilted too far: stand it level", "Just switched on: wait a moment", "The prearm switch is off", "The flight controller is overloaded",
+    "The failsafe test switch is on", "Governor: no head-speed signal", "No RPM signal (ESC telemetry)", "Throttle is not at idle",
+    "Tilted too far: stand it level", "Just switched on: wait a moment", "The pre-arm safety switch is off", "The flight controller is overloaded",
     "Calibrating: keep it still", "The command line (CLI) is open", "The on-screen menu is open", "Blocked (BST)",
-    "Blocked by the configurator", "Paralyze is on: restart the FC", "GPS rescue needs a GPS fix", "The rescue switch is on",
-    "RPM filter: no RPM signal", "Restart the flight controller", "DShot bitbang fault", "Calibrate the accelerometer",
-    "No motor protocol chosen", "A servo or motor override is on", "Arm switch on too soon: off, then on"};
+    "Blocked by the configurator", "The model is locked: restart the FC", "GPS rescue needs a GPS fix", "The rescue switch is on",
+    "RPM filter: no RPM signal", "Restart the flight controller", "DShot bitbang fault", "Calibrate level first",
+    "No ESC signal chosen", "A servo or motor override is on", "Arm switch on too soon: off, then on"};
 static int ArmReq = 0;
 static bool ArmPending = false, ArmKnown = false, ArmFcArmed = false, ArmBlank = true;
 static uint32_t ArmFlags = 0, ArmNextAt = 0;
@@ -779,7 +791,16 @@ FLASHMEM void ArmTick() // every 50 ms (ManageTransmitter): MSP 101 every 2 s wh
             uint8_t b[40];
             const int n = PipeRepCode == 200 ? PipeReplyBytes(b, sizeof(b)) : 0;
             ArmPending = false; ArmNextAt = millis() + 2000;
-            if (n >= 21) { ArmFlags = RdU32(b, 17) & 0x07FFFFFFUL; ArmFcArmed = (b[6] & 1) != 0; ArmKnown = true; ArmShow(); }
+            if (n >= 21)
+            {
+                // (15 Oct: byte 16 is how many flags the firmware has, and the ARM SWITCH flag is always its last - bit 25 on
+                // Rotorflight 4.6, which has no override flag. It was read as bit 25 = "A servo or motor override is on", so
+                // "arm switch on too soon" showed as an override. The last flag is moved to ArmWhy's arm-switch slot, 26.)
+                uint32_t f = RdU32(b, 17);
+                const int cnt = b[16];
+                if (cnt >= 1 && cnt <= 26 && (f & (1UL << (cnt - 1)))) { f &= ~(1UL << (cnt - 1)); f |= 1UL << 26; }
+                ArmFlags = f & 0x07FFFFFFUL; ArmFcArmed = (b[6] & 1) != 0; ArmKnown = true; ArmShow();
+            }
         }
         else if (PipeReplyLate()) { ArmPending = false; ArmNextAt = millis() + 2000; }
         return;

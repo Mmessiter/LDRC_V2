@@ -30,7 +30,8 @@ FLASHMEM static void ServoBusy(const char *msg)
 FLASHMEM static void ServoTitle()
 {
     char b[40];
-    snprintf(b, sizeof(b), "Servo %d of %d (Rotorflight)", ServoAt + 1, ServoCount > 0 ? ServoCount : 1);
+    // (15 Oct: the phone app's roles - servos 1 to 3 the swashplate, 4 the tail, the rest other - where "(Rotorflight)" was)
+    snprintf(b, sizeof(b), "Servo %d of %d (%s)", ServoAt + 1, ServoCount > 0 ? ServoCount : 1, ServoAt < 3 ? "swashplate" : ServoAt == 3 ? "tail" : "other");
     SendText((char *)"t0", b);
 }
 FLASHMEM static void ServoNum(const char *name, long v)
@@ -169,6 +170,7 @@ FLASHMEM void ServoPoll() // each time round the loop (ManageTransmitter)
         ServoBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         ServoMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        RfSavedThenLeave(SERVOVIEW);   // B102: OK's "Save now?" closes the page once saved
         return;
     }
     default:
@@ -188,9 +190,7 @@ FLASHMEM void StartServoView()
     SendCommand((char *)"page ServoView");
     CurrentView = SERVOVIEW;
     SendText((char *)"t11", ModelName);
-    char b[16];
-    snprintf(b, sizeof(b), "Bank %d", Bank);
-    SendText((char *)"t9", b);
+    SendText((char *)"t9", (char *)"All banks");   // (15 Oct: the servos are the same in every bank; it said "Bank n")
     SendCommand((char *)"vis b3,0");
     Servo_Was_Edited = false;
     ServoAt = 0;
@@ -206,12 +206,14 @@ FLASHMEM static void ServoShowEdits() // after a question's page: the typed valu
     SendValue((char *)"tn7", ServoRev ? 1 : 0);   // (B65: a switch)
     SendValue((char *)"tn8", ServoGeo ? 1 : 0);   // (B65: a switch)
 }
+void SaveServo();
+FLASHMEM static void ServoSaveNow() { ServoShowEdits(); SaveServo(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndServoView() // OK
 {
     if (Servo_Was_Edited)
     {
         ServoGather(); // (B59) before the question's page takes the fields away
-        if (!GetConfirmation((char *)"page ServoView", (char *)"Discard the edited servo values?")) { ServoShowEdits(); return; }
+        if (!RfSaveFirst("page ServoView", "The edited servo values are", ServoSaveNow, EndServoView, &Servo_Was_Edited)) return;   // B102
     }
     ServoStep = SRV_IDLE;
     Servo_Was_Edited = false;

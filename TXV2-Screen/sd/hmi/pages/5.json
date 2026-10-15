@@ -81,7 +81,7 @@
    "g": "l",
    "x": 526,
    "y": 194,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -112,7 +112,7 @@
    "g": "l",
    "x": 526,
    "y": 240,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -121,7 +121,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Tracking",
+   "txt": "Speed change",
    "a": {
     "style": 0,
     "key": 255,
@@ -143,7 +143,7 @@
    "g": "l",
    "x": 526,
    "y": 286,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -152,7 +152,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Recovery",
+   "txt": "Quick restart",
    "a": {
     "style": 0,
     "key": 255,
@@ -174,7 +174,7 @@
    "g": "l",
    "x": 526,
    "y": 332,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -205,7 +205,7 @@
    "g": "l",
    "x": 44,
    "y": 286,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -214,7 +214,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Autorot timeout",
+   "txt": "Autorot. timeout",
    "a": {
     "style": 0,
     "key": 255,
@@ -543,7 +543,7 @@
    "g": "l",
    "x": 285,
    "y": 194,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -574,7 +574,7 @@
    "g": "l",
    "x": 285,
    "y": 240,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -583,7 +583,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Idle thr x10",
+   "txt": "Idle throttle x10",
    "a": {
     "style": 0,
     "key": 255,
@@ -605,7 +605,7 @@
    "g": "l",
    "x": 285,
    "y": 286,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -614,7 +614,7 @@
     "borderc": 0,
     "bco": 57215
    },
-   "txt": "Auto thr x10",
+   "txt": "Auto throttle x10",
    "a": {
     "style": 0,
     "key": 255,
@@ -634,9 +634,9 @@
    "i": 20,
    "t": "number",
    "g": "g",
-   "x": 692,
+   "x": 698,
    "y": 194,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -657,7 +657,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Spool-down [s]\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Spool-down time (s)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -665,9 +665,9 @@
    "i": 21,
    "t": "number",
    "g": "g",
-   "x": 692,
+   "x": 698,
    "y": 240,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -688,7 +688,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Tracking [s]\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Speed-change time (s)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -696,9 +696,9 @@
    "i": 22,
    "t": "number",
    "g": "g",
-   "x": 692,
+   "x": 698,
    "y": 286,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -719,7 +719,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Recovery [s]\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Quick-restart time (s)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -727,9 +727,9 @@
    "i": 23,
    "t": "number",
    "g": "g",
-   "x": 692,
+   "x": 698,
    "y": 332,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -750,7 +750,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Hold timeout [s]\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Throttle-hold timeout (s)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -758,9 +758,9 @@
    "i": 24,
    "t": "number",
    "g": "g",
-   "x": 210,
+   "x": 216,
    "y": 286,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -781,7 +781,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Autorot timeout [s]\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Autorotation timeout (s)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -944,9 +944,9 @@
    "i": 30,
    "t": "number",
    "g": "g",
-   "x": 451,
+   "x": 457,
    "y": 194,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -975,9 +975,9 @@
    "i": 31,
    "t": "number",
    "g": "g",
-   "x": 451,
+   "x": 457,
    "y": 240,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -998,7 +998,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Idle thr x0.1%\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Idle throttle (tenths of a %)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -1006,9 +1006,9 @@
    "i": 32,
    "t": "number",
    "g": "g",
-   "x": 451,
+   "x": 457,
    "y": 286,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -1029,7 +1029,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Auto thr x0.1%\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Auto throttle (tenths of a %)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -1051,7 +1051,7 @@
    "g": "l",
    "x": 44,
    "y": 194,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -1082,7 +1082,7 @@
    "g": "l",
    "x": 44,
    "y": 240,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -1091,7 +1091,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Handover [%]",
+   "txt": "Handover (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -1144,7 +1144,7 @@
    "g": "l",
    "x": 526,
    "y": 148,
-   "w": 160,
+   "w": 166,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -1173,9 +1173,9 @@
    "i": 38,
    "t": "number",
    "g": "g",
-   "x": 210,
+   "x": 216,
    "y": 194,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -1204,9 +1204,9 @@
    "i": 39,
    "t": "number",
    "g": "g",
-   "x": 210,
+   "x": 216,
    "y": 240,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -1227,7 +1227,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Handover [%]\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Handover throttle (%)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -1266,9 +1266,9 @@
    "i": 41,
    "t": "number",
    "g": "g",
-   "x": 692,
+   "x": 698,
    "y": 148,
-   "w": 64,
+   "w": 58,
    "h": 40,
    "font": 2,
    "sta": 1,
@@ -1289,7 +1289,7 @@
     "isbr": 1
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Spool-up [s]\"\nva0.val=57<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Spool-up time (s)\"\nva0.val=57<<8\nprint va0.val"
    }
   },
   {
@@ -1308,7 +1308,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Times [s]",
+   "txt": "Timings (s)",
    "a": {
     "style": 0,
     "key": 255,
@@ -1522,7 +1522,7 @@
    "g": "g",
    "x": 280,
    "y": 235,
-   "w": 412,
+   "w": 418,
    "h": 96,
    "font": 2,
    "sta": 1,

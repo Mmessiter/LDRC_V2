@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Gyro filters: expert",
+   "txt": "Filters: expert mode",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 29,
+   "x": 25,
    "y": 74,
-   "w": 741,
+   "w": 749,
    "h": 390,
    "font": 6,
    "sta": 1,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:FILTERS2.TXT\"\nLogView.t0.txt=\"Gyro filters: expert help\"\nLogView.return.txt=\"Filter2View\""
+    "r": "print \"HelpView:FILTERS2.TXT\"\nLogView.t0.txt=\"Filters: expert mode help\"\nLogView.return.txt=\"Filter2View\""
    }
   },
   {
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 90,
-   "w": 340,
+   "w": 344,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -190,7 +190,7 @@
     "borderc": 4426,
     "bco": 4426
    },
-   "txt": "Lowpass 1: dynamic cutoff",
+   "txt": "Dynamic cutoff (lowpass 1)",
    "a": {
     "style": 0,
     "key": 255,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 127,
-   "w": 224,
+   "w": 228,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -263,9 +263,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 164,
-   "w": 224,
+   "w": 228,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -274,7 +274,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Min cutoff [Hz]",
+   "txt": "Min cutoff (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -314,7 +314,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Dynamic min cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Min cutoff frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -322,9 +322,9 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 201,
-   "w": 224,
+   "w": 228,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -333,7 +333,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Max cutoff [Hz]",
+   "txt": "Max cutoff (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -373,7 +373,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Dynamic max cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Max cutoff frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -381,9 +381,9 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 238,
-   "w": 340,
+   "w": 344,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -409,9 +409,9 @@
    "i": 15,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 275,
-   "w": 224,
+   "w": 228,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -465,9 +465,9 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 312,
-   "w": 224,
+   "w": 228,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -524,9 +524,9 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 45,
+   "x": 41,
    "y": 349,
-   "w": 224,
+   "w": 228,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -535,7 +535,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cutoff frequency [Hz]",
+   "txt": "Cutoff frequency (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -575,7 +575,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Lowpass 2 cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Lowpass 2 cutoff frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -585,7 +585,7 @@
    "g": "g",
    "x": 405,
    "y": 90,
-   "w": 348,
+   "w": 352,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -613,7 +613,7 @@
    "g": "g",
    "x": 405,
    "y": 127,
-   "w": 232,
+   "w": 236,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -638,7 +638,7 @@
    "n": "tn6",
    "t": "switch",
    "g": "g",
-   "x": 658,
+   "x": 662,
    "y": 127,
    "w": 80,
    "h": 34,
@@ -669,7 +669,7 @@
    "g": "g",
    "x": 405,
    "y": 164,
-   "w": 232,
+   "w": 236,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -678,7 +678,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Centre frequency [Hz]",
+   "txt": "Centre frequency (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -695,7 +695,7 @@
    "i": 25,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 647,
    "y": 164,
    "w": 110,
    "h": 35,
@@ -718,7 +718,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch 1 centre [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Notch 1 centre frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -728,7 +728,7 @@
    "g": "g",
    "x": 405,
    "y": 201,
-   "w": 232,
+   "w": 236,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -737,7 +737,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Cutoff frequency [Hz]",
+   "txt": "Cutoff frequency (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -754,7 +754,7 @@
    "i": 27,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 647,
    "y": 201,
    "w": 110,
    "h": 35,
@@ -777,7 +777,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch 1 cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Notch 1 cutoff frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -787,7 +787,7 @@
    "g": "g",
    "x": 405,
    "y": 238,
-   "w": 348,
+   "w": 352,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -815,7 +815,7 @@
    "g": "g",
    "x": 405,
    "y": 275,
-   "w": 232,
+   "w": 236,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -840,7 +840,7 @@
    "n": "tn9",
    "t": "switch",
    "g": "g",
-   "x": 658,
+   "x": 662,
    "y": 275,
    "w": 80,
    "h": 34,
@@ -871,7 +871,7 @@
    "g": "g",
    "x": 405,
    "y": 312,
-   "w": 232,
+   "w": 236,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -880,7 +880,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Centre frequency [Hz]",
+   "txt": "Centre frequency (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -897,7 +897,7 @@
    "i": 32,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 647,
    "y": 312,
    "w": 110,
    "h": 35,
@@ -920,7 +920,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch 2 centre [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Notch 2 centre frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -930,7 +930,7 @@
    "g": "g",
    "x": 405,
    "y": 349,
-   "w": 232,
+   "w": 236,
    "h": 35,
    "font": 2,
    "sta": 1,
@@ -939,7 +939,7 @@
     "borderc": 0,
     "bco": 59323
    },
-   "txt": "Cutoff frequency [Hz]",
+   "txt": "Cutoff frequency (Hz)",
    "a": {
     "style": 0,
     "key": 255,
@@ -956,7 +956,7 @@
    "i": 34,
    "t": "text",
    "g": "g",
-   "x": 643,
+   "x": 647,
    "y": 349,
    "w": 110,
    "h": 35,
@@ -979,7 +979,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Notch 2 cutoff [Hz]\"\nva0.val=95<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Notch 2 cutoff frequency (Hz)\"\nva0.val=95<<8\nprint va0.val"
    }
   },
   {
@@ -987,7 +987,7 @@
    "i": 35,
    "t": "button",
    "g": "l",
-   "x": 250,
+   "x": 254,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -1019,7 +1019,7 @@
    "i": 36,
    "t": "button",
    "g": "l",
-   "x": 422,
+   "x": 426,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -1051,7 +1051,7 @@
    "i": 37,
    "t": "button",
    "g": "l",
-   "x": 594,
+   "x": 598,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -1083,9 +1083,9 @@
    "i": 38,
    "t": "text",
    "g": "l",
-   "x": 45,
+   "x": 41,
    "y": 237,
-   "w": 592,
+   "w": 600,
    "h": 74,
    "font": 2,
    "sta": 1,

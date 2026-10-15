@@ -9,11 +9,11 @@ import rescue_pages as rp
 # codes (the main board's NumberedFunctions1): 145 open, 146 OK, 147 copy, 148 the source bank, 149 the target bank,
 # 150 flight tuning, 151 rates, 152 governor gains, 153 head speed too, 154 adjust gains for head speed
 rp.page(71, 'CopyBankView', 'Copy a bank', [
-    ('tn0', 'From', 0, 0, 'cycle', 148), ('tn1', 'To', 1, 0, 'cycle', 149),
+    ('tn0', 'From bank', 0, 0, 'cycle', 148), ('tn1', 'To bank', 1, 0, 'cycle', 149),   # (15 Oct 2026: the phone app's words)
     ('h0', 'What to copy', 0, 1, 'head', 0),
-    ('tn2', 'PIDs, PID+ and rescue', 0, 2, 'switch', 150), ('tn3', 'Rates', 1, 2, 'switch', 151),
+    ('tn2', 'Flight tuning', 0, 2, 'switch', 150), ('tn3', 'Rates & dynamics', 1, 2, 'switch', 151),
     ('tn4', 'Governor gains', 0, 3, 'switch', 152), ('tn5', 'Head speed too', 1, 3, 'switch', 153),
-    ('tn6', 'Scale gains to rpm', 0, 4, 'switch', 154),
+    ('tn6', 'Adjust for head speed', 0, 4, 'switch', 154),
 ], [('b3', 'Copy bank 1 to bank 2', 14, 420, 147), ('b1', 'OK', 605, 180, 146)], 'COPYBANK.TXT', busy_rect=(110, 296, 580, 108))   # (1.11.40: meant below the rows - but an island's centred box wins in rescue_pages.page(), so it is over the middle; reported, 10 Oct)
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))
 pg = json.load(open(os.path.join(rp.PAGES, '71.json')))

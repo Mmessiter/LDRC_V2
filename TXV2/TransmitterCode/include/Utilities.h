@@ -1236,8 +1236,30 @@ bool GetConfirmation(char *goback, char *Prompt)
     LastFileInView = 120;
     if (Confirmed[0] == 'Y')
         return true; // tell caller OK to continue
+    RfLeaveAfterSave = false; // B102: a No to a save's own question keeps the page open
     return false;    // tell caller STOP!
 }
+
+/******************************************************************************************************************************/
+// B102 (Malcolm, 15 Oct: "If a user forgets to hit save and instead hits OK, I think the message box, which already
+// recognises unsaved edits, should offer the option save now? To save clicks."): OK with unsaved edits asks "Save them
+// now?" on the message box's two buttons, Save (right) and Discard (left). Save saves, and the page closes once the save
+// has worked (RfSavedThenLeave, from each page's save); Discard leaves without saving, as before. A refusal or a failure
+// (any message box), or a No to the save's own question, keeps the page open with the edits.
+bool GetSaveOrDiscard(char *goback, char *Prompt) // true: Save
+{
+    char GoPopupView[] = "page PopupView";
+    char Dialog[] = "Dialog";
+    SendCommand(GoPopupView);
+    SendText((char *)"b0", (char *)"Save");
+    SendText((char *)"b1", (char *)"Discard");
+    SendText(Dialog, Prompt);
+    GetYesOrNo();
+    SendCommand(goback);
+    LastFileInView = 120;
+    return Confirmed[0] == 'Y';
+}
+#include "RF_SaveNow.h" // B102: RfSavedThenLeave, RfSaveFirst (a file of their own, so the host tests run the real ones)
 
 /******************************************************************************************************************************/
 // Windows style MSGBOX
@@ -1247,6 +1269,7 @@ bool GetConfirmation(char *goback, char *Prompt)
 
 void MsgBox(char *goback, char *Prompt)
 {
+    RfLeaveAfterSave = false; // B102: a refusal or a failure keeps the page open (OK's "Save now?")
     char GoPopupView[] = "page PopupView";
     char Dialog[] = "Dialog";
     char NoCancel[] = "vis b1,0"; // hide cancel button

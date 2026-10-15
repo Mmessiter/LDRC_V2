@@ -20,8 +20,8 @@ char GOV_Global_Labels[GOVERNOR_GLOBAL_LABELS_COUNT][4] = {
     "n21", "n22", "n23", "n24", "n25", "n26", "n27",
     "n28", "n29", "n30"};
 
-char Gov_Mode_types[5][20] = {"(Mode 0 = Off)", "(Mode 1 = Limit)", "(Mode 2 = Direct)", "(Mode 3 = Electric)", "(Mode 4 = Nitro)"};
-char Throttle_types[3][20] = {"(Type 0 = Normal)", "(Type 1 = Switch)", "(Type 2 = Function)"};
+char Gov_Mode_types[5][20] = {"0 - OFF", "1 - LIMIT", "2 - DIRECT", "3 - ELECTRIC", "4 - NITRO"};   // (15 Oct: the phone app's words)
+char Throttle_types[3][20] = {"0 - NORMAL", "1 - SWITCH", "2 - FUNCTION"};   // (Rotorflight's names, in the modes' style)
 
 // ====================================================
 FLASHMEM void ForegroundColourGOVConfigLabels(uint16_t Colour)
@@ -472,17 +472,15 @@ FLASHMEM void Start_Gov_Global()
 }
 
 // ====================================================
+FLASHMEM void Save_Gov_Global();
 FLASHMEM void End_Gov_Global()
 {
     if (GOVS_GLOBAL_Were_Edited)
     {
-        if (GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Discard edited governor config?"))
-        {
-            GOVS_GLOBAL_Were_Edited = false;
-            AddParameterstoQueue(MSP_ENABLE_TELEMETRY);
-            RotorFlightStart();
-        }
-        // if user says No, stay on page
+        if (!RfSaveFirst("page RFGovViewGlbl", "The edited governor settings are", Save_Gov_Global, End_Gov_Global, &GOVS_GLOBAL_Were_Edited)) return;   // B102: "Save now?"
+        GOVS_GLOBAL_Were_Edited = false;   // (Discard)
+        AddParameterstoQueue(MSP_ENABLE_TELEMETRY);
+        RotorFlightStart();
     }
     else
     {

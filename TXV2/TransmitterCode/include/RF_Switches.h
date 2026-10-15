@@ -108,7 +108,7 @@ FLASHMEM static void SwLive() // the switch's position now, from this transmitte
 FLASHMEM static void SwShow()
 {
     char b[64];
-    if (SwN) snprintf(b, sizeof(b), "Switch %d of %d", SwAt + 1, SwN); else snprintf(b, sizeof(b), "No switches yet");
+    if (SwN) snprintf(b, sizeof(b), "Switch action %d of %d", SwAt + 1, SwN); else snprintf(b, sizeof(b), "No switch actions yet");   // (the phone app's words, 15 Oct)
     SwText("t0", b);
     if (!SwN)
     {
@@ -127,7 +127,7 @@ FLASHMEM static void SwShow()
     SwText("bar", (char *)"|ON|");
     char h[100];
     if (s.perm == 0 && SwArmFrom && Sw_Was_Edited) snprintf(h, sizeof(h), "Arm moved from channel %d to %d, this model's arming channel (Settings). Save keeps it.", SwArmFrom, ch);   // B97
-    else snprintf(h, sizeof(h), "%s", s.perm == 0 ? "Safety switch: the ON zone must reach 2012 us, but not 988 us." : "Drag the round ends to set where the switch turns it on.");
+    else snprintf(h, sizeof(h), "%s", s.perm == 0 ? "Arm switch: its ON zone must reach 2012 us, but not 988 us." : "Drag the round ends to set where the switch turns it on.");
     SwText("hint", h);
     SwLiveCh = -1;
     SwLive();
@@ -153,7 +153,7 @@ FLASHMEM static bool SwTake(const uint8_t *b, int n) // the 34 image -> the slot
 }
 FLASHMEM static void SwRead_()
 {
-    SwBusy("Reading the switches ...");
+    SwBusy("Reading switch assignments ...");
     SwReq = MspAsk(34, nullptr, 0); SwStep = SW_READ; SwTries = 0;
 }
 FLASHMEM static void SwWriteNext() // the next slot that differs from what the flight controller has; none left: store
@@ -226,6 +226,7 @@ FLASHMEM void SwitchPoll()
         SwBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller changed some of it.");
         SwMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        RfSavedThenLeave(SWITCHVIEW);   // B102: OK's "Save now?" closes the page once saved
         return;
     }
     default:
@@ -249,10 +250,12 @@ FLASHMEM void StartSwitchView() // the menu's Switches ...
     SwShow();
     SwRead_();
 }
+FLASHMEM void SaveSwitchActions();
+FLASHMEM static void SwSaveNow() { SwHead(); SwShow(); SaveSwitchActions(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndSwitchView() // OK
 {
     if (SwStep != SW_IDLE) return;
-    if (Sw_Was_Edited && !GetConfirmation((char *)"page SwitchView", (char *)"Discard the edited switches?")) { SwHead(); SwShow(); return; }
+    if (Sw_Was_Edited && !RfSaveFirst("page SwitchView", "The edited switches are", SwSaveNow, EndSwitchView, &Sw_Was_Edited)) return;   // B102
     Sw_Was_Edited = false;
     RotorFlightStart();
 }

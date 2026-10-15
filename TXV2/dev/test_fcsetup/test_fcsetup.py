@@ -62,7 +62,7 @@ struct FcReq { int fn; std::string data; };
 static std::vector<FcReq> fcLog;
 static std::string hexOf(const uint8_t *d, int n) { char b[4]; std::string s; for (int i = 0; i < n; ++i) { snprintf(b, sizeof b, "%02X", d[i]); s += b; } return s; }
 static uint8_t bat[27], vm[33], cm[8], bb[13], mem[13], modes[80], trims[4], att[6];
-static uint32_t armFlags = 0; static int pidUs = 500, rebootLeft = 0, eraseLeft = -1;
+static uint32_t armFlags = 0; static int armCount = 26; static int pidUs = 500, rebootLeft = 0, eraseLeft = -1;
 static void fcReply(int code, const std::string &body) { PipeRepCode = code; strncpy(PipeRepBody, body.c_str(), sizeof(PipeRepBody) - 1); PipeRepBody[sizeof(PipeRepBody) - 1] = 0; PipeRepId = PipeReqId; }
 static void put32(uint8_t *b, int o, uint32_t v) { b[o] = v; b[o + 1] = v >> 8; b[o + 2] = v >> 16; b[o + 3] = v >> 24; }
 int MspAsk(uint8_t fn, const uint8_t *data, int len) {
@@ -70,7 +70,7 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     if (holdReplies) return PipeReqId;
     if (rebootLeft > 0 && fn != 68) { --rebootLeft; fcReply(504, "no answer"); return PipeReqId; }
     switch (fn) {
-    case 101: { uint8_t b[30] = {0}; b[0] = pidUs & 255; b[1] = pidUs >> 8; put32(b, 17, armFlags); b[16] = 27; fcReply(200, hexOf(b, 30)); return PipeReqId; }
+    case 101: { uint8_t b[30] = {0}; b[0] = pidUs & 255; b[1] = pidUs >> 8; put32(b, 17, armFlags); b[16] = (uint8_t)armCount; fcReply(200, hexOf(b, 30)); return PipeReqId; }
     case 32: fcReply(200, hexOf(bat, 27)); return PipeReqId;
     case 33: memcpy(bat, data, len); fcReply(200, ""); return PipeReqId;   // (Rotorflight: the first 15, and the profiles' list only when 12 more come)
     case 56: fcReply(200, hexOf(vm, 33)); return PipeReqId;
@@ -91,6 +91,13 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     }
     fcReply(404, "unknown"); return PipeReqId;
 }
+// B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave (include/RF_SaveNow.h) over a fake question: Discard
+// unless saveNowAnswer is 1; and the bank check (PipeHttp.h BankCheck) as without a pipe: the write goes
+static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
+static int saveNowAnswer = 0, saveNowAsked = 0;
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -113,7 +120,7 @@ int main() {
     CHECK(fields["tn4"] == "4.10" && fields["tn5"] == "3.50" && fields["tn6"] == "3.30" && fields["tn7"] == "4.30");
     CHECK(cmd("vis b2,0"));   // (B90: no Sensors > while the ESC is the source)
     // the voltage from the FC pads: ESC -> None -> FC pads; Sensors > appears (B90: the sensors are on page 75)
-    cmds.clear(); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "None"); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "FC pads" && cmd("vis b2,1") && Bat_Was_Edited);
+    cmds.clear(); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "Nowhere"); BatteryVoltageSourceTapped(); CHECK(fields["tn2"] == "FC pads (ADC)" && cmd("vis b2,1") && Bat_Was_Edited);
     // the cell voltages must rise: a warning above full is refused, nothing written
     fields["tn5"] = "4.25"; fcLog.clear(); boxes = 0; SaveBattery(); CHECK(boxes == 1 && lastBox.find("must rise") != std::string::npos && fcLog.empty());
     // a save from the sensors page: the battery page's edits were gathered on the way there; 33 = the first 15 bytes only
@@ -129,7 +136,7 @@ int main() {
     CHECK(!Bat_Was_Edited && fields["busy"] == "Saved, and read back the same.");
     // the current from the FC pads too (tapped on the battery page): its scale and offset on the sensors page, signed
     cmds.clear(); BatterySensorsBack(); CHECK(CurrentView == BATTERYVIEW && cmd("page BatteryView") && fields["tn0"] == "12");
-    BatteryCurrentSourceTapped(); BatteryCurrentSourceTapped(); CHECK(fields["tn3"] == "FC pads");
+    BatteryCurrentSourceTapped(); BatteryCurrentSourceTapped(); CHECK(fields["tn3"] == "FC pads (ADC)");
     cmds.clear(); BatterySensorsView(); CHECK(cmd("vis tn9,1") && fields["tn9"] == "400" && fields["tn10"] == "0");
     fields["tn9"] = "390"; fields["tn10"] = "-25"; fcLog.clear(); SaveBattery(); runBat();
     CHECK(writes(41) == 1 && lastData(41) == "0A8601E7FF" && RdS16(cm, 6) == -25 && fields["tn10"] == "-25");
@@ -184,6 +191,10 @@ int main() {
     for (int i = 0; i < 4; ++i) { ArmTick(); now += 50; }
     CHECK(writes(101) == 1 && fields["arm"] == "Will not arm: Throttle is not at idle (and 1 more)" && cmd("arm.pco=65504"));
     boxes = 0; ArmingWhy(); CHECK(boxes == 1 && lastBox.find("- Throttle is not at idle") != std::string::npos && lastBox.find("- Arm switch on too soon") != std::string::npos && fields["arm"].find("Will not arm") == 0);
+    // Rotorflight 4.6 (26 flags): its last, bit 25, is the arm switch - not an override (15 Oct)
+    armFlags = 1u << 25; now += 2100; for (int i = 0; i < 4; ++i) { ArmTick(); now += 50; } CHECK(fields["arm"] == "Will not arm: Arm switch on too soon: off, then on");
+    armCount = 27; now += 2100; for (int i = 0; i < 4; ++i) { ArmTick(); now += 50; } CHECK(fields["arm"] == "Will not arm: A servo or motor override is on");
+    armCount = 26; armFlags = (1u << 24) | (1u << 25); now += 2100; for (int i = 0; i < 4; ++i) { ArmTick(); now += 50; } CHECK(fields["arm"] == "Will not arm: No ESC signal chosen (and 1 more)");
     armFlags = 0; now += 2100; for (int i = 0; i < 4; ++i) { ArmTick(); now += 50; } CHECK(fields["arm"] == "Ready to arm" && cmd("arm.pco=2016"));
     // every 2 s, and never on top of another request
     fcLog.clear(); for (int i = 0; i < 50; ++i) { ArmTick(); now += 50; } CHECK(writes(101) == 1);

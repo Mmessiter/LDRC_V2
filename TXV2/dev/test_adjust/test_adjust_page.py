@@ -87,6 +87,13 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     if (fn == 101) { uint8_t b[32] = {0}; b[23] = pidBank; b[25] = rateBank; fcReply(200, hexOf(b, 32)); return PipeReqId; }
     fcReply(404, "unknown"); return PipeReqId;
 }
+// B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave (include/RF_SaveNow.h) over a fake question: Discard
+// unless saveNowAnswer is 1; and the bank check (PipeHttp.h BankCheck) as without a pipe: the write goes
+static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
+static int saveNowAnswer = 0, saveNowAsked = 0;
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -116,7 +123,7 @@ int main() {
     // banks (its ends bank 1's and bank 4's values), said in the banner, to be saved
     StartAdjustView(); CHECK(CurrentView == ADJUSTVIEW && fcLog.size() == 1 && fcLog[0].fn == 111);
     run(4);
-    CHECK(AdjHave && AdjN == 3 && AdjAt == 0 && fields["t0"] == "Adjustment 1 of 3" && fields["tn0"] == "PID bank switch (1 to 6)" && fields["tn1"] == "Channel 6: AUX1" && fields["tn3"] == "in any bank");
+    CHECK(AdjHave && AdjN == 3 && AdjAt == 0 && fields["t0"] == "Adjustment 1 of 3" && fields["tn0"] == "Bank (Profile) selector" && fields["tn1"] == "Channel 6: AUX1" && fields["tn3"] == "in any bank");
     if (fields["tn2"] != "Banks 1 to 4 of this transmitter") fprintf(stderr, "tn2 = '%s' busy = '%s' lo %d hi %d n %d\n", fields["tn2"].c_str(), fields["busy"].c_str(), AdjRows[0].lo, AdjRows[0].hi, AdjRows[0].n);
     CHECK(fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].legacy && AdjRows[0].kind == AK_SWITCH && AdjRows[0].n == 4 && AdjBankRowRight(AdjRows[0]) && AdjRows[0].lo % 5 == 0 && AdjRows[0].hi % 5 == 0);
     const int bankLo = AdjRows[0].lo, bankHi = AdjRows[0].hi;
@@ -137,7 +144,7 @@ int main() {
     CHECK(AdjNowKnown && AdjNow == 95);
     // the third: the nudge, a Rate shown x5
     AdjustNext(); run(6);
-    CHECK(AdjAt == 2 && fields["tn0"] == "Pitch top rotation speed (Rate)" && fields["tn2"] == "Step up / down" && fields["ts0"] == "2" && fields["ts1"] == "100" && fields["ts2"] == "500");
+    CHECK(AdjAt == 2 && fields["tn0"] == "Pitch top rotation speed (Rate)" && fields["tn2"] == "Step adjustment" && fields["ts0"] == "2" && fields["ts1"] == "100" && fields["ts2"] == "500");
     CHECK(cmdValue("bar.kind") == 2 && fields["bar"] == "down 2|100 to 500|up 2" && fields["tn8"] == "Holding: 1500 us");
     CHECK(AdjNow == 240);
     // 2. save as it stands: the bank switch's three lines become one, and the lines close up (the knob to slot 1 with its
@@ -201,7 +208,7 @@ int main() {
     // transmitter's banks (the channel tells no banks apart), so it is shown as it is, with handles, and the kind tap says why
     putLine(8, 1, 1, 875, 2125, 1, 875, 2125, 1500, 1500, 1, 4, 0);
     confirmAnswer = true; StartAdjustView(); run(6); AdjustNext(); AdjustNext(); AdjustNext(); run(4);
-    CHECK(AdjN == 4 && fields["tn0"] == "Rates bank switch (1 to 6)" && fields["tn2"] == "Switch, 4 positions" && fields["bar"] == "1|2|3|4" && cmdValue("bar.kind") == 3 && cmdValue("bar.d0") == 875 && cmdValue("bar.d1") == 2125 && !Adj_Was_Edited);
+    CHECK(AdjN == 4 && fields["tn0"] == "Rates selector" && fields["tn2"] == "Switch, 4 positions" && fields["bar"] == "1|2|3|4" && cmdValue("bar.kind") == 3 && cmdValue("bar.d0") == 875 && cmdValue("bar.d1") == 2125 && !Adj_Was_Edited);
     boxes = 0; AdjustKindTapped();
     CHECK(boxes == 1 && lastBox.find("Channel 7 has no value of its own") == 0 && !Adj_Was_Edited);
     // moved to channel 6 it is matched at once
@@ -218,21 +225,21 @@ int main() {
     CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == 1000 && AdjRows[0].hi == 1850 && !Adj_Was_Edited && cmdValue("bar.kind") == 4);
     putLine(0, 2, 0, 875, 2125, 0, 1300, 1400, 1500, 1500, 1, 4, 0);
     StartAdjustView(); run(6);
-    CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == bankLo && AdjRows[0].hi == bankHi && Adj_Was_Edited && fields["busy"] == "Press Save: the bank switch now matches this transmitter's banks.");
+    CHECK(AdjAt == 0 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].lo == bankLo && AdjRows[0].hi == bankHi && Adj_Was_Edited && fields["busy"] == "Press Save: the bank selector now matches this transmitter's banks.");
     // 7c. a second bank line (the phone app's Switches page wrote its own into slot 30, 8 Oct): the first is kept, the
     // second removed, said in the banner, and the save blanks it
     putLine(0, 2, 0, 875, 2125, 0, 1000, 1850, 1500, 1500, 1, 4, 0);
     putLine(30, 2, 255, 1500, 1500, 0, 988, 2012, 1500, 1500, 1, 4, 0);
     StartAdjustView(); run(6);
-    CHECK(AdjN == 4 && Adj_Was_Edited && fields["busy"] == "Press Save: 1 extra bank switch line removed (they fight).");
+    CHECK(AdjN == 4 && Adj_Was_Edited && fields["busy"] == "Press Save: 1 extra bank selector line removed (they fight).");
     { int k = 0; for (int i = 0; i < AdjN; ++i) if (AdjRows[i].fn == 2) ++k; CHECK(k == 1 && AdjRows[0].lo == 1000 && AdjRows[0].hi == 1850); }
     fcLog.clear(); SaveAdjustments(); run(40);
     { AdjLine L[42]; AdjParseLines(adj, 588, L); int k = 0; for (int i = 0; i < 42; ++i) if (L[i].fn == 2) ++k; CHECK(k == 1 && L[30].fn == 0 && writes(53) >= 1); }
     // 8. no USB cable: the refusal, in the receiver's words, and back to the menu
     usb = false; boxes = 0; rfStarts = 0; StartAdjustView(); run(6);
-    CHECK(boxes == 1 && rfStarts == 1 && lastBox.find("Adjustments need the USB cable") == 0 && lastBox.find("Plug the flight controller's USB") != std::string::npos && CurrentView == 47);
+    CHECK(boxes == 1 && rfStarts == 1 && lastBox.find("In-flight adjustments need the USB cable") == 0 && lastBox.find("Plug the flight controller's USB") != std::string::npos && CurrentView == 47);
     // 9. no model: refused before anything
-    usb = true; BoundFlag = false; boxes = 0; fcLog.clear(); StartAdjustView(); CHECK(boxes == 1 && fcLog.empty() && lastBox.find("Adjustments need the model connected") == 0);
+    usb = true; BoundFlag = false; boxes = 0; fcLog.clear(); StartAdjustView(); CHECK(boxes == 1 && fcLog.empty() && lastBox.find("In-flight adjustments need the model") == 0);
     printf("test_adjust_page: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

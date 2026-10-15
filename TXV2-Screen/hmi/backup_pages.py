@@ -8,12 +8,12 @@ import rescue_pages as rp
 # codes (the main board's NumberedFunctions1): 48 open (the menu), 111 Back up, 112 Restore all, 113 Write edits, 114 Forget edits, 115 OK
 comps = []; i = [1]
 def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
-add(rp.comp(rp.TITLE, n='t0', txt='Backup (Rotorflight)'))
+add(rp.comp(rp.TITLE, n='t0', txt='Backup & restore'))   # (15 Oct 2026: the phone app's name; "Backup (Rotorflight)" before)
 add(rp.comp(rp.CARD, n='card'))
 add(rp.comp(rp.BANK, n='t9', txt='No model'))
 add(rp.comp(rp.MODEL, n='t11', txt='Model name'))
 add(rp.comp(rp.VA0, n='va0'))
-h = rp.comp(rp.by['b0'], n='b0'); h['ev'] = {'r': 'print "HelpView:BACKUP.TXT"\nLogView.t0.txt="Backup (Rotorflight) help"\nLogView.return.txt="RFBackUpView"'}; add(h)   # (polish: the help's title is the page's title + " help")
+h = rp.comp(rp.by['b0'], n='b0'); h['ev'] = {'r': 'print "HelpView:BACKUP.TXT"\nLogView.t0.txt="Backup & restore help"\nLogView.return.txt="RFBackUpView"'}; add(h)   # (polish: the help's title is the page's title + " help")
 # B91: an island - the two lines of fact across it; under them the guidance, and beside it the four things to do with the
 # backup as a block of two by three (Back up, Restore all / Diff to card, Execute diff / Write edits, Forget edits); OK
 # alone at the foot, at the right
@@ -44,7 +44,7 @@ gx = X + W - GW
 # wait) is the block's LAST row, so a hidden button leaves its gap at the foot, by OK, not in the middle of the block -
 # rows: Back up / Restore all, Diff to card / Execute diff, Write edits / Forget edits. (The list keeps its order: the
 # buttons keep their ids; only the rows change.)
-for nm, txt, col, row, code in (('b3', 'Back up', 0, 0, 111), ('b2', 'Restore all', 1, 0, 112), ('b4', 'Write edits', 0, 2, 113), ('b5', 'Forget edits', 1, 2, 114), ('ldrcDiff', 'Diff to card', 0, 1, 'ldrc diff'), ('ldrcExec', 'Execute diff', 1, 1, 'ldrc exec')):
+for nm, txt, col, row, code in (('b3', 'Back up', 0, 0, 111), ('b2', 'Restore all', 1, 0, 112), ('b4', 'Send to model', 0, 2, 113), ('b5', 'Discard edits', 1, 2, 114), ('ldrcDiff', 'Diff to card', 0, 1, 'ldrc diff'), ('ldrcExec', 'Execute diff', 1, 1, 'ldrc exec')):
     b = rp.comp(rp.BUTTON, n=nm, x=gx + col * (BW + rp.C_BTN_GAP), y=Y + GY + row * (rp.C_BTN_H + 10), w=BW, h=rp.C_BTN_H, txt=txt)
     b['ev'] = {'r': code} if isinstance(code, str) else {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
 for (nm, txt, x, y, w, code) in isl['btn']:

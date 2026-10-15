@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Mixer: bench measure",
+   "txt": "Bench measure",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 24,
+   "x": 26,
    "y": 74,
-   "w": 752,
+   "w": 747,
    "h": 390,
    "font": 6,
    "sta": 1,
@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank 1",
+   "txt": "All banks",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:TRAVEL4.TXT\"\nLogView.t0.txt=\"Mixer: bench measure help\"\nLogView.return.txt=\"Travel4View\""
+    "r": "print \"HelpView:TRAVEL4.TXT\"\nLogView.t0.txt=\"Bench measure help\"\nLogView.return.txt=\"Travel4View\""
    }
   },
   {
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 151,
+   "x": 105,
    "y": 90,
-   "w": 498,
+   "w": 589,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -207,7 +207,7 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 151,
+   "x": 105,
    "y": 130,
    "w": 62,
    "h": 36,
@@ -235,9 +235,9 @@
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 219,
+   "x": 173,
    "y": 130,
-   "w": 430,
+   "w": 521,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -266,9 +266,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 151,
+   "x": 105,
    "y": 170,
-   "w": 392,
+   "w": 483,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -277,7 +277,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Hold angle [deg]",
+   "txt": "Angle (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -294,7 +294,7 @@
    "i": 11,
    "t": "text",
    "g": "g",
-   "x": 549,
+   "x": 594,
    "y": 170,
    "w": 100,
    "h": 36,
@@ -317,7 +317,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Hold angle [deg]\"\nva0.val=180<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Angle (deg)\"\nva0.val=180<<8\nprint va0.val"
    }
   },
   {
@@ -325,9 +325,9 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 151,
+   "x": 105,
    "y": 210,
-   "w": 392,
+   "w": 483,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -336,7 +336,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Gauge reads [deg]",
+   "txt": "Peak gauge reading (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -353,7 +353,7 @@
    "i": 13,
    "t": "text",
    "g": "g",
-   "x": 549,
+   "x": 594,
    "y": 210,
    "w": 100,
    "h": 36,
@@ -376,7 +376,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Gauge reads [deg]\"\nva0.val=180<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Peak gauge reading (deg)\"\nva0.val=180<<8\nprint va0.val"
    }
   },
   {
@@ -384,9 +384,9 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 151,
+   "x": 105,
    "y": 250,
-   "w": 392,
+   "w": 483,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -395,7 +395,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cyclic calibration [%]",
+   "txt": "Cyclic gain (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -412,7 +412,7 @@
    "i": 15,
    "t": "text",
    "g": "g",
-   "x": 549,
+   "x": 594,
    "y": 250,
    "w": 100,
    "h": 36,
@@ -435,7 +435,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Cyclic calibration [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Cyclic gain (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -443,9 +443,9 @@
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 151,
+   "x": 105,
    "y": 290,
-   "w": 392,
+   "w": 483,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -454,7 +454,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Suggested calibration [%]",
+   "txt": "Suggested gain (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -471,7 +471,7 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 549,
+   "x": 594,
    "y": 290,
    "w": 100,
    "h": 36,
@@ -502,7 +502,7 @@
    "i": 18,
    "t": "button",
    "g": "l",
-   "x": 84,
+   "x": 81,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -534,7 +534,7 @@
    "i": 19,
    "t": "button",
    "g": "l",
-   "x": 256,
+   "x": 253,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -566,7 +566,7 @@
    "i": 20,
    "t": "button",
    "g": "l",
-   "x": 428,
+   "x": 425,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -598,7 +598,7 @@
    "i": 21,
    "t": "button",
    "g": "l",
-   "x": 600,
+   "x": 597,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -630,9 +630,9 @@
    "i": 22,
    "t": "text",
    "g": "l",
-   "x": 40,
+   "x": 42,
    "y": 168,
-   "w": 720,
+   "w": 715,
    "h": 80,
    "font": 2,
    "sta": 1,

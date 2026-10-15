@@ -9,8 +9,8 @@ Your choice stays through take-offs, landings and switching off,|
 until you press the other button. Design your own screens in|
 Transmitter setup / 'Appearance' / 'Defined front screens'.||
 Touch the model's picture to choose another picture.|
-With Rotorflight, touch the RPM box to open 'Rotorflight options'|
-(put the safety on and the motor off first).||
+With Rotorflight, touch the RPM box to open the 'Rotorflight'|
+page (put the safety on and the motor off first).||
 With a model connected, switching the motor on brings the front|
 screen back from any other page. Not while a question is|
 waiting, or you are a buddy pupil, or during a calibration,|

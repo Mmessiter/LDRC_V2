@@ -34,8 +34,8 @@ FLASHMEM static void EcalSend(int value) // MSP 195: motor 0 at value (1000 = fu
 FLASHMEM static void EcalShow()
 {
     EcalButton();
-    if (EcalState == ECAL_FULL) EcalStatus("FULL THROTTLE held: plug the battery in");
-    else if (EcalState == ECAL_MIN) EcalStatus("MINIMUM: wait for the beeps");
+    if (EcalState == ECAL_FULL) EcalStatus("FULL THROTTLE held: plug the flight battery in");
+    else if (EcalState == ECAL_MIN) EcalStatus("MINIMUM: wait for the confirmation beeps");
     else if (EcalState == ECAL_DONE) EcalStatus("Calibrated: unplug the battery");
     else EcalStatus("Ready: tap Full throttle to begin");
 }
@@ -108,7 +108,7 @@ FLASHMEM void EscCalTapped() // the one button: Full throttle, or Minimum while 
         MsgBox((char *)"page EscCalView", (char *)"The calibration needs the model itself,\r\nswitched on and joined by Bluetooth.");
         return;
     }
-    if (!GetConfirmation((char *)"page EscCalView", (char *)"Blades off or pinion out? Flight pack\r\nunplugged, flight controller on USB power?\r\nIt holds FULL throttle until you tap\r\n'Minimum'. Plug the battery in once held."))
+    if (!GetConfirmation((char *)"page EscCalView", (char *)"Blades OFF or pinion out? Flight pack\r\nUNPLUGGED? Flight controller on USB power?\r\nIt holds FULL throttle until you tap\r\n'Minimum'. Plug the flight battery in\r\nonce it is held."))
     {
         EcalShow();
         return;

@@ -5,7 +5,7 @@ overcrowded" - so the four settings (link rates and banks, version, arming chann
 their own, and the menu is a grid of up to nine buttons. The main board addresses components by NAME: the menu keeps
 t0, card, b0 (Help), t11 (model name), va0, b4 (OK), Progress, t14 (bank), t8 (rate), pipe; the settings page keeps
 t3/sw0, t4/t5, t6/Arming, t1/Ratio with their events. Re-run after a change here: python3 hmi/rfmenu_pages.py"""
-import json, os, copy
+import json, os, copy, re
 HERE = os.path.dirname(os.path.abspath(__file__)); PAGES = os.path.join(HERE, '..', 'sd', 'hmi', 'pages')
 menu = json.load(open(os.path.join(PAGES, '8.json')))
 by = {c['n']: c for c in menu['comps']}
@@ -31,10 +31,10 @@ def add(lst, c): c['i'] = i[0]; i[0] += 1; lst.append(c); return c
 add(settings, comp(by['t0'], txt='Rotorflight settings'))
 # (10 Oct 2026 polish, Malcolm: "make the screens look more beautiful, well designed and easy to use": "Main gear ratio",
 # the pilot's word for it - the help already says gear ratio - in its keypad's question too)
-ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Main gear ratio', 'Main gear ratio'))
+ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Gear ratio (V1 receiver)', 'Gear ratio (V1 receiver)'))   # (15 Oct 2026: the transmitter's own ratio for a V1 receiver's head speed; Rotorflight's "Main gear ratio", the phone app's words, is on page 78)
 # B90: four rows lay out compact (rescue_pages.compact_plan): a card their size, centred on the background picture, the rows in the larger font
 # B99: "Model basics ..." beside OK - the swashplate type, rotor direction, tail type, ESC signal and brand, poles, gear ratios (hmi/basics_pages.py)
-plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b5', 'Model basics ...', 183), ('b4', 'OK', 82)])
+plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b5', 'First-time basics ...', 183), ('b4', 'OK', 82)])   # (15 Oct 2026: the phone app's name; "Model basics" before)
 add(settings, comp(by['card'], x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3]))
 header(settings, model='')
 add(settings, comp(by['va0']))
@@ -58,20 +58,20 @@ json.dump(page61, open(os.path.join(PAGES, '61.json'), 'w'), indent=1)
 
 # ---- the menu: a grid of buttons, three by five, the arming line under it (B88)
 i = [1]; comps = []
-add(comps, comp(by['t0']))
+add(comps, comp(by['t0'], txt='Rotorflight'))   # (15 Oct 2026: the phone app's name for this page; "Rotorflight options" before)
 # B91: the menu on an island - the grid 232 wide a button (the arming line's longest words, 705 px, fit under it), 44 high,
 # the arming line under it, the Bluetooth word against OK at the foot
 BW, BH, GX, GY = 232, 44, 8, 6
 GRID_W = 3 * BW + 2 * GX
 isl = rp.island(GRID_W, 5 * BH + 4 * GY + 8 + 40, [('b4', 'OK', 0)])
 add(comps, comp(by['card'], x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3]))
-h = comp(by['b0']); h['ev'] = dict(h['ev'], r=h['ev']['r'].replace('LogView.t0.txt="RotorFlight setup help"', 'LogView.t0.txt="Rotorflight options help"'))   # (polish: the help's title is the page's title + help)
+h = comp(by['b0']); h['ev'] = dict(h['ev'], r=re.sub(r'LogView\.t0\.txt="[^"]*"', 'LogView.t0.txt="Rotorflight help"', h['ev']['r']))   # (polish: the help's title is the page's title + help)
 add(comps, h)
 header(comps)
 add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last
     ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22), ('b2', 'Governor ...', 50),
-    ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Mixer ...', 83),
+    ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Travel extents ...', 83),
     ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116), ('Switches', 'Switches ...', 133),
     ('CopyBank', 'Copy a bank ...', 145), ('Battery', 'Battery ...', 155), ('Blackbox', 'Black box ...', 161),
     ('Calibrate', 'Calibrate ...', 170), ('Setup', 'Settings ...', 81), ('Cli', 'Command line ...', 'ldrc cli'),
@@ -88,7 +88,7 @@ arm['c'] = {'pco': 65535, 'borderc': rp.CARD['c']['bco'], 'bco': rp.CARD['c']['b
 arm['ev'] = {'r': 'va0.val=175<<8\nprint va0.val'}
 add(comps, arm)
 okx = isl['btn'][0][2]
-bk = comp(proto, n='b3', x=isl['card'][0] + rp.C_PAD, y=isl['foot_y'], w=240, h=rp.C_BTN_H, txt='Backup / Restore ...'); bk['ev'] = {'r': 'va0.val=48<<8\nprint va0.val'}   # (far left of the foot)
+bk = comp(proto, n='b3', x=isl['card'][0] + rp.C_PAD, y=isl['foot_y'], w=240, h=rp.C_BTN_H, txt='Backup & restore ...'); bk['ev'] = {'r': 'va0.val=48<<8\nprint va0.val'}   # (far left of the foot)
 add(comps, bk)
 pw = comp(by['pipe'], x=bk['x'] + bk['w'] + rp.C_BTN_GAP, y=isl['foot_y'], w=okx - rp.C_BTN_GAP - (bk['x'] + bk['w'] + rp.C_BTN_GAP), h=rp.C_BTN_H, font=2); pw['a'] = dict(pw['a'], xcen=2)   # (the Bluetooth word or its tooth, against OK, which keeps the bottom right)
 add(comps, pw)

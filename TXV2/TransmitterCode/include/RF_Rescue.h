@@ -29,7 +29,7 @@ static int RescueStep = RSC_IDLE, RescueReq = 0;
 static uint32_t RescueMsgUntil = 0;        // a message shown over the fields goes by itself
 static uint8_t RescueWant[RESCUE_BYTES];   // what a save asked for
 
-static const char *RescueModeWords[3] = {"Off", "Climb", "Hold height"};   // the mode on the height page; page 1's "Enable Rescue" is Off / On (B52: the configurator's names in its places)
+static const char *RescueModeWords[3] = {"Off", "Level & climb", "Level & hold height"};   // the mode on the height page (15 Oct: the phone app's words); page 1's "Enable rescue" is Off / On
 
 FLASHMEM static uint16_t RdU16(const uint8_t *b, int o) { return (uint16_t)(b[o] | (b[o + 1] << 8)); }
 FLASHMEM static void WrU16(uint8_t *b, int o, long v)
@@ -290,6 +290,7 @@ FLASHMEM void RescuePoll()
         RescueBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         RescueMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        RfSavedThenLeave(CurrentView);   // B102: OK's "Save now?" closes the page once saved
         return;
     }
     default:
@@ -321,18 +322,14 @@ FLASHMEM void StartRescueView()
     Rescue_Was_Edited = false;
     RescueRead();
 }
+void SaveRescue();
+FLASHMEM static void RescueSaveNow() { SendText((char *)"t11", ModelName); SendCommand((char *)"vis b3,1"); RescueShow(); SaveRescue(); }   // B102: OK's "Save now?"
 FLASHMEM void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< Previous" is EndRescue2View)
 {
     if (Rescue_Was_Edited)
     {
         if (CurrentView == RESCUEVIEW) RescueGatherPage1(); else RescueGatherPage2();   // (B59) the edits, before the question's page takes the fields away
-        if (!GetConfirmation((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), (char *)"Discard the edited rescue values?"))
-        {
-            SendText((char *)"t11", ModelName);
-            SendCommand((char *)"vis b3,1");
-            RescueShow(); // the page came back blank: the edits again
-            return;
-        }
+        if (!RfSaveFirst(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView", "The edited rescue values are", RescueSaveNow, EndRescueView, &Rescue_Was_Edited)) return;   // B102
     }
     RescueStep = RSC_IDLE;
     Rescue_Was_Edited = false;

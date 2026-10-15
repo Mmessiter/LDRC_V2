@@ -1,7 +1,7 @@
-The gear ratios, as the configurator's two numbers each:|
-how many turns the rotor makes for how many of the motor|
-(or tail). With the pole count, they give the true head|
-speed the governor holds and the transmitter shows.||
+The gear ratios, as on the phone app's 'First-time basics' page:|
+two numbers each, how many turns the rotor makes for how many|
+of the motor (or tail). With the pole count, they give the true|
+head speed the governor holds and the transmitter shows.||
 Tap a number to type it. Whole numbers are the teeth:|
 pinion 10 : main gear 102. Decimals work too: 1 : 10.2|
 is the same ratio. Direct drive is 1 : 1.|
@@ -15,8 +15,10 @@ Tail gear ratio: rotor : tail, usually 1 : 4 to 1 : 5.5.|
 Only the tail-speed readout and the tail's vibration filters|
 use it. Two-stage (SAB): tail pulley x pinion : front tail|
 pulley x main gear, for example 25x19 : 37x68 = 475 : 2516.||
-'Save' writes all the Model basics pages, stores them, restarts|
-the flight controller and reads them back. It asks first.|
-'< Previous' goes back to the first page, 'Next >' on to the|
-ports, changes kept.|
-'OK' leaves; if a change was not saved, it asks first.|
+'Save' writes all the First-time basics pages, stores them,|
+restarts the flight controller and reads them back.|
+It asks first.|
+'< Previous' goes back to 'First-time basics', 'Next >' on to|
+'Ports', changes kept.|
+'OK' leaves. With a change not saved it asks 'Save now?':|
+'Save' saves, then leaves; 'Discard' leaves without saving.|

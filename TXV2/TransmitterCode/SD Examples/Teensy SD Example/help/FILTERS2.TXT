@@ -1,4 +1,4 @@
-What the configurator's expert mode adds to its Gyro tab.|
+The extra filters of the phone app's 'Expert mode'.|
 Rarely needed: the defaults suit most helicopters.||
 Tap a number to type a new one. Tap Filter type to switch|
 between 1st and 2nd order.|
@@ -10,8 +10,9 @@ the configurator's defaults.|
 pages, stores them and reads them back. If the first page was|
 changed too, it asks first.|
 '< Previous' goes back to the first page, changes kept.|
-'OK' leaves; if a change was not saved, it asks first.||
-LOWPASS 1 DYNAMIC CUTOFF:|
+'OK' leaves. With a change not saved it asks 'Save now?':|
+'Save' saves, then leaves; 'Discard' leaves without saving.||
+DYNAMIC CUTOFF (LOWPASS 1):|
 The first page's lowpass cutoff follows the head speed, from|
 Min cutoff to Max cutoff (0 to 1000 Hz), instead of staying|
 fixed. Enable off = the fixed cutoff.|

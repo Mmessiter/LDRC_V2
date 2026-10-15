@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B101 15/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B102 15/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1975,6 +1975,13 @@ bool AgeGapChecked = false;
 bool BankCheckIsNeeded = false;
 
 bool BlockBankChanges = false; // used to block bank changes when Param go to or from Nexus
+bool RfLeaveAfterSave = false; // B102: OK's "Save now?" - the page closes once its save has worked (Utilities.h RfSaveFirst)
+int RfLeaveView = -1;
+void (*RfLeaveFn)() = nullptr;
+bool GetSaveOrDiscard(char *goback, char *Prompt);
+void RfSavedThenLeave(int view);
+bool RfSaveFirst(const char *page, const char *what, void (*save)(), void (*leave)(), bool *edited);
+void BankCheck(bool rates, int want, void (*then)(), const char *page); // B102: PipeHttp.h
 uint8_t BackGroundSelection = 1;
 char SearchFile[80]; // used for searching files on SD card after adding path to filename
 
@@ -2077,7 +2084,7 @@ uint8_t GovWritePayload[GOV_ACK_PAYLOAD_SIZE] = {0};
 uint8_t GovAckPayload[GOV_ACK_PAYLOAD_SIZE] = {0};
 uint8_t Saved_GOV_Config_Values[GOV_CONFIG_PAYLOAD_SIZE] = {0};
 
-char Rate_Types[7][16] = {"None", "Betaflight", "Raceflight", "KISS", "Actual", "QuickRates", "Rotorflight 2.3"};
+char Rate_Types[7][16] = {"0 - NONE", "1 - BETAFLIGHT", "2 - RACEFLIGHT", "3 - KISS", "4 - ACTUAL", "5 - QUICKRATES", "6 - ROTORFLIGHT"};   // (15 Oct: the phone app's Rates type words)
 
 const float FactorTableRF2_2[13] = {1, 10, 10, .01, 10, 10, .01, 10, 10, .01, .25, .25, .01}; // Factors for RATES in RF V2.2 (0th element not used)
 const float FactorTableRF2_3[13] = {1, 5, 1, 1, 5, 1, 1, 5, 1, 1, .125, 1, 1};                // Factors for RATES in RF V2.3 (0th element not used)

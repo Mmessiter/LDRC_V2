@@ -10,7 +10,7 @@ WHICH SWITCH:|
 The 'Rates' switch chooses the rate.|
 With no 'Rates' switch, it is Rate 4.|
 With 'Link rates and banks' on ('Settings ...' on the|
-Rotorflight options), the bank switch chooses it instead.||
+'Rotorflight' page), the bank switch chooses it instead.||
 GOOD TO KNOW:|
 Save before you move the switch: a move loads the other rate,|
 and unsaved changes are lost.|
@@ -18,32 +18,39 @@ To check a save, move the switch away and back.|
 The page reads the values again.|
 If the page says nothing came back, do the same,|
 or leave the page and open it again.|
-'Rate 2 / FC 1' at the top left: the flight controller|
-is on rate 1, so the page shows and saves rate 1.||
+'Save' writes only into the transmitter's rate.|
+'Rate 2 / FC 1' at the top left: the flight controller is on|
+rate 1. The page shows rate 1, but 'Save' writes nothing, and|
+a message says so. Check the set-up of the switch that|
+chooses the rate. (The check needs Bluetooth joined.)||
 THE NUMBERS:|
 Roll, Pitch and Yaw: degrees per second, which the flight|
 controller will seek (physics permitting).|
 Collective: degrees of blade pitch, if the mechanism allows.|
-A value between steps is rounded down (163 becomes 160).||
+A value between steps goes to the nearest step|
+(163 becomes 160).||
 THE COLUMNS:|
-They follow the Rotorflight version in 'Settings ...'.|
-2.3: Rate, Shape and Exponential.|
+They follow the rate's type, on the 'Rates type:' line.|
+'6 - ROTORFLIGHT': Rate, Shape and Expo.|
 Rate goes in steps of 5, up to 1275 (Collective: 0.125).|
-Shape and Exponential are whole numbers, 0 to 255.|
-2.2: Centre rate, Max rate and Exponential.|
-Centre rate and Max rate go in steps of 10, up to 2550|
+Shape and Expo are whole numbers, 0 to 255.|
+Every other type: Centre, Max rate and Expo.|
+Centre and Max rate go in steps of 10, up to 2550|
 (Collective: 0.25).|
-Exponential goes from 0 to 1, in steps of 0.01.||
+Expo goes from 0 to 1, in steps of 0.01.||
 RATES TYPE:|
-'Rates type:' names the type the flight controller uses.|
+'Rates type:' names the type the flight controller uses,|
+such as '4 - ACTUAL'.|
 Change it on the phone app's 'Rates' page, not here.|
-The numbers here match the Configurator for the Actual type,|
-and for the Rotorflight type on 2.3. With any other type,|
+The numbers here match the Configurator for '4 - ACTUAL',|
+and for '6 - ROTORFLIGHT' on 2.3. With any other type,|
 choose one of those two on the phone app's 'Rates' page,|
 then set the rates again.||
-'Advanced ...' opens 'Rates +' for the same rate.|
-'OK' goes back to the Rotorflight options.|
-Both ask first if you have unsaved changes.|
+'Dynamics ...' opens 'Rates: dynamics' for the same rate.|
+It asks first if you have unsaved changes.|
+'OK' goes back to the 'Rotorflight' page.|
+With unsaved changes it asks 'Save now?': 'Save' saves them,|
+and the page closes once saved; 'Discard' leaves without saving.|
 The page opens only with the safety on.|
 With no model connected, it shows the model's backup|
-(see the Rotorflight options help).|
+(see the help on the 'Rotorflight' page).|

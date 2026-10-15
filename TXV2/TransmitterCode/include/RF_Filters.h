@@ -250,6 +250,7 @@ FLASHMEM void FilterPoll()
         FltBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         FltMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        RfSavedThenLeave(CurrentView);   // B102: OK's "Save now?" closes the page once saved
         return;
     }
     default:
@@ -273,12 +274,14 @@ FLASHMEM void StartFilterView()
     FltHead();
     FltRead();
 }
+void SaveFilters();
+FLASHMEM static void FltSaveNow() { FltHead(); FltShow(); SaveFilters(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndFilterView() // OK on either page
 {
     if (Flt_Was_Edited)
     {
         FltGather(); // (B59) before the question's page takes the fields away
-        if (!GetConfirmation((char *)FltPageWord(), (char *)"Discard the edited filter values?")) { FltHead(); FltShow(); return; }
+        if (!RfSaveFirst(FltPageWord(), "The edited filter values are", FltSaveNow, EndFilterView, &Flt_Was_Edited)) return;   // B102
     }
     FltStep = FLT_IDLE;
     Flt_Was_Edited = false;
@@ -388,7 +391,7 @@ FLASHMEM void SaveFilters()
     // unseen): a save writes both pages, so a change on the OTHER page is said, and asked about, first.
     if (FltOtherPageChanged())
     {
-        if (!GetConfirmation((char *)FltPageWord(), (char *)(CurrentView == FILTERVIEW ? "The expert page was changed too\r\n(lowpass 2, dynamic cutoff or notches).\r\nSave both pages?" : "The first page was changed too\r\n(lowpass, dynamic or RPM filter).\r\nSave both pages?")))
+        if (!GetConfirmation((char *)FltPageWord(), (char *)(CurrentView == FILTERVIEW ? "The expert mode page was changed too\r\n(lowpass 2, dynamic cutoff or notches).\r\nSave both pages?" : "The first page was changed too\r\n(lowpass, dynamic or RPM filter).\r\nSave both pages?")))
         {
             FltHead(); FltShow();
             return;

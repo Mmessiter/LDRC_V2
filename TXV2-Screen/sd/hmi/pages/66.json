@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Mixer: tail rotor",
+   "txt": "Travel extents: tail",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 24,
+   "x": 26,
    "y": 74,
-   "w": 752,
+   "w": 747,
    "h": 390,
    "font": 6,
    "sta": 1,
@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank 1",
+   "txt": "All banks",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:TRAVEL3.TXT\"\nLogView.t0.txt=\"Mixer: tail rotor help\"\nLogView.return.txt=\"Travel3View\""
+    "r": "print \"HelpView:TRAVEL3.TXT\"\nLogView.t0.txt=\"Travel extents: tail help\"\nLogView.return.txt=\"Travel3View\""
    }
   },
   {
@@ -181,7 +181,7 @@
    "g": "g",
    "x": -2000,
    "y": -2000,
-   "w": 393,
+   "w": 445,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 203,
+   "x": 177,
    "y": 90,
-   "w": 393,
+   "w": 445,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -235,9 +235,9 @@
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 203,
+   "x": 177,
    "y": 130,
-   "w": 287,
+   "w": 339,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -246,7 +246,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Yaw reversed",
+   "txt": "Rudder reversed",
    "a": {
     "style": 0,
     "key": 255,
@@ -262,7 +262,7 @@
    "n": "tn0",
    "t": "switch",
    "g": "g",
-   "x": 506,
+   "x": 532,
    "y": 131,
    "w": 80,
    "h": 34,
@@ -291,9 +291,9 @@
    "i": 11,
    "t": "text",
    "g": "g",
-   "x": 203,
+   "x": 177,
    "y": 170,
-   "w": 287,
+   "w": 339,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -302,7 +302,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Yaw centre trim [deg]",
+   "txt": "Tail centre trim (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -319,7 +319,7 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 496,
+   "x": 522,
    "y": 170,
    "w": 100,
    "h": 36,
@@ -342,7 +342,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw centre\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Tail centre trim\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -350,9 +350,9 @@
    "i": 13,
    "t": "text",
    "g": "g",
-   "x": 203,
+   "x": 177,
    "y": 210,
-   "w": 287,
+   "w": 339,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -361,7 +361,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Yaw calibration [%]",
+   "txt": "Tail gain (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -378,7 +378,7 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 496,
+   "x": 522,
    "y": 210,
    "w": 100,
    "h": 36,
@@ -401,7 +401,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw calibration [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Tail gain (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -409,9 +409,9 @@
    "i": 15,
    "t": "text",
    "g": "g",
-   "x": 203,
+   "x": 177,
    "y": 250,
-   "w": 287,
+   "w": 339,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -420,7 +420,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Yaw limit CW [deg]",
+   "txt": "Tail travel, stick right (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -437,7 +437,7 @@
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 496,
+   "x": 522,
    "y": 250,
    "w": 100,
    "h": 36,
@@ -460,7 +460,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw limit CW\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Tail travel, stick right\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -468,9 +468,9 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 203,
+   "x": 177,
    "y": 290,
-   "w": 287,
+   "w": 339,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -479,7 +479,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Yaw limit CCW [deg]",
+   "txt": "Tail travel, stick left (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -496,7 +496,7 @@
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 496,
+   "x": 522,
    "y": 290,
    "w": 100,
    "h": 36,
@@ -519,7 +519,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Yaw limit CCW\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Tail travel, stick left\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -527,9 +527,9 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 203,
+   "x": 177,
    "y": 330,
-   "w": 287,
+   "w": 339,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -538,7 +538,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Motor idle throttle [%]",
+   "txt": "Tail motor idle (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -555,7 +555,7 @@
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 496,
+   "x": 522,
    "y": 330,
    "w": 100,
    "h": 36,
@@ -578,7 +578,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Motor idle throttle [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Tail motor idle (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -586,7 +586,7 @@
    "i": 21,
    "t": "button",
    "g": "l",
-   "x": 84,
+   "x": 81,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -618,7 +618,7 @@
    "i": 22,
    "t": "button",
    "g": "l",
-   "x": 256,
+   "x": 253,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -650,7 +650,7 @@
    "i": 23,
    "t": "button",
    "g": "l",
-   "x": 428,
+   "x": 425,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -682,7 +682,7 @@
    "i": 24,
    "t": "button",
    "g": "l",
-   "x": 600,
+   "x": 597,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -714,9 +714,9 @@
    "i": 25,
    "t": "text",
    "g": "l",
-   "x": 40,
+   "x": 42,
    "y": 208,
-   "w": 720,
+   "w": 715,
    "h": 80,
    "font": 2,
    "sta": 1,

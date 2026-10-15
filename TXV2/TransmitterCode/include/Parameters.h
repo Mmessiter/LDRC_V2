@@ -175,7 +175,7 @@ bool RfNeedsModel(char *why, size_t n)
         return false;
     if (BakHaveFile())
         return false;   // B70: no model, but its backup on the card: the pages read and edit that
-    snprintf(why, n, "No model, and no backup of it on the\r\ncard. Back it up once (Rotorflight,\r\nBackup) to edit it here.");   // (B72: within the callers' 120 characters)
+    snprintf(why, n, "No model, and no backup of it on the\r\ncard. Back it up once (Rotorflight,\r\nBackup & restore) to edit it here.");   // (B72: within the callers' 120 characters)
     return true;
 }
 bool RfPipeBlocked(char *why, size_t n)

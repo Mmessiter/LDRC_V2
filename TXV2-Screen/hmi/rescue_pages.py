@@ -67,7 +67,7 @@ C_PAD, C_COLGAP, C_LVGAP = 16, 20, 6
 C_BTN_W, C_BTN_H, C_BTN_GAP, C_BTN_ABOVE = 160, 50, 12, 14
 ISLAND_MX, ISLAND_MY = 24, 16
 STRETCH = 60   # (a column is made at most this much wider than its words need)
-def compact_plan(fields, buttons, tier=None, min_size=None):
+def compact_plan(fields, buttons, tier=None, min_size=None, wide_cap=None):
     """fields as page() takes them; buttons: (name, words, code). None when no size of row lets the page be an island,
     else a dict: card (x, y, w, h), col[(lx, cw)], y(row), btn[(name, words, x, y, w, code)], box (the message box),
     font, row_h, val_w, wide_l, tier."""
@@ -79,7 +79,9 @@ def compact_plan(fields, buttons, tier=None, min_size=None):
         # (B91, Malcolm of the Black box page: "The answer to the 'when' is so abbreviated, it's difficult to understand ... perhaps
         # by making the relative sizes of the boxes different"): a 'wide' row's label is no wider than its words need, so its box
         # has the room - and each 'wide' row names (7th element) the longest words the main board puts in it
-        wide_l = min(wide_l, max((width(font, f[1]) + 20 for f in fields if f[4] == 'wide'), default=wide_l))
+        # (15 Oct 2026: wide_cap lets one page's 'wide' labels be wider than the tier allows - the ports page's "TELEM (UART 2)",
+        # the phone app's socket names)
+        wide_l = min(wide_cap or wide_l, max((width(font, f[1]) + 20 for f in fields if f[4] == 'wide'), default=wide_l))
         cols = [0, 0]; minc = 300 if font == 6 else 260
         for f in fields:
             nm, label, col, row, kind = f[:5]; hint = f[6] if len(f) > 6 else None
@@ -144,24 +146,24 @@ def series_begin():
 def series_end():
     global _series
     pending, _series = _series, None
-    plans = [compact_plan(a[3], [(b[0], b[1], b[4]) for b in a[4]]) for a, k in pending]
+    plans = [compact_plan(a[3], [(b[0], b[1], b[4]) for b in a[4]], wide_cap=k.get('wide_cap')) for a, k in pending]
     if any(p is None for p in plans):
         for a, k in pending: page(*a, **k)
         return
     tier = max(p['tier'] for p in plans)
-    sized = [compact_plan(a[3], [(b[0], b[1], b[4]) for b in a[4]], tier=tier) for a, k in pending]
+    sized = [compact_plan(a[3], [(b[0], b[1], b[4]) for b in a[4]], tier=tier, wide_cap=k.get('wide_cap')) for a, k in pending]
     if any(p is None for p in sized):
         for a, k in pending: page(*a, **k)
         return
     size = (max(p['size'][0] for p in sized), max(p['size'][1] for p in sized))
     for a, k in pending: page(*a, **dict(k, tier=tier, min_size=size))
 
-def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact=None, tier=None, min_size=None):
+def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact=None, tier=None, min_size=None, wide_cap=None):
     """fields: (name, label, column, row, kind, code[, keypad label]) with kind 'num' (the keypad), 'cycle' (a tap), 'switch' (on/off), 'info' (told, not changed),
     'head' (a group heading, no value) or 'pick' (1.11.35: a choice from a long list, the whole row: label, a < button, the choice, a > button;
     code = the > button's, the 7th element = the < button's)"""
     if _series is not None:
-        _series.append(((pid, name, title, fields, buttons, help_file), dict(busy_rect=busy_rect, compact=compact))); return
+        _series.append(((pid, name, title, fields, buttons, help_file), dict(busy_rect=busy_rect, compact=compact, wide_cap=wide_cap))); return
     comps = []; i = [1]
     def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
     add(comp(TITLE, n='t0', txt=title))
@@ -171,7 +173,7 @@ def page(pid, name, title, fields, buttons, help_file, busy_rect=MSGBOX, compact
     add(comp(VA0, n='va0'))
     help_btn = comp(by['b0'], n='b0'); help_btn['ev'] = {'r': 'print "HelpView:%s"\nLogView.t0.txt="%s"\nLogView.return.txt="%s"' % (help_file, title + ' help', name)}
     add(help_btn)
-    plan = compact_plan(fields, [(b[0], b[1], b[4]) for b in buttons], tier=tier, min_size=min_size) if compact is not False else None   # (None: no island fits)
+    plan = compact_plan(fields, [(b[0], b[1], b[4]) for b in buttons], tier=tier, min_size=min_size, wide_cap=wide_cap) if compact is not False else None   # (None: no island fits)
     if plan:
         comps[1].update(x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3])
         busy_rect = plan['box']
@@ -236,19 +238,19 @@ series_begin()
 # names in sentence case and British spelling (the page had "Leveling" and "Levelling" side by side), the keypad asking in
 # the same words; page 1 in 7 + 6 rows, the left column what rescue does (the switches,
 # then each stage's collective and time), the right its time-outs and gains - same reading order, taller rows.
-page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the configurator's names, order and units (Malcolm, 7 Oct: "use the same names in the same places")
-    ('tn0', 'Enable rescue', 0, 0, 'switch', 68), ('tn1', 'Flip to upright', 0, 1, 'switch', 69),
-    ('tn2', 'Pull-up collective [%]', 0, 2, 'num', 67), ('tn3', 'Pull-up time [s]', 0, 3, 'num', 67),
-    ('tn4', 'Climb collective [%]', 0, 4, 'num', 67), ('tn5', 'Climb time [s]', 0, 5, 'num', 67),
-    ('tn6', 'Hover collective [%]', 0, 6, 'num', 67),
-    ('tn7', 'Flip fail time [s]', 1, 0, 'num', 67), ('tn8', 'Exit time [s]', 1, 1, 'num', 67),
-    ('tn9', 'Levelling gain', 1, 2, 'num', 67), ('tn10', 'Flip to upright gain', 1, 3, 'num', 67),
-    ('tn11', 'Max levelling rate', 1, 4, 'num', 67), ('tn12', 'Max levelling accel.', 1, 5, 'num', 67),   # ("acceleration" in full: the island would not fit)
+page(58, 'RescueView', 'Rescue (Rotorflight)', [          # the phone app's words (Malcolm, 15 Oct: "use the same terminology that we used in the phone app"; 7 Oct it was the configurator's)
+    ('tn0', 'Enable rescue', 0, 0, 'switch', 68), ('tn1', 'Flip upright if inverted', 0, 1, 'switch', 69),
+    ('tn2', 'Pull-up collective (%)', 0, 2, 'num', 67), ('tn3', 'Pull-up time (s)', 0, 3, 'num', 67),
+    ('tn4', 'Climb collective (%)', 0, 4, 'num', 67), ('tn5', 'Climb time (s)', 0, 5, 'num', 67),
+    ('tn6', 'Hover collective (%)', 0, 6, 'num', 67),
+    ('tn7', 'Flip time (s)', 1, 0, 'num', 67), ('tn8', 'Exit time (s)', 1, 1, 'num', 67),
+    ('tn9', 'Levelling strength', 1, 2, 'num', 67), ('tn10', 'Flip strength', 1, 3, 'num', 67),
+    ('tn11', 'Max turn rate', 1, 4, 'num', 67), ('tn12', 'Max turn acceleration', 1, 5, 'num', 67),
 ], [('b3', 'Save', 14, 180, 66), ('b2', 'Next >', 408, 180, 70), ('b1', 'OK', 605, 180, 65)], 'RESCUE.TXT')   # 1.11.22: Next / Previous between the two pages (Malcolm)
-page(59, 'Rescue2View', 'Rescue: height hold', [   # (the polish, hmi/polish/rfmore.py, widens this page's value boxes for "Hold height")
-    ('tn0', 'Rescue mode', 0, 0, 'cycle', 72), ('tn1', 'Hover height [m]', 0, 1, 'num', 67),
+page(59, 'Rescue2View', 'Rescue: hold height', [   # (the polish, hmi/polish/rfmore.py, widens this page's value boxes for "Hold height")
+    ('tn0', 'Rescue mode', 0, 0, 'cycle', 72), ('tn1', 'Hold height (m)', 0, 1, 'num', 67),
     ('tn2', 'Height hold P', 0, 2, 'num', 67), ('tn3', 'Height hold I', 0, 3, 'num', 67),
-    ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max collective [%]', 0, 5, 'num', 67),
+    ('tn4', 'Height hold D', 0, 4, 'num', 67), ('tn5', 'Max collective (%)', 0, 5, 'num', 67),
 ], [('b3', 'Save', 14, 180, 66), ('b2', '< Previous', 408, 180, 71), ('b1', 'OK', 605, 180, 65)], 'RESCUE2.TXT')
 series_end()
 

@@ -24,7 +24,7 @@ vis busy,0
 @shot 67_none
 # a bank switch matched to this transmitter's banks (kind 4, no handles)
 t0.txt="Adjustment 1 of 6"
-tn0.txt="PID bank switch (1 to 6)"
+tn0.txt="Bank (Profile) selector"
 tn3.txt="in any bank"
 vis tn3,0
 tn2.txt="Banks 1 to 4 of this transmitter"
@@ -74,7 +74,7 @@ tn8.txt="Knob 1500 us: 60"
 t0.txt="Adjustment 13 of 14"
 tn0.txt="Yaw collective feedforward"
 tn3.txt="in bank 4"
-tn2.txt="Step up / down"
+tn2.txt="Step adjustment"
 tn1.txt="Channel 16: AUX11"
 bar.kind=2
 bar.n=3
@@ -87,7 +87,7 @@ tn8.txt="Holding: 1500 us"
 @shot 67_step
 # a bank switch that cannot follow (kind 3), the longest live line (b[64])
 t0.txt="Adjustment 1 of 6"
-tn0.txt="PID bank switch (1 to 6)"
+tn0.txt="Bank (Profile) selector"
 vis tn3,0
 tn2.txt="Switch, 4 positions"
 tn1.txt="Channel 7: AUX2"

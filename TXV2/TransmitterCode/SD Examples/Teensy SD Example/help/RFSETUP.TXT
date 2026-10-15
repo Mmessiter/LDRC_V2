@@ -2,7 +2,7 @@ What the transmitter itself needs to know|
 about this model's flight controller.|
 Touch a white box to type a new value.|
 'OK' saves them with the model,|
-and goes back to the Rotorflight options.||
+and goes back to the Rotorflight page.||
 LINK RATES AND BANKS:|
 On: the bank switch sets the rates too (Bank 2 uses Rate 2).|
 Off: the 'Rates' switch sets the rates on its own.|
@@ -18,22 +18,24 @@ and 'Link rates and banks' has no effect.|
 At 2.2 or 2.3 the transmitter's own rate percentages|
 are not used: Rotorflight's rates are.|
 'Governor ...' needs 2.3.|
-The columns of the Rates page follow the version too.||
+The Rates page's columns follow each bank's rates type.||
 ARMING CHANNEL:|
 The channel the safety switch drives (usually 6).|
 Safety off arms the flight controller.|
-1 to 16. Any other entry is ignored: the old channel stays.||
-MAIN GEAR RATIO:|
+6 to 16: Rotorflight's switches start at channel 6.|
+Any other entry is ignored: the old channel stays.||
+GEAR RATIO (V1 RECEIVER):|
 Motor turns for one turn of the main rotor, such as 10.3.|
 A Version 1 receiver uses it to work out the head speed.|
 A Version 2 receiver does not: Rotorflight sends the head speed.|
 With a Version 2 receiver, set Rotorflight's own gear ratio on|
-'Model basics ...' (its second page), not here.||
-MODEL BASICS:|
-'Model basics ...' opens four pages for a new model's set-up:|
-swash type, which way the rotor turns, tail type, ESC signal|
-and brand, motor pole count; the main and tail gear ratios;|
-the ports (what each UART does); the ESC throttle calibration.|
-The first two work from the model's backup too; the ports and|
+'First-time basics ...' (its 'Gear ratio' page), not here.||
+FIRST-TIME BASICS:|
+'First-time basics ...' opens four pages for a new model's|
+set-up: swash type, which way the rotor turns, tail type, ESC|
+signal and brand, motor pole count; 'Gear ratio' (main and|
+tail); 'Ports' (what each UART does); 'Throttle calibration'|
+(the ESC's throttle range).|
+The first two work from the model's backup too; 'Ports' and|
 the calibration need the model itself.|
 A 'Save' there restarts the flight controller.|

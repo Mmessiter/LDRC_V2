@@ -132,6 +132,24 @@ FLASHMEM void ShowLocalBank()
     BlockBankChanges = false;
 }
 //************************************************************************************************************/
+// B102: the read, and the write once the flight controller is known to be on this bank (PipeHttp.h BankCheck)
+FLASHMEM static void PidAskValues()
+{
+    if (CurrentView != PIDVIEW) { BlockBankChanges = false; return; }
+    PID_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await PID values
+    Reading_PIDS_Now = true;               // This tells the Ack payload parser to get PID values
+    AddParameterstoQueue(SEND_PID_VALUES); // Request PID values from RX
+    PID_Start_Time = millis(); // record start time as it's not long
+}
+FLASHMEM static void PidQueueWrite()
+{
+    AddParameterstoQueue(GET_SECOND_11_PID_VALUES);  // SECOND MUST BE QUEUED FIRST!!! Send PID 6-16 values from TX to RX
+    AddParameterstoQueue(GET_FIRST_6_PID_VALUES);    // SECOND MUST BE QUEUED FIRST!!! Send PID 0-5 values from TX to RX
+    PIDS_Were_Edited = false;
+    if (CurrentView == PIDVIEW) { SendCommand((char *)"vis b3,0"); HidePIDMsg(); }   // hide "Send" button
+    PlaySound(BEEPCOMPLETE);                         // let user know we're done
+    RfSavedThenLeave(PIDVIEW);                       // B102: OK's "Save now?" closes the page once saved
+}
 FLASHMEM void ShowPIDBank() // this is called when bank is changed so new bank's PID values are requested from Nexus and shown
 {
     if (CurrentView == PIDVIEW) // Must be in PID view
@@ -161,11 +179,8 @@ FLASHMEM void ShowPIDBank() // this is called when bank is changed so new bank's
         PIDS_Loaded = false;                    // B40: until the whole set has come (transceiver.h BlockItemSeen)
         BlockBankChanges = true;                // block bank changes while we do this
         PIDMsg(buf, Gray);                     // Show loading message and hides old PIDs
-        PID_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await PID values
-        Reading_PIDS_Now = true;               // This tells the Ack payload parser to get PID values
-        AddParameterstoQueue(SEND_PID_VALUES); // Request PID values from RX
         PIDS_Were_Edited = false;
-        PID_Start_Time = millis(); // record start time as it's not long
+        PidAskValues();
     }
 }
 //************************************************************************************************************/
@@ -226,12 +241,7 @@ FLASHMEM void SendEditedPIDs()
     DelayWithDog(100);                               // allow LOTS of time for screen to update BEFORE sending another Nextion command
     ReadEditedPIDs();                                // read the edited PIDs from the screen;
     BlockBankChanges = true;
-    AddParameterstoQueue(GET_SECOND_11_PID_VALUES);  // SECOND MUST BE QUEUED FIRST!!! Send PID 6-16 values from TX to RX
-    AddParameterstoQueue(GET_FIRST_6_PID_VALUES);    // SECOND MUST BE QUEUED FIRST!!! Send PID 0-5 values from TX to RX
-    SendCommand((char *)"vis b3,0");                 // hide "Send" button
-    PIDS_Were_Edited = false;
-    PlaySound(BEEPCOMPLETE);                         // let user know we're done
-    HidePIDMsg();
+    BankCheck(false, Bank, PidQueueWrite, "page PIDView");   // B102: into this bank, or not at all (PipeHttp.h)
 }
 //************************************************************************************************************/
 FLASHMEM void StartPIDView() // this starts PID view
@@ -254,8 +264,9 @@ FLASHMEM void EndPIDView()
 {
     if (PIDS_Were_Edited)
     {
-        if (GetConfirmation((char *)"page PIDView", (char *)"Discard edited PIDs?"))
-            RotorFlightStart();
+        if (!RfSaveFirst("page PIDView", "The edited PIDs are", SendEditedPIDs, EndPIDView, &PIDS_Were_Edited)) return;   // B102: "Save now?"
+        PIDS_Were_Edited = false;   // (Discard)
+        RotorFlightStart();
     }
     else
     {

@@ -4,7 +4,7 @@
 Screen_Background=8
 @model 1
 page RatesView
-t4.txt="Axis"
+t4.txt=""
 t5.txt="Rate"
 t6.txt="Shape"
 t9.txt="Rate 1"
@@ -27,7 +27,7 @@ vis b3,0
 t11.txt="RAW 420 MCM"
 @shot 1_busy
 # ack items 25..28: t10 = Rate_Types[6], then Rate/Shape/Expo per axis (x5,x1,x1; collective x0.125 -> "%.2f")
-t10.txt="Rotorflight 2.3"
+t10.txt="6 - ROTORFLIGHT"
 tn0.txt="160"
 tn1.txt="20"
 tn2.txt="20"
@@ -95,8 +95,8 @@ vis b3,0
 # ---- worst case: longest text each box can get. RF 2.2 labels (longer), byte 255 everywhere with the RF 2.2
 # factors (x10, x0.01, x0.25), longest type name, Rate 4, 30-char model name
 page RatesView
-t4.txt="Axis"
-t5.txt="Centre rate"
+t4.txt=""
+t5.txt="Centre"
 t6.txt="Max rate"
 t9.txt="Rate 4"
 tn0.pco=33840
@@ -116,7 +116,7 @@ vis busy,1
 vis b2,0
 vis b3,0
 t11.txt="GOBLIN RAW 700 COMPETITION MK2"
-t10.txt="Rotorflight 2.3"
+t10.txt="6 - ROTORFLIGHT"
 tn0.txt="2550"
 tn1.txt="2550"
 tn2.txt="2.55"
@@ -156,10 +156,10 @@ busy.txt="No Bluetooth to the receiver: NOT read. Close the phone app if it is r
 page RatesView
 t11.txt="RAW 420 MCM"
 t9.txt="Rate 1"
-t4.txt="Axis"
+t4.txt=""
 t5.txt="Rate"
 t6.txt="Shape"
-t10.txt="Rotorflight 2.3"
+t10.txt="6 - ROTORFLIGHT"
 tn0.txt="160"
 tn1.txt="20"
 tn2.txt="20"
@@ -172,9 +172,9 @@ tn8.txt="20"
 tn9.txt="6.00"
 tn10.txt="48"
 tn11.txt="0"
-t5.txt="Centre rate"
+t5.txt="Centre"
 t6.txt="Max rate"
-t10.txt="Actual"
+t10.txt="4 - ACTUAL"
 @shot 1_new_rf22
 tn0.pco=33840
 tn1.pco=33840

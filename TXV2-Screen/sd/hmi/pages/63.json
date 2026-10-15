@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Mixer: main rotor geometry",
+   "txt": "Travel extents: swash",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 24,
+   "x": 26,
    "y": 74,
-   "w": 752,
+   "w": 747,
    "h": 390,
    "font": 6,
    "sta": 1,
@@ -81,7 +81,7 @@
    "g": "g",
    "x": 10,
    "y": 4,
-   "w": 183,
+   "w": 200,
    "h": 25,
    "font": 2,
    "sta": 1,
@@ -90,7 +90,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Bank 1",
+   "txt": "All banks",
    "a": {
     "style": 0,
     "key": 255,
@@ -109,7 +109,7 @@
    "g": "g",
    "x": 10,
    "y": 30,
-   "w": 183,
+   "w": 200,
    "h": 25,
    "font": 2,
    "sta": 1,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:TRAVEL2.TXT\"\nLogView.t0.txt=\"Mixer: main rotor geometry help\"\nLogView.return.txt=\"Travel2View\""
+    "r": "print \"HelpView:TRAVEL2.TXT\"\nLogView.t0.txt=\"Travel extents: swash help\"\nLogView.return.txt=\"Travel2View\""
    }
   },
   {
@@ -181,7 +181,7 @@
    "g": "g",
    "x": -2000,
    "y": -2000,
-   "w": 372,
+   "w": 376,
    "h": 35,
    "font": 6,
    "sta": 1,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 90,
-   "w": 266,
+   "w": 270,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -218,7 +218,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cyclic calibration [%]",
+   "txt": "Cyclic gain (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -235,7 +235,7 @@
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 312,
+   "x": 318,
    "y": 90,
    "w": 100,
    "h": 36,
@@ -258,7 +258,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Cyclic calibration [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Cyclic gain (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -266,9 +266,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 130,
-   "w": 266,
+   "w": 270,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -277,7 +277,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Collective calibration [%]",
+   "txt": "Collective gain (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -294,7 +294,7 @@
    "i": 11,
    "t": "text",
    "g": "g",
-   "x": 312,
+   "x": 318,
    "y": 130,
    "w": 100,
    "h": 36,
@@ -317,7 +317,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective calibration [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective gain (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -325,9 +325,9 @@
    "i": 12,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 170,
-   "w": 266,
+   "w": 270,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -336,7 +336,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Geometry correction [%]",
+   "txt": "Up/down balance (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -353,7 +353,7 @@
    "i": 13,
    "t": "text",
    "g": "g",
-   "x": 312,
+   "x": 318,
    "y": 170,
    "w": 100,
    "h": 36,
@@ -376,7 +376,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Geometry correction [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective up/down balance (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -384,9 +384,9 @@
    "i": 14,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 210,
-   "w": 266,
+   "w": 270,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -395,7 +395,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Cyclic pitch limit [deg]",
+   "txt": "Cyclic pitch limit (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -412,7 +412,7 @@
    "i": 15,
    "t": "text",
    "g": "g",
-   "x": 312,
+   "x": 318,
    "y": 210,
    "w": 100,
    "h": 36,
@@ -435,7 +435,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Cyclic blade pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Cyclic pitch limit (deg)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -443,9 +443,9 @@
    "i": 16,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 250,
-   "w": 266,
+   "w": 270,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -454,7 +454,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Collective pitch limit [deg]",
+   "txt": "Collective pitch limit (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -471,7 +471,7 @@
    "i": 17,
    "t": "text",
    "g": "g",
-   "x": 312,
+   "x": 318,
    "y": 250,
    "w": 100,
    "h": 36,
@@ -494,7 +494,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Collective pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Collective pitch limit (deg)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -502,9 +502,9 @@
    "i": 18,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 290,
-   "w": 266,
+   "w": 270,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -513,7 +513,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Total pitch limit [deg]",
+   "txt": "Total pitch limit (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -530,7 +530,7 @@
    "i": 19,
    "t": "text",
    "g": "g",
-   "x": 312,
+   "x": 318,
    "y": 290,
    "w": 100,
    "h": 36,
@@ -553,7 +553,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Total blade pitch limit [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Total pitch limit (deg, 0 = off)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -561,9 +561,9 @@
    "i": 20,
    "t": "text",
    "g": "g",
-   "x": 40,
+   "x": 42,
    "y": 330,
-   "w": 266,
+   "w": 270,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -572,7 +572,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Swash phase angle [deg]",
+   "txt": "Swash phase angle (deg)",
    "a": {
     "style": 0,
     "key": 255,
@@ -589,7 +589,7 @@
    "i": 21,
    "t": "text",
    "g": "g",
-   "x": 312,
+   "x": 318,
    "y": 330,
    "w": 100,
    "h": 36,
@@ -612,7 +612,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Swashplate phase angle [deg]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Swash phase angle (deg)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -620,9 +620,9 @@
    "i": 22,
    "t": "text",
    "g": "g",
-   "x": 432,
+   "x": 438,
    "y": 90,
-   "w": 222,
+   "w": 213,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -631,7 +631,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Positive tilt corr. [%]",
+   "txt": "Tilt correction + (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -648,7 +648,7 @@
    "i": 23,
    "t": "text",
    "g": "g",
-   "x": 660,
+   "x": 657,
    "y": 90,
    "w": 100,
    "h": 36,
@@ -671,7 +671,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Positive tilt correction [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Positive tilt correction (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -679,9 +679,9 @@
    "i": 24,
    "t": "text",
    "g": "g",
-   "x": 432,
+   "x": 438,
    "y": 130,
-   "w": 222,
+   "w": 213,
    "h": 36,
    "font": 2,
    "sta": 1,
@@ -690,7 +690,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Negative tilt corr. [%]",
+   "txt": "Tilt correction - (%)",
    "a": {
     "style": 0,
     "key": 255,
@@ -707,7 +707,7 @@
    "i": 25,
    "t": "text",
    "g": "g",
-   "x": 660,
+   "x": 657,
    "y": 130,
    "w": 100,
    "h": 36,
@@ -730,7 +730,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "keybdB.t1.txt=\"Negative tilt correction [%]\"\nva0.val=86<<8\nprint va0.val"
+    "r": "keybdB.t1.txt=\"Negative tilt correction (%)\"\nva0.val=86<<8\nprint va0.val"
    }
   },
   {
@@ -738,7 +738,7 @@
    "i": 26,
    "t": "button",
    "g": "l",
-   "x": 84,
+   "x": 81,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -770,7 +770,7 @@
    "i": 27,
    "t": "button",
    "g": "l",
-   "x": 256,
+   "x": 253,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -802,7 +802,7 @@
    "i": 28,
    "t": "button",
    "g": "l",
-   "x": 428,
+   "x": 425,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -834,7 +834,7 @@
    "i": 29,
    "t": "button",
    "g": "l",
-   "x": 600,
+   "x": 597,
    "y": 398,
    "w": 160,
    "h": 50,
@@ -866,9 +866,9 @@
    "i": 30,
    "t": "text",
    "g": "l",
-   "x": 40,
+   "x": 42,
    "y": 208,
-   "w": 720,
+   "w": 715,
    "h": 80,
    "font": 2,
    "sta": 1,

@@ -17,28 +17,28 @@ import rescue_pages as rp
 # B100: 194 Next > (2>3), 195 < Previous (3>2), 196-201 a port's function tapped (rows 1-6), 202 Next > (3>4), 203 < Previous (4>3),
 # 204 Full throttle / Minimum
 rp.series_begin()
-rp.page(77, 'BasicsView', 'Model basics', [
+rp.page(77, 'BasicsView', 'First-time basics', [
     ('tn0', 'Swash type', 0, 0, 'wide', 186, 'CCPM 120 deg'),
     ('tn1', 'Rotor turns', 0, 1, 'wide', 187, 'Anticlockwise'),
     ('tn2', 'Tail type', 0, 2, 'wide', 188, 'Bi-directional'),
-    ('tn3', 'ESC signal', 0, 3, 'wide', 189, 'PWM (most heli ESCs)'),
-    ('tn4', 'ESC brand', 0, 4, 'wide', 190, 'Hobbywing V5'),
+    ('tn3', 'ESC signal', 0, 3, 'wide', 189, 'Normal PWM (most heli ESCs)'),
+    ('tn4', 'ESC brand', 0, 4, 'wide', 190, 'Hobbywing V5'),   # (the phone's "ESC telemetry protocol" does not fit; its own help says "brand")
     ('tn5', 'Motor pole count', 0, 5, 'num', 191),
 ], [('b3', 'Save', 14, 180, 185), ('b2', 'Next >', 408, 180, 192), ('b1', 'OK', 605, 180, 184)], 'BASICS.TXT')
-rp.page(78, 'Basics2View', 'Model basics: gear ratios', [
+rp.page(78, 'Basics2View', 'Gear ratio', [
     ('tn0', 'Main gear ratio: rotor', 0, 0, 'num', 191),
     ('tn1', 'Main gear ratio: motor', 0, 1, 'num', 191),
     ('tn2', 'Tail gear ratio: rotor', 0, 2, 'num', 191),
     ('tn3', 'Tail gear ratio: tail', 0, 3, 'num', 191),
 ], [('b3', 'Save', 14, 180, 185), ('b4', '< Previous', 208, 180, 193), ('b2', 'Next >', 402, 180, 194), ('b1', 'OK', 596, 180, 184)], 'BASICS2.TXT')
-rp.page(79, 'PortsView', 'Model basics: ports', [
-    ('tn%d' % r, 'Port A (4)', 0, r, 'wide', 196 + r, 'Receiver (this link)') for r in range(6)   # (the label's words set its width: the main board writes each row's real name, "Port A (4)" the widest kind)
-], [('b3', 'Save', 14, 180, 185), ('b4', '< Previous', 208, 180, 195), ('b2', 'Next >', 402, 180, 202), ('b1', 'OK', 596, 180, 184)], 'BASICS3.TXT')
-rp.page(80, 'EscCalView', 'Model basics: ESC throttle', [
-    ('tn0', 'Blades off, or the pinion out of the main gear', 0, 0, 'info', 0),
-    ('tn1', 'Flight pack unplugged, FC on USB power', 0, 1, 'info', 0),
+rp.page(79, 'PortsView', 'Ports', [
+    ('tn%d' % r, 'TELEM (UART 2)', 0, r, 'wide', 196 + r, 'Dongle on a wire (MSP)') for r in range(6)   # (the label's words set its width: the main board writes each row's real name, in the phone app's words since 15 Oct 2026 - "TELEM (UART 2)" the widest)
+], [('b3', 'Save', 14, 180, 185), ('b4', '< Previous', 208, 180, 195), ('b2', 'Next >', 402, 180, 202), ('b1', 'OK', 596, 180, 184)], 'BASICS3.TXT', wide_cap=220)
+rp.page(80, 'EscCalView', 'Throttle calibration', [
+    ('tn0', 'Blades OFF or pinion out', 0, 0, 'info', 0),
+    ('tn1', 'Flight pack UNPLUGGED. Flight controller on USB power.', 0, 1, 'info', 0),
     ('tn2', 'Safety on, nobody at the sticks', 0, 2, 'info', 0),
-    ('tn3', 'Ready: tap Full throttle to begin', 0, 3, 'info', 0, 'FULL THROTTLE held: plug the battery in'),
+    ('tn3', 'Ready: tap Full throttle to begin', 0, 3, 'info', 0, 'FULL THROTTLE held: plug the flight battery in'),
 ], [('b2', 'Full throttle', 14, 180, 204), ('b4', '< Previous', 408, 180, 203), ('b1', 'OK', 605, 180, 184)], 'BASICS4.TXT')
 rp.series_end()
 idx = json.load(open(os.path.join(rp.PAGES, '..', 'index.json')))

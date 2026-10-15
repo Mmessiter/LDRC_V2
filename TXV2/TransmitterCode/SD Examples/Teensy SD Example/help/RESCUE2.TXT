@@ -1,22 +1,26 @@
 What rescue does once the model is level: climb, or climb|
 and hold a height. For the bank shown at the top left.||
-Rescue mode: tap it to step through Off, Climb and Hold height.|
-Off: no rescue (as Enable rescue off on the first page).|
-Climb: levels the model, climbs for the climb time, then|
-hovers on the hover collective.|
-Hold height: levels it, climbs to the hover height and holds|
-it there. It needs the flight controller's altitude sensor|
-(barometer).||
-Hover height [m]: the height that Hold height climbs to and|
-holds (0 to 500, two decimals). Hold height only.|
-Height hold P, I and D: how firmly the height is held|
-(0 to 10000 each). Hold height only. Rotorflight's defaults|
-suit most models: change them in small steps.|
-Max collective [%]: the most collective rescue may ever use|
+Rescue mode: tap it to step through 'Off', 'Level & climb'|
+and 'Level & hold height'.|
+Off: no rescue (as 'Enable rescue' off on the first page).|
+Level & climb: levels the model, climbs for the climb time,|
+then hovers on the hover collective.|
+Level & hold height: levels it, climbs to the hold height and|
+holds it there. It needs the flight controller's altitude|
+sensor (barometer).||
+Hold height (m) (hover altitude): the height rescue climbs to|
+and holds in 'Level & hold height' (0 to 500, two decimals).|
+Height hold P, I and D (altitude P, I and D gain): how firmly|
+the height is held (0 to 10000 each). 'Level & hold height'|
+only. Rotorflight's defaults suit most models: change them in|
+small steps.|
+Max collective (%): the most collective rescue may ever use|
 (1 to 100, one decimal).||
 Tap a number to type a new one.|
 'Save' appears once something is changed. It writes both rescue|
 pages to the flight controller, stores them and reads them back.|
 '< Previous' goes back to the first page, with your changes|
 kept but not yet saved.|
-'OK' leaves; if a change was not saved, it asks first.|
+'OK' leaves. With unsaved changes it asks 'Save now?':|
+'Save' saves them, and the page closes once saved;|
+'Discard' leaves without saving.|

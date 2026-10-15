@@ -124,8 +124,57 @@ static void FcBankShow()
     }
     SendText((char *)((CurrentView == PIDADVANCEDVIEW || CurrentView == RFGOVERNORVIEW_PROFILE) ? "t26" : "t9"), b);
 }
+// B102: A SAVE GOES ONLY INTO THE TRANSMITTER'S BANK. The Version 1 word pages (PIDs, PID +, rates, dynamics and the
+// governor) write through the receiver into whichever bank the flight controller is on, which need not be the transmitter's:
+// with a bank switch set up wrongly, bank 2's values went into another bank, seen only as "Bank 2 / FC 1" (Malcolm, 15 Oct:
+// "Setting a different headspeed for different banks on the transmitter successfully wrote banks one and three but not two"
+// - his transmitter's set-up, since put right). Now before each write the flight controller is asked which bank it is on
+// (MSP 101): the write goes only if that is the transmitter's; else it is refused, and says why. (It is not put on the
+// transmitter's bank: that would hide the set-up's fault until the bank switch is flipped in flight.) With no model (the
+// backup file) or no Bluetooth pipe the write goes as before.
+static void (*BcThen)() = nullptr;
+static int BcReq = 0, BcStep = 0, BcWant = 0;
+static bool BcRates = false;
+static const char *BcPage = "page RFView";
+FLASHMEM static void BankCheckRefuse(const char *why)
+{
+    BcStep = 0;
+    BlockBankChanges = false;
+    PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)BcPage, (char *)why);
+}
+FLASHMEM void BankCheck(bool rates, int want, void (*then)(), const char *page)
+{
+    if (PipeState != 2 || !(BoundFlag && ModelMatched) || BakOffline() || want < 1 || want > 6) { BcStep = 0; then(); return; }
+    BcThen = then; BcRates = rates; BcWant = want; BcPage = page;
+    FcBankPending = false;   // (one question at a time on the pipe: this one goes first)
+    BcStep = 1;
+    BcReq = MspAsk(101, nullptr, 0);
+}
+FLASHMEM static void BankCheckTick()
+{
+    if (!BcStep) return;
+    if (!PipeReplyReady(BcReq))
+    {
+        if (PipeReplyLate()) BankCheckRefuse("Not saved: the flight controller did\r\nnot say which bank it is on.\r\nNothing was written. Try again.");
+        return;
+    }
+    uint8_t b[40];
+    const int n = PipeRepCode == 200 ? PipeReplyBytes(b, sizeof(b)) : 0;
+    if (n < 26) { BankCheckRefuse("Not saved: the flight controller did\r\nnot say which bank it is on.\r\nNothing was written. Try again."); return; }
+    FcPidBank = (b[23] & 0x0F) + 1; FcRateBank = (b[25] & 0x0F) + 1;
+    FcBankShow();
+    const int fc = BcRates ? FcRateBank : FcPidBank;
+    if (fc == BcWant) { BcStep = 0; BcThen(); return; }
+    char m[170];
+    snprintf(m, sizeof(m), "Not saved: the flight controller is on\r\n%s %d, the transmitter on %s %d.\r\nCheck the %s switch's set-up.\r\nNothing was written.",
+             BcRates ? "rates" : "bank", fc, BcRates ? "rates" : "bank", BcWant, BcRates ? "rates" : "bank");
+    BankCheckRefuse(m);
+}
 void FcBankTick() // every 50 ms (ManageTransmitter)
 {
+    BankCheckTick();   // (B102)
+    if (BcStep) return;
     if (!FcBankPage() || PipeState != 2 || !(BoundFlag && ModelMatched)) { FcBankPending = false; FcBankAskAt = FcBankAskAt2 = 0; return; }
     if (FcBankPending)
     {

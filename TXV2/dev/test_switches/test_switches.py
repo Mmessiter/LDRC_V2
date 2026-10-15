@@ -63,6 +63,13 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     if (fn == 250) { fcReply(200, ""); return PipeReqId; }
     fcReply(404, "unknown"); return PipeReqId;
 }
+// B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave (include/RF_SaveNow.h) over a fake question: Discard
+// unless saveNowAnswer is 1; and the bank check (PipeHttp.h BankCheck) as without a pipe: the write goes
+static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
+static int saveNowAnswer = 0, saveNowAsked = 0;
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -77,9 +84,9 @@ int main() {
     slot(3, 26, 1, 1300, 1700);     // BLACKBOX on AUX2, the middle
     // 1. open: the read, the first action shown (the arm switch), the marker where the safety switch has the channel
     StartSwitchView(); run(4);
-    CHECK(CurrentView == SWITCHVIEW && SwHave && SwN == 3 && SwAt == 0 && fields["t0"] == "Switch 1 of 3" && fields["tn0"] == "Arm - motor enable (ARM)" && fields["tn1"] == "Channel 6: AUX1");
+    CHECK(CurrentView == SWITCHVIEW && SwHave && SwN == 3 && SwAt == 0 && fields["t0"] == "Switch action 1 of 3" && fields["tn0"] == "Arm - motor enable (ARM)" && fields["tn1"] == "Channel 6: AUX1");
     CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1500 && cmdValue("bar.d1") == 2125 && cmdValue("bar.mk") == 988 && fields["tn8"] == "OFF: 988 us" && fields["bar"] == "|ON|");
-    CHECK(fields["hint"].find("Safety switch:") == 0);
+    CHECK(fields["hint"].find("Arm switch:") == 0);
     // the rescue: its switch is up (1900 us -> 1910 as the FC sees it): ON
     SwitchNext(); run(2); CHECK(SwAt == 1 && fields["tn0"] == "Rescue - the safety net (RESCUE)" && fields["tn1"] == "Channel 8: AUX3" && fields["tn8"] == "ON: 1909 us" && cmdValue("bar.d0") == 1700);
     SwitchNext(); run(2); CHECK(SwAt == 2 && fields["tn0"] == "Black box recording (BLACKBOX)" && fields["tn8"] == "ON: 1500 us");
@@ -101,7 +108,7 @@ int main() {
     SwitchAdd(); CHECK(CurrentView == SWITCHPICKVIEW && vals["list"] == 1);
     vals["list"] = 2; SwitchPickOk(); run(2);
     CHECK(CurrentView == SWITCHVIEW && SwN == 4 && fields["tn0"] == "Self-level (ANGLE)" && SwNow[2].perm == 1 && SwNow[2].aux == 1 && SwNow[2].lo == 1700 && SwNow[2].hi == 2125 && Sw_Was_Edited);
-    CHECK(fields["t0"] == "Switch 3 of 4");   // (slot 2 comes after the rescue in slot 1)
+    CHECK(fields["t0"] == "Switch action 3 of 4");   // (slot 2 comes after the rescue in slot 1)
     // the action of an existing row changed through the picker
     SwitchModeTapped(); CHECK(CurrentView == SWITCHPICKVIEW && vals["list"] == 2); vals["list"] = 5; SwitchPickOk(); CHECK(SwNow[2].perm == 47 && fields["tn0"] == "Acro trainer (TRAINER)");
     SwitchModeTapped(); SwitchPickCancel(); CHECK(CurrentView == SWITCHVIEW && SwNow[2].perm == 47);
@@ -121,13 +128,13 @@ int main() {
     CHECK(SwN == 2 && SwNow[0].perm == 0 && SwNow[0].aux == 0 && Sw_Was_Edited && fields["tn1"] == "Channel 6: AUX1" && fields["hint"].find("Arm moved from channel 8 to 6") == 0 && fields["hint"].size() <= 90);
     CHECK(std::find(cmds.begin(), cmds.end(), std::string("vis b3,1")) != cmds.end());   // Save offered
     fcLog.clear(); SaveSwitchActions(); run(30);
-    CHECK(writes(35) == 1 && fcLog[0].data.substr(0, 6) == "000000" && modes[1] == 0 && modes[4] == 53 && modes[5] == 3 && !Sw_Was_Edited && fields["hint"].find("Safety switch:") == 0);
+    CHECK(writes(35) == 1 && fcLog[0].data.substr(0, 6) == "000000" && modes[1] == 0 && modes[4] == 53 && modes[5] == 3 && !Sw_Was_Edited && fields["hint"].find("Arm switch:") == 0);
     // the tap on the arm row with the channels agreeing: the old message; after Settings changed the arming channel, the tap moves it
     boxes = 0; SwitchChannelTapped(); CHECK(boxes == 1 && SwNow[0].aux == 0 && lastBox.find("The arm switch stays on this model") == 0);
     ArmingChannel = 9; boxes = 0; SwitchChannelTapped(); CHECK(boxes == 0 && SwNow[0].aux == 3 && Sw_Was_Edited && fields["tn1"] == "Channel 9: AUX4" && fields["hint"].find("Arm moved from channel 6 to 9") == 0);
     boxes = 0; fcLog.clear(); SaveSwitchActions(); run(30); CHECK(boxes == 0 && writes(35) == 1 && modes[1] == 3 && !Sw_Was_Edited);
     // (B48) an arming channel of 1-5 ties nothing: the arm switch is left where the flight controller has it
-    ArmingChannel = 3; StartSwitchView(); run(4); CHECK(SwN == 2 && SwNow[0].aux == 3 && !Sw_Was_Edited && fields["hint"].find("Safety switch:") == 0);
+    ArmingChannel = 3; StartSwitchView(); run(4); CHECK(SwN == 2 && SwNow[0].aux == 3 && !Sw_Was_Edited && fields["hint"].find("Arm switch:") == 0);
     ArmingChannel = 6;
     printf("test_switches: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;

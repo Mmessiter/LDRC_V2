@@ -64,7 +64,10 @@ def rates(pg):
     put(pg, 't10', x=402, y=119, w=346, h=36, txt='', c={'bco': NAVY, 'pco': WHITE}, a={'xcen': 0, 'style': 0})   # (no type shown before the Teensy says which: it said Actual)
     put(pg, 't9', txt='')                # (the Teensy writes "Rate n" here; "Bank 1" was the wrong kind of word to show before it does)
     put(pg, 't11', txt='')
-    words(pg, 'b2', 'Rates + ...')       # (the page it opens is "Rates + (Rotorflight)": one name for one page)
+    words(pg, 'b2', 'Dynamics ...')      # (15 Oct 2026, the phone app's words: the page it opens is "Rates: dynamics", the
+    # phone's "Dynamics" card on its Rates page; "Rates + ..." before)
+    words(pg, 't7', 'Expo')              # (the phone's column; "Exponential" before. The keypads read it: "Roll Expo")
+    put(pg, 't4', txt='')                # (the phone's corner is empty; the Teensy writes "" there too since 15 Oct)
     # the message box over the rates-type line and the heads, the island's whole inner width: only words that are never
     # touched lie there (in the table it cut the axis names, and wider there it would take the right column's taps)
     put(pg, 'busy', x=52, y=119, w=696, h=76, txt='')
@@ -81,14 +84,15 @@ R42_X = [341 + 106 * k for k in range(4)]; R42_W = 101
 R42_Y0, R42_P, R42_H = 99, 40, 36
 R42_ROW = {'t4': 0, 't1': 1, 't2': 2, 't3': 3, 't10': 4, 't12': 5, 't13': 6}
 R42_KEYS = {   # the keypad's question in the words of the row and the column (they were "Roll RT", "Col SPGF" ...)
-    'n0': ('Roll RT', 'Roll response time [ms]'), 'n1': ('Pitch RT', 'Pitch response time [ms]'),
-    'n2': ('Yaw RT', 'Yaw response time [ms]'), 'n3': ('Col RT', 'Collective response time [ms]'),
-    'n4': ('Roll SPG', 'Roll boost gain'), 'n5': ('Pitch SPG', 'Pitch boost gain'),
-    'n6': ('Yaw SPG', 'Yaw boost gain'), 'n7': ('Col SPGF', 'Collective boost gain'),
-    'n8': ('Roll SPC', 'Roll boost cutoff [Hz]'), 'n9': ('Pitch SPC', 'Pitch boost cutoff [Hz]'),
-    'n10': ('Yaw SPC', 'Yaw boost cutoff [Hz]'), 'n11': ('Col SPC', 'Collective boost cutoff [Hz]'),
-    'n12': ('Yaw DCG', 'Yaw dynamic ceiling gain'), 'n13': ('Yaw DDG', 'Yaw dynamic deadband gain'),
-    't14': ('Yaw DDF', 'Yaw deadband filter [Hz]'),
+    # (15 Oct 2026: the phone app's words; each first old form is the HMI's, the second the 10 Oct polish's)
+    'n0': (('Roll RT', 'Roll response time [ms]'), 'Roll response time (ms)'), 'n1': (('Pitch RT', 'Pitch response time [ms]'), 'Pitch response time (ms)'),
+    'n2': (('Yaw RT', 'Yaw response time [ms]'), 'Yaw response time (ms)'), 'n3': (('Col RT', 'Collective response time [ms]'), 'Collective response time (ms)'),
+    'n4': (('Roll SPG', 'Roll boost gain'), 'Roll stick sharpening (boost gain)'), 'n5': (('Pitch SPG', 'Pitch boost gain'), 'Pitch stick sharpening (boost gain)'),
+    'n6': (('Yaw SPG', 'Yaw boost gain'), 'Yaw stick sharpening (boost gain)'), 'n7': (('Col SPGF', 'Collective boost gain'), 'Collective stick sharpening'),
+    'n8': (('Roll SPC', 'Roll boost cutoff [Hz]'), 'Roll sharpening smoothing (Hz)'), 'n9': (('Pitch SPC', 'Pitch boost cutoff [Hz]'), 'Pitch sharpening smoothing (Hz)'),
+    'n10': (('Yaw SPC', 'Yaw boost cutoff [Hz]'), 'Yaw sharpening smoothing (Hz)'), 'n11': (('Col SPC', 'Collective boost cutoff [Hz]'), 'Collective sharpening smoothing (Hz)'),
+    'n12': (('Yaw DCG', 'Yaw dynamic ceiling gain'), 'Yaw fast-move headroom (ceiling)'), 'n13': (('Yaw DDG', 'Yaw dynamic deadband gain'), 'Yaw stick-centre quieting'),
+    't14': (('Yaw DDF', 'Yaw deadband filter [Hz]'), 'Yaw quieting smoothing (Hz)'),
 }
 
 
@@ -103,8 +107,9 @@ def rates_plus(pg):
         for k, n in enumerate(row): rect(pg, n, R42_X[k], y(r + 1), R42_W, R42_H)
     for r, n in enumerate(('n12', 'n13', 't14')):
         rect(pg, n, R42_X[2], y(r + 4), R42_W, R42_H)
-    for n, txt in (('t1', 'Response time [ms]'), ('t2', 'Setpoint boost gain'), ('t3', 'Setpoint boost cutoff [Hz]'),
-                   ('t10', 'Dynamic ceiling gain'), ('t12', 'Dynamic deadband gain'), ('t13', 'Dynamic deadband filter [Hz]')):
+    words(pg, 't0', 'Rates: dynamics')   # (15 Oct 2026: the phone app's "Dynamics" card on its Rates page; "Rates + (Rotorflight)" before)
+    for n, txt in (('t1', 'Response time (ms)'), ('t2', 'Stick sharpening (boost gain)'), ('t3', 'Sharpening smoothing (Hz)'),
+                   ('t10', 'Fast-move headroom'), ('t12', 'Stick-centre quieting'), ('t13', 'Quieting smoothing (Hz)')):
         words(pg, n, txt)
         label_box(pg, n, PALE_BLUE, x=R42_LX, y=y(R42_ROW[n]), w=R42_LW, h=R42_H)
     by = R42_CARD[1] + R42_CARD[3] - 16 - 50          # the bottom row on the island's foot: Save beside OK, OK at the right
@@ -116,7 +121,7 @@ def rates_plus(pg):
     for n, (old, new) in R42_KEYS.items(): keypad(pg, n, old, new)
     put(pg, 't9', txt='')                # (the Teensy writes "Rate n")
     put(pg, 't11', txt='')
-    ev_title(pg, 'b0', 'r', 'Rates Advanced setup help', 'Rates + (Rotorflight) help')
+    ev_title(pg, 'b0', 'r', ('Rates Advanced setup help', 'Rates + (Rotorflight) help'), 'Rates: dynamics help')
 
 
 # ------------------------------------------------------------------ PIDs (page 40)
@@ -148,8 +153,13 @@ def pids(pg):
     # offset stay whole); up and down it keeps the place it had over the rows before the polish (8 px of Roll above it)
     rect(pg, 'busy', P40_X[0], P40_ROW_Y[0] + 8, P40_X[4] + P40_W - P40_X[0], 90)
     put(pg, 't11', txt='')
-    words(pg, 'b2', 'PID + ...')         # (the page it opens is "PID + (Rotorflight)")
-    ev_title(pg, 'b0', 'r', 'PID setup help', 'PID (Rotorflight) help')
+    words(pg, 'b2', 'PID + ...')         # (the page it opens is "PID + (advanced)", the phone app's name)
+    # 15 Oct 2026, the phone app's words: "PIDs", its corner empty, "HSI gain" (it was "HSI offset": the limit is PID +'s cap)
+    words(pg, 't0', 'PIDs (Rotorflight)')
+    put(pg, 't4', txt='')
+    words(pg, 't13', 'HSI gain')
+    keypad(pg, 'n15', 'HSI offset Roll', 'Roll HSI gain'); keypad(pg, 'n16', 'HSI offset Pitch', 'Pitch HSI gain')
+    ev_title(pg, 'b0', 'r', ('PID setup help', 'PID (Rotorflight) help'), 'PIDs (Rotorflight) help')
 
 
 # ------------------------------------------------------------------ PID + (page 7)
@@ -159,6 +169,38 @@ P7_RIGHT = {   # sentence case (each keeps its trailing space); its keypad's que
     't45': ('t17', 'Pitch B-Term cutoff ', 'Pitch B-term cutoff '), 't46': ('t18', 'Yaw B-Term cutoff ', 'Yaw B-term cutoff '),
     't47': ('t19', 'CW Yaw stop gain ', 'CW yaw stop gain '), 't48': ('t20', 'CCW Yaw stop gain ', 'CCW yaw stop gain '),
     't49': ('t21', 'Yaw Precomp cutoff ', 'Yaw precomp cutoff '),
+}
+# 15 Oct 2026 (Malcolm: "use the same terminology that we used in the phone app"): the phone's plain words, which lead with
+# what each does, short enough for the label (the left labels 230 wide from x 16, the right 271 from x 400: the columns used
+# only 36-246 and 451-671); its keypad's question the phone's words in full where they fit, the firmware's name in brackets.
+# label: (its words, its value, the value's keypad question then: the HMI's or the polish's, the question now)
+P7_PHONE = {
+    't34': ('Piro compensation ', 'sw0', None, None),
+    't29': ('Relax on the ground ', 't1', 'Ground error decay ', 'Relax corrections on the ground '),
+    't30': ('Roll wind-up relief ', 't2', 'Cutoff point for Roll ', 'Roll wind-up relief (I-term relax) '),
+    't31': ('Pitch wind-up relief ', 't3', 'Cutoff point for Pitch ', 'Pitch wind-up relief (I-term relax) '),
+    't28': ('Yaw wind-up relief ', 't4', 'Cutoff point for Yaw ', 'Yaw wind-up relief (I-term relax) '),
+    't35': ('Roll correction cap ', 't5', 'Error limit Roll ', 'Roll correction cap (error limit) '),
+    't36': ('Pitch correction cap ', 't6', 'Error limit Pitch ', 'Pitch correction cap (error limit) '),
+    't37': ('Yaw correction cap ', 't7', 'Error limit Yaw ', 'Yaw correction cap (error limit) '),
+    't32': ('Roll trim cap (HSI) ', 't8', 'HSI offset limit Roll ', 'Roll high-speed trim cap (HSI) '),
+    't33': ('Pitch trim cap (HSI) ', 't9', 'HSI offset limit Pitch ', 'Pitch high-speed trim cap (HSI) '),
+    't38': ('Roll response speed ', 't10', 'Roll bandwidth ', 'Roll response speed (bandwidth) '),
+    't39': ('Pitch response speed ', 't11', 'Pitch bandwidth ', 'Pitch response speed (bandwidth) '),
+    't40': ('Yaw response speed ', 't12', 'Yaw bandwidth ', 'Yaw response speed (bandwidth) '),
+    't41': ('Roll D smoothing ', 't13', 'Roll D-term cutoff ', 'Roll D smoothing (D-term cutoff) '),
+    't42': ('Pitch D smoothing ', 't14', 'Pitch D-term cutoff ', 'Pitch D smoothing (D-term cutoff) '),
+    't43': ('Yaw D smoothing ', 't15', 'Yaw D-term cutoff ', 'Yaw D smoothing (D-term cutoff) '),
+    't44': ('Roll boost smoothing ', 't16', 'Roll B-term cutoff ', 'Roll boost smoothing (B-term cutoff) '),
+    't45': ('Pitch boost smoothing ', 't17', 'Pitch B-term cutoff ', 'Pitch boost smoothing (B-term) '),
+    't46': ('Yaw boost smoothing ', 't18', 'Yaw B-term cutoff ', 'Yaw boost smoothing (B-term cutoff) '),
+    't47': ('Yaw stop firmness CW ', 't19', 'CW yaw stop gain ', 'Yaw stop firmness, clockwise '),
+    't48': ('Yaw stop firmness CCW ', 't20', 'CCW yaw stop gain ', 'Yaw stop firmness, anticlockwise '),
+    't49': ('Yaw precomp smoothing ', 't21', 'Yaw precomp cutoff ', 'Yaw pre-correction smoothing '),
+    't50': ('Yaw push from cyclic ', 't22', 'Cyclic FF gain ', 'Yaw push from cyclic load '),
+    't51': ('Yaw push from collective ', 't23', 'Collective FF gain ', 'Yaw push from collective load '),
+    't52': ('Yaw push from speed-ups ', 't24', 'Inertia precomp gain ', 'Yaw push from rotor speed-ups '),
+    't53': ('Speed-up push smoothing ', 't25', 'Inertia precomp cutoff ', 'Rotor speed-up push smoothing '),
 }
 
 
@@ -193,18 +235,30 @@ def pid_plus(pg):
     # the house switch: grey off, green on (it was alarm red when merely off); the Teensy sets its knob (pco)
     put(pg, 'sw0', c={'bco': 33808, 'bco2': 2016})
     for lab, (val, old, new) in P7_RIGHT.items():
-        words(pg, lab, new)
-        keypad(pg, val, old, new)
-    ev_title(pg, 'b0', 'r', 'PID advanced setup help', 'PID + (Rotorflight) help')
+        keypad(pg, val, (old, new), P7_PHONE[lab][3])
+    for lab, (txt, val, old, new) in P7_PHONE.items():
+        words(pg, lab, txt)
+        put(pg, lab, x=16 if lab in P7_LEFT_LABELS else 400, w=230 if lab in P7_LEFT_LABELS else 271)
+        if old and lab not in P7_RIGHT: keypad(pg, val, old, new)
+    words(pg, 't0', 'PID + (advanced)')   # (the phone app's name; "PID + (Rotorflight)" before)
+    ev_title(pg, 'b0', 'r', ('PID advanced setup help', 'PID + (Rotorflight) help'), 'PID + (advanced) help')
 
 
 # ------------------------------------------------------------------ Governor (page 6)
 P6_LEFT = ('t34', 't29', 't30', 't31', 't28', 't35', 't36')
 P6_RIGHT = ('t37', 't32', 't33', 't38', 't39', 't40', 't41')
-P6_WORDS = {   # label: (its words, its value, the keypad's old question)
-    't34': ('Head speed [rpm]', 'n0', 'Headspeed (rpm)'), 't37': ('TTA limit [%]', 'n7', 'TTA limit %'),
-    't32': ('Max throttle [%]', 'n8', 'Max throttle %'), 't33': ('Min throttle [%]', 'n9', 'Min throttle %'),
-    't38': ('Fallback drop [%]', 'n10', 'Fallback drop %'),
+P6_WORDS = {   # label: (its words, its value, the keypad's old questions: the HMI's, the 10 Oct polish's; then the question now)
+    # (15 Oct 2026: the phone app's words, in its round brackets; the keypads in the phone's words in full where they fit)
+    't34': ('Headspeed (rpm)', 'n0', ('Headspeed (rpm)', 'Head speed [rpm]'), 'Headspeed (rpm)'),
+    't35': ('F gain (feed-forward)', 'n5', ('F gain',), 'F gain (feed-forward)'),
+    't36': ('Tail-torque strength', 'n6', ('TTA gain',), 'Tail-torque assist strength (TTA gain)'),
+    't37': ('Tail-torque limit (%)', 'n7', ('TTA limit %', 'TTA limit [%]'), 'Tail-torque assist limit (%)'),
+    't32': ('Max throttle (%)', 'n8', ('Max throttle %', 'Max throttle [%]'), 'Max throttle (%)'),
+    't33': ('Min throttle (%)', 'n9', ('Min throttle %', 'Min throttle [%]'), 'Min throttle (%)'),
+    't38': ('Fall-back drop (%)', 'n10', ('Fallback drop %', 'Fallback drop [%]'), 'Throttle drop if RPM signal lost (%)'),
+    't39': ('Anticipate yaw', 'n11', ('Yaw weight',), 'Anticipate yaw moves (yaw weight)'),
+    't40': ('Anticipate cyclic', 'n12', ('Cyclic weight',), 'Anticipate cyclic moves'),
+    't41': ('Anticipate collective', 'n13', ('Collective weight',), 'Anticipate collective moves'),
 }
 
 
@@ -228,9 +282,9 @@ def governor(pg):
     # under it may not lose more of their taps than before the polish (it still hides every word of those rows)
     rect(pg, 'busy', 126, P6_Y(3), 690 - 126, P6_Y(5) + P6_H - P6_Y(3))
     put(pg, 't27', txt='')
-    for n, (txt, val, old) in P6_WORDS.items():
+    for n, (txt, val, old, q) in P6_WORDS.items():
         words(pg, n, txt)
-        keypad(pg, val, old, txt)
+        keypad(pg, val, old, q)
     put(pg, 't0', txt='')    # (FixHeading writes the title, with the bank's number, as soon as the page opens)
     ev_title(pg, 'b0', 'r', 'RF Governor profile help', 'Governor (Rotorflight) help')
 
@@ -240,29 +294,30 @@ def governor(pg):
 # under "Times [s]" (the receiver hands the transmitter WHOLE SECONDS since 0.9.581: RXV2 TxParams.h govAckSecs) - and the
 # two copy buttons the house's grey in the bottom row, "Restore" and "Keep a copy" ("Restore SD to FC" was salmon and
 # "Save FC to SD" green, the size of a row, and looked like part of the columns; "Save FC to SD" sat beside Save).
-G5_X = (44, 285, 526); G5_CW, G5_VW, G5_RH = 230, 64, 40
+G5_X = (44, 285, 526); G5_CW, G5_VW, G5_RH = 230, 58, 40   # (15 Oct 2026: values 58 wide, 64 before: "Auto throttle x10" needs the room)
 G5_LW = G5_CW - G5_VW - 6
 G5_Y = (148, 194, 240, 286, 332)
 G5_ROWS = {   # label: (column, row, shade, words or None, its value)
-    't42': (0, 1, PALE_YELLOW, 'Governor mode', 'n14'), 't43': (0, 2, PALE_YELLOW, 'Handover [%]', 'n15'),
-    't50': (0, 3, PALE_YELLOW, None, 'n22'),
-    't69': (1, 1, PALE_BLUE, None, 'n28'), 't70': (1, 2, PALE_BLUE, None, 'n29'), 't71': (1, 3, PALE_BLUE, None, 'n30'),
+    # (15 Oct 2026: the phone app's words - Handover, Autorot., Idle and Auto throttle, Speed change, Quick restart)
+    't42': (0, 1, PALE_YELLOW, 'Governor mode', 'n14'), 't43': (0, 2, PALE_YELLOW, 'Handover (%)', 'n15'),
+    't50': (0, 3, PALE_YELLOW, 'Autorot. timeout', 'n22'),
+    't69': (1, 1, PALE_BLUE, None, 'n28'), 't70': (1, 2, PALE_BLUE, 'Idle throttle x10', 'n29'), 't71': (1, 3, PALE_BLUE, 'Auto throttle x10', 'n30'),
     't45': (2, 0, PALE_GREEN, 'Spool-up', 'n17'), 't46': (2, 1, PALE_GREEN, 'Spool-down', 'n18'),
-    't47': (2, 2, PALE_GREEN, 'Tracking', 'n19'), 't48': (2, 3, PALE_GREEN, 'Recovery', 'n20'),
+    't47': (2, 2, PALE_GREEN, 'Speed change', 'n19'), 't48': (2, 3, PALE_GREEN, 'Quick restart', 'n20'),
     't49': (2, 4, PALE_GREEN, 'Hold timeout', 'n21'),
 }
 G5_KEYS = {   # the keypad's question: the label's words with the unit (a lost multiplication sign showed as garbage in most)
-    'n17': ('Spoolup \ufffd0.1%/s', 'Spool-up [s]'), 'n18': ('Spooldown \ufffd.1% s', 'Spool-down [s]'),
-    'n19': ('Tracking \ufffd0.1%/s', 'Tracking [s]'), 'n20': ('Recovery \ufffd0.1%/s', 'Recovery [s]'),
-    'n21': ('Hold timeout \ufffd0.1s', 'Hold timeout [s]'), 'n22': ('Autorot timeout s', 'Autorot timeout [s]'),
-    'n15': ('Handover thr %', 'Handover [%]'),
-    'n29': ('Idle thr \ufffd0.1%', 'Idle thr x0.1%'), 'n30': ('Auto thr \ufffd0.1%', 'Auto thr x0.1%'),
+    'n17': (('Spoolup \ufffd0.1%/s', 'Spool-up [s]'), 'Spool-up time (s)'), 'n18': (('Spooldown \ufffd.1% s', 'Spool-down [s]'), 'Spool-down time (s)'),
+    'n19': (('Tracking \ufffd0.1%/s', 'Tracking [s]'), 'Speed-change time (s)'), 'n20': (('Recovery \ufffd0.1%/s', 'Recovery [s]'), 'Quick-restart time (s)'),
+    'n21': (('Hold timeout \ufffd0.1s', 'Hold timeout [s]'), 'Throttle-hold timeout (s)'), 'n22': (('Autorot timeout s', 'Autorot timeout [s]'), 'Autorotation timeout (s)'),
+    'n15': (('Handover thr %', 'Handover [%]'), 'Handover throttle (%)'),
+    'n29': (('Idle thr \ufffd0.1%', 'Idle thr x0.1%'), 'Idle throttle (tenths of a %)'), 'n30': (('Auto thr \ufffd0.1%', 'Auto thr x0.1%'), 'Auto throttle (tenths of a %)'),
     'n16': ('Startup \ufffd0.1s', 'Startup x0.1s'), 'n25': ('D filter \ufffd0.1Hz', 'D filter x0.1Hz'),   # (parked off the glass: only the sign mended - ASCII)
 }
 
 
 def governor_global(pg):
-    for k, (n, txt) in enumerate((('t3', None), ('t2', None), ('t1', 'Times [s]'))):
+    for k, (n, txt) in enumerate((('t3', None), ('t2', None), ('t1', 'Timings (s)'))):   # (the phone app's "Timings (seconds)"; "Times [s]" before)
         head(pg, n, x=G5_X[k], y=102, w=G5_CW, h=40, font=6, a={'xcen': 0, 'style': 0})
         if txt: words(pg, n, txt)
     for k, n in enumerate(('GovMode', 'ThrMode')):   # (the Teensy writes the mode's meaning; a tap opens the mode's keypad)

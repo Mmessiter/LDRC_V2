@@ -109,9 +109,9 @@ FLASHMEM static void TravShowPage3()
     SendText((char *)"i0", b);
     TravRevYaw = TravInWant[3][0] < 0;
     SendValue((char *)"tn0", TravRevYaw ? 1 : 0);
-    SendText((char *)"ltn1", (char *)(TailMotorised() ? "Yaw centre offset [%]" : "Yaw centre trim [deg]"));
-    SendText((char *)"ltn3", (char *)(TailMotorised() ? "Yaw limit CW [%]" : "Yaw limit CW [deg]"));
-    SendText((char *)"ltn4", (char *)(TailMotorised() ? "Yaw limit CCW [%]" : "Yaw limit CCW [deg]"));
+    SendText((char *)"ltn1", (char *)(TailMotorised() ? "Tail centre trim (%)" : "Tail centre trim (deg)"));   // (15 Oct: the phone app's words)
+    SendText((char *)"ltn3", (char *)(TailMotorised() ? "Tail motor min (%)" : "Tail travel, stick right (deg)"));   // input 3 min
+    SendText((char *)"ltn4", (char *)(TailMotorised() ? "Tail motor max (%)" : "Tail travel, stick left (deg)"));   // input 3 max
     if (TailMotorised()) { TravTenths("tn1", S16At(TravCfgWant, 3)); TravTenths("tn3", labs(TravInWant[3][1])); TravTenths("tn4", TravInWant[3][2]); }
     else { TravTenths("tn1", RawToDegTenths(S16At(TravCfgWant, 3), ts)); TravTenths("tn3", RawToDegTenths(labs(TravInWant[3][1]), ts)); TravTenths("tn4", RawToDegTenths(TravInWant[3][2], ts)); }
     TravTenths("tn2", labs(TravInWant[3][0]));                      // Yaw calibration %
@@ -125,7 +125,7 @@ FLASHMEM static void BenchStatus() // page 4's told row and its Hold swash / Rel
     if (BenchHeld)
     {
         const long a = BenchHeldDegTenths < 0 ? -BenchHeldDegTenths : BenchHeldDegTenths;
-        snprintf(b, sizeof(b), "HELD: %s at %s%ld.%ld deg (gyros bypassed)", BenchHeldAxis == 2 ? "pitch" : "roll", BenchHeldDegTenths < 0 ? "-" : "", a / 10, a % 10);
+        snprintf(b, sizeof(b), "SWASH HELD: %s at %s%ld.%ld deg (gyros bypassed)", BenchHeldAxis == 2 ? "Pitch" : "Roll", BenchHeldDegTenths < 0 ? "-" : "", a / 10, a % 10);
     }
     else
         snprintf(b, sizeof(b), "Motor off, blades clear: it moves the swash");
@@ -303,23 +303,23 @@ FLASHMEM void TravelPoll()
     {
     case TRV_READ_CFG:
     {
-        if (!ok) { TravFail("Could not read the mixer"); return; }
+        if (!ok) { TravFail("Could not read the travel extents"); return; }
         uint8_t b[32];
         const int n = PipeReplyBytes(b, sizeof(b));
-        if (n < CFG_BYTES) { snprintf(PipeRepBody, sizeof(PipeRepBody), "only %d bytes came (Rotorflight 2.3 sends 21)", n); TravFail("Could not read the mixer"); return; }
+        if (n < CFG_BYTES) { snprintf(PipeRepBody, sizeof(PipeRepBody), "only %d bytes came (Rotorflight 2.3 sends 21)", n); TravFail("Could not read the travel extents"); return; }
         memcpy(TravCfg, b, CFG_BYTES);
         TravAskInput(1, TRV_READ_IN);
         return;
     }
     case TRV_READ_IN:
-        if (!ok || !TravTakeInput(TravIn)) { TravFail("Could not read a mixer input"); return; }
+        if (!ok || !TravTakeInput(TravIn)) { TravFail("Could not read the travel extents (an input)"); return; }
         if (TravIdx < 4) { TravAskInput(TravIdx + 1, TRV_READ_IN); return; }
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
         TravHave = true; TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false; TravPage4Edited = false;
         TravBusy(""); SendCommand((char *)"vis b3,0"); TravShow();
         return;
     case TRV_WRITE_CFG:
-        if (!ok) { TravFail("Not written (mixer)"); return; }
+        if (!ok) { TravFail("Not written (travel extents)"); return; }
         TravIdx = 1;
         { uint8_t f[7]; f[0] = 1; PutS16(f, 1, TravInWant[1][0]); PutS16(f, 3, TravInWant[1][1]); PutS16(f, 5, TravInWant[1][2]); TravReq = MspAsk(171, f, 7); TravStep = TRV_WRITE_IN; }
         return;
@@ -354,6 +354,7 @@ FLASHMEM void TravelPoll()
         TravBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         TravMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
+        RfSavedThenLeave(CurrentView);   // B102: OK's "Save now?" closes the page once saved
         return;
     }
     case TRV_HOLD: // B98
@@ -386,7 +387,7 @@ FLASHMEM static void TravPageHead()
 {
     SendText((char *)"t11", ModelName);
     char b[16];
-    snprintf(b, sizeof(b), "Bank %d", Bank);
+    snprintf(b, sizeof(b), "All banks");   // (15 Oct: the travel extents are the same in every bank, as the filters; it said "Bank n")
     SendText((char *)"t9", b);
     SendCommand((char *)(Trav_Was_Edited ? "vis b3,1" : "vis b3,0"));
 }
@@ -405,18 +406,15 @@ FLASHMEM void StartTravelView()
     TravPageHead();
     TravRead();
 }
+void SaveTravel();
+FLASHMEM static void TravSaveNow() { TravPageHead(); TravShow(); SaveTravel(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
 FLASHMEM void EndTravelView() // OK on any of the four pages
 {
     if (BenchHeld) { if (TravStep == TRV_IDLE) BenchRelease(BENCH_AFTER_LEAVE); return; }   // B98: the swash let go first; back here once it is
     if (Trav_Was_Edited)
     {
         TravGather();   // (B59) before the question's page takes the fields away
-        if (!GetConfirmation((char *)TravPageWord(), (char *)"Discard the edited mixer values?"))
-        {
-            TravPageHead();
-            TravShow();
-            return;
-        }
+        if (!RfSaveFirst(TravPageWord(), "The edited travel extents are", TravSaveNow, EndTravelView, &Trav_Was_Edited)) return;   // B102
     }
     TravStep = TRV_IDLE;
     Trav_Was_Edited = false;
@@ -441,7 +439,7 @@ FLASHMEM void SaveTravel()
     // B59: the fields FIRST. The question is a page of its own, and the travel page comes back from it reloaded, every
     // field blank: read after the question, they were zeros, and zeros were written (Malcolm, 7 Oct: "It wrote zero").
     TravGather();
-    if (!GetConfirmation((char *)TravPageWord(), (char *)"Save the mixer?\r\nIt changes how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
+    if (!GetConfirmation((char *)TravPageWord(), (char *)"Save the travel extents?\r\nThey change how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
     {
         TravPageHead();
         TravShow(); // the page came back blank: the edited values again
@@ -537,7 +535,7 @@ FLASHMEM void BenchSuggestTapped() // the suggested calibration row: worked out,
     if (held == 0 || BenchGaugeTenths <= 0 || gain <= 0)
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)TravPageWord(), (char *)"Type the angle held and what the\r\ngauge read, then tap here again.");
+        MsgBox((char *)TravPageWord(), (char *)"Type the angle and the peak gauge\r\nreading, then tap here again.");
         return;
     }
     long sug = (gain * held + BenchGaugeTenths / 2) / BenchGaugeTenths;   // calibration x commanded / measured

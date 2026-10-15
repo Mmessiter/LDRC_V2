@@ -1,15 +1,14 @@
-How the sticks reach the swash and the tail, laid out as the|
-configurator's Mixer tab, with its names. The phone app calls|
-these pages 'Travel extents'.|
-The same in every bank: the bank shown at the top left does|
-not matter here.||
+How the sticks reach the swash and the tail, with the phone|
+app's names (its 'Travel extents' page).|
+The same in every bank ('All banks' at the top left).||
 It needs the safety on (model disarmed) and a Version 2|
 receiver with Bluetooth. With no model, the pages show the|
 model's backup on the card, if one was made: a 'Save' then|
 changes the backup, and the change is offered to the model|
 when it next connects.||
-Four pages: this one, main rotor geometry, tail rotor, and the|
-bench measure (the swash held at an angle for a pitch gauge).|
+Four pages: this one, 'Travel extents: swash',|
+'Travel extents: tail' and 'Bench measure' (the swash held at|
+an angle for a pitch gauge).|
 'Next >' and '< Previous' move between them, changes kept.|
 Tap a number to type a new one.|
 Tap a switch to change it (green = on).|
@@ -17,16 +16,18 @@ Tap a switch to change it (green = on).|
 pages to the flight controller, stores them there and reads|
 them back. It asks first, because it changes how far the swash|
 and tail move: check them on the bench, blades off.|
-'OK' leaves; if a change was not saved, it asks first.||
+'OK' leaves. With a change not saved it asks 'Save now?':|
+'Save' saves, then leaves; 'Discard' leaves without saving.||
 MAIN ROTOR SETTINGS:|
 Swashplate type and Main rotor direction show what the flight|
 controller has. To change them: 'Settings ...', then|
-'Model basics ...' (the flight controller restarts).|
-Aileron, Elevator and Collective reversed: the configurator's|
-Control direction, Normal or Reverse (green = reversed).|
-Use one when that control moves the wrong way.|
+'First-time basics ...' (the flight controller restarts).|
+Aileron, Elevator and Collective reversed (green = reversed):|
+use one when that control moves the wrong way. It reverses|
+that control only: the servos and the other controls stay|
+as they are.|
 Before flying, check on the bench that the swash moves the|
 right way for each stick.||
-SWASHPLATE TRIMS:|
-Roll, Pitch and Collective trim [%]: small corrections that|
-level the swash (-100 to 100, one decimal).|
+SWASH TRIMS (%):|
+Roll, Pitch and Collective trim: small corrections that level|
+the swash (-100 to 100, one decimal).|

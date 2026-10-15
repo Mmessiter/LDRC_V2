@@ -34,7 +34,7 @@ The Rotorflight configurator can replay that file.|
 Afterwards the flight controller restarts; nothing is changed.|
 It needs the model on, the USB cable from the receiver to the|
 flight controller, the safety on, the motor off, and the screen's|
-Bluetooth joined (opening 'Rotorflight options' joins it).||
+Bluetooth joined (opening the Rotorflight page joins it).||
 EXECUTE DIFF:|
 Sends every command in this model's newest diff file to the|
 flight controller's command line, then saves: the flight|
@@ -45,25 +45,25 @@ and shown; the rest are saved all the same.|
 It needs the same as 'Diff to card'.||
 EDITS WITHOUT THE MODEL:|
 With a backup on the card, every Rotorflight page opens with no|
-model connected and shows the backup. 'Rotorflight options'|
+model connected and shows the backup. The Rotorflight page|
 then says 'From the backup file'. A 'Save' changes the backup,|
 not the model, and marks that setting as an edit waiting.|
 Without a backup, the PIDs, rates and governor pages still open:|
 they show and keep the copies in the model memory.||
-WRITE EDITS:|
-With the model connected again, press 'Write edits'. The marked|
-edits are written to the flight controller and checked, and the|
-marks go. You are also offered this when you open|
-'Rotorflight options' while connected, with edits waiting.|
-'Write edits' shows only when edits are waiting.||
-FORGET EDITS:|
+SEND TO MODEL:|
+With the model connected again, press 'Send to model'.|
+The marked edits are written to the flight controller and|
+checked, and the marks go. You are also offered this when you|
+open the Rotorflight page while connected, with edits waiting.|
+'Send to model' shows only when edits are waiting.||
+DISCARD EDITS:|
 The marks go and nothing is written. The backup still holds the|
 edited values ('Restore all' would write them) until the next|
 'Back up' replaces them.||
 GOOD TO KNOW:|
 The backup and the diff files are found by the model's name.|
 Rename the model and its old ones are no longer found.|
-The command line itself is 'Command line ...' on|
-'Rotorflight options'.|
+The command line itself is 'Command line ...' on the|
+Rotorflight page.|
 Let each job finish before you press anything else.|
-'OK' goes back to 'Rotorflight options'.|
+'OK' goes back to the Rotorflight page.|

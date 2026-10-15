@@ -107,6 +107,35 @@ FLASHMEM void ShowLocalPIDsAdvancedBank()
     HidePID_Advanced_Msg();
 }
 //************************************************************************************************************/
+// B102: the read, and the write once the flight controller is known to be on this bank (PipeHttp.h BankCheck)
+FLASHMEM static void PidAdvAskValues()
+{
+    if (CurrentView != PIDADVANCEDVIEW) { BlockBankChanges = false; return; }
+    PID_Advanced_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await PID values
+    Reading_PIDS_Advanced_Now = true;               // This tells the Ack payload parser to get PID values
+    AddParameterstoQueue(SEND_PID_ADVANCED_VALUES); // Request PID values from RX
+    PID_Advanced_Start_Time = millis();             // record start time as it's not long
+}
+FLASHMEM static void PidAdvQueueWrite()
+{
+    AddParameterstoQueue(GET_THIRD_8_ADVANCED_PID_VALUES);                  // LAST MUST BE QUEUED FIRST!!!
+    AddParameterstoQueue(GET_SECOND_9_ADVANCED_PID_VALUES);                 // the order of the other two doesn't matter ...
+    AddParameterstoQueue(GET_FIRST_9_ADVANCED_PID_VALUES);                  // its a LIFO stack with 26 parametres to send
+    PIDS_Advanced_Were_Edited = false;                                      // reset edited flag
+    BlockBankChanges = false;
+    if (CurrentView == PIDADVANCEDVIEW)
+    {
+        HidePID_Advanced_Msg();                                             // ...because this queue is a LIFO stack
+        SendCommand((char *)"vis b3,0");                                    // hide "Send" button
+    }
+    PlaySound(BEEPCOMPLETE);                                                // let user know we're done
+    if (RfValueWasCut && CurrentView == PIDADVANCEDVIEW)
+    { // B07
+        Display_PID_Advanced_Values(0, MAX_PIDS_ADVANCED_BYTES);
+        RfCutNote("page PID_A_View");
+    }
+    RfSavedThenLeave(PIDADVANCEDVIEW);                                      // B102: OK's "Save now?" closes the page once saved
+}
 FLASHMEM void ShowPIDAdvancedBank() // this is called when bank is changed so new bank's PID Advanced values are requested from Nexus and shown
 {
     char buf[40];
@@ -136,11 +165,8 @@ FLASHMEM void ShowPIDAdvancedBank() // this is called when bank is changed so ne
         }
         BlockBankChanges = true;                  // block bank changes while we do this
         PIDAdvancedMsg(buf, Gray);                      // Show loading message and hides old PIDs
-        PID_Advanced_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await PID values
-        Reading_PIDS_Advanced_Now = true;               // This tells the Ack payload parser to get PID values
-        AddParameterstoQueue(SEND_PID_ADVANCED_VALUES); // Request PID values from RX
         PIDS_Advanced_Were_Edited = false;              // reset edited flag
-        PID_Advanced_Start_Time = millis();             // record start time as it's not long
+        PidAdvAskValues();
     }
 }
 // ************************************************************************************************************/
@@ -180,22 +206,11 @@ FLASHMEM void SendEditedPID_Advanced()
         }
     }
     PlaySound(BEEPMIDDLE);
-    PIDS_Advanced_Were_Edited = false;
     DelayWithDog(100);                                                      // allow LOTS of time for screen to update BEFORE sending another Nextion command
     PIDAdvancedMsg((char *)"Sending edited advanced PIDs ...", Gray); // Show sending message
     ReadEditedPIDAdvancedValues();                                          // read the edited PID Advanced values from the screen;
-    AddParameterstoQueue(GET_THIRD_8_ADVANCED_PID_VALUES);                  // LAST MUST BE QUEUED FIRST!!!
-    AddParameterstoQueue(GET_SECOND_9_ADVANCED_PID_VALUES);                 // the order of the other two doesn't matter ...
-    AddParameterstoQueue(GET_FIRST_9_ADVANCED_PID_VALUES);                  // its a LIFO stack with 26 parametres to send
-    HidePID_Advanced_Msg();                                                 // ...because this queue is a LIFO stack
-    SendCommand((char *)"vis b3,0");                                        // hide "Send" button
-    PIDS_Advanced_Were_Edited = false;                                      // reset edited flag
-    PlaySound(BEEPCOMPLETE);                                                // let user know we're done
-    if (RfValueWasCut)
-    { // B07
-        Display_PID_Advanced_Values(0, MAX_PIDS_ADVANCED_BYTES);
-        RfCutNote("page PID_A_View");
-    }
+    BlockBankChanges = true;
+    BankCheck(false, Bank, PidAdvQueueWrite, "page PID_A_View");     // B102: into this bank, or not at all (the edited flag stays until then)
 }
 // ********************************************************************************************************
 FLASHMEM void StartPIDAdvancedView()
@@ -221,8 +236,9 @@ FLASHMEM void EndPIDsAdvancedView()
 {
     if (PIDS_Advanced_Were_Edited)
     {
-        if (GetConfirmation((char *)"page PID_A_View", (char *)"Discard edited values?"))
-            GotoFrontView();
+        if (!RfSaveFirst("page PID_A_View", "The edited values are", SendEditedPID_Advanced, EndPIDsAdvancedView, &PIDS_Advanced_Were_Edited)) return;   // B102: "Save now?"
+        PIDS_Advanced_Were_Edited = false;   // (Discard: back to the Rotorflight page, as without edits - it went to the front page)
+        RotorFlightStart();
     }
     else
     {

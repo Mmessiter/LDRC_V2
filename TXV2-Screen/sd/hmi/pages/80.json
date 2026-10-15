@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Model basics: ESC throttle",
+   "txt": "Throttle calibration",
    "a": {
     "style": 0,
     "key": 255,
@@ -51,9 +51,9 @@
    "i": 2,
    "t": "text",
    "g": "l",
-   "x": 46,
+   "x": 45,
    "y": 75,
-   "w": 708,
+   "w": 710,
    "h": 388,
    "font": 6,
    "sta": 1,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:BASICS4.TXT\"\nLogView.t0.txt=\"Model basics: ESC throttle help\"\nLogView.return.txt=\"EscCalView\""
+    "r": "print \"HelpView:BASICS4.TXT\"\nLogView.t0.txt=\"Throttle calibration help\"\nLogView.return.txt=\"EscCalView\""
    }
   },
   {
@@ -179,9 +179,9 @@
    "i": 7,
    "t": "text",
    "g": "g",
-   "x": 108,
+   "x": 61,
    "y": 91,
-   "w": 583,
+   "w": 678,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -190,7 +190,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Blades off, or the pinion out of the main gear",
+   "txt": "Blades OFF or pinion out",
    "a": {
     "style": 0,
     "key": 255,
@@ -207,9 +207,9 @@
    "i": 8,
    "t": "text",
    "g": "g",
-   "x": 108,
+   "x": 61,
    "y": 141,
-   "w": 583,
+   "w": 678,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -218,7 +218,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Flight pack unplugged, FC on USB power",
+   "txt": "Flight pack UNPLUGGED. Flight controller on USB power.",
    "a": {
     "style": 0,
     "key": 255,
@@ -235,9 +235,9 @@
    "i": 9,
    "t": "text",
    "g": "g",
-   "x": 108,
+   "x": 61,
    "y": 191,
-   "w": 583,
+   "w": 678,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -263,9 +263,9 @@
    "i": 10,
    "t": "text",
    "g": "g",
-   "x": 108,
+   "x": 61,
    "y": 241,
-   "w": 583,
+   "w": 678,
    "h": 42,
    "font": 6,
    "sta": 1,
@@ -291,7 +291,7 @@
    "i": 11,
    "t": "button",
    "g": "l",
-   "x": 234,
+   "x": 235,
    "y": 397,
    "w": 160,
    "h": 50,
@@ -323,7 +323,7 @@
    "i": 12,
    "t": "button",
    "g": "l",
-   "x": 406,
+   "x": 407,
    "y": 397,
    "w": 160,
    "h": 50,
@@ -355,7 +355,7 @@
    "i": 13,
    "t": "button",
    "g": "l",
-   "x": 578,
+   "x": 579,
    "y": 397,
    "w": 160,
    "h": 50,

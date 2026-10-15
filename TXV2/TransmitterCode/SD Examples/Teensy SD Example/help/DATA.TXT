@@ -4,7 +4,7 @@ model reports. Look at it after a flight, before you switch off.||
 gaps (and the 'Gaps ...' page), the frame rates, and the GPS|
 page's maximum speed and distance.|
 They also start again a few seconds after each connection, and|
-when you press 'OK' on 'Rotorflight options'.|
+when you press 'OK' on the 'Rotorflight' page.|
 'Gaps ...' shows how long each reconnection took.|
 'GPS ...' opens the GPS page.||
 THE LINK:|

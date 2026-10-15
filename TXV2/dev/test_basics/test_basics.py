@@ -38,8 +38,9 @@ static uint32_t millis() { return now; }
 static std::map<std::string, std::string> fields; static std::vector<std::string> cmds; static int boxes = 0; static std::string lastBox; static bool confirmAnswer = true; static int sounds = 0, rfStarts = 0, asked = 0, gathers = 0;
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void SendText(char *n, char *t) { fields[n] = t; }
-static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; }
-static bool GetConfirmation(char *page, char *prompt) { ++asked; lastBox = prompt; return confirmAnswer; }
+static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
+static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; RfLeaveAfterSave = false; }   // (B102: as Utilities.h)
+static bool GetConfirmation(char *page, char *prompt) { ++asked; lastBox = prompt; if (!confirmAnswer) RfLeaveAfterSave = false; return confirmAnswer; }   // (B102: a No keeps the page, as Utilities.h)
 static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; CurrentView = ROTORFLIGHTVIEW; }
 static void RFSettingsGather() { ++gathers; }
@@ -83,6 +84,12 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     }
     fcReply(404, "unknown"); return PipeReqId;
 }
+// B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave (include/RF_SaveNow.h) over a fake question: Discard
+// unless saveNowAnswer is 1; and the bank check (PipeHttp.h BankCheck) as without a pipe: the write goes
+static int saveNowAnswer = 0, saveNowAsked = 0;
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -111,7 +118,7 @@ int main() {
     CHECK(gathers == 1 && CurrentView == BASICSVIEW && cmd("page BasicsView") && fields["t9"] == "All banks"); run();
     CHECK(BasHave && BasEscHave && writes(42) == 1 && writes(131) == 1 && writes(123) == 1 && writes(4) == 1 && writes(54) == 1 && cmd("vis b3,0"));
     CHECK(BasPortsHave && BasPortsN == 6 && !strcmp(BasBoard, "NEXUS_X"));
-    CHECK(fields["tn0"] == "CCPM 120 deg" && fields["tn1"] == "Clockwise" && fields["tn2"] == "Variable pitch" && fields["tn3"] == "PWM (most heli ESCs)" && fields["tn4"] == "Scorpion" && fields["tn5"] == "10");
+    CHECK(fields["tn0"] == "CCPM 120 deg" && fields["tn1"] == "Clockwise" && fields["tn2"] == "Variable pitch" && fields["tn3"] == "Normal PWM (most heli ESCs)" && fields["tn4"] == "Scorpion" && fields["tn5"] == "10");
     // ---- 2. the choices step round; the typed pole count is left alone by a tap
     fields["tn5"] = "14"; cmds.clear();
     BasicsSwashTapped(); CHECK(fields["tn0"] == "CCPM 135 deg" && BasMixWant[5] == 3 && Bas_Was_Edited && cmd("vis b3,1") && fields["tn5"] == "14");
@@ -120,8 +127,8 @@ int main() {
     BasicsTailTapped(); CHECK(fields["tn2"] == "Motorised" && BasMixWant[1] == 1); BasicsTailTapped(); BasicsTailTapped(); CHECK(fields["tn2"] == "Variable pitch");
     BasicsProtocolTapped(); CHECK(fields["tn3"] == "OneShot125" && BasMotWant[9] == 1);
     BasicsProtocolTapped(); CHECK(fields["tn3"] == "DShot150" && BasMotWant[9] == 5);
-    for (int i = 0; i < 4; ++i) BasicsProtocolTapped(); CHECK(fields["tn3"] == "PWM (most heli ESCs)" && BasMotWant[9] == 0);   // 6 -> 7 -> 10 (Off) -> 0
-    BasMotWant[9] = 3; BasShowProtocol(); CHECK(fields["tn3"] == "Protocol 3"); BasicsProtocolTapped(); CHECK(BasMotWant[9] == 0 && fields["tn3"] == "PWM (most heli ESCs)");
+    for (int i = 0; i < 4; ++i) BasicsProtocolTapped(); CHECK(fields["tn3"] == "Normal PWM (most heli ESCs)" && BasMotWant[9] == 0);   // 6 -> 7 -> 10 (Off) -> 0
+    BasMotWant[9] = 3; BasShowProtocol(); CHECK(fields["tn3"] == "Protocol 3"); BasicsProtocolTapped(); CHECK(BasMotWant[9] == 0 && fields["tn3"] == "Normal PWM (most heli ESCs)");
     BasicsEscTapped(); CHECK(fields["tn4"] == "Kontronik" && BasEscWant[0] == 5);
     // ---- 3. Next >: the pole count gathered (13 -> 12: magnets come in pairs); page 2 shows the ratios
     fields["tn5"] = "13"; cmds.clear(); StartBasics2View();
@@ -156,9 +163,14 @@ int main() {
     CHECK(lastBox.find("backup") != std::string::npos); run();
     CHECK(writes(43) == 1 && writes(222) == 1 && writes(216) == 1 && writes(250) == 1 && writes(68) == 0 && reboots == 0 && writes(42) == 1 && fields["busy"] == "Saved, and read back the same.");
     offline = false;
-    // ---- 7. OK with an edit: asked; kept when refused, the menu when agreed
-    BasicsDirectionTapped(); confirmAnswer = false; asked = 0; rfStarts = 0; EndBasicsView(); CHECK(asked == 1 && lastBox.find("Discard") != std::string::npos && CurrentView == BASICS2VIEW && rfStarts == 0);
-    confirmAnswer = true; EndBasicsView(); CHECK(rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW && !Bas_Was_Edited);
+    // ---- 7. OK with an edit (B102): "Save now?" - Save saves and the page closes once it has; a No to the save's own question
+    // keeps the page and its edit; Discard leaves without writing
+    BasicsDirectionTapped(); saveNowAnswer = 1; confirmAnswer = false; saveNowAsked = 0; asked = 0; rfStarts = 0; fcLog.clear(); EndBasicsView();
+    CHECK(saveNowAsked == 1 && asked == 1 && CurrentView == BASICS2VIEW && rfStarts == 0 && Bas_Was_Edited && !RfLeaveAfterSave && writes(43) == 0);
+    confirmAnswer = true; EndBasicsView(); CHECK(saveNowAsked == 2 && rfStarts == 0 && RfLeaveAfterSave); run(120);   // (the restart and its waits)
+    CHECK(writes(43) == 1 && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW && !Bas_Was_Edited && !RfLeaveAfterSave);
+    CurrentView = BASICS2VIEW; BasicsDirectionTapped(); saveNowAnswer = 0; fcLog.clear(); rfStarts = 0; EndBasicsView();
+    CHECK(saveNowAsked == 3 && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW && !Bas_Was_Edited && fcLog.empty());
     // ---- 8. < Previous shows page 1 again with the values as edited; a flight controller without ESC telemetry
     fakeFc(); escMissing = true; CurrentView = RFSETUPVIEW; fcLog.clear(); StartBasicsView(); run();
     CHECK(BasHave && !BasEscHave && fields["tn4"] == "?"); BasicsEscTapped(); CHECK(!Bas_Was_Edited);
@@ -170,21 +182,21 @@ int main() {
     // ---- 10. B100 the ports page: the rows named by the Nexus-X's sockets, the USB socket left out, the sixth row hidden
     fakeFc(); CurrentView = RFSETUPVIEW; StartBasicsView(); run(); CHECK(BasHave && BasPortsHave);
     StartBasics2View(); cmds.clear(); StartBasics3View();
-    CHECK(CurrentView == PORTSVIEW && cmd("page PortsView") && fields["ltn0"] == "S.BUS (1)" && fields["tn0"] == "Receiver (this link)" && fields["ltn1"] == "TELEM (2)" && fields["tn1"] == "ESC telemetry");
-    CHECK(fields["ltn2"] == "Port C (3)" && fields["tn2"] == "None" && fields["ltn3"] == "Port A (4)" && fields["tn3"] == "None" && fields["ltn4"] == "Port B (6)" && fields["tn4"] == "Dongle (MSP 115200)" && cmd("vis ltn5,0") && cmd("vis tn5,0"));
+    CHECK(CurrentView == PORTSVIEW && cmd("page PortsView") && fields["ltn0"] == "S.BUS (UART 1)" && fields["tn0"] == "Receiver" && fields["ltn1"] == "TELEM (UART 2)" && fields["tn1"] == "ESC telemetry");
+    CHECK(fields["ltn2"] == "Port C (UART 3)" && fields["tn2"] == "Nothing" && fields["ltn3"] == "Port A (UART 4)" && fields["tn3"] == "Nothing" && fields["ltn4"] == "Port B (UART 6)" && fields["tn4"] == "Dongle on a wire (MSP)" && cmd("vis ltn5,0") && cmd("vis tn5,0"));
     // the receiver's port is locked; the others step round; a job the page does not know is told, and a tap takes it to None
-    boxes = 0; BasicsPort1Tapped(); CHECK(boxes == 1 && lastBox.find("receiver's link") != std::string::npos && fields["tn0"] == "Receiver (this link)" && !BasPortsEdited && !Bas_Was_Edited);
+    boxes = 0; BasicsPort1Tapped(); CHECK(boxes == 1 && lastBox.find("receiver's link") != std::string::npos && fields["tn0"] == "Receiver" && !BasPortsEdited && !Bas_Was_Edited);
     cmds.clear(); BasicsPort3Tapped(); CHECK(fields["tn2"] == "ESC telemetry" && BasPortsEdited && Bas_Was_Edited && cmd("vis b3,1"));
     BasicsPort3Tapped(); CHECK(fields["tn2"] == "GPS");
-    BasicsPort4Tapped(); BasicsPort4Tapped(); BasicsPort4Tapped(); CHECK(fields["tn3"] == "Dongle (MSP 115200)" && BasPortsWant[3 * 9 + 5] == 5);
-    for (int i = 0; i < 3; ++i) BasicsPort4Tapped(); CHECK(fields["tn3"] == "None");   // S.Port, Blackbox, None
-    BasPortsWant[2 * 9 + 1] = 33; BasPortsWant[2 * 9 + 2] = 0; BasShowPortRow(2); CHECK(fields["tn2"] == "Other (as set)"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "None"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "ESC telemetry");
+    BasicsPort4Tapped(); BasicsPort4Tapped(); BasicsPort4Tapped(); CHECK(fields["tn3"] == "Dongle on a wire (MSP)" && BasPortsWant[3 * 9 + 5] == 5);
+    for (int i = 0; i < 3; ++i) BasicsPort4Tapped(); CHECK(fields["tn3"] == "Nothing");   // S.Port, Blackbox, None
+    BasPortsWant[2 * 9 + 1] = 33; BasPortsWant[2 * 9 + 2] = 0; BasShowPortRow(2); CHECK(fields["tn2"] == "As it is"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "Nothing"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "ESC telemetry");
     // the save: 55 with all six ports, the features gaining ESC telemetry (27) and TELEMETRY (10), the restart, 54 read back
     fcLog.clear(); asked = 0; SaveBasics(); CHECK(asked == 1 && lastBox.find("ports") != std::string::npos); run(60);
     CHECK(writes(55) == 1 && lastData(55).size() == 108 && writes(36) == 1 && writes(37) == 1 && writes(250) == 1 && writes(68) == 1 && writes(54) == 1 && pmask(2) == 1024 && pmask(0) == 64 && pmask(5) == 1);
     CHECK(feat == ((1u << 3) | (1u << 26) | (1u << 29) | (1u << 30) | (1u << 27) | (1u << 10)) && !BasPortsEdited && !Bas_Was_Edited && fields["busy"] == "Saved, and read back the same." && fields["tn2"] == "ESC telemetry");
     // no feature write when nothing new is needed
-    BasicsPort3Tapped(); BasicsPort3Tapped(); CHECK(fields["tn2"] == "Dongle (MSP 115200)"); fcLog.clear(); SaveBasics(); run(60); CHECK(writes(55) == 1 && writes(36) == 1 && writes(37) == 0 && pmask(2) == 1);
+    BasicsPort3Tapped(); BasicsPort3Tapped(); CHECK(fields["tn2"] == "Dongle on a wire (MSP)"); fcLog.clear(); SaveBasics(); run(60); CHECK(writes(55) == 1 && writes(36) == 1 && writes(37) == 0 && pmask(2) == 1);
     // offline: the ports page is refused (the backup keeps no ports)
     EndBasics3View(); CHECK(CurrentView == BASICS2VIEW); offline = true; boxes = 0; StartBasics3View(); CHECK(boxes == 1 && lastBox.find("need the model") != std::string::npos && CurrentView == BASICS2VIEW); offline = false;
     // a flight controller that answers no 54: the page says so

@@ -32,7 +32,7 @@ static int CurrentView = RATESVIEW_RF;
 static uint8_t RotorFlight_V = 2, DualRateInUse = 1;
 static uint8_t Rate_Values[MAX_RATES_BYTES], Saved_Rate_Values[MAX_RATES_BYTES][4];
 static char RatesWindows[MAX_RATES_BYTES][5] = {"t10", "tn0", "tn1", "tn2", "tn3", "tn4", "tn5", "tn6", "tn7", "tn8", "tn9", "tn10", "tn11"};
-static char Rate_Types[7][16] = {"None", "Betaflight", "Raceflight", "KISS", "Actual", "QuickRates", "Rotorflight 2.3"};
+static char Rate_Types[7][16] = {"0 - NONE", "1 - BETAFLIGHT", "2 - RACEFLIGHT", "3 - KISS", "4 - ACTUAL", "5 - QUICKRATES", "6 - ROTORFLIGHT"};
 const float FactorTableRF2_2[13] = {1, 10, 10, .01, 10, 10, .01, 10, 10, .01, .25, .25, .01};
 const float FactorTableRF2_3[13] = {1, 5, 1, 1, 5, 1, 1, 5, 1, 1, .125, 1, 1};
 static bool RfValueWasCut = false, Rates_Were_Edited = false, Reading_RATES_Now = false, BlockBankChanges = false, Wait_for_Advanced_Rates_to_Be_Sent_Too = false, live = true;
@@ -55,6 +55,13 @@ static char *Str(char *b, int v, int) { snprintf(b, 10, "%d", v); return b; }
 static bool GetConfirmation(char *, char *) { return true; } static void RotorFlightStart() {}
 // (1Definitions.h gives these prototypes on the Teensy)
 void RatesMsg(const char *msg, uint16_t Colour); void HideRATESMsg(); void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex);
+// B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave (include/RF_SaveNow.h) over a fake question: Discard
+// unless saveNowAnswer is 1; and the bank check (PipeHttp.h BankCheck) as without a pipe: the write goes
+static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
+static int saveNowAnswer = 0, saveNowAsked = 0;
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -67,8 +74,8 @@ int main() {
     Rate_Values[0] = 6; CHECK(GetFactoredValue(1) == 100.0f && GetFactoredValue(2) == 36.0f && GetFactoredValue(3) == 30.0f && GetFactoredValue(10) == 6.25f);
     RotorFlight_V = 1; Rate_Values[0] = 6; CHECK(GetFactoredValue(1) == 200.0f);   // (2.2 has no type 6: the 2.2 scales)
     // 2. the headings follow the type when byte 0 arrives
-    RotorFlight_V = 2; Rate_Values[0] = 6; DisplayRatesValues(0, 1); CHECK(fields["t10"] == "Rotorflight 2.3" && fields["t5"] == "Rate" && fields["t6"] == "Shape");
-    Rate_Values[0] = 4; DisplayRatesValues(0, 13); CHECK(fields["t10"] == "Actual" && fields["t5"] == "Centre rate" && fields["t6"] == "Max rate" && fields["tn0"] == "200" && fields["tn2"] == "0.30" && fields["tn9"] == "12.50");   // (the collective to two decimals, as ever)
+    RotorFlight_V = 2; Rate_Values[0] = 6; DisplayRatesValues(0, 1); CHECK(fields["t10"] == "6 - ROTORFLIGHT" && fields["t5"] == "Rate" && fields["t6"] == "Shape");
+    Rate_Values[0] = 4; DisplayRatesValues(0, 13); CHECK(fields["t10"] == "4 - ACTUAL" && fields["t5"] == "Centre" && fields["t6"] == "Max rate" && fields["tn0"] == "200" && fields["tn2"] == "0.30" && fields["tn9"] == "12.50");   // (the collective to two decimals, as ever)
     Rate_Values[0] = 9; DisplayRatesValues(0, 1); CHECK(fields["t10"] == "?");   // (a type we do not know: no read past the names)
     // 3. the edits read back with the same table: 200 typed on an Actual bank is 20 (x10), on a type-6 bank 40 (x5)
     Rate_Values[0] = 4; typed("200", "360", "0.3", "12.5"); RfValueWasCut = false; ReadEditedRateValues();
@@ -84,8 +91,8 @@ int main() {
     live = false; DualRateInUse = 1; Saved_Rate_Values[0][0] = 6; typed("250", "40", "20", "12.5"); saves = 0; SaveRatesLocalBank();
     CHECK(saves == 1 && Saved_Rate_Values[0][0] == 6 && Saved_Rate_Values[1][0] == 50 && Saved_Rate_Values[2][0] == 40 && Saved_Rate_Values[10][0] == 100);
     Saved_Rate_Values[0][1] = 0; DualRateInUse = 2; SaveRatesLocalBank(); CHECK(Saved_Rate_Values[0][1] == 4 && Saved_Rate_Values[1][1] == 25);   // (no type known: Actual, x10)
-    DualRateInUse = 1; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "Rotorflight 2.3" && fields["tn0"] == "250" && fields["tn9"] == "12.50" && fields["t5"] == "Rate" && Rate_Values[0] == 6);
-    DualRateInUse = 2; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "Actual" && fields["tn0"] == "250" && fields["t5"] == "Centre rate");
+    DualRateInUse = 1; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "6 - ROTORFLIGHT" && fields["tn0"] == "250" && fields["tn9"] == "12.50" && fields["t5"] == "Rate" && Rate_Values[0] == 6);
+    DualRateInUse = 2; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "4 - ACTUAL" && fields["tn0"] == "250" && fields["t5"] == "Centre");
     printf("test_rates: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

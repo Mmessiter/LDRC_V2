@@ -1,6 +1,7 @@
 What Rotorflight does when you flick the rescue switch:|
 it takes over, levels the model and climbs.|
-Names, order and units as the configurator's Rescue settings.||
+Names as on the phone app's 'Rescue' page. Order and units|
+as in the Configurator (its names in brackets below).||
 It needs the safety on (model disarmed) and a Version 2|
 receiver with Bluetooth. With no model, the page shows the|
 model's backup on the card, if one was made: a 'Save' then|
@@ -8,46 +9,52 @@ changes the backup, and the change is offered to the model|
 when it next connects.||
 Tap a number to type a new one.|
 Tap a switch to change it (green = on).|
-'Next >' opens the second page, with your changes kept:|
-Rescue mode, Hover height, Height hold P, I and D, and|
-Max collective.|
+'Next >' opens the second page, 'Rescue: hold height', with|
+your changes kept: Rescue mode, Hold height, Height hold P,|
+I and D, and Max collective.|
 'Save' appears once something is changed. It writes both|
 rescue pages to the flight controller, stores them there and|
 reads them back, so the page shows what it now holds.|
-'OK' leaves; if a change was not saved, it asks first.||
+'OK' leaves. With unsaved changes it asks 'Save now?':|
+'Save' saves them, and the page closes once saved;|
+'Discard' leaves without saving.||
 BANKS:|
 The values are those of the bank shown at the top left.|
 Move the bank switch and the page reads that bank. Save|
 first: changes not saved are lost (a message says so).||
 BEFORE YOU RELY ON IT:|
 Rescue also needs a switch: set one with 'Switches ...' on|
-the Rotorflight options page (Rescue - the safety net).|
+the 'Rotorflight' page (Rescue - the safety net).|
 Calibrate the level first too ('Calibrate ...'): rescue|
 levels the model by it.|
 Test rescue at a safe height before you trust it low down.||
 WHAT RESCUE DOES, STAGE BY STAGE:|
 1. Pull-up: it levels the model, on the pull-up collective.|
-2. Flip: if the model is upside down and Flip to upright is|
-on, it turns it the right way up.|
-3. Climb: it climbs on the climb collective (Hold height:|
-towards the hover height).|
-4. Hover: on the hover collective (Hold height: it holds the|
-hover height), until you let go of the switch.|
+2. Flip: with 'Flip upright if inverted' on, a model that is|
+upside down is turned the right way up.|
+3. Climb: on the climb collective.|
+'Level & hold height': it climbs towards the hold height.|
+4. Hover: on the hover collective, until you let go of the|
+switch. 'Level & hold height': it stays at the hold height.|
 5. Exit: it hands control back to you over the exit time.|
 Let go of the switch at any stage and it goes to Exit.||
 THE SETTINGS:|
-Enable rescue: rescue on or off. Climb, or hold a height,|
-is chosen on the second page (Rescue mode).|
-Flip to upright: on, a model that is upside down when rescue|
-starts is turned the right way up first. Recommended on.|
-Pull-up, Climb and Hover collective [%]: the collective each|
+Enable rescue: rescue on or off. 'Level & climb' or|
+'Level & hold height' is chosen on the second page|
+(Rescue mode).|
+Flip upright if inverted (flip to upright): on, a model that|
+is upside down when rescue starts is turned the right way up|
+first. Recommended on.|
+Pull-up, Climb and Hover collective (%): the collective each|
 stage of the rescue uses (0 to 100, one decimal: 65.5).|
-Pull-up time and Climb time [s]: how long those stages last.|
-Flip fail time [s]: how long it may take to turn it upright.|
-Exit time [s]: how long it takes to hand control back to you.|
+Pull-up time and Climb time (s): how long those stages last.|
+Flip time (s) (flip fail time): how long it may take to turn|
+the model upright.|
+Exit time (s): how long it takes to hand control back to you.|
 Times: 0 to 25 seconds, one decimal (1.5 = a second and a half).|
-Levelling gain and Flip-to-upright gain: how firmly it levels|
-the model, and how hard it rolls it over (5 to 250).|
-Max levelling rate (1 to 1000 degrees a second) and|
-Max levelling accel. (1 to 10000): the limits on how fast|
-it may roll the model level.|
+Levelling strength and Flip strength (levelling gain and|
+flip-to-upright gain): how firmly it levels the model, and|
+how hard it rolls it over (5 to 250).|
+Max turn rate (max levelling rate): 1 to 1000 degrees a second.|
+Max turn acceleration (max levelling accel.): 1 to 10000.|
+They limit how fast it may roll the model level.|

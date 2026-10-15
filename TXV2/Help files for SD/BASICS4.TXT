@@ -1,15 +1,16 @@
 Teaches the ESC the throttle range Rotorflight sends|
-(1000 to 2000 us): the configurator's Motors tab procedure,|
-with no computer. The phone app has the same on its ESC page.||
+(1000 to 2000 us): the Configurator's Motors tab procedure,|
+with no computer. The phone app has the same on its|
+'ESC setup' page: 'Throttle calibration'.||
 BEFORE YOU START:|
-Blades off, or the pinion out of the main gear.|
-Flight pack unplugged. The flight controller powered by USB|
+Blades OFF, or the pinion out of the main gear.|
+Flight pack UNPLUGGED. The flight controller on USB power|
 (a power bank), so that the battery can be plugged in AFTER|
-full throttle is set.|
+full throttle is held.|
 Safety on, and nobody at the sticks.||
 HOW IT GOES:|
 1. Tap 'Full throttle' and answer the question.|
-   The top line says FULL THROTTLE held.|
+   The fourth line says FULL THROTTLE held.|
 2. Plug the flight pack in. The ESC sees full throttle as it|
    wakes, and beeps to say it has learned the top.|
 3. Tap 'Minimum'. The hold is let go, the ESC sees minimum|
@@ -18,9 +19,9 @@ HOW IT GOES:|
 HOW IT IS KEPT SAFE:|
 The flight controller obeys the hold only while disarmed, and|
 forgets it by itself one second after the last renewal. This|
-page renews it about three times a second while the top line|
+page renews it about three times a second while the fourth line|
 says held. Leave the page, lose the link or flick the safety,|
 and the hold is gone a second later. If a renewal gets no|
 answer in time, the page says the hold lapsed: start again.||
-'< Previous' goes back to the ports. 'OK' leaves.|
+'< Previous' goes back to 'Ports'. 'OK' leaves.|
 Nothing here is saved: the ESC itself remembers the range.|

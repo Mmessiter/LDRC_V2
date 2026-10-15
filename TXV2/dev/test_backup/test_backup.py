@@ -287,7 +287,7 @@ int main() {
       CHECK(p[0] == 1 && p[1] == 30 && p[2] == 0 && p[3] == 40 && p[5] == 60 && p[7] == 70 && p[9] == 80 && p[13] == 9 && p[14] == 0 && p[19] == 2 && p[20] == 11 && p[21] == 10 && p[22] == 14 && p[23] == 13 && p[25] == 12 && p[26] == 50 && p[28] == 15 && p[31] == 16 && p[32] == 17);
       CHECK(p[11] == 11 && p[12] == 12 && p[15] == 15 && p[24] == 24 && p[29] == 29 && p[33] == 33);   // the bytes no page edits keep the file's
       CHECK(BakEdited("142")); }
-    { char e[200]; BakEditsText(e, sizeof e); CHECK(strcmp(e, "PIDs bank 2, rates bank 1, adv. PIDs bank 2, governor bank 2, governor global") == 0); }
+    { char e[200]; BakEditsText(e, sizeof e); CHECK(strcmp(e, "PIDs bank 2, rates bank 1, advanced PIDs bank 2, governor bank 2, governor global") == 0); }
     CHECK(!BakOfflineWords(1) && !BakOfflineWords(36));
     // 10. the offer comes from the tick once the pipe is ready, and is forgotten when the model goes
     BoundFlag = true; CurrentView = ROTORFLIGHTVIEW; BakOffered = false; confirmAnswer = false; lastBox = ""; PipeState = 1; BakOfferTick(); CHECK(lastBox == "" && !BakOffered);

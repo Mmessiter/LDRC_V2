@@ -7,13 +7,13 @@ Screen_Background=8
 @model 1
 page ServoView
 t11.txt="Black Thunder 2"
-t9.txt="Bank 1"
+t9.txt="All banks"
 vis b3,0
 vis busy,1
 busy.txt="Reading the servos from the flight controller ..."
 @shot 60_reading
 vis busy,0
-t0.txt="Servo 1 of 4 (Rotorflight)"
+t0.txt="Servo 1 of 4 (swashplate)"
 tn0.txt="1500"
 tn1.txt="-700"
 tn2.txt="700"
@@ -24,7 +24,7 @@ tn6.txt="0"
 tn7.val=0
 tn8.val=1
 @shot 60_loaded
-t0.txt="Servo 8 of 8 (Rotorflight)"
+t0.txt="Servo 8 of 8 (other)"
 tn0.txt="2250"
 tn1.txt="-1000"
 tn2.txt="1000"

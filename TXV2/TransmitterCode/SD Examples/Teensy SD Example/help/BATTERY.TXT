@@ -1,37 +1,39 @@
-Tell the flight controller about the flight pack, for its warnings|
-and the telemetry. The settings are the same in every bank|
-('All banks' at the top left).||
+Tell the flight controller about the flight pack, for its|
+warnings and the telemetry. The settings are the same in every|
+bank ('All banks' at the top left).||
 It needs the model connected, with the safety on,|
 and a Version 2 receiver with Bluetooth.|
 With no model, the page shows the backup on the card.|
 'Save' then changes the backup.|
 The change is offered to the model when it next connects.||
-Tap any number to type a new one. Tap the box beside 'Voltage from'|
-or 'Current from' to step through its choices.||
+Tap any number to type a new one. Tap the box beside|
+'Voltage from' or 'Current from' to step through its choices.||
 FLIGHT PACK:|
-Cells: how many cells the pack has, up to 24.|
+Cell count (0 = auto): how many cells the pack has, up to 24.|
 0 = automatic: the flight controller counts them by the voltage.|
-Capacity [mAh]: the size of the pack, for the fuel gauge. With several|
-battery profiles, it is the one in use.|
-Voltage from and Current from: usually ESC telemetry; FC pads when|
-the battery wires go to the flight controller's own sensor pads;|
-or None. (FBUS shows only if it was already chosen.)||
-EACH CELL [V]:|
+Capacity (mAh): the size of the pack, for the fuel gauge.|
+With several battery profiles, it is the one in use.|
+Voltage from and Current from: usually ESC telemetry;|
+FC pads (ADC) when the battery wires go to the flight|
+controller's own sensor pads; or Nowhere.|
+(FBUS shows only if it was already chosen.)||
+CELL VOLTAGES (V):|
 Volts per cell, 1.00 to 5.00.|
 Full: fresh off the charger (4.20 for LiPo).|
 Warning: time to land (3.50 is common).|
 Empty: the bottom of the fuel gauge.|
 Highest allowed: used for counting the cells.|
-They must rise: Empty below Warning below Full, and Full no higher|
-than Highest allowed. 'Save' refuses otherwise.||
+They must rise: Empty below Warning below Full, and Full no|
+higher than Highest allowed. 'Save' refuses otherwise.||
 SENSORS:|
-'Sensors >' shows when a source is FC pads.|
+'Sensors >' shows when a source is FC pads (ADC).|
 Its page, 'Battery sensors (FC pads)', has the voltage|
 sensor's scale, and the current sensor's scale and offset.|
-Each sensor shows only when its source is FC pads.|
+Each sensor shows only when its source is FC pads (ADC).|
 Adjust them until the flight controller agrees with a meter.|
 '< Battery' goes back. 'Save' and 'OK' work from either page.||
 SAVE AND OK:|
-'Save' appears once something is changed. It writes to the flight|
-controller, stores and reads back.|
-'OK' leaves; if a change was not saved, it asks first.|
+'Save' appears once something is changed. It writes to the|
+flight controller, stores and reads back.|
+'OK' leaves. With a change not saved it asks 'Save now?':|
+'Save' saves, then leaves; 'Discard' leaves without saving.|

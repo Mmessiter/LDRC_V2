@@ -19,7 +19,7 @@ vis b3,0
 tn0.txt="CCPM 120 deg"
 tn1.txt="Anticlockwise"
 tn2.txt="Bi-directional"
-tn3.txt="PWM (most heli ESCs)"
+tn3.txt="Normal PWM (most heli ESCs)"
 tn4.txt="Hobbywing V5"
 tn5.txt="10"
 @shot 77_ready
@@ -40,22 +40,22 @@ page PortsView
 t11.txt="Black Thunder 2"
 t9.txt="All banks"
 vis b3,0
-ltn0.txt="S.BUS (1)"
-tn0.txt="Receiver (this link)"
-ltn1.txt="TELEM (2)"
+ltn0.txt="S.BUS (UART 1)"
+tn0.txt="Receiver"
+ltn1.txt="TELEM (UART 2)"
 tn1.txt="ESC telemetry"
-ltn2.txt="Port C (3)"
-tn2.txt="None"
-ltn3.txt="Port A (4)"
-tn3.txt="Dongle (MSP 115200)"
-ltn4.txt="Port B (6)"
-tn4.txt="Telemetry (S.Port)"
+ltn2.txt="Port C (UART 3)"
+tn2.txt="Nothing"
+ltn3.txt="Port A (UART 4)"
+tn3.txt="Dongle on a wire (MSP)"
+ltn4.txt="Port B (UART 6)"
+tn4.txt="Telemetry out: S.Port"
 vis ltn5,0
 vis tn5,0
 @shot 79_ready
 page EscCalView
 t11.txt="Black Thunder 2"
 t9.txt="All banks"
-tn3.txt="FULL THROTTLE held: plug the battery in"
+tn3.txt="FULL THROTTLE held: plug the flight battery in"
 b2.txt="Minimum"
 @shot 80_held
