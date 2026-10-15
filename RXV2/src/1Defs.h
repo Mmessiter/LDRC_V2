@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.891-save-above-keyboard";
+constexpr const char* FW_VERSION = "RXV2-0.9.892-hobbywing-program-box";
 
 //*********************************************************************
 //  Auto-update manifest URLs

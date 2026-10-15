@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.892-hobbywing-program-box",
+      "url": "https://messiter.com/rxv2/release/v0.9.892/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.892/littlefs.bin",
+      "fs_md5": "13d25a3a37153722d17a5b5b9516f855",
+      "notes": "The ESC pages now recommend Hobbywing's LCD program box for a Hobbywing ESC: quick and easy, and well worth having."
+    },
+    {
       "name": "RXV2-0.9.891-save-above-keyboard",
       "url": "https://messiter.com/rxv2/release/v0.9.891/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.891/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.881/littlefs.bin",
       "fs_md5": "25e28987cbe9661d8ddf3e4bb0f1cffa",
       "notes": "The command line (USB cable) may be used from a linked transmitter when the safety is on: the transmitter's new Command line page and Diff to card use it. A linked transmitter with the arming channel high, or none set, is refused as before."
-    },
-    {
-      "name": "RXV2-0.9.880-adjustment-lines-known",
-      "url": "https://messiter.com/rxv2/release/v0.9.880/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.880/littlefs.bin",
-      "fs_md5": "25e28987cbe9661d8ddf3e4bb0f1cffa",
-      "notes": "The receiver keeps a copy of the flight controller's adjustment lines as they pass through it (every read over the USB cable, every write from the app or the transmitter) and serves it to the app, so the Switches page now shows the bank selector as the flight controller really has it - the travel the transmitter set, in the slot it lives in - and a Save there writes that slot and removes any duplicate line instead of adding one."
     }
   ],
   "rotorflight": {

@@ -13,10 +13,10 @@ ok(G.PROTO_NAMES.length === 14 && G.PROTO_NAMES[2] === 'Hobbywing V4' && G.PROTO
 let v = G.escProtoVerdict(4);
 ok(v.ok === true, 'Scorpion (4) is the brand this page changes');
 v = G.escProtoVerdict(2);
-ok(v.ok === false && /Hobbywing V4/.test(v.text) && /LCD box/.test(v.text) && /not from here/.test(v.text), 'Hobbywing V4: read-only for Rotorflight, LCD box / WiFi module: ' + v.text);
-ok(!/set it/.test(v.text) && !/Scorpion/.test(v.text), 'Hobbywing V4 is NOT told to switch to Scorpion');
+ok(v.ok === false && /Hobbywing V4/.test(v.text) && /LCD program box/.test(v.text) && /quick and easy/.test(v.text) && /cannot change it from here/.test(v.text), 'Hobbywing V4: read-only for Rotorflight, the LCD program box recommended (Malcolm 2026-10-15): ' + v.text);
+ok(!/set it to/.test(v.text) && !/Scorpion/.test(v.text), 'Hobbywing V4 is NOT told to switch to Scorpion');
 v = G.escProtoVerdict(3);
-ok(v.ok === false && /Hobbywing V5/.test(v.text) && /does not know it yet/.test(v.text), 'Hobbywing V5: programmable, not here yet');
+ok(v.ok === false && /Hobbywing V5/.test(v.text) && /LCD program box/.test(v.text) && /does not do it yet/.test(v.text), 'Hobbywing V5: programmable, not here yet; the LCD program box meanwhile');
 v = G.escProtoVerdict(0);
 ok(v.ok === false && /First-time basics/.test(v.text), 'no protocol: sent to First-time basics');
 for (const [p, name] of [[9, 'OpenYGE'], [10, 'FlyRotor'], [12, 'XDFly']]) {
@@ -35,7 +35,7 @@ ok(probe.includes("applyState('notscorpion',escProto)"), 'a brand this page cann
 ok(html.includes("case 'notscorpion':") && /case 'notscorpion':[\s\S]*?setButton\('🔌 Read the ESC',false\)/.test(html), 'the notscorpion state greys the Read button');
 ok(!html.includes('not Scorpion — set it in First-time basics'), 'the old "set it to Scorpion" message is gone');
 ok(html.includes('escProtoVerdict(b[0])'), 'checkWiring() uses the same verdict');
-ok(/<li><b>Other brands<\/b>:[^<]*Hobbywing Platinum V5/.test(html) && /Hobbywing Platinum V4 or a Kontronik cannot be changed/.test(html), 'help says which brands Rotorflight can program and which it cannot');
+ok(/<li><b>Hobbywing<\/b>: set it up with Hobbywing&rsquo;s <b>LCD program box<\/b>/.test(html) && /Platinum V4 cannot be changed through the flight controller/.test(html) && /<li><b>Other brands<\/b>:[^<]*FlyRotor/.test(html) && /Kontronik cannot be changed/.test(html), 'help: the Hobbywing LCD program box first; which brands Rotorflight can program and which it cannot');
 const wiring = fs.readFileSync(path.join(__dirname, '..', 'data', 'rotorflight-wiring.html'), 'utf8');
 ok(/Hobbywing Platinum V4: the <b>signal<\/b> pin of its programming port/.test(wiring) && /leave its red pin out/.test(wiring), 'wiring page: programming-port signal pin, never the red pin');
 console.log(fails ? 'FAIL ' + fails : 'ALL PASS');

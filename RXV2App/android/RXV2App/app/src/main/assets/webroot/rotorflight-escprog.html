@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>ESC settings &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=391">
-<script src="/app.js?v=391" defer></script>
+<link rel=stylesheet href="/style.css?v=392">
+<script src="/app.js?v=392" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -121,7 +121,8 @@
 <li><b>Forgot to release?</b> Unplug the flight battery, wait 5 seconds and plug it back in &mdash; that clears programming mode too. Never fly with the ESC still in programming mode: the transmitter would show no head speed. This page warns in red when it sees an unreleased ESC.</li>
 <li>The telemetry protocol is shown but never written &mdash; changing it can sever the link between ESC and flight controller.</li>
 <li>Needs the ESC telemetry protocol set to Scorpion with two-way talk on (First-time basics &rarr; ESC), and the ESC wired to the flight controller&rsquo;s TLM pad.</li>
-<li><b>Other brands</b>: Rotorflight can also program a Hobbywing Platinum V5, FlyRotor, OpenYGE or XDFly through the wire, which this page does not do yet. A Hobbywing Platinum V4 or a Kontronik cannot be changed through the flight controller at all &mdash; Rotorflight only reads their telemetry; their settings live in their own programmer (LCD box, app or USB adapter).</li>
+<li><b>Hobbywing</b>: set it up with Hobbywing&rsquo;s <b>LCD program box</b> &mdash; quick and easy, and well worth having (Malcolm, 2026-10-15). A Platinum V4 cannot be changed through the flight controller at all: Rotorflight only reads its telemetry. A V5 could be, but this page does not do it yet.</li>
+<li><b>Other brands</b>: Rotorflight can also program FlyRotor, OpenYGE or XDFly through the wire, which this page does not do yet. A Kontronik cannot be changed through the flight controller: its settings live in its own programmer (ProgDisc or app).</li>
 </ul>
 </template>
 <script>
@@ -189,8 +190,8 @@ function escProtoVerdict(p){
     const name=PROTO_NAMES[p]||('protocol '+p);
     if(p===4) return {ok:true,name,text:''};
     if(p===0) return {ok:false,name,text:'No ESC telemetry protocol is set. Choose the ESC’s brand in First-time basics → ESC. Only a Scorpion can be read and changed from here.'};
-    if(p===2) return {ok:false,name,text:'The flight controller is set to Hobbywing V4. Rotorflight only reads that family’s telemetry: its settings are changed with Hobbywing’s LCD box or WiFi module, not from here.'};
-    if(p===3) return {ok:false,name,text:'The flight controller is set to Hobbywing V5. Rotorflight can program a V5, but this page does not know it yet: use Hobbywing’s LCD box or WiFi module for now.'};
+    if(p===2) return {ok:false,name,text:'Hobbywing V4: set it up with Hobbywing’s LCD program box - quick and easy, and well worth having. Rotorflight only reads this ESC’s telemetry, so it cannot change it from here.'};
+    if(p===3) return {ok:false,name,text:'Hobbywing V5: set it up with Hobbywing’s LCD program box - quick and easy. (Rotorflight could program a V5 through the wire, but this page does not do it yet.)'};
     if(p===9||p===10||p===12) return {ok:false,name,text:'The flight controller is set to '+name+'. Rotorflight can program it, but this page only knows the Scorpion so far: use the ESC’s own programmer.'};
     return {ok:false,name,text:'The flight controller is set to '+name+'. Only a Scorpion can be read and changed from here; a '+name+' keeps its settings for its own programmer.'};
 }
