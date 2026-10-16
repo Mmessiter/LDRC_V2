@@ -474,8 +474,8 @@ FLASHMEM static int AdjTxBankUs(int ch0, int bank) // this transmitter's output 
     v += (SubTrims[src] - 127) * 5 + GetTrimAmount(InPutStick[src]);
     Bank = saved;
     GetCurveDots(src, DualRateValue);   // (the curve dots are a global: put the bank in use back)
-    if (v < MINMICROS) v = MINMICROS;
-    if (v > MAXMICROS) v = MAXMICROS;
+    if (v < (int)RangeLo()) v = RangeLo(); // (B113: inside the model's max range, as DoTrimsAndSubtrims keeps it)
+    if (v > (int)RangeHi()) v = RangeHi();
     if (ReversedChannelBITS & (1 << ch0)) v = MAXMICROS - (v - MINMICROS);
     return AdjFcUs((uint16_t)v);
 }

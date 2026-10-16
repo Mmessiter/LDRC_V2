@@ -186,6 +186,24 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Max range: 500 to 2500, or 945 to 2055 (Teensy B113, screen 1.11.80 unchanged, 17 Oct 2026)
+
+Malcolm, of B111/B112: "I think here we have confused 'stick ends' with 'max range'. We need to control MAX RANGE, but
+this doesn't necessarily mean stick ends because the curve might not go to the top and bottom of the available range."
+So the stick ends are gone and each model has a MAX RANGE, chosen on the Channels page ("Max range:", two radio buttons):
+500 to 2500 (as ever, and every model's until changed) or 945 to 2055 (just past the 1000 to 2000 Rotorflight reads on
+CRSF). The range is what a curve's 0 to 180 degrees span - the curve page's bottom to top, its numbers, the mixes'
+limits, a macro's place - and every channel is kept inside it (the trims' clamp); the bars span it too. The curves are not
+stretched: a change keeps every point's microseconds where the new range has them, and a point outside it goes to its
+edge, so nothing moves but what the new range cannot hold (a new model's 833/2167 ends become 945/2055). Never with the
+motor live; asked first; saved in the model's own extension (two marker bytes and the range at offset 3064 of its record,
+after the checksummed sequence: a model never changed reads and writes as before, a .MOD only grows when narrow). The
+motor's safe value (MotorChannelZero) stays on 500 to 2500: it never moves with the range. A macro's trigger now fires at
+the top of the range (2055 when narrow; it waited for 2499). The control fingerprint folds the range in only when narrow,
+so an update is compared as before. Found while testing: the Teensy's map() rounds, so B112's "2055" was really 2056 -
+the tests now use the core's own map(). Help CHANNELS.TXT "MAX RANGE", CURVES.TXT. dev/test_channel_us 3152 + 1154 checks
+(19 mistakes put in on purpose, all caught), including the real curve maths and the trims' clamp in both ranges.
+
 ## Stick ends: 944 to 2055, or 500 to 2500 (Teensy B112, screen 1.11.80 unchanged, 16 Oct 2026)
 
 Malcolm, of B111's switch (off put the ends back to 833 and 2166): "The current max range is 500-2500 and I think this

@@ -108,8 +108,8 @@ FASTRUN void MixOutputs()
                         }
                         MixValue += SendBuffer[(Mixes[MixNumber][M_SlaveChannel]) - 1]; // This is the actual mix moment! (MixValue is now the mixed value)
                         MixValue += (Mixes[MixNumber][M_OFFSET] - 127) * 8;
-                        short MinimumDeg = IntoHigherRes(MinDegrees[Bank][(Mixes[MixNumber][M_SlaveChannel]) - 1]);
-                        short MaximumDeg = IntoHigherRes(MaxDegrees[Bank][(Mixes[MixNumber][M_SlaveChannel]) - 1]);
+                        short MinimumDeg = CurveMicros(MinDegrees[Bank][(Mixes[MixNumber][M_SlaveChannel]) - 1]); // (B113: in the max range)
+                        short MaximumDeg = CurveMicros(MaxDegrees[Bank][(Mixes[MixNumber][M_SlaveChannel]) - 1]); // (B113: in the max range)
                         if (MinimumDeg > MaximumDeg)
                         {
                             SendBuffer[(Mixes[MixNumber][M_SlaveChannel]) - 1] = constrain(MixValue, MaximumDeg, MinimumDeg);

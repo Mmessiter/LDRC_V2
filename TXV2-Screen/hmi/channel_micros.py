@@ -6,8 +6,8 @@ small change to the screen?"
 Beside each bar, by its own button, a box of the buttons' size (us1 .. us16: odd channels between the left buttons and
 the bars, even ones between the bars and the right buttons), white words on the card (the theme's colours), in the
 buttons' font. The bars give up the room: 364 -> 248 pixels, their middle line where it was (x 400), their rows as they
-were. The Teensy writes us<n>.txt (main.cpp ShowChannelMicros). B111/B112: "Stick ends:" 944 to 2055 or 500 to 2500,
-bottom left (main.cpp StickEndsChosen). Safe to run again."""
+were. The Teensy writes us<n>.txt (main.cpp ShowChannelMicros). B113: "Max range:" 500 to 2500 or 945 to 2055, bottom
+left (main.cpp MaxRangeChosen). Safe to run again."""
 import json, os
 from fontw import width
 P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'sd', 'hmi', 'pages', '26.json')
@@ -33,13 +33,13 @@ for i in range(1, 17):
                         'a': {'style': 0, 'key': 255, 'borderw': 0, 'xcen': 1, 'ycen': 1, 'pw': 0, 'txt_maxl': 6, 'isbr': 0}})
     nid += 1
 assert width(FONT, '2500') + 8 <= NUM_W
-# Teensy B111 (Malcolm: "switching to your restricted range ought to be a user option please rather than permanent or
-# automatic") and B112 ("The current max range is 500-2500 and I think this should be one of the two selectable ranges"):
-# bottom left, beside OK, "Stick ends:" and two choices as the Batteries page has them (radio buttons, their words
-# beside them): se1 "944 to 2055" (code 219) and se2 "500 to 2500" (code 220). A choice or its words touched marks it and
-# asks the Teensy, which asks the pilot, changes the curves or not, and marks the choice as things then are (neither,
-# when the curves end elsewhere). Global, so a page back from a curve keeps what the Teensy last showed.
-pg['comps'] = [c for c in pg['comps'] if c['n'] not in ('se', 'lse', 'se1', 'se2', 'lse1', 'lse2')]
+# Teensy B113 (Malcolm, 17 Oct: "We need to control MAX RANGE, but this doesn't necessarily mean stick ends because the
+# curve might not go to the top and bottom of the available range"; B111/B112 had set the stick channels' ends): bottom
+# left, beside OK, "Max range:" and two choices as the Batteries page has them (radio buttons, their words beside them):
+# mr1 "500 to 2500" (code 219) and mr2 "945 to 2055" (code 220). A choice or its words touched marks it and asks the
+# Teensy, which asks the pilot, changes the model's range or not, and marks the choice as it then is. Global, so a page
+# back from a curve keeps what the Teensy last showed.
+pg['comps'] = [c for c in pg['comps'] if c['n'] not in ('se', 'lse', 'se1', 'se2', 'lse1', 'lse2', 'mr1', 'mr2', 'lmr', 'lmr1', 'lmr2')]
 nid = max(c['i'] for c in pg['comps']) + 1
 ok = by['b10']
 R_W, R_H, R_GAP, W_GAP = 40, 36, 4, 12          # (the Batteries page's radio buttons: 40 x 36, the words 4 px on)
@@ -50,15 +50,15 @@ def words(n, txt, x, w, ev=None):
     if ev: c['ev'] = {'r': ev}
     assert width(6, txt) <= w, txt
     return c
-def pick(k, code): return 'se1.val=%d\nse2.val=%d\nva0.val=%d<<8\nprint va0.val' % (k == 1, k == 2, code)
+def pick(k, code): return 'mr1.val=%d\nmr2.val=%d\nva0.val=%d<<8\nprint va0.val' % (k == 1, k == 2, code)
 x = 10
-row = [words('lse', 'Stick ends:', x, width(6, 'Stick ends:') + 4)]
+row = [words('lmr', 'Max range:', x, width(6, 'Max range:') + 4)]
 x += row[-1]['w'] + 8
-for k, (txt, code) in enumerate((('944 to 2055', 219), ('500 to 2500', 220)), start=1):
-    row.append({'n': 'se%d' % k, 'i': 0, 't': 'radio', 'g': 'g', 'x': x, 'y': ok['y'] + (ok['h'] - R_H) // 2, 'w': R_W, 'h': R_H,
-                'c': {'pco': 53248, 'bco': 65535}, 'val': 0, 'ev': {'r': pick(k, code)}})
+for k, (txt, code) in enumerate((('500 to 2500', 219), ('945 to 2055', 220)), start=1):
+    row.append({'n': 'mr%d' % k, 'i': 0, 't': 'radio', 'g': 'g', 'x': x, 'y': ok['y'] + (ok['h'] - R_H) // 2, 'w': R_W, 'h': R_H,
+                'c': {'pco': 53248, 'bco': 65535}, 'val': 1 if k == 1 else 0, 'ev': {'r': pick(k, code)}})
     x += R_W + R_GAP
-    row.append(words('lse%d' % k, txt, x, width(6, txt) + 6, pick(k, code)))
+    row.append(words('lmr%d' % k, txt, x, width(6, txt) + 6, pick(k, code)))
     x += row[-1]['w'] + W_GAP
 assert x - W_GAP <= ok['x'] - 8, x
 for c in row:

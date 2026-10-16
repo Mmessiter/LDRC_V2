@@ -141,6 +141,7 @@ bool ReadOneModel(uint32_t Mnum)
 
     FileCheckSum = 0;
     MixNumber = 0;
+    MaxRangeNarrow = 0; // B113: until this model's own extension is read (a slot never written stays 500 to 2500)
     if ((Mnum > 90) || (Mnum <= 0))
         Mnum = 1; // ClaudeFix-2-7-2026 clamp the SLOT too: the old code clamped only the global, then read the out-of-range slot anyway -- and the next save wrote that slot's data over model 1
     if ((ModelNumber > 90) || (ModelNumber <= 0))
@@ -508,6 +509,7 @@ bool ReadOneModel(uint32_t Mnum)
     CheckServoType();
     // **************************************
     ReadCheckSum32();
+    ReadModelExtension(); // B113: after the sequence, outside its checksum
     OneModelMemory = SDCardAddress - StartLocation;
 
 #ifdef DB_SD
@@ -688,6 +690,31 @@ uint8_t SDRead8BITS(int p_address)
     return r;
 }
 
+/*********************************************************************************************************************************/
+// B113: each model's own extension - what its record keeps after the checksummed sequence, at a fixed place near the end
+// of its MODELSIZE bytes (MODEL_EXT_OFFSET: the sequence ends near 2100): the transmitter block's two marker bytes, then the
+// max range (0 or 1). Read and written with the checksum off, as the transmitter block's extension is, so a record from
+// before B113 still passes its checksum and reads 500 to 2500. Written only when there is something to say, or when it is
+// already there: a model never set does not lengthen its file (a .MOD backup stays as it was).
+void ReadModelExtension()
+{
+    const int a = StartLocation + MODEL_EXT_OFFSET;
+    DoingCheckSm = true; // (BuildCheckSum() skips while this is set)
+    const uint8_t m0 = SDRead8BITS(a), m1 = SDRead8BITS(a + 1), r = SDRead8BITS(a + 2);
+    DoingCheckSm = false;
+    MaxRangeNarrow = (m0 == TX_EXT_MAGIC && m1 == TX_EXT_MAGIC2 && r == 1) ? 1 : 0;
+}
+void SaveModelExtension()
+{
+    const int a = StartLocation + MODEL_EXT_OFFSET;
+    if (!MaxRangeNarrow && (int)ModelsFileNumber.size() <= a)
+        return;
+    DoingCheckSm = true;
+    SDUpdate8BITS(a, TX_EXT_MAGIC);
+    SDUpdate8BITS(a + 1, TX_EXT_MAGIC2);
+    SDUpdate8BITS(a + 2, MaxRangeNarrow ? 1 : 0);
+    DoingCheckSm = false;
+}
 /*********************************************************************************************************************************/
 // B32: the transmitter block's extension. Two bytes at a fixed place near the end of the block (TXSIZE is 512, the sequence
 // above ends near 276): a marker, then the reversed flags of switches 5-8 in bits 0-3. Read and written with the checksum
@@ -1466,6 +1493,7 @@ void SaveOneModel(uint32_t mnum)
     }
 
     SaveCheckSum32(); // Save the Model parametres checksm
+    SaveModelExtension(); // B113: after the sequence, outside its checksum
 
     // ********************** Add more
 

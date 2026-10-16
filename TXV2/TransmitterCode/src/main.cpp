@@ -517,11 +517,11 @@ uint16_t CatmullSplineInterpolation(uint16_t InputValue, uint16_t InputChannel, 
     xPoints[2] = ChannelCentre[InputChannel];
     xPoints[3] = ChannelMidHi[InputChannel];
     xPoints[4] = ChannelMax[InputChannel];
-    yPoints[4] = IntoHigherRes(CurveDots[4]);
-    yPoints[3] = IntoHigherRes(CurveDots[3]);
-    yPoints[2] = IntoHigherRes(CurveDots[2]);
-    yPoints[1] = IntoHigherRes(CurveDots[1]);
-    yPoints[0] = IntoHigherRes(CurveDots[0]);
+    yPoints[4] = CurveMicros(CurveDots[4]);
+    yPoints[3] = CurveMicros(CurveDots[3]);
+    yPoints[2] = CurveMicros(CurveDots[2]);
+    yPoints[1] = CurveMicros(CurveDots[1]);
+    yPoints[0] = CurveMicros(CurveDots[0]);
     return Interpolation::CatmullSpline(xPoints, yPoints, PointsCount, InputValue);
 }
 /*********************************************************************************************************************************/
@@ -530,22 +530,22 @@ uint16_t StraightLineInterpolation(uint16_t InputValue, uint16_t InputChannel, u
     uint16_t k = 0;
     if (InputValue >= ChannelMidHi[InputChannel])
     {
-        k = map(InputValue, ChannelMidHi[InputChannel], ChannelMax[InputChannel], IntoHigherRes(CurveDots[3]), IntoHigherRes(CurveDots[4]));
+        k = map(InputValue, ChannelMidHi[InputChannel], ChannelMax[InputChannel], CurveMicros(CurveDots[3]), CurveMicros(CurveDots[4]));
     }
 
     if (InputValue >= ChannelCentre[InputChannel] && InputValue <= (ChannelMidHi[InputChannel]))
     {
-        k = map(InputValue, ChannelCentre[InputChannel], ChannelMidHi[InputChannel], IntoHigherRes(CurveDots[2]), IntoHigherRes(CurveDots[3]));
+        k = map(InputValue, ChannelCentre[InputChannel], ChannelMidHi[InputChannel], CurveMicros(CurveDots[2]), CurveMicros(CurveDots[3]));
     }
 
     if (InputValue >= ChannelMidLow[InputChannel] && InputValue <= ChannelCentre[InputChannel])
     {
-        k = map(InputValue, ChannelMidLow[InputChannel], ChannelCentre[InputChannel], IntoHigherRes(CurveDots[1]), IntoHigherRes(CurveDots[2]));
+        k = map(InputValue, ChannelMidLow[InputChannel], ChannelCentre[InputChannel], CurveMicros(CurveDots[1]), CurveMicros(CurveDots[2]));
     }
 
     if (InputValue <= ChannelMidLow[InputChannel])
     {
-        k = map(InputValue, ChannelMin[InputChannel], ChannelMidLow[InputChannel], IntoHigherRes(CurveDots[0]), IntoHigherRes(CurveDots[1]));
+        k = map(InputValue, ChannelMin[InputChannel], ChannelMidLow[InputChannel], CurveMicros(CurveDots[0]), CurveMicros(CurveDots[1]));
     }
 
     return k;
@@ -556,11 +556,11 @@ uint16_t ExponentialInterpolation(uint16_t InputValue, uint16_t InputChannel, ui
     uint16_t k = 0;
     if (InputValue >= ChannelCentre[InputChannel])
     {
-        k = MapWithExponential(InputValue - ChannelCentre[InputChannel], 0, ChannelMax[InputChannel] - ChannelCentre[InputChannel], 0, IntoHigherRes(CurveDots[4]) - IntoHigherRes(CurveDots[2]), Exponential[Bank][OutputChannel]) + IntoHigherRes(CurveDots[2]);
+        k = MapWithExponential(InputValue - ChannelCentre[InputChannel], 0, ChannelMax[InputChannel] - ChannelCentre[InputChannel], 0, CurveMicros(CurveDots[4]) - CurveMicros(CurveDots[2]), Exponential[Bank][OutputChannel]) + CurveMicros(CurveDots[2]);
     }
     else
     {
-        k = MapWithExponential(ChannelCentre[InputChannel] - InputValue, 0, ChannelCentre[InputChannel] - ChannelMin[InputChannel], IntoHigherRes(CurveDots[2]) - IntoHigherRes(CurveDots[0]), 0, Exponential[Bank][OutputChannel]) + IntoHigherRes(CurveDots[0]);
+        k = MapWithExponential(ChannelCentre[InputChannel] - InputValue, 0, ChannelCentre[InputChannel] - ChannelMin[InputChannel], CurveMicros(CurveDots[2]) - CurveMicros(CurveDots[0]), 0, Exponential[Bank][OutputChannel]) + CurveMicros(CurveDots[0]);
     }
     return k;
 }
@@ -645,7 +645,7 @@ void DoTrimsAndSubtrims()
         int TrimmedValue = (int)SendBuffer[OutputChannel];
         TrimmedValue += (SubTrims[OutputChannel] - 127) * 5;                       // ADD SUBTRIM to output channel, (Range 0 - 127 - 254) multiplier is always 5 otherwise subtrim might keep changing
         TrimmedValue += GetTrimAmount(InputChannel);                               // ADD TRIM to output channel
-        SendBuffer[OutputChannel] = constrain(TrimmedValue, MINMICROS, MAXMICROS); // Keep within limits
+        SendBuffer[OutputChannel] = constrain(TrimmedValue, (int)RangeLo(), (int)RangeHi()); // Keep within limits (B113: this model's max range)
         PreMixBuffer[OutputChannel] = SendBuffer[OutputChannel];                   // premixbuffer will be needed again...
     }
 }
@@ -885,7 +885,7 @@ void UpdateButtonLabels()
             }
             SendText(ChannelLabels[i], LabelText);
         }
-        StickEndsShow(); // B111/B112: "Stick ends:" 944 to 2055 or 500 to 2500
+        MaxRangeShow(); // B113: "Max range:" 500 to 2500 or 945 to 2055
     }
     if (CurrentView == FAILSAFE_VIEW)
     {
@@ -920,120 +920,73 @@ void UpdateButtonLabels()
 }
 
 /*********************************************************************************************************************************/
-// B111 (Malcolm, 16 Oct 2026: "the imperfect sticks don't always achieve quite 100% at full deflection and such a limit
-// actually outputs only about 1015 - 1935 .... so we need a bit more!" - then, more carefully, 1025 - 1977 with ends of
-// 1000 and 2000; and: "switching to your restricted range ought to be a user option please rather than permanent or
-// automatic"); B112 ("The current max range is 500-2500 and I think this should be one of the two selectable ranges"):
-// the Channels page's "Stick ends:" with two choices. 944 to 2055 (40 and 140 degrees): the ends of every channel a stick
-// drives (its input one of the four stick axes, 0-3), in all four banks - a stick that stops about 5 % short still passes
-// 1000 and 2000, the most Rotorflight reads on CRSF. 500 to 2500 (0 and 180): the widest there is. Each half of a curve is
-// stretched or shrunk about its centre point, so the curve keeps its shape, its centre and which way it goes. Asked first;
-// the model is saved. The choice shown is worked out from the curves (neither, when they end elsewhere: new models' 833
-// and 2166, or a pilot's own); nothing new is kept in the model.
-#define STICK_END_LOW 40   // 944 us
-#define STICK_END_HIGH 140 // 2055 us
-#define STICK_MAX_LOW 0    // 500 us
-#define STICK_MAX_HIGH 180 // 2500 us
-FLASHMEM static void StickEndsHalf(uint8_t &end, uint8_t &mid, uint8_t centre, uint8_t lo, uint8_t hi) // one half of one curve: its end to lo or hi
+// B113 (Malcolm, 17 Oct 2026, of B111/B112's "Stick ends": "I think here we have confused 'stick ends' with 'max range'.
+// We need to control MAX RANGE, but this doesn't necessarily mean stick ends because the curve might not go to the top and
+// bottom of the available range"): the Channels page's "Max range:" - 500 to 2500 (as ever) or 945 to 2055 (just past the
+// 1000 to 2000 Rotorflight reads on CRSF: Malcolm's sticks stop about 5 % short). The range is what a curve's 0 .. 180
+// degrees span (CurveMicros), and a macro's place; the curves are not stretched to it. On a change every point of every
+// curve, in every bank, and every macro's place keeps its microseconds where the new range has them - a point outside it
+// goes to its edge - so nothing moves but what the new range cannot hold. Never with the motor live; asked first; saved.
+FLASHMEM static uint8_t RangeDegrees(int us, uint16_t lo, uint16_t hi) // microseconds -> the nearest degree of the range lo .. hi
 {
-    if (end == centre || centre <= lo || centre >= hi)
-        return; // (flat, or a centre at or past the new end: left as it is)
-    const int target = end > centre ? hi : lo;
-    const float k = (float)(target - centre) / (float)((int)end - (int)centre);
-    mid = (uint8_t)constrain((int)lroundf((float)centre + ((float)mid - (float)centre) * k), 0, 180);
-    end = (uint8_t)target;
+    us = constrain(us, (int)lo, (int)hi);
+    return (uint8_t)constrain((int)lroundf((float)(us - lo) * 180.0f / (float)(hi - lo)), 0, 180);
 }
-FLASHMEM uint8_t StickEndsApply(uint8_t lo, uint8_t hi) // how many channels a stick drives (each changed in all four banks)
+FLASHMEM void MaxRangeConvert(uint8_t narrow) // every curve point into the new range, keeping its microseconds (MaxRangeNarrow still the old one)
 {
-    uint8_t n = 0;
-    for (int ch = 0; ch < CHANNELSUSED; ++ch)
-    {
-        if (InPutStick[ch] > 3)
-            continue; // (a knob, a switch or nothing drives it: left as it is)
-        for (int b = 1; b <= 4; ++b)
+    const uint16_t lo = narrow ? RANGE_NARROW_LO : MINMICROS, hi = narrow ? RANGE_NARROW_HI : MAXMICROS;
+    for (int b = 1; b <= 4; ++b)
+        for (int ch = 0; ch < CHANNELSUSED; ++ch)
         {
-            StickEndsHalf(MaxDegrees[b][ch], MidHiDegrees[b][ch], CentreDegrees[b][ch], lo, hi);
-            StickEndsHalf(MinDegrees[b][ch], MidLowDegrees[b][ch], CentreDegrees[b][ch], lo, hi);
+            uint8_t *pt[5] = {&MinDegrees[b][ch], &MidLowDegrees[b][ch], &CentreDegrees[b][ch], &MidHiDegrees[b][ch], &MaxDegrees[b][ch]};
+            for (int k = 0; k < 5; ++k)
+                *pt[k] = RangeDegrees(CurveMicros(*pt[k]), lo, hi);
         }
-        ++n;
-    }
-    return n;
+    for (int m = 0; m < MAXMACROS; ++m) // (a macro's place is a point of the range too: macros.h RunMacro)
+        MacrosBuffer[m][MACROMOVETOPOSITION] = RangeDegrees(CurveMicros(MacrosBuffer[m][MACROMOVETOPOSITION]), lo, hi);
+    MaxRangeNarrow = narrow;
 }
-FLASHMEM static bool StickEndsAllAt(uint8_t lo, uint8_t hi) // every stick channel, in every bank, ends at lo and hi (either way round)?
+FLASHMEM void MaxRangeShow() // the choice as it is
 {
-    bool any = false;
-    for (int ch = 0; ch < CHANNELSUSED; ++ch)
-    {
-        if (InPutStick[ch] > 3)
-            continue;
-        any = true;
-        for (int b = 1; b <= 4; ++b)
-        {
-            const uint8_t a = MinDegrees[b][ch], z = MaxDegrees[b][ch];
-            if (!((a == lo && z == hi) || (a == hi && z == lo)))
-                return false;
-        }
-    }
-    return any;
+    SendValue((char *)"mr1", MaxRangeNarrow ? 0 : 1);
+    SendValue((char *)"mr2", MaxRangeNarrow ? 1 : 0);
 }
-FLASHMEM uint8_t StickEndsChoice() // 1: 944 to 2055, 2: 500 to 2500, 0: neither
+FLASHMEM static void MaxRangeChosen(uint8_t narrow) // a choice touched: the question, then the change (or nothing)
 {
-    return StickEndsAllAt(STICK_END_LOW, STICK_END_HIGH) ? 1 : StickEndsAllAt(STICK_MAX_LOW, STICK_MAX_HIGH) ? 2 : 0;
-}
-FLASHMEM void StickEndsShow() // the choice as things are
-{
-    const uint8_t c = StickEndsChoice();
-    SendValue((char *)"se1", c == 1 ? 1 : 0);
-    SendValue((char *)"se2", c == 2 ? 1 : 0);
-}
-FLASHMEM static void StickEndsChosen(uint8_t want) // a choice touched (1 or 2): the question, then the change (or nothing)
-{
-    char names[64] = "";
-    for (int ch = 0; ch < CHANNELSUSED; ++ch)
-    {
-        if (InPutStick[ch] > 3)
-            continue;
-        char one[24];
-        snprintf(one, sizeof(one), "%s%.10s", names[0] ? ", " : "", ChannelNames[ch]);
-        if (strlen(names) + strlen(one) + 6 >= sizeof(names))
-        {
-            strcat(names, ", ...");
-            break;
-        }
-        strcat(names, one);
-    }
     char prompt[260];
-    if (!names[0])
+    if (narrow != MaxRangeNarrow) // (the one already chosen: nothing to do)
     {
-        snprintf(prompt, sizeof(prompt), "No channel here is driven by a stick.");
-        MsgBox(pSticksView, prompt);
-    }
-    else if (StickEndsChoice() != want) // (the one already chosen: nothing to do)
-    {
-        const char *ends = want == 1 ? "944 and 2055" : "500 and 2500";
-        if (want == 1)
-            snprintf(prompt, sizeof(prompt), "Set the stick channels' ends\r\n(%s)\r\nto %s, in all four banks?\r\n"
-                                             "Each curve keeps its shape: check\r\nthe model's rates after.", names, ends);
-        else
-            snprintf(prompt, sizeof(prompt), "Set the stick channels' ends\r\n(%s)\r\nto %s, in all four banks?\r\n"
-                                             "Rotorflight on CRSF reads only 1000 to\r\n2000: it gets there at about half stick.", names, ends);
-        if (GetConfirmation(pSticksView, prompt))
+        if (MotorEnabled)
         {
-            const uint8_t n = want == 1 ? StickEndsApply(STICK_END_LOW, STICK_END_HIGH) : StickEndsApply(STICK_MAX_LOW, STICK_MAX_HIGH);
-            SaveOneModel(ModelNumber);
-            snprintf(prompt, sizeof(prompt), "Done: %u %s at %s.%s", (unsigned)n, n == 1 ? "channel now ends" : "channels now end", ends,
-                     want == 1 ? "\r\nPush each stick to its ends: its number\r\nshould pass 1000 and 2000." : "");
+            snprintf(prompt, sizeof(prompt), "Switch the motor off first:\r\na new max range can move channels.");
             MsgBox(pSticksView, prompt);
         }
+        else
+        {
+            if (narrow)
+                snprintf(prompt, sizeof(prompt), "Set this model's max range to\r\n945 to 2055? Each point keeps its value;\r\n"
+                                                 "any beyond that range moves to its edge.\r\nCheck every channel before flying.");
+            else
+                snprintf(prompt, sizeof(prompt), "Set this model's max range to\r\n500 to 2500? Each point keeps its value:\r\n"
+                                                 "the curves can then go further.");
+            if (GetConfirmation(pSticksView, prompt))
+            {
+                MaxRangeConvert(narrow);
+                SaveOneModel(ModelNumber);
+                snprintf(prompt, sizeof(prompt), "Done: this model's max range is\r\nnow %s. The curve pages run\r\nfrom one end to the other.",
+                         narrow ? "945 to 2055" : "500 to 2500");
+                MsgBox(pSticksView, prompt);
+            }
+        }
     }
-    Force_ReDisplay(); // (the Channels page is back from the question: everything on it again, the choice as things now are)
+    Force_ReDisplay(); // (the Channels page is back from the question: everything on it again, the choice as it now is)
     CurrentView = STICKSVIEW;
     UpdateModelsNameEveryWhere();
     UpdateButtonLabels();
     ClearText();
 }
-FLASHMEM void StickEndsNarrowTapped() { StickEndsChosen(1); } // 219: "944 to 2055"
-FLASHMEM void StickEndsWideTapped() { StickEndsChosen(2); }   // 220: "500 to 2500"
+FLASHMEM void MaxRangeWideTapped() { MaxRangeChosen(0); }   // 219: "500 to 2500"
+FLASHMEM void MaxRangeNarrowTapped() { MaxRangeChosen(1); } // 220: "945 to 2055"
 /*********************************************************************************************************************************/
 void Force_ReDisplay()
 {
@@ -1779,6 +1732,7 @@ void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when
             MinDegrees[j][i] = 30;
         }
     }
+    MaxRangeNarrow = 0; // B113: 500 to 2500, as ever
 
     for (j = 0; j < MAXMIXES; ++j)
     {
@@ -2042,23 +1996,23 @@ FASTRUN void DisplayCurve()
     strcat(cmdBuffer, endMarker);
 
     // Top row values - sent in a single batch
-    sprintf(tempCmd, "n1.val=%d", IntoHigherRes(MinDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
+    sprintf(tempCmd, "n1.val=%d", CurveMicros(MinDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n2.val=%d", IntoHigherRes(MidLowDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
+    sprintf(tempCmd, "n2.val=%d", CurveMicros(MidLowDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n3.val=%d", IntoHigherRes(CentreDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
+    sprintf(tempCmd, "n3.val=%d", CurveMicros(CentreDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n4.val=%d", IntoHigherRes(MidHiDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
+    sprintf(tempCmd, "n4.val=%d", CurveMicros(MidHiDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n5.val=%d", IntoHigherRes(MaxDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
+    sprintf(tempCmd, "n5.val=%d", CurveMicros(MaxDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
@@ -3481,8 +3435,8 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     RatesTypePickCancel,     // 216 the picker's Cancel
     RatesCurvesTapped,       // 217 B107: the Rates page's "Curves ..." (page 83)
     RatesCurvesOk,           // 218 the curves page's OK: back to the Rates page
-    StickEndsNarrowTapped,   // 219 B111/B112: the Channels page's "Stick ends:" 944 to 2055
-    StickEndsWideTapped      // 220 B112: ... 500 to 2500
+    MaxRangeWideTapped,      // 219 B113: the Channels page's "Max range:" 500 to 2500 (B111/B112: the stick ends)
+    MaxRangeNarrowTapped     // 220 B113: ... 945 to 2055
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

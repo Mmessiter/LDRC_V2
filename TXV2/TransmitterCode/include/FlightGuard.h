@@ -217,6 +217,11 @@ uint32_t ControlFingerprint()
             Fp(0x5EC3);
             Fp(FrontSwitchUnused);
         }
+        if (MaxRangeNarrow) // B113: the narrow max range - only when chosen, after everything else
+        {
+            Fp(0x5EC4);
+            Fp(MaxRangeNarrow);
+        }
     }
     return FingerprintSoFar;
 }

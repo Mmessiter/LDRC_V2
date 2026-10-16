@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Host test of B109: the Channels page's numbers (each channel's microseconds beside its bar, screen 1.11.80), and B110:
-the curve page's Input, Output and points in microseconds (StickMicros, ShowGraphMicros, DisplayCurve), and B111/B112: the
-Channels page's "Stick ends:" 944 to 2055 or 500 to 2500 (StickEndsHalf/Apply/AllAt/Choice/Show/Chosen: asked first, each
-curve's shape kept, the choice worked out from the curves; new models unchanged).
+the curve page's Input, Output and points in microseconds (StickMicros, ShowGraphMicros, DisplayCurve), and B113: each
+model's max range, 500 to 2500 or 945 to 2055 (CurveMicros and the bars over it, the trims' clamp, MaxRangeConvert keeping
+every point's microseconds, the Channels page's question, the model's own extension after its checksummed sequence; the
+motor's safe value never moves; nothing changes on 500 to 2500).
 ShowChannelMicros and Force_ReDisplay (main.cpp) and RcPut (RF_Rates.h) are lifted out by name and compiled on the Mac
 over a fake of the screen's wire (its room) and the clock: every box filled on opening, whole commands only and never
 more than there is room for, a stick's noise not shown, a move shown at once, a small change once it has stood half a
@@ -10,7 +11,7 @@ second, no channel left waiting when room is short. Then the call site (the Chan
 when ESP32-board2 is here, the page file (the boxes by their buttons, the bars' middle where it was) and the screen's
 button alignment (the right-hand column's words start at the left).
    python3 dev/test_channel_us/test_channel_us.py"""
-import json, os, re, subprocess, sys, tempfile
+import glob, json, os, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TC = os.path.join(ROOT, 'TransmitterCode')
 def src(rel): return open(os.path.join(TC, rel), encoding='utf-8', errors='replace').read()
@@ -23,8 +24,36 @@ def lift(rel, head):
                     return '\n'.join(lines[i:j + 1]) + '\n'
     raise SystemExit('cannot lift %s from %s' % (head, rel))
 main = src('src/main.cpp')
-DEFS = '\n'.join(l for l in main.split('\n') if re.match(r'#define STICK_(END|MAX)_(LOW|HIGH) ', l)) + '\n'
-assert DEFS.count('#define') == 4, DEFS
+defs1 = src('include/1Definitions.h')
+DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|MODEL_EXT_OFFSET|TX_EXT_MAGIC|TX_EXT_MAGIC2) ', l)) + '\n'
+assert DEFS.count('#define') == 5, DEFS
+DEFS += '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (MAXMACROS|BYTESPERMACRO|MACROTRIGGERCHANNEL|MACROMOVECHANNEL|MACROSTARTTIME|MACRODURATION|MACROMOVETOPOSITION|MACRORUNNINGNOW) ', l)) + '\n'
+assert DEFS.count('#define') == 13, DEFS
+util = src('include/Utilities.h')
+INLINES = '\n'.join(l for l in util.split('\n') if re.match(r'inline uint16_t (RangeLo|RangeHi|CurveMicros)\(', l)) + '\n'
+assert INLINES.count('inline') == 3, INLINES
+TEENSY_MAP = r'''
+// Teensy 4's map() for whole numbers (cores/teensy4/wiring.h): it ROUNDS - (deg x range + 90) / 180 - unlike Arduino's
+#include <type_traits>
+template <class T, class A, class B, class C, class D>
+long map(T _x, A _in_min, B _in_max, C _out_min, D _out_max, typename std::enable_if<std::is_integral<T>::value>::type * = 0)
+{
+    long x = _x, in_min = _in_min, in_max = _in_max, out_min = _out_min, out_max = _out_max;
+    long in_range = in_max - in_min, out_range = out_max - out_min;
+    if (in_range == 0) return out_min + out_range / 2;
+    long num = (x - in_min) * out_range;
+    if (out_range >= 0) num += in_range / 2; else num -= in_range / 2;
+    long result = num / in_range + out_min;
+    if (out_range >= 0) { if (in_range * num < 0) return result - 1; } else { if (in_range * num >= 0) return result + 1; }
+    return result;
+}
+template <class T, class A, class B, class C, class D>
+T map(T x, A in_min, B in_max, C out_min, D out_max, typename std::enable_if<std::is_floating_point<T>::value>::type * = 0)
+{
+    return (x - (T)in_min) * ((T)out_max - (T)out_min) / ((T)in_max - (T)in_min) + (T)out_min;
+}
+'''
+CORE = os.path.expanduser('~/.platformio/packages/framework-arduinoteensy/cores/teensy4/wiring.h')
 statics = '\n'.join(l for l in main.split('\n') if re.match(r'static (uint16_t UsShown|uint32_t UsMovedAt|uint8_t UsNext|uint16_t GraphShown|uint32_t GraphMovedAt)\b', l))
 assert statics.count('\n') == 4, statics
 PROG = r'''
@@ -65,9 +94,23 @@ static void SaveOneModel(uint32_t) { ++saves; }
 static void SendValue(char *n, int v) { values[n] = v; }
 static void UpdateModelsNameEveryWhere() {}
 static void ClearText() {}
-void StickEndsShow();
-static void UpdateButtonLabels() { ++redraws; StickEndsShow(); }   // (the real one sends the labels, then the switch)
-''' + statics + '\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + lift('src/main.cpp', 'FLASHMEM static void StickEndsHalf(') + lift('src/main.cpp', 'FLASHMEM uint8_t StickEndsApply(') + lift('src/main.cpp', 'FLASHMEM static bool StickEndsAllAt(') + lift('src/main.cpp', 'FLASHMEM uint8_t StickEndsChoice()') + lift('src/main.cpp', 'FLASHMEM void StickEndsShow()') + lift('src/main.cpp', 'FLASHMEM static void StickEndsChosen(') + '\n'.join(l for l in main.split('\n') if l.startswith('FLASHMEM void StickEnds') and 'Tapped() {' in l) + '\n' + r'''
+static uint8_t MaxRangeNarrow = 0; static bool MotorEnabled = false;
+#define FASTRUN
+static uint16_t ChannelMidLow[CHANNELSUSED + 1], ChannelMidHi[CHANNELSUSED + 1], CurveDots[5], PreMixBuffer[CHANNELSUSED + 1];
+static uint8_t Exponential[5][CHANNELSUSED + 1], SubTrims[CHANNELSUSED + 1], Bank = 1;
+static int trimNow = 0;
+static int GetTrimAmount(uint8_t) { return trimNow; }
+static uint8_t MacrosBuffer[16][8]; static uint32_t MacroStartTime[16], MacroStopTime[16];
+typedef uint8_t u_int8_t;
+void MaxRangeShow();
+static void UpdateButtonLabels() { ++redraws; MaxRangeShow(); }   // (the real one sends the labels, then the choice)
+// the card: models.dat or a .MOD, a byte at a time, with the running checksum as SDcard.h keeps it
+static std::vector<uint8_t> card; static long FileCheckSum = 0; static bool DoingCheckSm = false; static int StartLocation = 0;
+struct FakeFile { size_t size() { return card.size(); } };
+static FakeFile ModelsFileNumber;
+static uint8_t SDRead8BITS(int a) { const uint8_t r = a < (int)card.size() ? card[a] : 255; if (!DoingCheckSm) FileCheckSum += r * (a + 1); return r; }
+static void SDUpdate8BITS(int a, uint8_t v) { if (!DoingCheckSm) FileCheckSum += v * (a + 1); if (a >= (int)card.size()) card.resize(a + 1, 0); card[a] = v; }
+''' + statics + '\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + TEENSY_MAP + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint16_t IntoHigherRes(uint8_t LowRes)') + lift('src/main.cpp', 'FLASHMEM static uint8_t RangeDegrees(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeConvert(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeShow()') + lift('src/main.cpp', 'FLASHMEM static void MaxRangeChosen(') + '\n'.join(l for l in main.split('\n') if l.startswith('FLASHMEM void MaxRange') and 'Tapped() {' in l) + '\n' + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') + lift('include/Utilities.h', 'FASTRUN float MapWithExponential(') + lift('src/main.cpp', 'uint16_t StraightLineInterpolation(') + lift('src/main.cpp', 'uint16_t ExponentialInterpolation(') + lift('src/main.cpp', 'void DoTrimsAndSubtrims()') + lift('include/macros.h', 'void StartMacro(uint8_t m)') + lift('include/macros.h', 'void RunMacro(uint8_t m)') + lift('include/macros.h', 'void StopMacro(uint8_t m)') + lift('include/macros.h', 'void ExecuteMacro()') + r'''
 // the commands sent since the last look: "us3=1500" each (anything else is a fault)
 static std::vector<std::string> sent() {
     std::vector<std::string> r; std::string &o = NEXTION.out; size_t p = 0;
@@ -164,68 +207,115 @@ int main() {
     NEXTION.room = 10; nowMs += 40; ShowGraphMicros(1700, 1800); CHECK(NEXTION.out.empty() && NEXTION.over == 0);   // no room: nothing, not half
     NEXTION.room = 1 << 30; nowMs += 40; ShowGraphMicros(1700, 1800);
     CHECK(NEXTION.out == std::string("Input.val=1700\xFF\xFF\xFFOutput.val=1800\xFF\xFF\xFF")); NEXTION.out.clear();
-    // ---- B111/B112: the Channels page's "Stick ends:" 944 to 2055 or 500 to 2500 ----
+    // ---- B113: each model's max range ----
     auto setCurve = [](int b, int ch, int a, int bb, int c, int d, int e) { MinDegrees[b][ch] = a; MidLowDegrees[b][ch] = bb; CentreDegrees[b][ch] = c; MidHiDegrees[b][ch] = d; MaxDegrees[b][ch] = e; };
     auto is = [](int b, int ch, int a, int bb, int c, int d, int e) { return MinDegrees[b][ch] == a && MidLowDegrees[b][ch] == bb && CentreDegrees[b][ch] == c && MidHiDegrees[b][ch] == d && MaxDegrees[b][ch] == e; };
-    auto marks = [](int a, int b) { return values["se1"] == a && values["se2"] == b; };
-    const char *nm[4] = {"Aileron", "Elevator", "Collective", "Rudder"};
-    for (int ch = 0; ch < CHANNELSUSED; ++ch) { InPutStick[ch] = (uint8_t)ch; snprintf(ChannelNames[ch], 11, "%s", ch < 4 ? nm[ch] : "Ch"); for (int b = 0; b <= 4; ++b) setCurve(b, ch, 30, 60, 90, 120, 150); }
-    // 11. new models' ends (833 and 2166): neither marked
-    CHECK(StickEndsChoice() == 0); StickEndsShow(); CHECK(marks(0, 0));
-    // 12. 944 to 2055: the four stick channels, all four banks, a straight line kept straight; the others and bank 0 untouched
-    confirmAnswer = true; StickEndsNarrowTapped();
-    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) CHECK(is(b, ch, 40, 65, 90, 115, 140));
-    for (int b = 1; b <= 4; ++b) for (int ch = 4; ch < CHANNELSUSED; ++ch) CHECK(is(b, ch, 30, 60, 90, 120, 150));
-    for (int ch = 0; ch < CHANNELSUSED; ++ch) CHECK(is(0, ch, 30, 60, 90, 120, 150));
-    CHECK(asks == 1 && saves == 1 && StickEndsChoice() == 1 && marks(1, 0));
-    CHECK(prompts.back().find("(Aileron, Elevator, Collective, Rudder)") != std::string::npos && prompts.back().find("to 944 and 2055, in all four banks?") != std::string::npos);
-    CHECK(msgs.back().find("Done: 4 channels now end at 944 and 2055.") == 0);
-    CHECK(CurrentView == STICKSVIEW && ShownBuffer[0] == 242 && redraws == 1);     // the page drawn again after the question
-    // 13. 500 to 2500: the widest, with Rotorflight's warning
-    StickEndsWideTapped();
-    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) CHECK(is(b, ch, 0, 45, 90, 135, 180));
-    CHECK(asks == 2 && saves == 2 && StickEndsChoice() == 2 && marks(0, 1));
-    CHECK(prompts.back().find("to 500 and 2500, in all four banks?") != std::string::npos && prompts.back().find("about half stick") != std::string::npos);
-    CHECK(msgs.back() == "Done: 4 channels now end at 500 and 2500.");
-    // 14. and back: exactly where it was
-    StickEndsNarrowTapped();
-    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) CHECK(is(b, ch, 40, 65, 90, 115, 140));
-    CHECK(StickEndsChoice() == 1 && saves == 3);
-    // 15. the one already chosen: nothing asked, nothing changed, nothing saved, the marks put right (the touch had changed them)
-    values["se1"] = 0; values["se2"] = 1; StickEndsNarrowTapped();
-    CHECK(asks == 3 && saves == 3 && marks(1, 0));
-    // 16. No: nothing changed, nothing saved, the marks as things are
-    confirmAnswer = false; StickEndsWideTapped();
-    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) CHECK(is(b, ch, 40, 65, 90, 115, 140));
-    CHECK(asks == 4 && saves == 3 && marks(1, 0));
-    confirmAnswer = true;
-    // 17. shapes: the Havok's aileron (151), a curve the wrong way round, a centre off the middle, a centre past the ends, a flat half
-    setCurve(1, 0, 30, 60, 90, 120, 151); setCurve(1, 1, 150, 120, 90, 60, 30); setCurve(1, 2, 30, 65, 100, 130, 160); setCurve(1, 3, 30, 60, 145, 150, 150);
-    StickEndsApply(STICK_END_LOW, STICK_END_HIGH);
-    CHECK(is(1, 0, 40, 65, 90, 115, 140));                              // 90 + 30 x 50/61 = 114.6
-    CHECK(is(1, 1, 140, 115, 90, 65, 40));                              // the wrong way round stays so
-    CHECK(is(1, 2, 40, 70, 100, 120, 140));                             // each half about its own centre: 100 - 35 x 60/70, 100 + 30 x 40/60
-    CHECK(is(1, 3, 30, 60, 145, 150, 150));                             // a centre at or past 140: left alone
-    StickEndsApply(STICK_MAX_LOW, STICK_MAX_HIGH);
-    CHECK(is(1, 1, 180, 135, 90, 45, 0) && is(1, 3, 0, 38, 145, 180, 180));   // the widest: still the wrong way round; a centre at 145 stretched both ways (145 - 85 x 145/115)
-    setCurve(2, 0, 30, 60, 90, 90, 90); StickEndsApply(STICK_END_LOW, STICK_END_HIGH);
-    CHECK(is(2, 0, 40, 65, 90, 90, 90));                                // a flat half: left alone, the other half done
-    // 18. a choice means every stick channel in every bank: one bank elsewhere is neither, and a touch puts all of them there
-    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) setCurve(b, ch, 40, 65, 90, 115, 140);
-    setCurve(1, 1, 140, 115, 90, 65, 40);                               // (the wrong way round counts)
-    CHECK(StickEndsChoice() == 1);
-    setCurve(3, 2, 30, 60, 90, 120, 150); CHECK(StickEndsChoice() == 0);
-    StickEndsNarrowTapped(); CHECK(StickEndsChoice() == 1 && is(3, 2, 40, 65, 90, 115, 140) && is(1, 1, 140, 115, 90, 65, 40));
-    // 19. no stick channel: says so, changes nothing, asks nothing, marks neither
-    for (int ch = 0; ch < CHANNELSUSED; ++ch) InPutStick[ch] = (uint8_t)(4 + ch % 12);
-    const int a0 = asks, s0 = saves; StickEndsWideTapped();
-    CHECK(asks == a0 && saves == s0 && msgs.back() == "No channel here is driven by a stick." && StickEndsChoice() == 0 && marks(0, 0));
-    // 20. a stick may drive any channel (a switch on 1, the throttle stick on 6)
-    for (int ch = 0; ch < CHANNELSUSED; ++ch) { InPutStick[ch] = 9; for (int b = 1; b <= 4; ++b) setCurve(b, ch, 30, 60, 90, 120, 150); }
-    InPutStick[5] = 2; InPutStick[0] = 8;
-    StickEndsNarrowTapped();
-    CHECK(is(1, 5, 40, 65, 90, 115, 140) && is(4, 5, 40, 65, 90, 115, 140) && is(1, 0, 30, 60, 90, 120, 150));
-    CHECK(prompts.back().find("(Ch)") != std::string::npos && msgs.back().find("Done: 1 channel now ends at 944 and 2055.") == 0);
+    auto marks = [](int a, int b) { return values["mr1"] == a && values["mr2"] == b; };
+    auto pts = [](int b, int ch, int k) -> uint8_t & { uint8_t *p[5] = {&MinDegrees[b][ch], &MidLowDegrees[b][ch], &CentreDegrees[b][ch], &MidHiDegrees[b][ch], &MaxDegrees[b][ch]}; return *p[k]; };
+    // 21. 500 to 2500: exactly as before (a curve's microseconds, the bars, the ends)
+    MaxRangeNarrow = 0;
+    for (int d = 0; d <= 180; ++d) CHECK(CurveMicros((uint8_t)d) == IntoHigherRes((uint8_t)d));
+    for (int us = 500; us <= 2500; ++us) CHECK(IntoLowerRes((uint16_t)us) == (uint8_t)map(us, MINMICROS, MAXMICROS, 0, 100));
+    CHECK(RangeLo() == 500 && RangeHi() == 2500 && CurveMicros(30) == 833 && CurveMicros(150) == 2167);   // (Teensy rounds: 150 deg is 2167)
+    // 22. 945 to 2055: its ends and middle, rising all the way; the bars span it and stop at its ends
+    MaxRangeNarrow = 1;
+    CHECK(CurveMicros(0) == 945 && CurveMicros(90) == 1500 && CurveMicros(180) == 2055);
+    for (int d = 1; d <= 180; ++d) CHECK(CurveMicros((uint8_t)d) > CurveMicros((uint8_t)(d - 1)));
+    CHECK(IntoLowerRes(945) == 0 && IntoLowerRes(1500) == 50 && IntoLowerRes(2055) == 100 && IntoLowerRes(833) == 0 && IntoLowerRes(2500) == 100);
+    CHECK(IntoHigherRes(30) == 833);                                  // the motor's safe value never moves with the range
+    // 23. a change keeps every point's microseconds where the new range has them; beyond it, the edge
+    MaxRangeNarrow = 0;
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) for (int b = 0; b <= 4; ++b) setCurve(b, ch, 30, 60, 90, 120, 150);
+    setCurve(2, 3, 0, 45, 90, 135, 180); setCurve(3, 5, 150, 120, 90, 60, 30); setCurve(4, 9, 70, 80, 95, 100, 110);
+    static uint16_t before[5][CHANNELSUSED][5];
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < CHANNELSUSED; ++ch) for (int k = 0; k < 5; ++k) before[b][ch][k] = CurveMicros(pts(b, ch, k));
+    MaxRangeConvert(1);
+    CHECK(MaxRangeNarrow == 1);
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < CHANNELSUSED; ++ch) for (int k = 0; k < 5; ++k)
+    {
+        const int was = before[b][ch][k], now = CurveMicros(pts(b, ch, k));
+        if (was < 945) CHECK(now == 945); else if (was > 2055) CHECK(now == 2055); else CHECK(abs(now - was) <= 3);
+    }
+    CHECK(is(1, 0, 0, 36, 90, 144, 180));                               // 833 1167 1500 1833 2167 -> 945 1167 1500 1833 2055
+    CHECK(is(3, 5, 180, 144, 90, 36, 0) && is(2, 3, 0, 9, 90, 171, 180));   // (500 1000 1500 2000 2500 -> 945 1000 1500 2000 2055)
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) CHECK(is(0, ch, 30, 60, 90, 120, 150));   // (bank 0 is not a bank)
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < CHANNELSUSED; ++ch) for (int k = 0; k < 5; ++k) before[b][ch][k] = CurveMicros(pts(b, ch, k));
+    MaxRangeConvert(0);                                                 // and back: kept again, to half a degree of the wider range
+    CHECK(MaxRangeNarrow == 0);
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < CHANNELSUSED; ++ch) for (int k = 0; k < 5; ++k) CHECK(abs((int)CurveMicros(pts(b, ch, k)) - (int)before[b][ch][k]) <= 6);
+    // 24. the Channels page's choice: asked, changed, saved, marked
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) for (int b = 1; b <= 4; ++b) setCurve(b, ch, 30, 60, 90, 120, 150);
+    confirmAnswer = true; MotorEnabled = false; const int a0 = asks, s0 = saves;
+    MaxRangeShow(); CHECK(marks(1, 0));
+    MaxRangeNarrowTapped();
+    CHECK(MaxRangeNarrow == 1 && asks == a0 + 1 && saves == s0 + 1 && marks(0, 1) && is(1, 0, 0, 36, 90, 144, 180));
+    CHECK(prompts.back().find("945 to 2055? Each point keeps its value;") != std::string::npos && prompts.back().find("Check every channel before flying.") != std::string::npos);
+    CHECK(msgs.back().find("Done: this model's max range is\r\nnow 945 to 2055.") == 0);
+    CHECK(CurrentView == STICKSVIEW && ShownBuffer[0] == 242);          // the page drawn again after the question
+    values["mr1"] = 1; values["mr2"] = 0; MaxRangeNarrowTapped();       // the one already chosen: nothing asked, the marks put right
+    CHECK(asks == a0 + 1 && saves == s0 + 1 && marks(0, 1));
+    confirmAnswer = false; MaxRangeWideTapped();                        // No: nothing
+    CHECK(MaxRangeNarrow == 1 && asks == a0 + 2 && saves == s0 + 1 && marks(0, 1) && is(1, 0, 0, 36, 90, 144, 180));
+    confirmAnswer = true; MotorEnabled = true; MaxRangeWideTapped();    // the motor live: refused, nothing asked
+    CHECK(MaxRangeNarrow == 1 && asks == a0 + 2 && msgs.back().find("Switch the motor off first") == 0);
+    MotorEnabled = false; MaxRangeWideTapped();
+    CHECK(MaxRangeNarrow == 0 && saves == s0 + 2 && marks(1, 0) && prompts.back().find("500 to 2500? Each point keeps its value:") != std::string::npos);
+    CHECK(abs((int)CurveMicros(MinDegrees[1][0]) - 945) <= 6 && abs((int)CurveMicros(MaxDegrees[1][0]) - 2055) <= 6);
+    // 25. the model's own extension: after the checksummed sequence, outside its checksum
+    card.assign(2100, 0); StartLocation = 0; FileCheckSum = 0;
+    MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card.size() == 2100);                  // never set: the file not lengthened
+    MaxRangeNarrow = 1; SaveModelExtension();
+    CHECK(card.size() == MODEL_EXT_OFFSET + 3 && card[MODEL_EXT_OFFSET] == 0x5A && card[MODEL_EXT_OFFSET + 1] == 0xC3 && card[MODEL_EXT_OFFSET + 2] == 1 && FileCheckSum == 0);
+    MaxRangeNarrow = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 1 && FileCheckSum == 0);
+    MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card[MODEL_EXT_OFFSET + 2] == 0);    // there once: kept true
+    MaxRangeNarrow = 1; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);
+    card[MODEL_EXT_OFFSET + 2] = 1; card[MODEL_EXT_OFFSET + 1] = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);   // one marker wrong: 500 to 2500
+    card[MODEL_EXT_OFFSET + 1] = 0xC3; card[MODEL_EXT_OFFSET + 2] = 7; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);  // a value not ours: 500 to 2500
+    card.assign(100, 0); ReadModelExtension(); CHECK(MaxRangeNarrow == 0);   // a short file: read past its end (255s), 500 to 2500
+    card.assign(512 + 3 * 3072, 0); StartLocation = 512 + 2 * 3072; MaxRangeNarrow = 1; SaveModelExtension();   // model 3 of models.dat
+    CHECK(card.size() == 512 + 3 * 3072 && card[StartLocation + MODEL_EXT_OFFSET] == 0x5A && card[StartLocation + MODEL_EXT_OFFSET + 2] == 1);
+    // 26. the curves themselves (the flying path): a curve to the top and bottom ends at the range's ends; the middle is 1500
+    ChannelMin[0] = 300; ChannelMidLow[0] = 1150; ChannelCentre[0] = 2000; ChannelMidHi[0] = 2950; ChannelMax[0] = 3900;
+    const uint8_t full[5] = {0, 45, 90, 135, 180}; for (int k = 0; k < 5; ++k) CurveDots[k] = full[k];
+    Exponential[1][0] = 80;                                             // (the curve page's "30")
+    for (int narrow = 0; narrow <= 1; ++narrow)
+    {
+        MaxRangeNarrow = (uint8_t)narrow; const int lo = narrow ? 945 : 500, hi = narrow ? 2055 : 2500;
+        CHECK(StraightLineInterpolation(300, 0, 0) == lo && StraightLineInterpolation(2000, 0, 0) == 1500 && StraightLineInterpolation(3900, 0, 0) == hi);
+        CHECK(ExponentialInterpolation(300, 0, 0) == lo && ExponentialInterpolation(2000, 0, 0) == 1500 && ExponentialInterpolation(3900, 0, 0) == hi);
+        int last = 0; bool rising = true;
+        for (int raw = 300; raw <= 3900; raw += 25) { const int v = ExponentialInterpolation((uint16_t)raw, 0, 0); if (v < last) rising = false; last = v; }
+        CHECK(rising);
+    }
+    // ... and on 500 to 2500, a new model's curve gives what it always gave: 833 and 2167 at the ends (IntoHigherRes's numbers)
+    MaxRangeNarrow = 0; const uint8_t dflt[5] = {30, 60, 90, 120, 150}; for (int k = 0; k < 5; ++k) CurveDots[k] = dflt[k];
+    CHECK(StraightLineInterpolation(300, 0, 0) == IntoHigherRes(30) && StraightLineInterpolation(3900, 0, 0) == IntoHigherRes(150) && StraightLineInterpolation(2950, 0, 0) == IntoHigherRes(120));
+    // 27. the trims' clamp: every channel inside the range, whatever trims and subtrims add
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) { InPutStick[ch] = 0; SubTrims[ch] = 127; }
+    MaxRangeNarrow = 1; SendBuffer[0] = 2055; SendBuffer[1] = 945; SendBuffer[2] = 1600; trimNow = 40; DoTrimsAndSubtrims();
+    CHECK(SendBuffer[0] == 2055 && SendBuffer[1] == 985 && SendBuffer[2] == 1640 && PreMixBuffer[0] == 2055);
+    SendBuffer[1] = 945; trimNow = -40; DoTrimsAndSubtrims(); CHECK(SendBuffer[1] == 945);
+    MaxRangeNarrow = 0; SendBuffer[0] = 2500; SendBuffer[1] = 945; trimNow = 40; DoTrimsAndSubtrims();
+    CHECK(SendBuffer[0] == 2500 && SendBuffer[1] == 985);
+    SendBuffer[1] = 520; trimNow = -40; DoTrimsAndSubtrims(); CHECK(SendBuffer[1] == 500);
+    trimNow = 0;
+    // 28. macros: a trigger at the top of the range starts one (2055 when narrow: it waited for 2499 before); its place is a point of the range
+    memset(MacrosBuffer, 0, sizeof(MacrosBuffer));
+    MacrosBuffer[0][MACROTRIGGERCHANNEL] = 8; MacrosBuffer[0][MACROMOVECHANNEL] = 3; MacrosBuffer[0][MACROMOVETOPOSITION] = 0; MacrosBuffer[0][MACRODURATION] = 50;
+    for (int narrow = 0; narrow <= 1; ++narrow)
+    {
+        MaxRangeNarrow = (uint8_t)narrow; MacrosBuffer[0][MACRORUNNINGNOW] = 0;
+        SendBuffer[7] = (uint16_t)(RangeHi() - 2); SendBuffer[2] = 1500; ExecuteMacro(); CHECK(MacrosBuffer[0][MACRORUNNINGNOW] == 0 && SendBuffer[2] == 1500);
+        SendBuffer[7] = RangeHi(); ExecuteMacro(); CHECK(MacrosBuffer[0][MACRORUNNINGNOW] != 0 && SendBuffer[2] == RangeLo());
+        SendBuffer[7] = 1500; ExecuteMacro(); CHECK(MacrosBuffer[0][MACRORUNNINGNOW] == 0);
+    }
+    // a range change carries the macros' places with it, as it does the curves' points
+    MaxRangeNarrow = 0; MacrosBuffer[1][MACROMOVETOPOSITION] = 60; MacrosBuffer[2][MACROMOVETOPOSITION] = 180; MacrosBuffer[3][MACROMOVETOPOSITION] = 90;
+    MaxRangeConvert(1);
+    CHECK(MacrosBuffer[0][MACROMOVETOPOSITION] == 0 && MacrosBuffer[1][MACROMOVETOPOSITION] == 36 && MacrosBuffer[2][MACROMOVETOPOSITION] == 180 && MacrosBuffer[3][MACROMOVETOPOSITION] == 90);
+    MaxRangeConvert(0);
+    CHECK(abs((int)CurveMicros(MacrosBuffer[1][MACROMOVETOPOSITION]) - 1167) <= 6);
+    MaxRangeNarrow = 0;
     printf("%d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -254,26 +344,50 @@ check('ShowGraphMicros(InputUs, SendBuffer[ChanneltoSet - 1]);' in sp, 'Output i
 check('map(SendBuffer' not in sp and 'SendValue(ChannelInput' not in sp and 'SendValue(ChannelOutput' not in sp, 'no percentages left on the curve page')
 dc = lift('src/main.cpp', 'FASTRUN void DisplayCurve()')
 for n, deg in (('n1', 'MinDegrees'), ('n2', 'MidLowDegrees'), ('n3', 'CentreDegrees'), ('n4', 'MidHiDegrees'), ('n5', 'MaxDegrees')):
-    check('sprintf(tempCmd, "%s.val=%%d", IntoHigherRes(%s[Bank][ChanneltoSet - 1]));' % (n, deg) in dc, '%s: the point in microseconds' % n)
+    check('sprintf(tempCmd, "%s.val=%%d", CurveMicros(%s[Bank][ChanneltoSet - 1]));' % (n, deg) in dc, '%s: the point in microseconds (B113: in the max range)' % n)
 check('DegsToPercent' not in dc, 'no point in per cent')
 dcs = lift('src/main.cpp', 'FASTRUN void DisplayCurveAndServoPos()')
 check(re.search(r'GraphShown\[i\] = 0;', dcs) is not None and dcs.index('GraphShown') < dcs.index('ShowServoPos();'), 'the curve page opened: Input and Output shown afresh')
-# B111: a user option, not automatic - new models keep 833 and 2166
+# B113: each model's max range
 sdv = lift('src/main.cpp', 'void SetDefaultValues(bool Calibrating)')
-check(all(x in sdv for x in ('MaxDegrees[j][i] = 150;', 'MidHiDegrees[j][i] = 120;', 'CentreDegrees[j][i] = 90;', 'MidLowDegrees[j][i] = 60;', 'MinDegrees[j][i] = 30;')), 'new models keep their ends (833 and 2166): the narrow ends are only ever the pilot\'s choice')
-check(re.search(r'RatesCurvesOk,\s*// 218[^\n]*\n\s*StickEndsNarrowTapped,\s*// 219[^\n]*\n\s*StickEndsWideTapped\s*// 220', main) is not None and '#define LASTFUNCTION1 221' in main, 'codes 219 and 220 are the two choices')
+check(all(x in sdv for x in ('MaxDegrees[j][i] = 150;', 'MinDegrees[j][i] = 30;', 'MaxRangeNarrow = 0;')), 'a new model: 833 and 2167 ends, 500 to 2500')
+check(main.count('CurveMicros(CurveDots[') == 19 and 'IntoHigherRes(CurveDots[' not in main, 'every curve point through CurveMicros (19)')
+bw = src('include/BuddyWireless.h')
+check(main.count('IntoHigherRes(MotorChannelZero)') == 1 and bw.count('IntoHigherRes(MotorChannelZero)') == 2, "the motor's safe value stays 500 to 2500 (it must never move with the range)")
+dts = lift('src/main.cpp', 'void DoTrimsAndSubtrims()')
+check('constrain(TrimmedValue, (int)RangeLo(), (int)RangeHi())' in dts, "every channel ends inside the range (the trims' clamp)")
+mx = src('include/Mixes.h')
+check(mx.count('CurveMicros(MinDegrees[Bank][(Mixes[MixNumber][M_SlaveChannel]) - 1])') == 1 and mx.count('CurveMicros(MaxDegrees[Bank][(Mixes[MixNumber][M_SlaveChannel]) - 1])') == 1, "a mix stops at its channel's curve ends in the range")
+dc2 = lift('src/main.cpp', 'FASTRUN void DisplayCurve()')
+check(dc2.count('CurveMicros(') == 5 and 'IntoHigherRes' not in dc2, "the curve page's points in the range")
+fg = src('include/FlightGuard.h')
+blk2 = fg[fg.index('if (FrontSwitchUnused) // B38'):fg.index('return FingerprintSoFar;')]
+check(re.search(r'if \(MaxRangeNarrow\)[^\n]*\n\s*\{\s*Fp\(0x5EC4\);\s*Fp\(MaxRangeNarrow\);\s*\}\s*\}\s*$', blk2) is not None, 'the fingerprint: the range folded in last, only when narrow (an update is compared as before)')
+rom = src('include/SDcard.h')
+r1 = rom[rom.index('bool ReadOneModel(uint32_t Mnum)'):]
+check(r1.index('MaxRangeNarrow = 0;') < r1.index('ModelDefined = SDRead8BITS') and 'ReadCheckSum32();\n    ReadModelExtension();' in r1, 'a model read: 500 to 2500 until its own extension says otherwise')
+check('SaveCheckSum32(); // Save the Model parametres checksm\n    SaveModelExtension();' in rom, 'a model saved: its extension after the checksum')
+mods = glob.glob(os.path.join(TC, 'SD Examples', '*', 'mod', '*.MOD'))
+offs = int(re.search(r'#define MODEL_EXT_OFFSET (\d+)', defs1).group(1))
+longest = max(os.path.getsize(m) for m in mods) if mods else 0
+check(mods and longest + 500 < offs and offs + 3 <= 3 * 1024, 'the extension lies clear past the sequence (%d bytes the longest example) and inside the record' % longest)
+check(re.search(r'RatesCurvesOk,\s*// 218[^\n]*\n\s*MaxRangeWideTapped,\s*// 219[^\n]*\n\s*MaxRangeNarrowTapped\s*// 220', main) is not None and '#define LASTFUNCTION1 221' in main, 'codes 219 and 220 are the two choices')
 tb = main[main.index('void (*NumberedFunctions1[LASTFUNCTION1])(){'):]
 tb = re.sub(r'//[^\n]*', '', tb[tb.index('){') + 2:tb.index('};')])
 check(len([e for e in tb.split(',') if e.strip()]) == int(re.search(r'#define LASTFUNCTION1 (\d+)', main).group(1)), 'the table has exactly LASTFUNCTION1 entries (none missing: a missing one would be called as nothing)')
 ubl = lift('src/main.cpp', 'void UpdateButtonLabels()')
 blk = ubl[ubl.index('if (CurrentView == STICKSVIEW)'):ubl.index('if (CurrentView == FAILSAFE_VIEW)')]
-check(blk.count('StickEndsShow();') == 1 and blk.index('StickEndsShow();') > blk.index('SendText(ChannelLabels[i], LabelText);'), 'the switch shown whenever the Channels page\'s labels are')
-def imap(x, a, b, c, d): return int((x - a) * (d - c) / (b - a)) + c   # Arduino map (whole numbers, toward 0)
-check([imap(dg, 0, 180, 500, 2500) for dg in (40, 140, 0, 180, 30, 150)] == [944, 2055, 500, 2500, 833, 2166], 'the degrees are the microseconds the words say')
+check(blk.count('MaxRangeShow();') == 1 and blk.index('MaxRangeShow();') > blk.index('SendText(ChannelLabels[i], LabelText);'), "the choice shown whenever the Channels page's labels are")
+check('StickEnds' not in main and 'STICK_END' not in main, "B111/B112's stick ends are gone")
+adj = lift('include/RF_Adjust.h', 'FLASHMEM static int AdjTxBankUs(')
+check('if (v < (int)RangeLo()) v = RangeLo();' in adj and 'if (v > (int)RangeHi()) v = RangeHi();' in adj, "the Adjustments page predicts each bank's value inside the range, as it is sent")
+if os.path.exists(CORE):
+    core = open(CORE).read()
+    check('num += in_range / 2;' in core and 'if (in_range == 0) return out_min + out_range / 2;' in core, "the test's map() is the Teensy core's (rounding)")
 help_ch = open(os.path.join(ROOT, 'Help files for SD', 'CHANNELS.TXT')).read()
-check('STICK ENDS:' in help_ch and '944 to 2055' in help_ch and '500 to 2500' in help_ch and all(len(l) <= 66 for l in help_ch.split('\n')), 'CHANNELS.TXT: the two choices')
+check('MAX RANGE:' in help_ch and '945 to 2055' in help_ch and '500 to 2500' in help_ch and 'STICK ENDS' not in help_ch and all(len(l) <= 66 for l in help_ch.split('\n')), 'CHANNELS.TXT: the max range')
 help_c = open(os.path.join(ROOT, 'Help files for SD', 'CURVES.TXT')).read()
-check("'Input'" in help_c and "'Output'" in help_c and 'microseconds' in help_c and '-100 to 100' not in help_c, 'CURVES.TXT speaks of microseconds')
+check("'Input'" in help_c and "'Output'" in help_c and 'microseconds' in help_c and '-100 to 100' not in help_c and "model's max range" in help_c, 'CURVES.TXT speaks of microseconds and the max range')
 check(all(len(l) <= 66 for l in help_c.split('\n')), 'CURVES.TXT lines no longer than its longest before (66)')
 # the page and the screen (ESP32-board2 beside TXV1B)
 EMU = os.path.join(ROOT, '..', 'ESP32-board2', 'board4', 'nextion-emulator')
@@ -310,13 +424,13 @@ if os.path.exists(P):
         check(abs((u['y'] + u['h'] / 2) - (bar['y'] + bar['h'] / 2)) <= 1, 'us%d: centred on its bar' % i)
     for i in range(1, 17): check(by['Sch%d' % i]['a']['xcen'] == (2 if i % 2 else 0), 'Sch%d: words to the %s' % (i, 'right' if i % 2 else 'left'))
     okb = by['b10']
-    for k, (code, txt) in enumerate(((219, '944 to 2055'), (220, '500 to 2500')), start=1):
-        r, w = by.get('se%d' % k), by.get('lse%d' % k)
-        ev = 'se1.val=%d\nse2.val=%d\nva0.val=%d<<8\nprint va0.val' % (k == 1, k == 2, code)
-        check(r is not None and r['t'] == 'radio' and r['g'] == 'g' and r['ev'].get('r') == ev, 'se%d: a radio button, global, marks itself and sends %d' % (k, code))
+    for k, (code, txt) in enumerate(((219, '500 to 2500'), (220, '945 to 2055')), start=1):
+        r, w = by.get('mr%d' % k), by.get('lmr%d' % k)
+        ev = 'mr1.val=%d\nmr2.val=%d\nva0.val=%d<<8\nprint va0.val' % (k == 1, k == 2, code)
+        check(r is not None and r['t'] == 'radio' and r['g'] == 'g' and r['ev'].get('r') == ev, 'mr%d: a radio button, global, marks itself and sends %d' % (k, code))
         check(w is not None and w['txt'] == txt and w['ev'].get('r') == ev and width(w['font'], txt) <= w['w'], 'its words, the same touch')
-    row = [by[n] for n in ('lse', 'se1', 'lse1', 'se2', 'lse2') if n in by]
-    check(len(row) == 5 and by['lse']['txt'] == 'Stick ends:', '"Stick ends:" and its two choices')
+    row = [by[n] for n in ('lmr', 'mr1', 'lmr1', 'mr2', 'lmr2') if n in by]
+    check(len(row) == 5 and by['lmr']['txt'] == 'Max range:' and not any(n in by for n in ('se1', 'se2', 'lse1', 'lse2', 'lse', 'se')), '"Max range:" and its two choices (the stick ends gone)')
     for i2, a2 in enumerate(row):
         check(a2['y'] >= by['Sch15']['y'] + by['Sch15']['h'] and not overlap(a2, okb) and order.index(a2['n']) > order.index('card'), '%s: bottom left, clear of OK, over the card' % a2['n'])
         for b2 in row[i2 + 1:]: check(not overlap(a2, b2), '%s clear of %s' % (a2['n'], b2['n']))

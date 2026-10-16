@@ -196,7 +196,7 @@ static bool safetyOff = false, safetyDefined = false, justNow = false, radiosOff
 static bool SafetyIsOff() { return safetyOff; } static bool SafetyIsDefined() { return safetyDefined; } static bool ModelJustNow() { return justNow; } static bool RadiosMustBeOff() { return radiosOff; }
 // prototypes of what is lifted
 void RerouteOutputs(); uint8_t SourceOfOutput(uint8_t out); int CheckRange(int v, int min, int max); void UpdateButtonLabels(); void CheckMotorOff(); void GetBank();
-static void StickEndsShow() {} // (B111: the Channels page's switch, tested in dev/test_channel_us)
+static void MaxRangeShow() {} // (B113: the Channels page's max range, tested in dev/test_channel_us)
 uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber); void ReadAutoAndMotorSwitch(); void ReadSafetySwitch(); void ReadDualRateSwitch();
 void ShowMotorTimer(); void ShowMotor(); void MotorEnabledHasChanged(); void TrimsToSubtrim(); int GetTrimAmount(uint8_t InputChannel); void ResetAllTrims();
 void MixInputs(); void ReadDualRatesValues(); void CheckServoSpeeds(); void CheckServoType(); void ReadMixValues(); void ReceiveLotsofData();

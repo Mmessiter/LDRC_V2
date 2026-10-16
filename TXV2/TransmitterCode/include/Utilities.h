@@ -914,9 +914,18 @@ uint8_t IntoDegrees(uint16_t HiRes) // convert to lower resolution for screen di
     return (map(HiRes, MINMICROS, MAXMICROS, 0, 180));
 }
 /*********************************************************************************************************************************/
-uint8_t IntoLowerRes(uint16_t HiRes) // convert to lower resolution for screen display
+// B113 (Malcolm, 17 Oct 2026: "We need to control MAX RANGE, but this doesn't necessarily mean stick ends because the
+// curve might not go to the top and bottom of the available range"): each model has a max range, 500 to 2500 or 945 to
+// 2055 (MaxRangeNarrow, set on the Channels page). A curve's 0 .. 180 degrees span it - the curve page's bottom to top -
+// so every curve, mix limit and curve-page number goes through CurveMicros, and every channel ends inside it (the trims'
+// clamp, main.cpp DoTrimsAndSubtrims). IntoHigherRes stays 500 to 2500 for what is NOT a curve: the motor's safe value
+// (MotorChannelZero) must never move with the range.
+inline uint16_t RangeLo() { return MaxRangeNarrow ? RANGE_NARROW_LO : MINMICROS; }
+inline uint16_t RangeHi() { return MaxRangeNarrow ? RANGE_NARROW_HI : MAXMICROS; }
+inline uint16_t CurveMicros(uint8_t deg) { return map(deg, 0, 180, RangeLo(), RangeHi()); } // (500 to 2500: exactly IntoHigherRes)
+uint8_t IntoLowerRes(uint16_t HiRes) // convert to lower resolution for screen display (B113: a bar spans this model's max range)
 {
-    return (map(HiRes, MINMICROS, MAXMICROS, 0, 100));
+    return (uint8_t)constrain(map(HiRes, RangeLo(), RangeHi(), 0, 100), 0, 100);
 }
 
 /*********************************************************************************************************************************/

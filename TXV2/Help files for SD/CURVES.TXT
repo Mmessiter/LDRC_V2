@@ -12,7 +12,8 @@ banks when you press 'OK'.|
 Each bank has its own curve.|
 Move the bank switch to change another bank's curve.||
 THE NUMBERS (microseconds):|
-Along the top: each point's height, 500 to 2500 (middle 1500).|
+Along the top: each point's height (middle 1500). The graph's|
+bottom and top are the model's max range (on the Channels page).|
 The upright line is where the stick is now.|
 'Input': where the stick is, on the usual 1000 to 2000 scale.|
 'Output': what this channel sends now, with rates, trims and|
