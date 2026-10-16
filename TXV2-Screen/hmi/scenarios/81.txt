@@ -2,6 +2,7 @@
 # slider moved), EzShowSliders (s0..s4: 0..20 / 0..12, sw, the agility rows hidden for an uncovered rates type),
 # EzOpeningNote / EzLifted (note), EzBusy (busy). B105: the numbers box while a finger is on a slider - the slider's
 # press script (the box in the row's shade, emptied, shown), then EzLive (lv0-lv4); its release script hides it.
+# 1.11.77: the box and the note at the card's top, above the sliders (under them the finger hid it).
 Screen_Background=8
 @model 1
 page EasyView

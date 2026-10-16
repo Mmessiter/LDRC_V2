@@ -6,8 +6,8 @@ It needs the model connected, the safety on, and a Version 2|
 receiver with Bluetooth. It tunes the bank your bank switch is|
 on, and the rates your rates switch is on, as the other pages|
 do. If the flight controller is on another bank, it says so.||
-THE NUMBERS UNDER THE SLIDERS:|
-While your finger is on a slider, a box under the sliders|
+THE NUMBERS ABOVE THE SLIDERS:|
+While your finger is on a slider, a box above the sliders|
 shows the numbers that slider moves: what the model has now|
 -> what 'Save' would write. One number: 'Save' leaves it.|
 The box goes when you lift your finger.||

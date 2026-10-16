@@ -17,8 +17,9 @@
 // model: as on the phone, the backup is the sliders' centre, not a stand-in for the model.
 // B105 (Malcolm, 16 Oct: "a temporary display of affected pid etc values ... appear when finger lands, update as it slides,
 // vanish on finger lift"; and the spool-up switch "to the bottom of the options"): while a finger is on a slider, a box
-// under the rows shows the numbers that slider moves, now -> what Save would write (EzLive). Each slider's word carries
-// its place, so the numbers keep up with the finger without a "get" (55 ms) each time.
+// above the rows (screen 1.11.77: under them the finger hid it) shows the numbers that slider moves, now -> what Save
+// would write (EzLive). Each slider's word carries its place, so the numbers keep up with the finger without a "get"
+// (55 ms) each time.
 #include <Arduino.h>
 #include "1Definitions.h"
 #ifndef RF_EASY_H
@@ -186,7 +187,7 @@ FLASHMEM static void EzBusy(const char *msg)
     if (msg && *msg) SendText((char *)"busy", (char *)msg);
 }
 // ---------------------------------------------------------------- B105: the numbers while a finger is on a slider
-// The box under the rows (lvb, the slider's shade) holds five columns: lv0 the names, lv1-lv4 the numbers - what the flight
+// The box above the rows (lvb, the slider's shade) holds five columns: lv0 the names, lv1-lv4 the numbers - what the flight
 // controller holds now -> what Save would write, one number where Save would leave it - in the words of the Governor, Rates
 // and PIDs pages. The SCREEN shows the box as the finger lands and hides it as the finger lifts (the sliders' own scripts),
 // so a word lost on the way can never leave it up: the main board only fills it. The rows line up because every column has
@@ -303,7 +304,7 @@ FLASHMEM static void EzOpeningNote() // what the page says when it has the bank'
     else
         SendText((char *)"note", (char *)"");
 }
-FLASHMEM static void EzLifted(int k) // the finger lifted (the box has gone): the line under the rows says if the slider is at an end
+FLASHMEM static void EzLifted(int k) // the finger lifted (the box has gone): the line in its place says if the slider is at an end
 {
     static const char *const name[5] = {"Start", "Agility", "Stick feel", "Cyclic", "Tail"};
     if (EzPos[k] <= (k < 3 ? 0 : -30) || EzPos[k] >= (k < 3 ? 100 : 30))

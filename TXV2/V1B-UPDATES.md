@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Easy tuning: the numbers above the sliders (screen 1.11.77, Teensy B105 unchanged, 16 Oct 2026)
+
+Malcolm, with his finger on a slider: "Truly excellent!!!! When I move a slider, my finger hides the data I wanted to see
+... if most of the screen options were to move down the screen, we could show this new data above so that my finger won't
+hide it." The box of numbers now sits at the top of the card, above every slider, and the rows moved down under it (4 px
+shorter, at the sliders' own height, so each slider is as big to touch as before). The line that says a slider is at the
+end of its travel, and the page's other notes, show in the same place when no finger is down. Help EASY.TXT: "above".
+
 ## Easy tuning: the numbers while you slide; the spool-up switch at the bottom (Teensy B105, screen 1.11.76, 16 Oct 2026)
 
 Malcolm, of B104's page: "Very very good !!!!! I love it! ... please move it to the bottom of the options and change the
