@@ -964,6 +964,38 @@
     "txt_maxl": 200,
     "isbr": 1
    }
+  },
+  {
+   "n": "b4",
+   "i": 34,
+   "t": "button",
+   "g": "l",
+   "x": 72,
+   "y": 369,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Curves ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=217<<8\nprint va0.val"
+   }
   }
  ]
 }

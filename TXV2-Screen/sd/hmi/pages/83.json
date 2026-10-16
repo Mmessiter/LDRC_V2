@@ -1,0 +1,407 @@
+{
+ "name": "RatesCurveView",
+ "id": 83,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "vis busy,0\nRatesCurveView.pic=Screen_Background",
+  "postinitialize": "print \"ldrcrcv\""
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Rates curves",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 28,
+   "y": 74,
+   "w": 744,
+   "h": 390,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Rate 1",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:RATES1.TXT\"\nLogView.t0.txt=\"Rates (Rotorflight) help\"\nLogView.return.txt=\"RatesCurveView\""
+   }
+  },
+  {
+   "n": "lg0",
+   "i": 7,
+   "t": "text",
+   "g": "l",
+   "x": 44,
+   "y": 90,
+   "w": 196,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65341
+   },
+   "txt": "Roll",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 32,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lg1",
+   "i": 8,
+   "t": "text",
+   "g": "l",
+   "x": 44,
+   "y": 128,
+   "w": 196,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 59323
+   },
+   "txt": "Pitch",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 32,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lg2",
+   "i": 9,
+   "t": "text",
+   "g": "l",
+   "x": 44,
+   "y": 166,
+   "w": 196,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 61215
+   },
+   "txt": "Yaw",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 32,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lg3",
+   "i": 10,
+   "t": "text",
+   "g": "l",
+   "x": 44,
+   "y": 204,
+   "w": 196,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Collective",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 32,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tt",
+   "i": 11,
+   "t": "text",
+   "g": "l",
+   "x": 44,
+   "y": 242,
+   "w": 196,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 24,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "plot",
+   "i": 12,
+   "t": "text",
+   "g": "l",
+   "x": 250,
+   "y": 90,
+   "w": 506,
+   "h": 294,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 65535,
+    "bco": 65535
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "b1",
+   "i": 13,
+   "t": "button",
+   "g": "l",
+   "x": 596,
+   "y": 398,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=218<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "busy",
+   "i": 14,
+   "t": "text",
+   "g": "l",
+   "x": 110,
+   "y": 207,
+   "w": 580,
+   "h": 124,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 5,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 200,
+    "isbr": 1
+   }
+  }
+ ]
+}

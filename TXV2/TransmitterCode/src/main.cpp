@@ -3058,7 +3058,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 217 // One more than final one
+#define LASTFUNCTION1 219 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3277,7 +3277,9 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     EasySpoolTapped,         // 213 the switch: PID spool-up in every bank
     RatesTypeTapped,         // 214 B106: the Rates page's type tapped (its picker)
     RatesTypePickOk,         // 215 the picker's OK: the chosen type, with its starting values
-    RatesTypePickCancel      // 216 the picker's Cancel
+    RatesTypePickCancel,     // 216 the picker's Cancel
+    RatesCurvesTapped,       // 217 B107: the Rates page's "Curves ..." (page 83)
+    RatesCurvesOk            // 218 the curves page's OK: back to the Rates page
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4160,6 +4162,12 @@ FASTRUN void ButtonWasPressed()
         if (InStrng((char *)"ldrcadj", TextIn) > 0)
         { // B75: the adjustments page is on the screen again (from the keypad, a question, or just opened): its bar drawn afresh
             AdjustPageBack();
+            ClearText();
+            return;
+        }
+        if (InStrng((char *)"ldrcrcv", TextIn) > 0)
+        { // B107: the rates curves page is on the screen (opened, back from Help or the screen saver): its curves drawn afresh
+            RatesCurvesPageBack();
             ClearText();
             return;
         }
@@ -5077,6 +5085,7 @@ void FASTRUN ManageTransmitter()
     BlackboxPoll();    // B88: the black box page
     CalibratePoll();   // B88: the calibrate page
     EasyPoll();        // B104: the Easy tuning page
+    RatesCurvePoll();  // B107: the rates curves, a few lines a pass
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..

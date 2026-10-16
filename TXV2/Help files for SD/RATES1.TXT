@@ -55,6 +55,16 @@ as fast, and twice the Collective.||
 The numbers here match the Configurator for '4 - ACTUAL',|
 and for '6 - ROTORFLIGHT' on 2.3: the easiest to read.|
 '6 - ROTORFLIGHT' needs Rotorflight 2.3.||
+CURVES:|
+'Curves ...' draws this rate's four curves from the numbers|
+on the page (typed but not yet saved too), worked out with|
+Rotorflight's own formulas. Across: the stick, from full one|
+way to full the other. Up: how fast the model turns.|
+Roll, Pitch and Yaw share one scale; Collective (degrees of|
+blade pitch) has its own. The boxes on the left give each|
+one's value at full stick. A curve lying on another (Pitch|
+the same as Roll) is drawn dashed, so both show.|
+'OK' goes back to the numbers.||
 'Dynamics ...' opens 'Rates: dynamics' for the same rate.|
 It asks first if you have unsaved changes.|
 'OK' goes back to the 'Rotorflight' page.|

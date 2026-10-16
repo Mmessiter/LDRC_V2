@@ -418,6 +418,11 @@
    "id": 82,
    "name": "RatesTypeView",
    "n": 11
+  },
+  {
+   "id": 83,
+   "name": "RatesCurveView",
+   "n": 14
   }
  ],
  "fonts": {

@@ -6,8 +6,12 @@ bank's own type. B106: the type is chosen on the picker (RatesTypeView): OK give
 Configurator's, Rotorflight's own formulas giving about 240 / 400 deg/s and 12.5 deg at full stick), Cancel nothing, a bank
 switch moved while choosing leaves the type; a type Rotorflight does not have (7 and up; 6 on a 2.2) is never saved, live
 or kept; and the phone's Rates page has the same starting values (rotorflight-rates.html RATES_START, if LDRC_V2_ALL is here).
+B107: the curves page (RatesCurveView): RfRatesCurve against Rotorflight 4.6's formulas (fc/rc_rates.c, ported here) for
+every type and 4000 random settings; the drawing - what is drawn, inside the plot, a twin dashed, never more than the wire
+to the screen holds, the legend's words; OK and the bank switch; the page files (if ESP32-board2 is here) agree on the
+plot and the codes. RC_SCENARIO=path writes the commands drawn, for the page renderer (hmi/scenarios/83.txt).
    python3 dev/test_rates/test_rates.py"""
-import os, subprocess, sys, tempfile
+import json, math, os, random, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HDR = os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Rates.h')
 prog = r'''
@@ -18,6 +22,13 @@ prog = r'''
 #include <string>
 #include <map>
 #include <vector>
+#include <cmath>
+#include <algorithm>
+using std::max;
+template <class T> static T constrain(T v, T lo, T hi) { return v < lo ? lo : (v > hi ? hi : v); }
+// the wire to the screen: room as the hardware's buffer has it, every write kept
+struct FakeNextion { int room = 1 << 30; int over = 0; std::string out; int availableForWrite() { return room; } size_t write(const uint8_t *b, size_t n) { if ((int)n > room) ++over; room -= (int)n; out.append((const char *)b, n); return n; } };
+static FakeNextion NEXTION;
 #define FLASHMEM
 #define PROGMEM
 #define MAX_RATES_BYTES 13
@@ -32,6 +43,7 @@ prog = r'''
 #define GET_SECOND_6_RATES_VALUES 14
 #define MSP_WAIT_TIME 2000
 #define RATESTYPEVIEW 82
+#define RATESCURVEVIEW 83
 static int CurrentView = RATESVIEW_RF;
 static uint8_t ParametersToBeSentPointer = 0; static uint32_t listVal = 0; static std::map<std::string, int> values;
 static uint32_t GetValue(char *) { return listVal; }
@@ -161,6 +173,78 @@ int main() {
         live = false; DualRateInUse = 3; Saved_Rate_Values[0][2] = 6; CurrentView = RATESVIEW_RF; ShowRatesLocalBank(); RatesTypeTapped(); listVal = 4; RatesTypePickOk(); saves = 0; SendEditedRates();
         CHECK(saves == 1 && Saved_Rate_Values[0][2] == 4 && Saved_Rate_Values[1][2] == 18 && Saved_Rate_Values[2][2] == 24 && Saved_Rate_Values[8][2] == 40 && Saved_Rate_Values[10][2] == 50);
     }
+    // 7. B107: the curves page
+    {
+        auto cmdsOf = [](const std::string &w) { std::vector<std::string> v; size_t a = 0, b; while ((b = w.find("\xFF\xFF\xFF", a)) != std::string::npos) { v.push_back(w.substr(a, b - a)); a = b + 3; } return v; };
+        // the Havok, back on ROTORFLIGHT: Rotorflight's own numbers
+        live = true; RotorFlight_V = 2; DualRateInUse = 1; CurrentView = RATESVIEW_RF; Rates_Were_Edited = false; Reading_RATES_Now = false; ParametersToBeSentPointer = 0;
+        const uint8_t rf[13] = {6, 50, 12, 40, 50, 12, 40, 80, 12, 50, 100, 12, 0};
+        memcpy(Rate_Values, rf, 13); fields.clear(); DisplayRatesValues(0, 13);
+        CHECK(fabsf(RcFull(0) - 250.0f) < 0.01f && fabsf(RcFull(2) - 400.0f) < 0.01f && fabsf(RcFull(3) * 0.025f - 12.5f) < 0.001f);
+        Reading_RATES_Now = true; cmds.clear(); RatesCurvesTapped(); CHECK(cmds.empty() && CurrentView == RATESVIEW_RF); Reading_RATES_Now = false;   // (reading: nothing)
+        RatesCurvesTapped();
+        CHECK(cmds.back() == "page RatesCurveView" && CurrentView == RATESCURVEVIEW && fields["t9"] == "Rate 1" && memcmp(Rate_Values, rf, 13) == 0);
+        NEXTION.out.clear(); RatesCurvePoll(); CHECK(NEXTION.out.empty());   // (nothing drawn before the page says it is there)
+        RatesCurvesPageBack();
+        CHECK(fields["lg0"] == "Roll 250 deg/s" && fields["lg1"] == "Pitch 250 deg/s" && fields["lg2"] == "Yaw 400 deg/s" && fields["lg3"] == "Collective 12.5 deg" && fields["tt"] == "6 - ROTORFLIGHT");
+        // the scales, as on the phone: roll, pitch and yaw on one (yaw's 400 at 92 % of the half height: 135 px over the middle,
+        // roll's 250 at 85), the collective on its own (its 12.5 deg at 92 % too); every curve through the middle
+        CHECK(RcY[2][RC_SEGS] == 237 - 135 && RcY[0][RC_SEGS] == 237 - 85 && RcY[3][RC_SEGS] == 237 - 135 && RcY[0][0] == 237 + 85 && RcY[3][RC_SEGS / 2] == 237 && RcY[2][RC_SEGS / 2] == 237);
+        // drawn a pass at a time, never more than the wire holds (64 bytes, the Teensy's own buffer)
+        int passes = 0; NEXTION.over = 0;
+        while (RcStep >= 0 && passes < 2000) { NEXTION.room = 64; RatesCurvePoll(); ++passes; }
+        std::vector<std::string> drawn = cmdsOf(NEXTION.out);
+        CHECK(RcStep == -1 && NEXTION.over == 0 && passes > 20 && passes < 1000);
+        CHECK(!drawn.empty() && drawn.front() == "fill 250,90,506,294,65535" && drawn.back() == "cirs 503,237,5,64937");
+        int inside = 1, roll = 0, pitch = 0, yaw = 0, coll = 0;
+        for (const std::string &c : drawn)
+        {
+            int x1, y1, x2, y2; unsigned col;
+            if (sscanf(c.c_str(), "line %d,%d,%d,%d,%u", &x1, &y1, &x2, &y2, &col) != 5) continue;
+            inside &= x1 >= 250 && x2 <= 755 && y1 >= 90 && y2 >= 90 && y1 <= 383 && y2 <= 383;
+            roll += col == 57798; pitch += col == 17672; yaw += col == 25046; coll += col == 64608;
+        }
+        CHECK(inside && roll == 128 && yaw == 128 && coll == 128 && pitch > 40 && pitch < 80);   // (pitch lies on roll: dashed, half its pieces)
+        if (getenv("RC_SCENARIO")) { FILE *f = fopen(getenv("RC_SCENARIO"), "w"); if (f) { for (const std::string &c : drawn) fprintf(f, "%s\n", c.c_str()); fclose(f); } }
+        // again when the page comes back (Help, the screen saver): the same
+        NEXTION.out.clear(); RatesCurvesPageBack(); while (RcStep >= 0) { NEXTION.room = 64; RatesCurvePoll(); }
+        CHECK(cmdsOf(NEXTION.out) == drawn);
+        // the page left mid-draw: it stops
+        RatesCurvesPageBack(); NEXTION.room = 64; RatesCurvePoll(); CurrentView = RATESVIEW_RF; NEXTION.out.clear(); NEXTION.room = 64; RatesCurvePoll(); CHECK(NEXTION.out.empty() && RcStep == -1);
+        CurrentView = RATESCURVEVIEW;
+        // OK: back to the Rates page, its numbers as they were, Save as it was
+        cmds.clear(); fields.clear(); RatesCurvesOk();
+        CHECK(CurrentView == RATESVIEW_RF && cmds.front() == "page RatesView" && cmds.back() == "vis b3,0" && fields["tn0"] == "250" && fields["t10"] == "6 - ROTORFLIGHT" && memcmp(Rate_Values, rf, 13) == 0);
+        RatesCurvesOk(); CHECK(cmds.back() == "vis b3,0");   // (not on the page: nothing)
+        // typed but not saved: the curves are of what was typed, and OK keeps it (Save still shown)
+        Rates_Were_Edited = true; fields["tn0"] = "300"; RatesCurvesTapped(); CHECK(Rate_Values[1] == 60); RatesCurvesPageBack(); CHECK(fields["lg0"] == "Roll 300 deg/s");
+        while (RcStep >= 0) { NEXTION.room = 64; RatesCurvePoll(); }
+        RatesCurvesOk(); CHECK(fields["tn0"] == "300" && cmds.back() == "vis b3,1"); Rates_Were_Edited = false;
+        // the bank switch moved while looking: the new bank is read on the way back
+        memcpy(Rate_Values, rf, 13); RatesCurvesTapped(); DualRateInUse = 2; queued.clear(); RatesCurvesOk();
+        CHECK(CurrentView == RATESVIEW_RF && Reading_RATES_Now && queued.size() == 1 && queued[0] == SEND_RATES_VALUES && fields["t9"] == "Rate 2");
+        Reading_RATES_Now = false; BlockBankChanges = false; DualRateInUse = 1;
+        // ACTUAL's starting values: a straight collective, roll and pitch on one line (pitch dashed), all inside
+        const uint8_t act[13] = {4, 18, 24, 0, 18, 24, 0, 18, 40, 0, 50, 50, 0};
+        memcpy(Rate_Values, act, 13); fields.clear(); DisplayRatesValues(0, 13); RatesCurvesTapped(); RatesCurvesPageBack();   // (the page shows them first, as on the screen)
+        CHECK(fields["lg0"] == "Roll 240 deg/s" && fields["lg2"] == "Yaw 400 deg/s" && fields["lg3"] == "Collective 12.5 deg" && fields["tt"] == "4 - ACTUAL" && RcTwin[1] == 1 && RcTwin[0] == 0 && RcTwin[2] == 0);
+        // the Havok's trap (ACTUAL reading Rotorflight's numbers): the curves say so - a straight 500 deg/s, 25 deg of collective
+        const uint8_t trap[13] = {4, 50, 12, 40, 50, 12, 40, 80, 12, 50, 100, 12, 0};
+        memcpy(Rate_Values, trap, 13); RatesCurvesPageBack(); CHECK(fields["lg0"] == "Roll 500 deg/s" && fields["lg2"] == "Yaw 800 deg/s" && fields["lg3"] == "Collective 25.0 deg");
+        // all zero (ACTUAL with nothing set): not drawn, said as 0
+        uint8_t zero[13] = {4}; memcpy(Rate_Values, zero, 13); RatesCurvesPageBack(); CHECK(RcTwin[0] == 255 && RcTwin[3] == 255 && fields["lg0"] == "Roll 0 deg/s");
+        NEXTION.out.clear(); while (RcStep >= 0) { NEXTION.room = 64; RatesCurvePoll(); }
+        int curves = 0; for (const std::string &c : cmdsOf(NEXTION.out)) { unsigned col = 0; int a, b, cc, d; if (sscanf(c.c_str(), "line %d,%d,%d,%d,%u", &a, &b, &cc, &d, &col) == 5 && (col == 57798 || col == 17672 || col == 25046 || col == 64608)) ++curves; }
+        CHECK(curves == 0);
+        RatesCurvesOk(); RcStep = -1;
+        // the curve itself, for the comparison with Rotorflight's formulas (the Python below)
+        uint32_t seed = 12345; auto rnd = [&]() { seed = seed * 1103515245u + 12345u; return (seed >> 8) & 0xFFFF; };
+        for (int n = 0; n < 4000; ++n)
+        {
+            const uint8_t t = rnd() % 8, rc = rnd() % 256, sr = rnd() % 256, ex = rnd() % 101; const float x = (rnd() % 1001) / 1000.0f;
+            printf("CURVE %u %u %u %u %.3f %.6f\n", t, rc, sr, ex, x, RfRatesCurve(t, rc, sr, ex, x));
+        }
+    }
     printf("test_rates: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -168,4 +252,76 @@ int main() {
 d = tempfile.mkdtemp(); cpp = os.path.join(d, 't.cpp'); open(cpp, 'w').write(prog)
 r = subprocess.run(['clang++', '-std=c++14', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-o', os.path.join(d, 't'), cpp], capture_output=True, text=True)
 if r.returncode: print(r.stderr[:4000]); sys.exit(1)
-sys.exit(subprocess.run([os.path.join(d, 't')]).returncode)
+run = subprocess.run([os.path.join(d, 't')], capture_output=True, text=True)
+sys.stderr.write(run.stderr)
+
+# Rotorflight 4.6 fc/rc_rates.c, ported (applyRatesCurve: the type's curve, then at most SETPOINT_RATE_LIMIT 2000)
+def rf_pow(x, expo):
+    b = min(expo, 127); y = x * x; z = x
+    if b & 16: y *= z
+    z *= z
+    if b & 32: y *= z
+    z *= z
+    if b & 64: y *= z
+    z = math.sqrt(x)
+    if b & 8: y *= z
+    z = math.sqrt(z)
+    if b & 4: y *= z
+    z = math.sqrt(z)
+    if b & 2: y *= z
+    z = math.sqrt(z)
+    if b & 1: y *= z
+    return y
+def clamp(v, lo, hi): return lo if v < lo else (hi if v > hi else v)
+def rf_rate(t, rc, sr, ex, x):
+    e = ex / 100.0
+    if t == 1:
+        r = rc * 2.0
+        if r > 400: r += 14.54 * (r - 400)
+        v = r * (x * (1 - e) + x ** 4 * e) / clamp(1 - x * sr / 100.0, 0.01, 1.0)
+    elif t == 2:
+        f = x * (1 - e) + x ** 3 * e; f += f * x * sr / 100.0; v = rc * 10.0 * f
+    elif t == 3:
+        v = rc * 2.0 * (x * (1 - e) + x ** 3 * e) / clamp(1 - x * sr / 100.0, 0.01, 1.0)
+    elif t == 4:
+        r = rc * 10.0; a = max(0.0, sr * 10.0 - r); v = x * (r + a * (x * (1 - e) + x ** 5 * e))
+    elif t == 5:
+        r = rc * 2.0; m = max(sr * 10.0, r)
+        if m <= 0: return 0.0
+        v = r * x / clamp(1 - (x * (1 - e) + x ** 3 * e) * (1 - r / m), 0.01, 1.0)
+    elif t == 6:
+        v = rc * 5.0 * (x * (1 - e) + rf_pow(x, sr) * e)
+    else:
+        v = 500.0 * x
+    return min(v, 2000.0)
+n = bad = 0
+for line in run.stdout.splitlines():
+    if not line.startswith('CURVE '): continue
+    t, rc, sr, ex, x, v = line.split()[1:]
+    want = rf_rate(int(t), int(rc), int(sr), int(ex), float(x)); n += 1
+    if abs(float(v) - want) > 0.02 + 2e-4 * abs(want):
+        bad += 1
+        if bad <= 5: print('CURVE DIFFERS: type %s rc %s sr %s ex %s x %s: %s, Rotorflight %.4f' % (t, rc, sr, ex, x, v, want))
+print('\n'.join(l for l in run.stdout.splitlines() if not l.startswith('CURVE ')))
+print('curves against Rotorflight 4.6\'s formulas: %d points, %d differ' % (n, bad))
+# the page files (screen 1.11.79): the plot where the main board draws, the codes
+pages = os.path.join(ROOT, '..', 'ESP32-board2', 'board4', 'nextion-emulator', 'sd', 'hmi', 'pages')
+page_bad = 0
+if os.path.isdir(pages) and os.path.exists(os.path.join(pages, '83.json')):
+    import re
+    hdr = open(HDR).read(); k = {m: int(re.search(r'#define %s (\d+)' % m, hdr).group(1)) for m in ('RC_PLOT_X', 'RC_PLOT_Y', 'RC_PLOT_W', 'RC_PLOT_H')}
+    p83 = {c['n']: c for c in json.load(open(os.path.join(pages, '83.json')))['comps']}; pg83 = json.load(open(os.path.join(pages, '83.json')))
+    p1 = {c['n']: c for c in json.load(open(os.path.join(pages, '1.json')))['comps']}
+    want = [k['RC_PLOT_X'], k['RC_PLOT_Y'], k['RC_PLOT_W'], k['RC_PLOT_H']]
+    checks_ = [([p83['plot'][a] for a in 'xywh'] == want, 'page 83 plot %s = RC_PLOT_* %s' % ([p83['plot'][a] for a in 'xywh'], want)),
+               ('va0.val=218<<8' in p83['b1']['ev']['r'], 'page 83 OK sends 218'),
+               (pg83['ev'].get('postinitialize') == 'print "ldrcrcv"', 'page 83 says "ldrcrcv" when it comes'),
+               (all('lg%d' % a in p83 for a in range(4)) and 'tt' in p83, 'page 83 has the legend lg0-lg3 and tt'),
+               ('va0.val=217<<8' in p1['b4']['ev']['r'] and p1['b4']['txt'] == 'Curves ...', 'page 1 "Curves ..." sends 217'),
+               ('va0.val=214<<8' in p1['t10']['ev']['r'], 'page 1 type box sends 214')]
+    for ok_, what in checks_:
+        if not ok_: page_bad += 1; print('PAGE FILE:', what)
+    print('page files: %d checks, %d failures' % (len(checks_), page_bad))
+else:
+    print('(ESP32-board2 is not here: the page files not checked)')
+sys.exit(1 if (run.returncode or bad or page_bad) else 0)

@@ -192,6 +192,7 @@ FLASHMEM void RatesMsg(const char *msg, uint16_t Colour)
         SendText((char *)"busy", (char *)msg); // Show RATES message
         SendCommand((char *)"vis busy,1");     // Make it visible
         SendCommand((char *)"vis b2,0");       // Make Advanced invisible
+        SendCommand((char *)"vis b4,0");       // B107: and "Curves ..."
         SendCommand((char *)"vis b3,0");       // hide "Send" button
     }
 }
@@ -203,6 +204,7 @@ FLASHMEM void HideRATESMsg()
     {
         SendCommand((char *)"vis busy,0");  // Hide  message
         SendCommand((char *)"vis b2,1");    // Make Advanced visible
+        SendCommand((char *)"vis b4,1");    // B107: and "Curves ..."
         ForegroundColourRATESLabels(Black); // make text black so it is visible again
     }
     BlockBankChanges = false; // ALWAYS clear — a view change before this call
@@ -376,13 +378,13 @@ FLASHMEM bool RatesTypeBad(const char *page)
     MsgBox((char *)page, m);
     return true;
 }
-static uint8_t RatesTypeBank = 0;   // the rates bank the picker was opened on
+static uint8_t RatesAwayBank = 0;   // the rates bank the picker (or the curves, B107) was opened on
 FLASHMEM void RatesTypeTapped() // the type tapped: the picker, at the bank's own type
 {
     if (CurrentView != RATESVIEW_RF || Reading_RATES_Now || ParametersToBeSentPointer)
         return; // (reading or sending: the page's note covers the type)
     ReadEditedRateValues(); // what the page shows (typed or not), kept through the picker - Cancel brings it back
-    RatesTypeBank = DualRateInUse;
+    RatesAwayBank = DualRateInUse;
     SendCommand((char *)"page RatesTypeView");
     CurrentView = RATESTYPEVIEW;
     char b[16];
@@ -391,11 +393,11 @@ FLASHMEM void RatesTypeTapped() // the type tapped: the picker, at the bank's ow
     SendText((char *)"t11", ModelName);
     SendValue((char *)"list", RatesTypeKnown(Rate_Values[0]) ? Rate_Values[0] : (RotorFlight_V == 1 ? 4 : 6));
 }
-FLASHMEM static void RatesTypeBack() // back to the Rates page: everything on it sent again, Save shown if there is anything to save
+FLASHMEM static void RatesAwayBack() // back to the Rates page: everything on it sent again, Save shown if there is anything to save
 {
     SendCommand((char *)"page RatesView");
     CurrentView = RATESVIEW_RF;
-    if (DualRateInUse != RatesTypeBank)
+    if (DualRateInUse != RatesAwayBank)
     { // the bank switch moved while choosing: that bank is shown (and an edit here is said to be lost), the type left as it was
         SendText((char *)"t11", ModelName);
         ShowRatesBank();
@@ -413,14 +415,14 @@ FLASHMEM void RatesTypePickOk()
     if (CurrentView != RATESTYPEVIEW)
         return;
     const int32_t t = (int32_t)GetValue((char *)"list");
-    if (DualRateInUse == RatesTypeBank && t >= 0 && t <= 6 && RatesTypeKnown((uint8_t)t))
+    if (DualRateInUse == RatesAwayBank && t >= 0 && t <= 6 && RatesTypeKnown((uint8_t)t))
     {
         Rate_Values[0] = (uint8_t)t;
         for (int i = 1; i < MAX_RATES_BYTES; ++i)
             Rate_Values[i] = RatesStart[t][i - 1];
         Rates_Were_Edited = true;
     }
-    RatesTypeBack();
+    RatesAwayBack();
     if (t == 6 && !RatesTypeKnown(6) && CurrentView == RATESVIEW_RF)
     {
         PlaySound(WHAHWHAHMSG);
@@ -431,7 +433,232 @@ FLASHMEM void RatesTypePickCancel()
 {
     if (CurrentView != RATESTYPEVIEW)
         return;
-    RatesTypeBack();
+    RatesAwayBack();
+}
+// ************************************************************************************************************/
+// B107 (Malcolm, 16 Oct 2026, a photo of the phone's "Rates curves": "I wonder if it might be possible to have these curves
+// on the transmitter!?"): "Curves ..." on the Rates page opens page 83 (RatesCurveView), this rate's four curves from the
+// page's numbers (typed and not yet saved too), worked out with Rotorflight's own formulas (fc/rc_rates.c, 4.6) - the
+// phone drew a sketch of them, and now uses the same formulas (rotorflight-rates.html rfRate). As on the phone: across,
+// the stick from full one way to full the other; up, the turn rate; roll, pitch and yaw on one deg/s scale, the collective
+// (degrees of pitch) on its own; a curve lying on an earlier one dashed, so both show. Drawn a few lines a pass, never
+// more than the wire to the screen holds (RatesCurvePoll), so no packet waits and no touch is thrown away; drawn again
+// whenever the page comes back (its postinitialize prints "ldrcrcv": opened, after Help, after the screen saver).
+FLASHMEM float RfRatesCurve(uint8_t type, uint8_t rc, uint8_t sr, uint8_t ex, float x) // Rotorflight's rate at |stick| x (0..1), deg/s; a collective's is x 0.025 = degrees
+{
+    const float e = ex / 100.0f;
+    float v;
+    switch (type)
+    {
+    case 1: // BETAFLIGHT
+    {
+        float r = rc * 2.0f;
+        if (r > 400.0f)
+            r += 14.54f * (r - 400.0f);
+        const float f = x * (1.0f - e) + x * x * x * x * e;
+        v = r * f / constrain(1.0f - x * (sr / 100.0f), 0.01f, 1.0f);
+        break;
+    }
+    case 2: // RACEFLIGHT
+    {
+        float f = x * (1.0f - e) + x * x * x * e;
+        f += f * x * (sr / 100.0f);
+        v = rc * 10.0f * f;
+        break;
+    }
+    case 3: // KISS
+    {
+        const float f = x * (1.0f - e) + x * x * x * e;
+        v = rc * 2.0f * f / constrain(1.0f - x * (sr / 100.0f), 0.01f, 1.0f);
+        break;
+    }
+    case 4: // ACTUAL
+    {
+        const float r = rc * 10.0f, a = max(0.0f, sr * 10.0f - r);
+        v = x * (r + a * (x * (1.0f - e) + x * x * x * x * x * e));
+        break;
+    }
+    case 5: // QUICKRATES
+    {
+        const float r = rc * 2.0f, m = max(sr * 10.0f, r);
+        if (m <= 0.0f)
+            return 0.0f;
+        const float f = x * (1.0f - e) + x * x * x * e;
+        v = r * x / constrain(1.0f - f * (1.0f - r / m), 0.01f, 1.0f);
+        break;
+    }
+    case 6: // ROTORFLIGHT: rfPow, the exponent 2 .. 8.25 from the shape's bits
+    {
+        const unsigned bits = sr < 127 ? sr : 127;
+        float y = x * x, z = x;
+        if (bits & 16) y *= z;
+        z *= z;
+        if (bits & 32) y *= z;
+        z *= z;
+        if (bits & 64) y *= z;
+        z = sqrtf(x);
+        if (bits & 8) y *= z;
+        z = sqrtf(z);
+        if (bits & 4) y *= z;
+        z = sqrtf(z);
+        if (bits & 2) y *= z;
+        z = sqrtf(z);
+        if (bits & 1) y *= z;
+        v = rc * 5.0f * (x * (1.0f - e) + y * e);
+        break;
+    }
+    default: // NONE, or a type Rotorflight does not have: its null rates
+        v = 500.0f * x;
+    }
+    return v < 2000.0f ? v : 2000.0f; // (SETPOINT_RATE_LIMIT)
+}
+#define RC_PLOT_X 250 // the plot on page 83 (hmi/ratestype_pages.py PLOT; test_rates checks they agree)
+#define RC_PLOT_Y 90
+#define RC_PLOT_W 506
+#define RC_PLOT_H 294
+#define RC_SEGS 64                                  // the line pieces of a curve, end to end
+#define RC_CURVES (17 + 4 * RC_SEGS * 2)             // the plot's things before the dot: its ground, 12 grid lines, 4 for the axes, 2 lines a piece
+static const uint16_t RcInk[4] = {57798, 17672, 25046, 64608}; // roll red, pitch green, yaw purple, collective orange: the hues of the page's pale axis labels, deep enough to read on white
+static int16_t RcY[4][RC_SEGS + 1]; // each curve's points on the screen
+static uint8_t RcTwin[4];           // 0: drawn whole; n: lies on n earlier curves, so dashed in their gaps; 255: all zero, not drawn
+static int16_t RcStep = -1;         // the next thing to draw; -1: nothing
+FLASHMEM float RcFull(uint8_t a) { return RfRatesCurve(Rate_Values[0], Rate_Values[1 + 3 * a], Rate_Values[2 + 3 * a], Rate_Values[3 + 3 * a], 1.0f); }
+FLASHMEM static void RcPrepare() // the four curves' points and the legend's words
+{
+    float full[4];
+    float rpy = 1.0f;
+    for (uint8_t a = 0; a < 4; ++a)
+    {
+        full[a] = RcFull(a);
+        if (a < 3 && full[a] > rpy)
+            rpy = full[a];
+    }
+    const int cy = RC_PLOT_Y + RC_PLOT_H / 2;
+    for (uint8_t a = 0; a < 4; ++a)
+    {
+        const float scale = a == 3 ? (full[3] > 0.0f ? full[3] : 1.0f) : rpy; // (the collective on its own scale, as on the phone)
+        for (int k = 0; k <= RC_SEGS; ++k)
+        {
+            const float s = -1.0f + 2.0f * k / RC_SEGS;
+            float v = RfRatesCurve(Rate_Values[0], Rate_Values[1 + 3 * a], Rate_Values[2 + 3 * a], Rate_Values[3 + 3 * a], fabsf(s));
+            if (s < 0.0f)
+                v = -v;
+            int y = cy - (int)lroundf(v / scale * (RC_PLOT_H / 2) * 0.92f);
+            RcY[a][k] = (int16_t)constrain(y, RC_PLOT_Y + 1, RC_PLOT_Y + RC_PLOT_H - 3);
+        }
+        RcTwin[a] = 0;
+        if (full[a] <= 0.0f)
+        {
+            RcTwin[a] = 255;
+            continue;
+        }
+        for (uint8_t b = 0; b < a; ++b)
+        {
+            if (RcTwin[b] == 255)
+                continue;
+            bool same = true;
+            for (int k = 0; k <= RC_SEGS && same; ++k)
+                same = abs(RcY[a][k] - RcY[b][k]) <= 1;
+            if (same)
+                ++RcTwin[a];
+        }
+    }
+    static const char *const names[4] = {"Roll", "Pitch", "Yaw", "Collective"};
+    for (uint8_t a = 0; a < 4; ++a)
+    {
+        char t[32], n[6];
+        if (a == 3)
+            snprintf(t, sizeof(t), "%s %.1f deg", names[a], full[a] * 0.025f);
+        else
+            snprintf(t, sizeof(t), "%s %d deg/s", names[a], (int)lroundf(full[a]));
+        snprintf(n, sizeof(n), "lg%u", (unsigned)a);
+        SendText(n, t);
+    }
+    SendText((char *)"tt", (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // (the type the curves are of)
+}
+FLASHMEM static bool RcDraw(int i) // one thing on the plot, straight onto the wire (never waits, never reads: a touch is never lost); false: no room yet
+{
+    char c[48];
+    const int x0 = RC_PLOT_X, y0 = RC_PLOT_Y, cx = RC_PLOT_X + RC_PLOT_W / 2, cy = RC_PLOT_Y + RC_PLOT_H / 2;
+    c[0] = 0;
+    if (i == 0)
+        snprintf(c, sizeof(c), "fill %d,%d,%d,%d,65535", x0, y0, RC_PLOT_W, RC_PLOT_H);
+    else if (i <= 6) // the grid, a quarter of the way out each way: across ...
+    {
+        const int k = (i - 1) % 3 + 1, x = (i <= 3) ? cx - k * RC_PLOT_W / 8 : cx + k * RC_PLOT_W / 8;
+        snprintf(c, sizeof(c), "line %d,%d,%d,%d,59164", x, y0, x, y0 + RC_PLOT_H - 1);
+    }
+    else if (i <= 12) // ... and up
+    {
+        const int k = (i - 7) % 3 + 1, y = (i <= 9) ? cy - k * RC_PLOT_H / 8 : cy + k * RC_PLOT_H / 8;
+        snprintf(c, sizeof(c), "line %d,%d,%d,%d,59164", x0, y, x0 + RC_PLOT_W - 1, y);
+    }
+    else if (i <= 16) // the axes, two pixels each
+    {
+        if (i <= 14)
+            snprintf(c, sizeof(c), "line %d,%d,%d,%d,16904", x0, cy + (i - 13), x0 + RC_PLOT_W - 1, cy + (i - 13));
+        else
+            snprintf(c, sizeof(c), "line %d,%d,%d,%d,16904", cx + (i - 15), y0, cx + (i - 15), y0 + RC_PLOT_H - 1);
+    }
+    else if (i < RC_CURVES) // a curve's piece, two pixels thick; a twin's only in its dashes
+    {
+        const int j = i - 17, a = j / (RC_SEGS * 2), k = (j / 2) % RC_SEGS, t = j % 2;
+        const uint8_t tw = RcTwin[a];
+        if (tw == 255 || ((k >> 1) % (tw + 1)) != tw)
+            return true;
+        const int xa = x0 + k * (RC_PLOT_W - 1) / RC_SEGS, xb = x0 + (k + 1) * (RC_PLOT_W - 1) / RC_SEGS;
+        snprintf(c, sizeof(c), "line %d,%d,%d,%d,%u", xa, RcY[a][k] + t, xb, RcY[a][k + 1] + t, (unsigned)RcInk[a]);
+    }
+    else // the dot at the middle
+        snprintf(c, sizeof(c), "cirs %d,%d,5,64937", cx, cy);
+    const int n = (int)strlen(c);
+    if (NEXTION.availableForWrite() < n + 3)
+        return false;
+    NEXTION.write((const uint8_t *)c, n);
+    NEXTION.write((const uint8_t *)"\xFF\xFF\xFF", 3);
+    return true;
+}
+FLASHMEM void RatesCurvePoll()
+{
+    if (RcStep < 0)
+        return;
+    if (CurrentView != RATESCURVEVIEW)
+    {
+        RcStep = -1;
+        return;
+    }
+    while (RcStep <= RC_CURVES && RcDraw(RcStep))
+        ++RcStep;
+    if (RcStep > RC_CURVES)
+        RcStep = -1;
+}
+FLASHMEM void RatesCurvesTapped() // "Curves ...": the page, its curves from what the Rates page shows
+{
+    if (CurrentView != RATESVIEW_RF || Reading_RATES_Now || ParametersToBeSentPointer)
+        return; // (reading or sending: the page's note says so)
+    ReadEditedRateValues(); // the numbers shown, typed or not (kept: OK brings them back)
+    RatesAwayBank = DualRateInUse;
+    SendCommand((char *)"page RatesCurveView");
+    CurrentView = RATESCURVEVIEW;
+    char b[16];
+    snprintf(b, sizeof(b), "Rate %u", (unsigned)DualRateInUse);
+    SendText((char *)"t9", b);
+    SendText((char *)"t11", ModelName);
+    RcStep = -1; // (drawn when the page says it is there: RatesCurvesPageBack)
+}
+FLASHMEM void RatesCurvesPageBack() // "ldrcrcv": the page is on the screen (opened, back from Help or the screen saver): drawn afresh
+{
+    if (CurrentView != RATESCURVEVIEW)
+        return;
+    RcPrepare();
+    RcStep = 0;
+}
+FLASHMEM void RatesCurvesOk()
+{
+    if (CurrentView != RATESCURVEVIEW)
+        return;
+    RcStep = -1;
+    RatesAwayBack();
 }
 #endif // RATESRF_H
 

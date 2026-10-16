@@ -23,6 +23,7 @@ tn11.pco=33840
 busy.txt="Loading rates for Rate 1"
 vis busy,1
 vis b2,0
+vis b4,0
 vis b3,0
 t11.txt="RAW 420 MCM"
 @shot 1_busy
@@ -42,6 +43,7 @@ tn10.txt="48"
 tn11.txt="0"
 vis busy,0
 vis b2,1
+vis b4,1
 tn0.pco=0
 tn1.pco=0
 tn2.pco=0
@@ -75,10 +77,12 @@ tn11.pco=33840
 busy.txt="Sending edited rates ..."
 vis busy,1
 vis b2,0
+vis b4,0
 vis b3,0
 @shot 1_sending
 vis busy,0
 vis b2,1
+vis b4,1
 tn0.pco=0
 tn1.pco=0
 tn2.pco=0
@@ -114,6 +118,7 @@ tn11.pco=33840
 busy.txt="Loading rates for Rate 4"
 vis busy,1
 vis b2,0
+vis b4,0
 vis b3,0
 t11.txt="GOBLIN RAW 700 COMPETITION MK2"
 t10.txt="6 - ROTORFLIGHT"
@@ -132,6 +137,7 @@ tn11.txt="2.55"
 @shot 1_long_busy
 vis busy,0
 vis b2,1
+vis b4,1
 tn0.pco=0
 tn1.pco=0
 tn2.pco=0
@@ -191,6 +197,7 @@ tn11.pco=33840
 busy.txt="Saving edited rates ..."
 vis busy,1
 vis b2,0
+vis b4,0
 vis b3,0
 @shot 1_new_saving
 # ---- B106: the type chosen on the picker (page 82). The Havok, 16 Oct 2026: ACTUAL with Rotorflight-type numbers (its

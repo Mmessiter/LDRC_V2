@@ -186,6 +186,24 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The rates curves on the transmitter (Teensy B107, screen 1.11.79, receivers 0.9.897, 16 Oct 2026)
+
+Malcolm, with a photo of the phone's Rates curves: "I wonder if it might be possible to have these curves on the
+transmitter!?" **Rates (Rotorflight) > Curves ...** (the bottom row's free slot) opens page 83 (RatesCurveView): the
+rate's four curves from the numbers on the page, typed but not yet saved too - the legend down the left in the page's
+pale axis shades ("Roll 250 deg/s" ... "Collective 12.5 deg", each at full stick), the type under it, the plot to the
+right: across the stick, up the turn rate; roll, pitch and yaw on one scale, the collective on its own (as on the phone);
+a curve lying on another dashed so both show; **OK** back to the numbers.
+
+- **Rotorflight's own formulas** (fc/rc_rates.c, 4.6) for all seven types, not a sketch: RF_Rates.h RfRatesCurve,
+  checked against a port of rc_rates.c at 4000 random settings (dev/test_rates). The phone's curves were a sketch (its
+  ROTORFLIGHT curve ignored Shape): **receivers/apps 0.9.897** draw them with the same formulas, and its read-only
+  **Max Vel** is now the true full-stick speed (the Havok's ACTUAL Centre 500 / Max Rate 120 flew 500 and said 120).
+- **Never in the way of the radio:** drawn a few lines per pass, only what the wire to the screen holds (64 bytes),
+  straight onto the wire - no waiting, and no touch thrown away (SendCommand would have read them). Drawn again whenever
+  the page comes back (its postinitialize prints "ldrcrcv": opened, after Help, after the screen saver).
+- Help RATES1.TXT "CURVES"; dev/test_rates 79 checks (7 mistakes put in on purpose, all caught).
+
 ## The rates type, chosen on the transmitter (Teensy B106, screen 1.11.78, receivers 0.9.896, 16 Oct 2026)
 
 Malcolm, with a photo of the Havok's Rates page: "On the transmitter, we can see the rates type, but we cannot edit it.

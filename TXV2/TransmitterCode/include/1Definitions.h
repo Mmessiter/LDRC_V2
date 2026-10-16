@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B106 16/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B107 16/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -348,6 +348,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define ESCCALVIEW 80            // B100: ... the ESC throttle calibration (RF_EscCal.h)
 #define EASYVIEW 81              // B104: Easy tuning, the phone app's sliders (RF_Easy.h)
 #define RATESTYPEVIEW 82         // B106: the Rates page's picker of rates types (RF_Rates.h)
+#define RATESCURVEVIEW 83        // B107: the Rates page's curves (RF_Rates.h)
 #define LEVELVIEW 74             // B88: calibrate the level (B90: it was CALIBRATEVIEW, the stick calibration's number 6 - redefined, so both were 74)
 #define MODELIDVIEW 56
 
@@ -1235,6 +1236,10 @@ void SendEditedRates();
 void RatesTypeTapped();     // B106: the Rates page's type tapped (its picker, RatesTypeView)
 void RatesTypePickOk();
 void RatesTypePickCancel();
+void RatesCurvesTapped();   // B107: the Rates page's "Curves ..." (page 83, RatesCurveView)
+void RatesCurvesOk();
+void RatesCurvesPageBack();
+void RatesCurvePoll();
 void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex);
 void ReadRatesBytesFromAckPayload(uint8_t n, uint8_t m);
 void RatesMsg(const char *msg, uint16_t Colour);
