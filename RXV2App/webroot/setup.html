@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Setup &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=396">
-<script src="/app.js?v=396" defer></script>
+<link rel=stylesheet href="/style.css?v=397">
+<script src="/app.js?v=397" defer></script>
 <style>html.h-dongle #protobtn, html.h-dongle a[href="/rxsettings"], html.h-dongle #renamebtn,
 html.h-simif #protobtn, html.h-simif a[href="/rxsettings"], html.h-simif #renamebtn { display: none !important; }</style>
 <script>try{const h=JSON.parse(localStorage.getItem('frontHints')||'{}');if(h.dongle)document.documentElement.classList.add('h-dongle');if(h.simif)document.documentElement.classList.add('h-simif');}catch(e){}</script>
@@ -23,7 +23,7 @@ html.h-simif #protobtn, html.h-simif a[href="/rxsettings"], html.h-simif #rename
 
     <a class="btn btn-diag" href="/protocol" id=protobtn><span class=ico>&#128225;</span>Output protocol &mdash; <span id=protoname>&hellip;</span></a>
     <a class="btn btn-diag" href="/diagnostics"><span class=ico>&#127916;</span>View channels</a>
-    <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; failsafe, battery, wave</a>
+    <a class="btn btn-diag" href="/rxsettings"><span class=ico>&#9881;&#65039;</span>Receiver settings &mdash; battery cells, failsafe</a>
     <a class="btn btn-fw"   href="/wifi" id=wifibtn style="display:none"><span class=ico>&#128246;</span>WiFi settings</a>
     <a class="btn btn-fw"   href="/firmware"><span class=ico>&#128229;</span>Update or roll back firmware</a>
     <a class="btn btn-diag" href="/dongle" id=donglebtn style="display:none"><span class=ico>&#128268;</span>Dongle settings &mdash; role, name and serial speed</a>
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <ul>
 <li><b>Output protocol</b> &mdash; what the receiver sends to your flight controller on D6 (CRSF for Rotorflight, SBUS, IBUS or PPM). The current choice is shown on the button.</li>
 <li><b>View channels</b> &mdash; live channel bars and the 3-D model.</li>
-<li><b>Receiver settings</b> &mdash; failsafe positions, the battery divider and the hello wave.</li>
+<li><b>Receiver settings</b> &mdash; the receiver battery&rsquo;s cells and divider, automatic fly mode and the failsafe positions.</li>
 <li><b>WiFi settings</b> &mdash; home network details and the &ldquo;AP mode only&rdquo; field setting.</li>
 <li><b>Update firmware</b> &mdash; install newer firmware or roll back.</li>
 <li><b>Dongle settings</b> &mdash; only on a board with no transceivers: its role (Rotorflight dongle or Simulator interface), the name the app shows, and the serial speed to the flight controller.</li>

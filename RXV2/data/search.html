@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Find a setting &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=396">
-<script src="/app.js?v=396" defer></script>
+<link rel=stylesheet href="/style.css?v=397">
+<script src="/app.js?v=397" defer></script>
 <script src="/search.js?v=1" defer></script>
 <style>
 .searchBox{display:flex;align-items:center;gap:.5em;background:#fff;border:2px solid #5fa099;border-radius:14px;padding:.35em .7em;margin:0 0 .8em}
@@ -43,14 +43,14 @@
 </div>
 <template id=helpContent>
 <h2>Find a setting</h2>
-<p>Type part of a setting's name in plain English or in Rotorflight's own words: <i>head speed</i>, <i>cells</i>, <i>tracking</i>, <i>arm</i>, <i>wiggle</i>, <i>bind</i>. Every result names the page and the card it lives on. Tap it: the page opens and that setting glows for a few seconds.</p>
+<p>Type part of a setting's name in plain English or in Rotorflight's own words: <i>head speed</i>, <i>cells</i>, <i>tracking</i>, <i>arm</i>, <i>rates type</i>, <i>bind</i>. Every result names the page and the card it lives on. Tap it: the page opens and that setting glows for a few seconds.</p>
 <p>The index is built from the pages themselves, so it always matches what this receiver has.</p>
 </template>
 <script>
 (function(){
     const $ = id => document.getElementById(id);
     const norm = s => (s || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9%+.\/ -]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const POPULAR = ['PIDs', 'Head speed', 'Cells', 'Spool-up', 'Tracking', 'Arm', 'Rescue', 'Wiggle', 'Telemetry', 'Backup', 'Bind', 'WiFi', 'Update'];   // PIDs first: Malcolm's most-used (2026-09-08)
+    const POPULAR = ['PIDs', 'Head speed', 'Cells', 'Spool-up', 'Tracking', 'Arm', 'Rescue', 'Rates type', 'Telemetry', 'Backup', 'Bind', 'WiFi', 'Update'];   // PIDs first: Malcolm's most-used (2026-09-08)
     let rows = [];
     async function ready() {
         rows = (window.LDRC_SEARCH || []).map(r => ({ p: r[0], g: r[1], h: r[2], l: r[3], id: r[4], k: r[5], s: r[6],

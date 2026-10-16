@@ -622,7 +622,10 @@ inline void txParamsWords(const uint16_t* w) {
 //*********************************************************************
 // Basic rates → MSP RC_TUNING order (Centre, Expo, Max per axis).
 inline void writeBasicRatesToScratch() {
-    pmScratch[0]  = wRatesType;
+    // 0.9.896: a rates type Rotorflight does not have is never written (Rotorflight keeps any byte it is sent - the
+    // Havoc's gov_throttle_type = 3, 15 Oct): the flight controller's own type, as read, stays. ROTORFLIGHT (6) came with
+    // Rotorflight 2.3 (API 12.9); the transmitter (B106) refuses such a Save too.
+    if (wRatesType < (rotorflightTxVersion() >= 2 ? 7 : 6)) pmScratch[0] = wRatesType;
     pmScratch[1]  = wRoll[0];  pmScratch[2]  = wRoll[2];  pmScratch[3]  = wRoll[1];
     pmScratch[7]  = wPitch[0]; pmScratch[8]  = wPitch[2]; pmScratch[9]  = wPitch[1];
     pmScratch[13] = wYaw[0];   pmScratch[14] = wYaw[2];   pmScratch[15] = wYaw[1];

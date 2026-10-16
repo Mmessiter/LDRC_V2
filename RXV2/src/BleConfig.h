@@ -447,10 +447,6 @@ inline void bleStart() {
     bleStarted = true;
     bleStatsRadioOn = true;                   // gap/swap stats pause while BT is on at all
     bleStatsQuietUntilMs = millis() + 4000;   // the BT radio's first-keying burst desenses the nRF24s
-    // Physical "Bluetooth is ready" cue: wave the chosen servo channels
-    // (Output.h) when advertising starts — power-on included. Debounced:
-    // one announcement per revival, however many triggers fire.
-    if (autoWaveAllowed()) bleWaveStartMs = millis();
     Serial.printf("[ble] advertising as '%s'\n", g_effectiveName.c_str());
     events.add("BLE config on");
 }

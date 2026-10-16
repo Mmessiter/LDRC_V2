@@ -645,19 +645,6 @@ inline void netStep() {
                 wifiRecoveryArmed = true;
             if (wifiRecoveryArmed && rx.lastMillis != 0 &&
                 (uint32_t)(millis() - rx.lastMillis) >= WIFI_REENABLE_AFTER_LOST_MS) {
-                // Announce reachability physically: wave the ailerons ONCE per
-                // link-loss episode (keyed on the final packet's timestamp so a
-                // second landing in the same session waves again) — but ONLY
-                // when Bluetooth is actually up (field/staGaveUp case, where it
-                // stayed on through the flight). If it's currently off, the
-                // bleStart() below announces the revival itself; waving while
-                // the user just turned the radios OFF was a lie (2026-07-24).
-                static uint32_t wavedForLoss = 0;
-                if (bleAdvertising() && wavedForLoss != rx.lastMillis && autoWaveAllowed()) {
-                    wavedForLoss   = rx.lastMillis;
-                    bleWaveStartMs = millis();
-                    events.add("Config link ready — waving ailerons");
-                }
                 if (!staGaveUp && staConnectedThisBoot) {
                     Serial.println("[net] TX link lost — bringing WiFi back up");
                     events.add("TX lost — WiFi re-enabled");

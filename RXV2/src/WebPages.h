@@ -2683,8 +2683,10 @@ inline void handleFailsafeClear() {
 }
 
 //*********************************************************************
-//  POST /api/gear?ratio=<float>  — extra head-speed divisor (normally 1:
-//  Rotorflight already sends head speed; gear.js resets this to 1 on save)
+//  POST /api/vbat?pin=0|9&ratio=<float>&cells=<0..12> — the receiver's own
+//  battery: the divider's pad and ratio, and its cell count (0 = guess from
+//  the voltage). 0.9.896: the count as the guess makes it - above 4S only
+//  even (6S, 8S, 10S, 12S; never 11S - Malcolm 2026-08-05): an odd one rounds up.
 //*********************************************************************
 inline void handleVbatSet() {
     if (server.hasArg("pin")) {
@@ -2716,6 +2718,7 @@ inline void handleVbatSet() {
     if (server.hasArg("cells")) {
         long c = server.arg("cells").toInt();
         if (c < 0)  c = 0;
+        if (c > 4 && (c & 1)) c++;   // (0.9.896: above 4S only even counts)
         if (c > 12) c = 12;
         vbatCellsCfg = (uint8_t)c;
         prefs.putUChar(NVS_KEY_VBAT_CELLS, vbatCellsCfg);
@@ -2796,7 +2799,7 @@ inline void handleProtocolSet() {
     // CHECKBOXES are simply absent from a form post when unticked, so they can
     // only be read as "off" from the protocol page's own form - which always
     // carries proto (0.9.834). Other pages post single settings here (the TX
-    // channels page: thr_ch + arm_ch; Receiver settings: wave_chs), and every
+    // channels page: thr_ch + arm_ch), and every
     // such save used to switch FC telemetry OFF - and with it the CRSF
     // signal-loss rule: with telemetry off the receiver takes the FC to be a
     // PWM converter and streams its own failsafe posture instead of going
@@ -2834,21 +2837,6 @@ inline void handleProtocolSet() {
             armingChannel = (uint8_t)ac;
             prefs.putUChar(NVS_KEY_ARM_CH, armingChannel);
         }
-    }
-    if (server.hasArg("wave_chs")) {
-        // Comma list "1,6" → bitmask. Blank = no wave.
-        String ws = server.arg("wave_chs");
-        uint16_t m = 0;
-        int start = 0;
-        while (start < (int)ws.length()) {
-            int comma = ws.indexOf(',', start);
-            if (comma < 0) comma = ws.length();
-            long ch = ws.substring(start, comma).toInt();
-            if (ch >= 1 && ch <= 16) m |= (uint16_t)(1u << (ch - 1));
-            start = comma + 1;
-        }
-        waveChannelMask = m;
-        prefs.putUShort(NVS_KEY_WAVE_CHS, waveChannelMask);
     }
 
     if (!needReboot) {
@@ -3248,24 +3236,6 @@ inline void handleReboot() {
 }
 
 //*********************************************************************
-//  POST /api/wave — fire the Bluetooth-ready wave on demand ("which
-//  model is this?" finder, and a bench-test hook for the wave itself).
-//  Refused while a TX link is live — never fight the pilot's sticks.
-//*********************************************************************
-inline void handleWaveNow() {
-    bool linkLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
-    if (linkLive) {
-        server.sendHeader("Cache-Control", "no-store");
-        server.send(409, "application/json", "{\"ok\":false,\"error\":\"transmitter link is live\"}");
-        return;
-    }
-    bleWaveStartMs = millis();
-    events.add("Wave requested from app");
-    server.sendHeader("Cache-Control", "no-store");
-    server.send(200, "application/json", "{\"ok\":true}");
-}
-
-//*********************************************************************
 //  GET /retest — re-run self-test, redirect to /diagnostics
 //*********************************************************************
 
@@ -3632,16 +3602,6 @@ inline void handleApiState() {
     j += ",\"crsf_hz\":"; j += crsfRateHz;
     j += ",\"fc_telem\":"; j += (fcTelemetryEnabled ? "true" : "false");
     j += ",\"thr_ch\":"; j += throttleChannel;
-    j += ",\"wave_chs\":\"";
-    {
-        bool first = true;
-        for (uint8_t c = 1; c <= 16; ++c)
-            if (waveChannelMask & (1u << (c - 1))) {
-                if (!first) j += ",";
-                j += c; first = false;
-            }
-    }
-    j += "\"";
     j += ",\"available\":[";
     // Display order — CRSF first (most-used), then the rest in enum order.
     static const Protocol DISPLAY_ORDER[] = { PROTO_CRSF, PROTO_SBUS, PROTO_IBUS, PROTO_PPM };
@@ -4075,7 +4035,6 @@ inline void registerWebRoutes() {
     // Misc
     server.on("/retest",      handleRetest);
     server.on("/reboot",      handleReboot);
-    server.on("/api/wave",    HTTP_POST, handleWaveNow);
     server.on("/ping", [](){
         // Tiny endpoint to keep iOS's TCP/WiFi state warm. No allocations.
         server.sendHeader("Cache-Control", "no-store");

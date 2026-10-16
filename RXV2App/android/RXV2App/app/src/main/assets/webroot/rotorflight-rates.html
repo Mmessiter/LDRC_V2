@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=396">
-<script src="/app.js?v=396" defer></script>
+<link rel=stylesheet href="/style.css?v=397">
+<script src="/app.js?v=397" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -70,7 +70,7 @@ table.dyn-yaw td input{width:6em;padding:.4em;font-size:.95em;text-align:right;
     </div>
 
     <div class=card>
-        <h2 data-help="Which formula turns stick movement into rotation speed. The numbers below mean different things for each type, so leave it as it is unless you mean to re-enter them all. ACTUAL is the easiest to read: Centre is how fast the model turns just off the middle of the stick, Max Rate is how fast it turns at full stick (degrees per second), and Expo softens the middle. ROTORFLIGHT is Rotorflight&rsquo;s own. The Easy tuning sliders work with ROTORFLIGHT, ACTUAL and QUICKRATES. Each type is explained in the ? help.">Rates type</h2>
+        <h2 data-help="Which formula turns stick movement into rotation speed. The numbers below mean different things for each type, so a new type puts this bank&rsquo;s rates to its starting values (as Rotorflight&rsquo;s Configurator does): check them, then Save. ACTUAL is the easiest to read: Centre is how fast the model turns just off the middle of the stick, Max Rate is how fast it turns at full stick (degrees per second), and Expo softens the middle. ROTORFLIGHT is Rotorflight&rsquo;s own. The Easy tuning sliders work with ROTORFLIGHT, ACTUAL and QUICKRATES. Each type is explained in the ? help.">Rates type</h2>
         <select class=typeDD id=ratesType>
             <option value=0>0 — NONE</option>
             <option value=1>1 — BETAFLIGHT</option>
@@ -231,6 +231,36 @@ function modelForType(t) {
     };
 }
 let MODEL = modelForType(6);
+
+// The rates type chosen (0.9.896; Malcolm, 16 Oct 2026: "I changed it to actual using the iPhone, but I didn't change the
+// numbers" - the Havok's Rotorflight-type Rate 250 / Shape 12 / Expo 40 then read as ACTUAL's Centre 500 / Max Rate 120, a
+// straight 500 °/s, and the collective's 12.5° as 25°). A new type puts the bank's rates to ITS starting values, after a
+// question - as Rotorflight's Configurator does ("If you change the rates type your rates will be set to a default
+// curve"). The Configurator 2.3.0's values (rates tab, initRatesSystem) as bytes, per axis [rcRate, srate, expo]: about
+// 240 °/s roll and pitch, 400 yaw and 12.5° collective at full stick in Rotorflight's own formulas - QUICKRATES'
+// collective 50 (the Configurator's 104 is 26°). The transmitter's Rates page has the same table (TXV1B RF_Rates.h
+// RatesStart); dev/ratestype_test.js checks that they agree.
+const RATES_START = [
+    [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],               // 0 NONE (its numbers are not used: 500 °/s, 12.5°)
+    [[120, 0, 0], [120, 0, 0], [200, 0, 0], [203, 1, 0]],       // 1 BETAFLIGHT
+    [[24, 0, 0], [24, 0, 0], [40, 0, 0], [50, 0, 0]],           // 2 RACEFLIGHT
+    [[120, 0, 0], [120, 0, 0], [200, 0, 0], [250, 0, 0]],       // 3 KISS
+    [[18, 24, 0], [18, 24, 0], [18, 40, 0], [50, 50, 0]],       // 4 ACTUAL: Centre 180, Max Rate 240 (yaw 400), collective 12.5 / 12.5
+    [[120, 24, 0], [120, 24, 0], [200, 40, 0], [250, 50, 0]],   // 5 QUICKRATES
+    [[50, 12, 40], [50, 12, 40], [80, 12, 50], [100, 12, 0]],   // 6 ROTORFLIGHT: Rate 250 (yaw 400), Shape 12, Expo 40 (yaw 50), collective 12.5
+];
+let ratesTypeNow = null;   // the type the table shows: the list goes back to it when the question is answered No
+function startValues(raw, t) {   // the bank's rates (in a copy of the read) at type t's starting values
+    const out = raw.slice();
+    out[0] = t;
+    for (let a = 0; a < 4; a++) { const o = 1 + a * 6, v = RATES_START[t][a]; out[o] = v[0]; out[o + 2] = v[1]; out[o + 1] = v[2]; }
+    return out;
+}
+function typeChosen() {   // the type to write, or null: one Rotorflight does not have was read and none chosen since
+    const el = document.getElementById('ratesType'), t = parseInt(el.value, 10);
+    const o = el.querySelector('option[value="' + t + '"]');
+    return (!isNaN(t) && o && !o.disabled) ? t : null;
+}
 
 // "How agile?" (Malcolm 2026-09-06: sliders for people who just want to
 // fly). ROTORFLIGHT, ACTUAL and QUICKRATES rates types (MODEL.feel names the
@@ -568,6 +598,7 @@ async function load() {
         const st = await stateR.json();
         const api = (st.fcinfo.api_major * 100) + st.fcinfo.api_minor;
         hasAdvanced = api >= 1208;
+        document.querySelector('#ratesType option[value="6"]').disabled = api < 1209;   // (ROTORFLIGHT came with Rotorflight 2.3: the Configurator lists it from API 12.9)
         document.getElementById('advCard').style.display = hasAdvanced ? '' : 'none';
         if (hasAdvanced) buildBoostUI();
     } catch (e) {}
@@ -580,7 +611,8 @@ async function load() {
         cachedRaw = bytes.slice();   // keep the FULL response (incl. any 2.3 cyclic ring/polar tail) so save() preserves it
 
         const rt = bytes[0];
-        document.getElementById('ratesType').value = rt;
+        document.getElementById('ratesType').value = rt;   // (a type Rotorflight does not have shows none, and is not written back: typeChosen)
+        ratesTypeNow = rt;
         applyModel(modelForType(rt));   // ROTORFLIGHT (6) → Rate/Shape/Expo/Max Vel; else legacy columns
         fillAxesFromCache();
         if (hasAdvanced && bytes.length >= 36) {
@@ -603,7 +635,7 @@ async function load() {
 
 function buildPayload() {
     const bytes = new Uint8Array(cachedRaw);
-    bytes[0] = parseInt(document.getElementById('ratesType').value || '0');
+    bytes[0] = typeChosen();   // (save and copyTo refuse first when there is none)
     let o = 1;
     for (const ax of AXES) {
         for (let i = 0; i < MODEL.cols.length; i++) {
@@ -632,8 +664,15 @@ function buildPayload() {
     return bytes;
 }
 
+function typeMissing() {   // 0.9.896: a type Rotorflight does not have is never written back
+    if (typeChosen() !== null) return false;
+    setStatus('bad', 'Not saved: this bank\u2019s rates type is ' + (cachedRaw ? cachedRaw[0] : '?') + ', which Rotorflight does not have. Choose a type first.');
+    return true;
+}
+
 async function save() {
     if (!cachedRaw) { setStatus('bad', 'Read flight controller first'); return; }
+    if (typeMissing()) return;
     if (!(await LDRC.confirm(LDRC.replay
             ? 'Save these rates on the phone? They will be offered for sending to the model at the next connection.'
             : 'Write these rates to the flight controller EEPROM?',
@@ -674,6 +713,7 @@ async function save() {
 async function copyTo(destIdx) {
     if (!cachedRaw) { setStatus('bad', 'Read flight controller first'); return; }
     if (destIdx === currentProfile) { setStatus('info', 'Already on profile ' + (destIdx+1)); return; }
+    if (typeMissing()) return;
     if (!(await LDRC.confirm('Copy current rates to profile ' + (destIdx + 1) + ' and switch to it?',
         {title:'Copy to profile ' + (destIdx + 1), icon:'📋', yes:'Copy + switch', kind:'warn'}))) return;
     setStatus('info', 'Copying to profile ' + (destIdx + 1) + '…');
@@ -698,12 +738,23 @@ document.addEventListener('DOMContentLoaded', () => {
     LDRC.followSwitch('rate', () => currentProfile, followTx);           // the transmitter's bank switch moves the page (0.9.844)
     applyModel(modelForType(6));   // sensible default layout until load() learns the FC's actual type
     paintProfileButtons();
-    // Changing the rates type re-lays out the columns and re-reads the cached
-    // bytes under the new interpretation (keeps headings + scaling consistent).
-    document.getElementById('ratesType').addEventListener('change', e => {
-        applyModel(modelForType(parseInt(e.target.value || '0')));
+    // Changing the rates type (0.9.896): a question, then the new type's columns at its starting values (RATES_START).
+    // Before, the columns re-read the stored numbers the new type's way - the Havok's trap.
+    document.getElementById('ratesType').addEventListener('change', async e => {
+        const t = parseInt(e.target.value, 10), name = e.target.options[e.target.selectedIndex].text;
+        if (!cachedRaw || isNaN(t) || !RATES_START[t]) { e.target.value = ratesTypeNow === null ? '' : String(ratesTypeNow); return; }
+        if (!(await LDRC.confirm('Change the rates type to ' + name + '? This bank\u2019s rates go to its starting values, as in Rotorflight\u2019s Configurator: about 240 °/s roll and pitch, 400 yaw, 12.5° collective. Check them, then Save.',
+                { title: 'Rates type', icon: '📈', yes: 'Change', kind: 'warn' }))) {
+            e.target.value = ratesTypeNow === null ? '' : String(ratesTypeNow);
+            return;
+        }
+        ratesTypeNow = t;
+        cachedRaw = startValues(cachedRaw, t);
+        applyModel(modelForType(t));
         fillAxesFromCache();
+        feelReflect();   // (the sliders follow the new type's columns; hidden for the types they do not cover)
         drawCurves();
+        LDRC.markDirty();
     });
     // Any user input in this form marks the page dirty so a profile-switch
     // can warn before throwing the edits away.
@@ -724,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <li><b>BETAFLIGHT</b> and <b>KISS:</b> the quadcopter classics. <b>RC Rate</b> is the sensitivity around centre (an abstract number, about 2&deg;/s per unit), <b>Super Rate</b> makes the curve steeper and steeper towards full stick, and <b>Expo</b> softens the middle. Full-stick speed is RC Rate &times; 2 &divide; (1 &minus; Super Rate), so it takes arithmetic to know. KISS softens the middle a little less.</li>
 <li><b>RACEFLIGHT:</b> <b>Rate</b> is degrees per second, <b>Acro+</b> adds a boost that grows towards full stick, so the top speed is Rate &times; (1 + Acro+&nbsp;%), and <b>Expo</b> softens the middle.</li>
 </ul>
-<p>Changing the type keeps the stored numbers and reads them the new way, so re-enter every axis after a change. ACTUAL and ROTORFLIGHT are the easiest to read; the sliders work with those two and QUICKRATES. <b>Max Vel</b> is read-only: the speed the type actually delivers at full stick.</p>
+<p><b>Changing the type</b> puts this bank&rsquo;s rates to the new type&rsquo;s starting values, as Rotorflight&rsquo;s own Configurator does: about 240&nbsp;&deg;/s at full stick for roll and pitch, 400 for yaw, and 12.5&deg; of collective. Check them, change what you like, then Save; nothing is written before. Why not keep the numbers? Each type reads them its own way: ROTORFLIGHT&rsquo;s Rate 250 is ACTUAL&rsquo;s Centre 500 &mdash; twice as fast, and twice the collective. The transmitter&rsquo;s Rates page does the same. ACTUAL and ROTORFLIGHT are the easiest to read; the sliders work with those two and QUICKRATES. ROTORFLIGHT needs Rotorflight 2.3. <b>Max Vel</b> is read-only: the speed the type actually delivers at full stick.</p>
 <h3>Tips</h3>
 <ul>
 <li>With the transmitter on, the page follows its bank switch. Unsaved edits stay with the bank they were made on until you save or discard them.</li>

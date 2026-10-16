@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.896-rates-type-start-values",
+      "url": "https://messiter.com/rxv2/release/v0.9.896/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.896/littlefs.bin",
+      "fs_md5": "696912875a472c557fbf4c7b7063e39e",
+      "notes": "Rates type: a new type gives its starting values (as Rotorflight's Configurator), never a type Rotorflight lacks; the hello wave removed; Receiver settings: a Cells list for the receiver battery."
+    },
+    {
       "name": "RXV2-0.9.895-diff-and-execute",
       "url": "https://messiter.com/rxv2/release/v0.9.895/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.895/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.885/littlefs.bin",
       "fs_md5": "017a9a3492967663a43b3c31637e491d",
       "notes": "The receiver honours the transmitter's failsafe ticks: only the ticked channels move on signal loss, the rest hold (older firmware moved all 16). Rescue page: climb time 0 means no climb, it levels and hovers. Governor page: idle and auto throttle shown and typed in per cent, and the bail-out help put right."
-    },
-    {
-      "name": "RXV2-0.9.884-cli-prompt-not-a-comment",
-      "url": "https://messiter.com/rxv2/release/v0.9.884/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.884/littlefs.bin",
-      "fs_md5": "229c6d3d6e6ee62d684462c6fffbcea2",
-      "notes": "The command line's reply was taken as ended at any \"# \" that a USB packet happened to end on - a diff is full of comment lines that begin so, which is why a long diff all ended at the same 347 lines every time. The prompt is now \"# \" at a line's start followed by silence."
     }
   ],
   "rotorflight": {

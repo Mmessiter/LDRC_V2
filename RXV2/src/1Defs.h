@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.895-diff-and-execute";
+constexpr const char* FW_VERSION = "RXV2-0.9.896-rates-type-start-values";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -121,11 +121,6 @@ inline int16_t tzOffsetMin    = 0;        // local = UTC + tzOffsetMin (phone-ta
 constexpr uint32_t FLT_PARDON_MS = 3000;   // safety ceiling — auto-expires even if the cancel is lost
 inline uint8_t  fltPardonAnnounceLeft = 0;
 
-// One wave per revival (Malcolm 2026-08-04: the tail announced Bluetooth,
-// then announced it AGAIN seconds later — the landing recovery and the WiFi
-// state machine each triggered one). Automatic wave sites debounce through
-// this; the app's explicit wave request bypasses it (a human asking always
-// gets an answer).
 // Deferred Fly-now teardown: the WiFi/BLE shutdown stalls the loop ~700 ms
 // (measured LOOP-STALL 707ms, 2026-08-04 — Malcolm felt the servo twitch).
 // The pardon (item 38) must be on the air BEFORE the stall, and acks only
@@ -141,7 +136,6 @@ inline uint32_t flyTeardownAtMs = 0;
 // long after the reboot. AP, web and Bluetooth come up at once as before.
 inline uint32_t staHoldUntilMs = 0;
 
-inline bool autoWaveAllowed();   // defined below rx (needs rx.lastMillis)
 inline uint32_t fltPardonMsToSend = FLT_PARDON_MS;   // 0 = "unignore now" (Malcolm's explicit end)
 // Every deferred self-stall (arm teardown, disarm revivals, Bluetooth-off,
 // quick-boot clear) must let the pardon REACH the transmitter before it
@@ -385,7 +379,7 @@ constexpr const char* NVS_KEY_GAP_MIN    = "gapmin";
 constexpr const char* NVS_KEY_TZ_MIN     = "tzmin";     // minutes local is ahead of UTC (phone-taught)
 constexpr const char* NVS_KEY_TX_OFF_S   = "txoffs";    // TX clock face minus true UTC, seconds (learned)
 constexpr const char* NVS_KEY_FLT_HEAD   = "flthead";    // ring head: physical slot of the NEWEST saved flight (kills the 20-file rotation storm)     // uint8 ms: a packet must be at least this LATE (beyond expected spacing) to count as a gap
-constexpr const char* NVS_KEY_WAVE_CHS   = "wavechs";    // uint16 bitmask of channels waved when Bluetooth comes up (bit0=ch1); default ch1, 0=off
+// (retired 0.9.896: "wavechs", the hello wave's channels - the wave is gone; old receivers keep the key, unread. Do not reuse the name.)
 constexpr const char* NVS_KEY_BOOT_COUNT = "qbc";        // quick-boot counter for escape hatch
 constexpr const char* NVS_KEY_PROTO      = "proto";
 constexpr const char* NVS_KEY_PPM_INV    = "ppm_inv";
@@ -743,7 +737,6 @@ inline uint16_t lastRxArmUs        = 0;
 // gap. A packet only counts as a gap when it's at least this many ms LATER
 // than the measured spacing, and it's billed only for the late part.
 inline uint8_t  gapMinMs           = 5;    // definable via POST /api/gapmin
-inline uint16_t waveChannelMask    = 0x0001; // channels waved when Bluetooth comes up (bit0=ch1); Malcolm's plane = 1+6
 // Legal decoded-channel range (microseconds), == v1 MINMICROS/MAXMICROS. A
 // decoded frame with any channel outside this isn't real channel data (a
 // bind/MAC/parameter frame misread, or a corrupt decode); decodeChannelData()
@@ -785,19 +778,6 @@ struct RxStats {
     uint32_t acksWritten   = 0;
 };
 inline RxStats rx;
-
-// Keyed to the LANDING, not the clock: Malcolm reports the spurious second
-// wave can come 1-2 MINUTES later (the field's STA-retry -> AP-fallback
-// transition re-announces BLE after ~100-125s of hopeful WiFi retries), so a
-// time window is the wrong tool. rx.lastMillis freezes at the last packet of
-// a landing — a unique per-landing key. One wave per landing, unlimited
-// flights per day, and internal WiFi/BLE restarts stay silent.
-inline uint32_t lastWaveLinkEpoch = 1;   // rx.lastMillis we last waved for (1 = never)
-inline bool autoWaveAllowed() {
-    if (rx.lastMillis == lastWaveLinkEpoch) return false;
-    lastWaveLinkEpoch = rx.lastMillis;
-    return true;
-}
 
 // BLE-interference quarantine for the link statistics (Malcolm 2026-07-27,
 // lodge test: TX-side perfect at 1 m, RX blackbox pessimistic). The ESP32's
@@ -982,15 +962,10 @@ inline void scrubShutdownGapsTick() {
     }
 }
 
-// BLE-ready servo announce: when the config radios come back up after the TX
-// went quiet, wave the ailerons (ch1) so the user knows — then settle back to
-// the failsafe posture. Non-blocking; driven from Output.h.
-inline uint32_t bleWaveStartMs = 0;                    // != 0 → wave in progress
-constexpr uint32_t BLE_WAVE_MS      = 1600;            // total wave duration
-constexpr float    BLE_WAVE_HZ     = 2.5f;             // wiggle rate
-constexpr int16_t  BLE_WAVE_AMPL_US = 150;             // gentle: ±150 µs around failsafe
-constexpr uint32_t ROTOR_COAST_MS       = 20000;       // a 770's head coasts ~20 s after the motor is cut
-constexpr uint32_t WAVE_AFTER_DISARM_MS = 5000;        // Malcolm 2026-09-16: no wiggle inside 5 s of the safety switch going on
+// (0.9.896: the "hello wave" is gone - Malcolm, 16 Oct 2026: "Because we have Bluetooth connection or Wi-Fi connection,
+// whenever we have arming switched off and almost immediately, I think it's fair to say we no longer need the wave option
+// to remind us of this fact, so we can remove this." It wiggled the chosen channels (ch1 by default) for 1.6 s whenever
+// Bluetooth came up - power-on, disarming, a landing - and on demand (/api/wave). Nothing moves a servo by itself now.)
 
 // Flight telemetry time-series — one sample/second of ESC temp, head speed and
 // battery, into a ring holding the last ~20 min. Reset on a fresh connection so
