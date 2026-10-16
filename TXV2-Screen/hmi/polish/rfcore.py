@@ -61,7 +61,9 @@ def rates(pg):
     # that says so - "Rates type:" in the quieter shade, the name in white - not an olive bar that read like a version
     add_text(pg, 'rtl', after='t10', x=52, y=119, w=344, h=36, font=2, txt='Rates type:',
              c={'bco': NAVY, 'pco': SOFT, 'borderc': 0}, a={'xcen': 2, 'ycen': 1, 'txt_maxl': 12})
-    put(pg, 't10', x=402, y=119, w=346, h=36, txt='', c={'bco': NAVY, 'pco': WHITE}, a={'xcen': 0, 'style': 0})   # (no type shown before the Teensy says which: it said Actual)
+    # (1.11.78, B106: the type is chosen here - tapped, its picker (hmi/ratestype_pages.py): a white box like the numbers', the
+    # name in the middle; no type shown before the Teensy says which - it said Actual)
+    put(pg, 't10', x=402, y=119, w=346, h=36, txt='', c={'bco': WHITE, 'pco': BLACK, 'borderc': BLACK}, a={'xcen': 1, 'style': 2, 'borderw': 2})
     put(pg, 't9', txt='')                # (the Teensy writes "Rate n" here; "Bank 1" was the wrong kind of word to show before it does)
     put(pg, 't11', txt='')
     words(pg, 'b2', 'Dynamics ...')      # (15 Oct 2026, the phone app's words: the page it opens is "Rates: dynamics", the

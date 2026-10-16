@@ -1,0 +1,13 @@
+# RatesTypeView (page 82), the Rates page's type picker (B106): RatesTypeTapped (TXV1B RF_Rates.h) writes t9, t11 and the
+# wheel's choice (the bank's own type: the Havok's ACTUAL, 16 Oct 2026); then the first and last types chosen.
+Screen_Background=8
+@model 1
+page RatesTypeView
+t9.txt="Rate 1"
+t11.txt="Havok"
+list.val=4
+@shot 82_open
+list.val=0
+@shot 82_none
+list.val=6
+@shot 82_rotorflight

@@ -406,20 +406,23 @@
    "font": 2,
    "sta": 1,
    "c": {
-    "pco": 65535,
+    "pco": 0,
     "borderc": 0,
-    "bco": 4426
+    "bco": 65535
    },
    "txt": "",
    "a": {
-    "style": 0,
+    "style": 2,
     "key": 255,
     "borderw": 2,
-    "xcen": 0,
+    "xcen": 1,
     "ycen": 1,
     "pw": 0,
     "txt_maxl": 40,
     "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=214<<8\nprint va0.val"
    }
   },
   {

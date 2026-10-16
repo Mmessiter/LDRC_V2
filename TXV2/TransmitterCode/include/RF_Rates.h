@@ -64,9 +64,9 @@ FLASHMEM void SaveRatesLocalBank()
 {
     RatesMsg((char *)"Saving edited rates ...", Gray); // Show sending message
     Rates_Were_Edited = false;
-    Rate_Values[0] = Saved_Rate_Values[0][DualRateInUse - 1]; // B08: the saved bank's own type chooses the scales (it was always made "Actual")
-    if (Rate_Values[0] == 0 || Rate_Values[0] > 6)
-        Rate_Values[0] = 4; // (none known: "Actual", as before)
+    // (B08 took the saved bank's own type here - before, every local save made it "Actual". B106: the page's type, which
+    // ShowRatesLocalBank set from the saved bank and the picker may have changed; one Rotorflight does not have is refused
+    // by SendEditedRates. NONE (0) is kept: a never-filled bank was made "Actual" with zero rates, NONE flies 500 deg/s.)
     ReadEditedRateValues();
     for (int i = 0; i < MAX_RATES_BYTES; ++i)
     {
@@ -84,8 +84,11 @@ FLASHMEM void SaveRatesLocalBank()
 }
 // ************************************************************************************************************/
 FLASHMEM static void RatesQueueWrite();   // (B102: below)
+FLASHMEM bool RatesTypeBad(const char *page);   // (B106: below)
 FLASHMEM void SendEditedRates()
 {
+    if (RatesTypeBad("page RatesView")) // B106: a type Rotorflight does not have is never sent, nor kept
+        return;
     if (!RfLive()) // Model not connected so save to local RATES
     {
         SaveRatesLocalBank();
@@ -161,7 +164,7 @@ FLASHMEM void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex) // Displ
             char temp[10];
             if (i == 0)
             {
-                SendText(RatesWindows[0], (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // Show rates type but it cannot be edited here
+                SendText(RatesWindows[0], (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // the rates type (B106: tapped, its picker)
                 Modify_Labels_For_RATES_View(); // B08: the headings follow the type
                 continue;
             }
@@ -219,7 +222,7 @@ FLASHMEM void ShowRatesLocalBank()
         ThisValue = (Saved_Rate_Values[i][DualRateInUse - 1] * f[i]); // MULTIPLY BY factor to get display value
         FixDecimalDisplay(temp, ThisValue, i, sizeof(temp));
         if (i == 0)
-            SendText(RatesWindows[0], (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // Show rates type but it cannot be edited here
+            SendText(RatesWindows[0], (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // the rates type (B106: tapped, its picker)
         else
             SendText(RatesWindows[i], temp);
     }
@@ -340,6 +343,95 @@ FLASHMEM void RatesWereEdited()
 {
     SendCommand((char *)"vis b3,1"); // show "Send" button
     Rates_Were_Edited = true;
+}
+// ************************************************************************************************************/
+// B106 (Malcolm, 16 Oct 2026, a photo of this page: "On the transmitter, we can see the rates type, but we cannot edit it.
+// Please can we add that in?" - he had changed the Havok's type to ACTUAL on the iPhone and kept its numbers: Rotorflight's
+// own Rate 250 / Shape 12 / Expo 40 then read as Centre 500 / Max rate 120, a straight 500 deg/s, and the collective's
+// 12.5 deg as 25). The type is tapped: a picker page (RatesTypeView) of Rotorflight's seven types; its OK puts the bank's
+// rates to the chosen type's starting values - as Rotorflight's Configurator does ("If you change the rates type your
+// rates will be set to a default curve") - and Save writes them; nothing is sent before Save. Cancel changes nothing.
+// The starting values are the Configurator 2.3.0's (rates tab, initRatesSystem), as bytes in this page's order (per axis
+// Centre or Rate, Max rate or Shape, Expo): each gives about 240 deg/s roll and pitch, 400 yaw and 12.5 deg of collective
+// at full stick - but for the Configurator's QUICKRATES collective (its 500 is a 104, 26 deg in the firmware's formula):
+// 50 here, 12.5 deg like the rest. The phone's Rates page has the same table (rotorflight-rates.html RATES_START; the
+// receiver's dev/ratestype_test.js checks that they agree, and the full-stick rates in Rotorflight's own formulas).
+static const uint8_t RatesStart[7][MAX_RATES_BYTES - 1] PROGMEM = {
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},              // 0 NONE (its numbers are not used: 500 deg/s, 12.5 deg)
+    {120, 0, 0, 120, 0, 0, 200, 0, 0, 203, 1, 0},     // 1 BETAFLIGHT
+    {24, 0, 0, 24, 0, 0, 40, 0, 0, 50, 0, 0},         // 2 RACEFLIGHT
+    {120, 0, 0, 120, 0, 0, 200, 0, 0, 250, 0, 0},     // 3 KISS
+    {18, 24, 0, 18, 24, 0, 18, 40, 0, 50, 50, 0},     // 4 ACTUAL: Centre 180, Max rate 240 (yaw 400), collective 12.5 / 12.5
+    {120, 24, 0, 120, 24, 0, 200, 40, 0, 250, 50, 0}, // 5 QUICKRATES
+    {50, 12, 40, 50, 12, 40, 80, 12, 50, 100, 12, 0}, // 6 ROTORFLIGHT: Rate 250 (yaw 400), Shape 12, Expo 40 (yaw 50), collective 12.5
+};
+FLASHMEM bool RatesTypeKnown(uint8_t t) { return t < 6 || (t == 6 && RotorFlight_V != 1); }   // (ROTORFLIGHT came with Rotorflight 2.3)
+FLASHMEM bool RatesTypeBad(const char *page)
+{
+    if (RatesTypeKnown(Rate_Values[0]))
+        return false;
+    char m[150];
+    snprintf(m, sizeof(m), "Not saved: the rates type is %u, which\r\nthis Rotorflight does not have.\r\nTap the type to choose one.", Rate_Values[0]);
+    PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)page, m);
+    return true;
+}
+static uint8_t RatesTypeBank = 0;   // the rates bank the picker was opened on
+FLASHMEM void RatesTypeTapped() // the type tapped: the picker, at the bank's own type
+{
+    if (CurrentView != RATESVIEW_RF || Reading_RATES_Now || ParametersToBeSentPointer)
+        return; // (reading or sending: the page's note covers the type)
+    ReadEditedRateValues(); // what the page shows (typed or not), kept through the picker - Cancel brings it back
+    RatesTypeBank = DualRateInUse;
+    SendCommand((char *)"page RatesTypeView");
+    CurrentView = RATESTYPEVIEW;
+    char b[16];
+    snprintf(b, sizeof(b), "Rate %u", (unsigned)DualRateInUse);
+    SendText((char *)"t9", b);
+    SendText((char *)"t11", ModelName);
+    SendValue((char *)"list", RatesTypeKnown(Rate_Values[0]) ? Rate_Values[0] : (RotorFlight_V == 1 ? 4 : 6));
+}
+FLASHMEM static void RatesTypeBack() // back to the Rates page: everything on it sent again, Save shown if there is anything to save
+{
+    SendCommand((char *)"page RatesView");
+    CurrentView = RATESVIEW_RF;
+    if (DualRateInUse != RatesTypeBank)
+    { // the bank switch moved while choosing: that bank is shown (and an edit here is said to be lost), the type left as it was
+        SendText((char *)"t11", ModelName);
+        ShowRatesBank();
+        return;
+    }
+    char b[16];
+    snprintf(b, sizeof(b), "Rate %u", (unsigned)DualRateInUse);
+    SendText((char *)"t9", b);
+    SendText((char *)"t11", ModelName);
+    DisplayRatesValues(0, MAX_RATES_BYTES); // the type, its headings, the numbers
+    SendCommand(Rates_Were_Edited ? (char *)"vis b3,1" : (char *)"vis b3,0");
+}
+FLASHMEM void RatesTypePickOk()
+{
+    if (CurrentView != RATESTYPEVIEW)
+        return;
+    const int32_t t = (int32_t)GetValue((char *)"list");
+    if (DualRateInUse == RatesTypeBank && t >= 0 && t <= 6 && RatesTypeKnown((uint8_t)t))
+    {
+        Rate_Values[0] = (uint8_t)t;
+        for (int i = 1; i < MAX_RATES_BYTES; ++i)
+            Rate_Values[i] = RatesStart[t][i - 1];
+        Rates_Were_Edited = true;
+    }
+    RatesTypeBack();
+    if (t == 6 && !RatesTypeKnown(6) && CurrentView == RATESVIEW_RF)
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RatesView", (char *)"ROTORFLIGHT came with Rotorflight 2.3:\r\nthis flight controller has 2.2.\r\nThe type was not changed.");
+    }
+}
+FLASHMEM void RatesTypePickCancel()
+{
+    if (CurrentView != RATESTYPEVIEW)
+        return;
+    RatesTypeBack();
 }
 #endif // RATESRF_H
 

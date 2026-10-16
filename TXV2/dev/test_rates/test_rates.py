@@ -2,7 +2,10 @@
 """Host test of the Rates page's numbers (B07, B08): include/RF_Rates.h compiled on the Mac over a fake screen. The scale
 table and the headings follow the BANK'S rates type (Rotorflight 2.3's own type 6 = Rate / Shape; Actual and the rest keep
 the Centre / Max scales), a typed value too big for its byte is cut and said, never wrapped, and a local save keeps the
-bank's own type.
+bank's own type. B106: the type is chosen on the picker (RatesTypeView): OK gives the chosen type's starting values (the
+Configurator's, Rotorflight's own formulas giving about 240 / 400 deg/s and 12.5 deg at full stick), Cancel nothing, a bank
+switch moved while choosing leaves the type; a type Rotorflight does not have (7 and up; 6 on a 2.2) is never saved, live
+or kept; and the phone's Rates page has the same starting values (rotorflight-rates.html RATES_START, if LDRC_V2_ALL is here).
    python3 dev/test_rates/test_rates.py"""
 import os, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,7 +31,11 @@ prog = r'''
 #define GET_FIRST_7_RATES_VALUES 13
 #define GET_SECOND_6_RATES_VALUES 14
 #define MSP_WAIT_TIME 2000
+#define RATESTYPEVIEW 82
 static int CurrentView = RATESVIEW_RF;
+static uint8_t ParametersToBeSentPointer = 0; static uint32_t listVal = 0; static std::map<std::string, int> values;
+static uint32_t GetValue(char *) { return listVal; }
+static void SendValue(char *n, int v) { values[n] = v; }
 static uint8_t RotorFlight_V = 2, DualRateInUse = 1;
 static uint8_t Rate_Values[MAX_RATES_BYTES], Saved_Rate_Values[MAX_RATES_BYTES][4];
 static char RatesWindows[MAX_RATES_BYTES][5] = {"t10", "tn0", "tn1", "tn2", "tn3", "tn4", "tn5", "tn6", "tn7", "tn8", "tn9", "tn10", "tn11"};
@@ -87,12 +94,73 @@ int main() {
     live = true; boxes = 0; queued.clear(); SendEditedRates();
     CHECK(boxes == 1 && lastBox.find("A value was too big for Rotorflight") == 0 && !RfValueWasCut && queued.size() == 2 && fields["tn0"] == "1275" && fields["tn9"] == "31.88");
     typed("250", "40", "20", "12.5"); boxes = 0; SendEditedRates(); CHECK(boxes == 0 && Rate_Values[1] == 50);   // (nothing cut: no box)
-    // 5. a local save keeps the saved bank's own type (it was always made Actual, so a type-6 bank came back with Actual's scales)
-    live = false; DualRateInUse = 1; Saved_Rate_Values[0][0] = 6; typed("250", "40", "20", "12.5"); saves = 0; SaveRatesLocalBank();
+    // 5. a local save keeps the bank's own type (it was always made Actual, so a type-6 bank came back with Actual's scales);
+    // B106: the page's type, which ShowRatesLocalBank takes from the saved bank (and the picker may change)
+    live = false; DualRateInUse = 1; Saved_Rate_Values[0][0] = 6; ShowRatesLocalBank(); typed("250", "40", "20", "12.5"); saves = 0; SendEditedRates();
     CHECK(saves == 1 && Saved_Rate_Values[0][0] == 6 && Saved_Rate_Values[1][0] == 50 && Saved_Rate_Values[2][0] == 40 && Saved_Rate_Values[10][0] == 100);
-    Saved_Rate_Values[0][1] = 0; DualRateInUse = 2; SaveRatesLocalBank(); CHECK(Saved_Rate_Values[0][1] == 4 && Saved_Rate_Values[1][1] == 25);   // (no type known: Actual, x10)
+    Saved_Rate_Values[0][1] = 0; DualRateInUse = 2; ShowRatesLocalBank(); typed("250", "40", "20", "12.5"); SendEditedRates();
+    CHECK(Saved_Rate_Values[0][1] == 0 && Saved_Rate_Values[1][1] == 25);   // (B106: NONE kept - it was made Actual with zero rates; x10 as before)
     DualRateInUse = 1; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "6 - ROTORFLIGHT" && fields["tn0"] == "250" && fields["tn9"] == "12.50" && fields["t5"] == "Rate" && Rate_Values[0] == 6);
-    DualRateInUse = 2; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "4 - ACTUAL" && fields["tn0"] == "250" && fields["t5"] == "Centre");
+    DualRateInUse = 2; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "0 - NONE" && fields["tn0"] == "250" && fields["t5"] == "Centre");   // (B106: NONE, as kept)
+    // 6. B106: the type chosen on the picker
+    {
+        static const uint8_t want[7][12] = {{0,0,0, 0,0,0, 0,0,0, 0,0,0}, {120,0,0, 120,0,0, 200,0,0, 203,1,0}, {24,0,0, 24,0,0, 40,0,0, 50,0,0},
+            {120,0,0, 120,0,0, 200,0,0, 250,0,0}, {18,24,0, 18,24,0, 18,40,0, 50,50,0}, {120,24,0, 120,24,0, 200,40,0, 250,50,0}, {50,12,40, 50,12,40, 80,12,50, 100,12,0}};
+        CHECK(memcmp(want, RatesStart, sizeof want) == 0);   // (the Configurator's; QUICKRATES' collective 50, not its 104 = 26 deg)
+        RotorFlight_V = 2; for (int t = 0; t <= 6; ++t) CHECK(RatesTypeKnown(t)); CHECK(!RatesTypeKnown(7) && !RatesTypeKnown(255));
+        RotorFlight_V = 1; CHECK(RatesTypeKnown(5) && !RatesTypeKnown(6)); RotorFlight_V = 0; CHECK(RatesTypeKnown(6));   // (6 only where 2.2 is known)
+        // the Havok (16 Oct 2026): ACTUAL with Rotorflight's numbers, read from the flight controller, bank 1
+        live = true; RotorFlight_V = 2; DualRateInUse = 1; CurrentView = RATESVIEW_RF; Rates_Were_Edited = false; Reading_RATES_Now = false; ParametersToBeSentPointer = 0;
+        const uint8_t havok[13] = {4, 50, 12, 40, 50, 12, 40, 80, 12, 50, 100, 12, 0};
+        memcpy(Rate_Values, havok, 13); fields.clear(); DisplayRatesValues(0, 13);
+        CHECK(fields["t10"] == "4 - ACTUAL" && fields["tn0"] == "500" && fields["tn1"] == "120" && fields["tn2"] == "0.40" && fields["tn9"] == "25.0");
+        // tapped while reading, or while a write is queued: nothing (the page's note covers it)
+        Reading_RATES_Now = true; cmds.clear(); RatesTypeTapped(); CHECK(cmds.empty() && CurrentView == RATESVIEW_RF); Reading_RATES_Now = false;
+        ParametersToBeSentPointer = 2; RatesTypeTapped(); CHECK(cmds.empty() && CurrentView == RATESVIEW_RF); ParametersToBeSentPointer = 0;
+        // tapped: the picker at the bank's own type, the page's numbers kept
+        values.clear(); RatesTypeTapped();
+        CHECK(!cmds.empty() && cmds.back() == "page RatesTypeView" && CurrentView == RATESTYPEVIEW && values["list"] == 4 && fields["t9"] == "Rate 1" && fields["t11"] == "Goblin");
+        CHECK(memcmp(Rate_Values, havok, 13) == 0);   // (the boxes read back to the same bytes)
+        // Cancel: back, nothing changed, Save not shown
+        cmds.clear(); fields.clear(); RatesTypePickCancel();
+        CHECK(CurrentView == RATESVIEW_RF && cmds.front() == "page RatesView" && cmds.back() == "vis b3,0" && !Rates_Were_Edited && memcmp(Rate_Values, havok, 13) == 0 && fields["tn0"] == "500" && fields["t10"] == "4 - ACTUAL");
+        RatesTypePickCancel(); CHECK(cmds.back() == "vis b3,0");   // (not on the picker: nothing)
+        // OK on 4 - ACTUAL: its starting values, Save shown - Centre 180, Max rate 240 (yaw 400), collective 12.5 / 12.5
+        RatesTypeTapped(); listVal = 4; cmds.clear(); fields.clear(); RatesTypePickOk();
+        CHECK(CurrentView == RATESVIEW_RF && Rates_Were_Edited && cmds.back() == "vis b3,1" && Rate_Values[0] == 4 && memcmp(Rate_Values + 1, want[4], 12) == 0);
+        CHECK(fields["t10"] == "4 - ACTUAL" && fields["t5"] == "Centre" && fields["t6"] == "Max rate" && fields["tn0"] == "180" && fields["tn1"] == "240" && fields["tn2"] == "0" && fields["tn6"] == "180" && fields["tn7"] == "400" && fields["tn9"] == "12.50" && fields["tn10"] == "12.50" && fields["tn11"] == "0.0");
+        // ... and saved: both batches queued, the type and the starting values in them
+        queued.clear(); boxes = 0; SendEditedRates(); CHECK(boxes == 0 && queued.size() == 2 && Rate_Values[0] == 4 && memcmp(Rate_Values + 1, want[4], 12) == 0);
+        // OK on 6 - ROTORFLIGHT: Rate 250 (yaw 400), Shape 12, Expo 40 (yaw 50), collective 12.5 - the heads follow
+        RatesTypeTapped(); CHECK(values["list"] == 4); listVal = 6; fields.clear(); RatesTypePickOk();
+        CHECK(Rate_Values[0] == 6 && memcmp(Rate_Values + 1, want[6], 12) == 0 && fields["t10"] == "6 - ROTORFLIGHT" && fields["t5"] == "Rate" && fields["t6"] == "Shape" && fields["tn0"] == "250" && fields["tn1"] == "12" && fields["tn2"] == "40" && fields["tn6"] == "400" && fields["tn8"] == "50" && fields["tn9"] == "12.50" && fields["tn10"] == "12");
+        // every type: its own starting values; a choice out of the list (7, or what a lost reply gives) changes nothing
+        for (int t = 0; t <= 6; ++t) { RatesTypeTapped(); listVal = t; RatesTypePickOk(); CHECK(Rate_Values[0] == t && memcmp(Rate_Values + 1, want[t], 12) == 0 && CurrentView == RATESVIEW_RF); }
+        uint8_t before[13]; memcpy(before, Rate_Values, 13);
+        RatesTypeTapped(); listVal = 7; RatesTypePickOk(); CHECK(memcmp(Rate_Values, before, 13) == 0 && CurrentView == RATESVIEW_RF);
+        RatesTypeTapped(); listVal = 0xFFFFFFFFu; RatesTypePickOk(); CHECK(memcmp(Rate_Values, before, 13) == 0 && CurrentView == RATESVIEW_RF);
+        // typed numbers before the tap are what Cancel brings back
+        Rates_Were_Edited = true; fields["tn0"] = "260"; RatesTypeTapped(); RatesTypePickCancel(); CHECK(fields["tn0"] == "260" && Rate_Values[1] == 52 && cmds.back() == "vis b3,1");
+        // the bank switch moved while choosing: the type left as it was, the new bank read (and the lost edit said)
+        RatesTypeTapped(); memcpy(before, Rate_Values, 13); DualRateInUse = 2; listVal = 4; queued.clear(); boxes = 0; RatesTypePickOk();
+        CHECK(Rate_Values[0] == before[0] && CurrentView == RATESVIEW_RF && Reading_RATES_Now && queued.size() == 1 && queued[0] == SEND_RATES_VALUES && boxes == 1 && fields["t9"] == "Rate 2");
+        Reading_RATES_Now = false; BlockBankChanges = false; Rates_Were_Edited = false; DualRateInUse = 1;
+        // a 2.2 flight controller: ROTORFLIGHT is not chosen, and said
+        RotorFlight_V = 1; Rate_Values[0] = 4; RatesTypeTapped(); listVal = 6; boxes = 0; sounds = 0; RatesTypePickOk();
+        CHECK(Rate_Values[0] == 4 && boxes == 1 && lastBox.find("ROTORFLIGHT came with Rotorflight 2.3") == 0 && sounds == 1 && CurrentView == RATESVIEW_RF);
+        // a bank whose type Rotorflight does not have: shown "?", the picker opens at ROTORFLIGHT (ACTUAL on a 2.2), Save refused - live and kept
+        RotorFlight_V = 2; Rate_Values[0] = 9; RatesTypeTapped(); CHECK(values["list"] == 6); RatesTypePickCancel(); CHECK(fields["t10"] == "?");
+        RotorFlight_V = 1; RatesTypeTapped(); CHECK(values["list"] == 4); RatesTypePickCancel(); RotorFlight_V = 2;
+        live = true; queued.clear(); boxes = 0; SendEditedRates(); CHECK(boxes == 1 && lastBox.find("Not saved: the rates type is 9") == 0 && queued.empty());
+        live = false; saves = 0; boxes = 0; Saved_Rate_Values[0][0] = 4; SendEditedRates(); CHECK(boxes == 1 && saves == 0 && Saved_Rate_Values[0][0] == 4);
+        RotorFlight_V = 1; Rate_Values[0] = 6; live = true; boxes = 0; SendEditedRates(); CHECK(boxes == 1 && lastBox.find("Not saved: the rates type is 6") == 0 && queued.empty());
+        // OK's "Save now?" refused by the type: the page stays, its edits kept
+        RotorFlight_V = 2; Rate_Values[0] = 9; Rates_Were_Edited = true; saveNowAnswer = 1; boxes = 0; RfLeaveAfterSave = false; EndRFRatesView();
+        CHECK(boxes == 1 && Rates_Were_Edited && queued.empty()); saveNowAnswer = 0; RfLeaveAfterSave = false; Rates_Were_Edited = false;
+        // a local (not connected) bank: the chosen type and its values kept on Save
+        live = false; DualRateInUse = 3; Saved_Rate_Values[0][2] = 6; CurrentView = RATESVIEW_RF; ShowRatesLocalBank(); RatesTypeTapped(); listVal = 4; RatesTypePickOk(); saves = 0; SendEditedRates();
+        CHECK(saves == 1 && Saved_Rate_Values[0][2] == 4 && Saved_Rate_Values[1][2] == 18 && Saved_Rate_Values[2][2] == 24 && Saved_Rate_Values[8][2] == 40 && Saved_Rate_Values[10][2] == 50);
+    }
     printf("test_rates: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -3058,7 +3058,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 214 // One more than final one
+#define LASTFUNCTION1 217 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3274,7 +3274,10 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     EasyStickFeelMoved,      // 210 Stick feel
     EasyCyclicMoved,         // 211 Cyclic
     EasyTailMoved,           // 212 Tail
-    EasySpoolTapped          // 213 the switch: PID spool-up in every bank
+    EasySpoolTapped,         // 213 the switch: PID spool-up in every bank
+    RatesTypeTapped,         // 214 B106: the Rates page's type tapped (its picker)
+    RatesTypePickOk,         // 215 the picker's OK: the chosen type, with its starting values
+    RatesTypePickCancel      // 216 the picker's Cancel
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

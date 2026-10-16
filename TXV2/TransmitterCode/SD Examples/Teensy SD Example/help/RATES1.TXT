@@ -40,12 +40,21 @@ Centre and Max rate go in steps of 10, up to 2550|
 Expo goes from 0 to 1, in steps of 0.01.||
 RATES TYPE:|
 'Rates type:' names the type the flight controller uses,|
-such as '4 - ACTUAL'.|
-Change it on the phone app's 'Rates' page, not here.|
+such as '4 - ACTUAL'. To change it:|
+1. Touch the type. Turn the wheel to another, press 'OK'.|
+2. The rates go to that type's starting values, as in|
+Rotorflight's own Configurator: about 240 degrees a second|
+at full stick for Roll and Pitch, 400 for Yaw, and 12.5|
+degrees of Collective.|
+3. Change any value you want, then press 'Save'.|
+'Cancel' changes nothing. Nothing is sent before 'Save'.|
+'OK' on the type already shown gives its starting values too.|
+WHY NOT KEEP THE NUMBERS? Each type reads them its own way.|
+Rotorflight's 'Rate 250' is 'Centre 500' to ACTUAL: twice|
+as fast, and twice the Collective.||
 The numbers here match the Configurator for '4 - ACTUAL',|
-and for '6 - ROTORFLIGHT' on 2.3. With any other type,|
-choose one of those two on the phone app's 'Rates' page,|
-then set the rates again.||
+and for '6 - ROTORFLIGHT' on 2.3: the easiest to read.|
+'6 - ROTORFLIGHT' needs Rotorflight 2.3.||
 'Dynamics ...' opens 'Rates: dynamics' for the same rate.|
 It asks first if you have unsaved changes.|
 'OK' goes back to the 'Rotorflight' page.|

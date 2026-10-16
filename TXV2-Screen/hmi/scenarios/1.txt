@@ -193,3 +193,49 @@ vis busy,1
 vis b2,0
 vis b3,0
 @shot 1_new_saving
+# ---- B106: the type chosen on the picker (page 82). The Havok, 16 Oct 2026: ACTUAL with Rotorflight-type numbers (its
+# Rate 250 / Shape 12 / Expo 40 read as Centre 500 / Max rate 120); then OK on 4 - ACTUAL: RatesTypeBack sends t9, t11,
+# DisplayRatesValues(0, 13) - the type, the heads, the starting values (Centre 18 x10, Max 24 x10 (yaw 40), Expo 0;
+# collective 50 x0.25 = "12.50", expo "0.0") - and Save shown
+page RatesView
+t9.txt="Rate 1"
+t11.txt="Havok"
+t4.txt=""
+t5.txt="Centre"
+t6.txt="Max rate"
+t10.txt="4 - ACTUAL"
+tn0.txt="500"
+tn1.txt="120"
+tn2.txt="0.40"
+tn3.txt="500"
+tn4.txt="120"
+tn5.txt="0.40"
+tn6.txt="800"
+tn7.txt="120"
+tn8.txt="0.50"
+tn9.txt="25.0"
+tn10.txt="3.0"
+tn11.txt="0.0"
+vis b3,0
+@shot 1_havok
+page RatesView
+t9.txt="Rate 1"
+t11.txt="Havok"
+t10.txt="4 - ACTUAL"
+t4.txt=""
+t5.txt="Centre"
+t6.txt="Max rate"
+tn0.txt="180"
+tn1.txt="240"
+tn2.txt="0"
+tn3.txt="180"
+tn4.txt="240"
+tn5.txt="0"
+tn6.txt="180"
+tn7.txt="400"
+tn8.txt="0"
+tn9.txt="12.50"
+tn10.txt="12.50"
+tn11.txt="0.0"
+vis b3,1
+@shot 1_type_start

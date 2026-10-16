@@ -186,6 +186,27 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The rates type, chosen on the transmitter (Teensy B106, screen 1.11.78, receivers 0.9.896, 16 Oct 2026)
+
+Malcolm, with a photo of the Havok's Rates page: "On the transmitter, we can see the rates type, but we cannot edit it.
+Please can we add that in?" - and "I changed it to actual using the iPhone, but I didn't change the numbers". So the Havok's
+Rate 1 was ACTUAL holding Rotorflight's own numbers (Rate 250 / Shape 12 / Expo 40), which ACTUAL reads as Centre 500 /
+Max rate 120: a straight 500 deg/s, and the collective's 12.5 deg as 25.
+
+- **Rates (Rotorflight):** the type is a white box. Touch it: a wheel of Rotorflight's seven types (page 82,
+  RatesTypeView). **OK** puts the bank's rates to that type's starting values, as Rotorflight's own Configurator does -
+  about 240 deg/s roll and pitch, 400 yaw and 12.5 deg collective at full stick (ACTUAL: Centre 180, Max rate 240, yaw
+  400, collective 12.5 / 12.5). **Cancel** changes nothing; nothing is sent before **Save**. ROTORFLIGHT only on 2.3.
+  The Configurator's QUICKRATES collective (26 deg in the firmware's formula) is 12.5 here, like the rest.
+- **Never saved:** a type Rotorflight does not have (7 and up; 6 on a 2.2) - refused by Save, kept or live, and by the
+  receiver (0.9.896 keeps the flight controller's own). A local save now keeps the page's type (NONE stays NONE; it was
+  made ACTUAL with zero rates).
+- **The phone's Rates page** does the same, after a question (it kept the numbers before - the Havok's trap).
+- Help RATES1.TXT "RATES TYPE"; dev/test_rates (8 mistakes put in on purpose, all caught); the receiver's
+  dev/ratestype_test.js checks the phone page, the two tables alike and Rotorflight's formulas.
+- **Receivers 0.9.896** also: the "hello wave" is gone (Malcolm: "we no longer need the wave option"), and Receiver
+  settings has **Cells** (Auto, 1S-4S, 6S-12S even) at the top of its Receiver battery card.
+
 ## Easy tuning: the numbers above the sliders (screen 1.11.77, Teensy B105 unchanged, 16 Oct 2026)
 
 Malcolm, with his finger on a slider: "Truly excellent!!!! When I move a slider, my finger hides the data I wanted to see

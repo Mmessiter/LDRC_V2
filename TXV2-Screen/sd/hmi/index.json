@@ -413,6 +413,11 @@
    "id": 81,
    "name": "EasyView",
    "n": 39
+  },
+  {
+   "id": 82,
+   "name": "RatesTypeView",
+   "n": 11
   }
  ],
  "fonts": {
