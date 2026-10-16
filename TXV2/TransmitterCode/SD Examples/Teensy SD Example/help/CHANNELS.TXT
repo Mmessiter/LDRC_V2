@@ -12,6 +12,13 @@ Beside each bar, by its button: what that channel sends now,|
 in microseconds. 1500 is the middle.|
 Rotorflight on CRSF (the receiver's usual way) sees 1000 to|
 2000 as 989 to 2012, and anything outside as the nearer end.||
+STICK ENDS:|
+The switch at the bottom sets the ends of the channels the|
+sticks drive, in all four banks. On: 944 and 2055, just past|
+the 1000 to 2000 Rotorflight reads, so a stick that stops a|
+little short still gives its full range. Off: 833 and 2166,|
+as new models have. It asks first, either way, and each curve|
+keeps its shape. Check the model's rates after a change.||
 There are 64 curves: 16 channels x 4 banks.|
 To give every bank the same curve, turn on 'Copy to all banks'|
 on the curve page before you press 'OK'.|

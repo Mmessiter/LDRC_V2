@@ -885,6 +885,7 @@ void UpdateButtonLabels()
             }
             SendText(ChannelLabels[i], LabelText);
         }
+        StickEndsShow(); // B111: the switch "Stick ends at 944 and 2055"
     }
     if (CurrentView == FAILSAFE_VIEW)
     {
@@ -918,6 +919,112 @@ void UpdateButtonLabels()
     }
 }
 
+/*********************************************************************************************************************************/
+// B111 (Malcolm, 16 Oct 2026: "the imperfect sticks don't always achieve quite 100% at full deflection and such a limit
+// actually outputs only about 1015 - 1935 .... so we need a bit more!" - then, more carefully, 1025 - 1977 with ends of
+// 1000 and 2000; and: "switching to your restricted range ought to be a user option please rather than permanent or
+// automatic"): the Channels page's switch "Stick ends at 944 and 2055". On: the ends of every channel a stick drives (its
+// input one of the four stick axes, 0-3) go to 944 and 2055 microseconds (40 and 140 degrees) in all four banks, so a stick
+// that stops about 5 % short still passes 1000 and 2000, the most Rotorflight reads on CRSF. Off: back to 833 and 2166 (30
+// and 150, as new models have). Each half of a curve is stretched or shrunk about its centre point, so the curve keeps its
+// shape, its centre and which way it goes. Asked first, either way; the model is saved. The switch shows whether every
+// stick channel ends there now (nothing new is kept in the model).
+#define STICK_END_LOW 40   // 944 us
+#define STICK_END_HIGH 140 // 2055 us
+#define STICK_WIDE_LOW 30  // 833 us
+#define STICK_WIDE_HIGH 150 // 2166 us
+FLASHMEM static void StickEndsHalf(uint8_t &end, uint8_t &mid, uint8_t centre, uint8_t lo, uint8_t hi) // one half of one curve: its end to lo or hi
+{
+    if (end == centre || centre <= lo || centre >= hi)
+        return; // (flat, or a centre at or past the new end: left as it is)
+    const int target = end > centre ? hi : lo;
+    const float k = (float)(target - centre) / (float)((int)end - (int)centre);
+    mid = (uint8_t)constrain((int)lroundf((float)centre + ((float)mid - (float)centre) * k), 0, 180);
+    end = (uint8_t)target;
+}
+FLASHMEM uint8_t StickEndsApply(uint8_t lo, uint8_t hi) // how many channels a stick drives (each changed in all four banks)
+{
+    uint8_t n = 0;
+    for (int ch = 0; ch < CHANNELSUSED; ++ch)
+    {
+        if (InPutStick[ch] > 3)
+            continue; // (a knob, a switch or nothing drives it: left as it is)
+        for (int b = 1; b <= 4; ++b)
+        {
+            StickEndsHalf(MaxDegrees[b][ch], MidHiDegrees[b][ch], CentreDegrees[b][ch], lo, hi);
+            StickEndsHalf(MinDegrees[b][ch], MidLowDegrees[b][ch], CentreDegrees[b][ch], lo, hi);
+        }
+        ++n;
+    }
+    return n;
+}
+FLASHMEM bool StickEndsAreNarrow() // is the switch on: every stick channel, in every bank, ends at 944 and 2055 (either way round)?
+{
+    bool any = false;
+    for (int ch = 0; ch < CHANNELSUSED; ++ch)
+    {
+        if (InPutStick[ch] > 3)
+            continue;
+        any = true;
+        for (int b = 1; b <= 4; ++b)
+        {
+            const uint8_t a = MinDegrees[b][ch], z = MaxDegrees[b][ch];
+            if (!((a == STICK_END_LOW && z == STICK_END_HIGH) || (a == STICK_END_HIGH && z == STICK_END_LOW)))
+                return false;
+        }
+    }
+    return any;
+}
+FLASHMEM void StickEndsShow() // the switch as things are
+{
+    SendValue((char *)"se", StickEndsAreNarrow() ? 1 : 0);
+}
+FLASHMEM void StickEndsTapped() // 219: the switch touched - the question, then the change (or nothing)
+{
+    char names[64] = "";
+    for (int ch = 0; ch < CHANNELSUSED; ++ch)
+    {
+        if (InPutStick[ch] > 3)
+            continue;
+        char one[24];
+        snprintf(one, sizeof(one), "%s%.10s", names[0] ? ", " : "", ChannelNames[ch]);
+        if (strlen(names) + strlen(one) + 6 >= sizeof(names))
+        {
+            strcat(names, ", ...");
+            break;
+        }
+        strcat(names, one);
+    }
+    const bool narrow = StickEndsAreNarrow(); // (what it is now: the touch asks for the other)
+    char prompt[260];
+    if (!names[0])
+    {
+        snprintf(prompt, sizeof(prompt), "No channel here is driven by a stick.");
+        MsgBox(pSticksView, prompt);
+    }
+    else
+    {
+        if (!narrow)
+            snprintf(prompt, sizeof(prompt), "Set the ends of the stick channels\r\n(%s)\r\nto 944 and 2055, in all four banks?\r\n"
+                                             "Each curve keeps its shape. The sticks\r\nwill feel softer: check the rates after.", names);
+        else
+            snprintf(prompt, sizeof(prompt), "Put the ends of the stick channels\r\n(%s)\r\nback to 833 and 2166, in all four banks?\r\n"
+                                             "Each curve keeps its shape. The sticks\r\nwill feel firmer: check the rates after.", names);
+        if (GetConfirmation(pSticksView, prompt))
+        {
+            const uint8_t n = narrow ? StickEndsApply(STICK_WIDE_LOW, STICK_WIDE_HIGH) : StickEndsApply(STICK_END_LOW, STICK_END_HIGH);
+            SaveOneModel(ModelNumber);
+            snprintf(prompt, sizeof(prompt), "Done: %u %s at %s.%s", (unsigned)n, n == 1 ? "channel now ends" : "channels now end",
+                     narrow ? "833 and 2166" : "944 and 2055", narrow ? "" : "\r\nPush each stick to its ends: its number\r\nshould pass 1000 and 2000.");
+            MsgBox(pSticksView, prompt);
+        }
+    }
+    Force_ReDisplay(); // (the Channels page is back from the question: everything on it again, the switch as things now are)
+    CurrentView = STICKSVIEW;
+    UpdateModelsNameEveryWhere();
+    UpdateButtonLabels();
+    ClearText();
+}
 /*********************************************************************************************************************************/
 void Force_ReDisplay()
 {
@@ -3143,7 +3250,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 219 // One more than final one
+#define LASTFUNCTION1 220 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3364,7 +3471,8 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     RatesTypePickOk,         // 215 the picker's OK: the chosen type, with its starting values
     RatesTypePickCancel,     // 216 the picker's Cancel
     RatesCurvesTapped,       // 217 B107: the Rates page's "Curves ..." (page 83)
-    RatesCurvesOk            // 218 the curves page's OK: back to the Rates page
+    RatesCurvesOk,           // 218 the curves page's OK: back to the Rates page
+    StickEndsTapped          // 219 B111: the Channels page's switch "Stick ends at 944 and 2055"
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

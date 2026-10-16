@@ -186,6 +186,23 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Stick ends at 944 and 2055: a switch on the Channels page (Teensy B111, screen 1.11.80 unchanged, 16 Oct 2026)
+
+After B110 showed the Havok's aileron ending at about 833 and 2166 (new models' ends: Rotorflight on CRSF reads nothing
+past 1000 and 2000, so the end of the stick did nothing), Malcolm: "I originally made the range huge in case it were ever
+needed" - asked whether to limit it to 1000-2000 - then: "the imperfect sticks don't always achieve quite 100% at full
+deflection ... so we need a bit more!" (measured more carefully: 1025 - 1977 with ends of 1000 and 2000, about 5 % short
+each way), and: "switching to your restricted range ought to be a user option please rather than permanent or
+automatic". So: a switch at the bottom left of the Channels page, "Stick ends at 944 and 2055". On: the ends of every
+channel a stick drives (its input one of the four stick axes), in all four banks, go to 944 and 2055 (40 and 140
+degrees) - a stick 5 % short then still passes 1000 and 2000. Off: back to 833 and 2166, as new models have. Each half
+of a curve is stretched or shrunk about its centre point, so it keeps its shape, its centre and its direction (a centre
+at or past the new ends, or a flat half, is left alone). It asks first, either way, then saves the model and says what
+it did; the switch shows whether every stick channel ends there now (nothing new is stored in the model). Nothing is
+automatic: new models keep 833 and 2166. Help CHANNELS.TXT "STICK ENDS". dev/test_channel_us 219 + 1078 checks (11
+mistakes put in on purpose, all caught). Not done (needs Malcolm's choice): the receiver's SBUS scale (an FC on SBUS sees
+1500 as about 1519, and 1000-2000 as about 1199-1839; putting it right would make SBUS models move about 1.5 times more).
+
 ## The curve page in microseconds: Input, Output and the points (Teensy B110, screen 1.11.80 unchanged, 16 Oct 2026)
 
 Malcolm, after B109 ("It looks very right!"), of the curve page: "we see on the right stick input and servo output and then

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Host test of B109: the Channels page's numbers (each channel's microseconds beside its bar, screen 1.11.80), and B110:
-the curve page's Input, Output and points in microseconds (StickMicros, ShowGraphMicros, DisplayCurve).
+the curve page's Input, Output and points in microseconds (StickMicros, ShowGraphMicros, DisplayCurve), and B111: the
+Channels page's switch "Stick ends at 944 and 2055" (StickEndsHalf/Apply/AreNarrow/Show/Tapped: either way, asked first,
+each curve's shape kept; new models unchanged).
 ShowChannelMicros and Force_ReDisplay (main.cpp) and RcPut (RF_Rates.h) are lifted out by name and compiled on the Mac
 over a fake of the screen's wire (its room) and the clock: every box filled on opening, whole commands only and never
 more than there is room for, a stick's noise not shown, a move shown at once, a small change once it has stood half a
@@ -21,6 +23,8 @@ def lift(rel, head):
                     return '\n'.join(lines[i:j + 1]) + '\n'
     raise SystemExit('cannot lift %s from %s' % (head, rel))
 main = src('src/main.cpp')
+DEFS = '\n'.join(l for l in main.split('\n') if re.match(r'#define STICK_(END|WIDE)_(LOW|HIGH) ', l)) + '\n'
+assert DEFS.count('#define') == 4, DEFS
 statics = '\n'.join(l for l in main.split('\n') if re.match(r'static (uint16_t UsShown|uint32_t UsMovedAt|uint8_t UsNext|uint16_t GraphShown|uint32_t GraphMovedAt)\b', l))
 assert statics.count('\n') == 4, statics
 PROG = r'''
@@ -46,7 +50,24 @@ static uint16_t SendBuffer[CHANNELSUSED + 1], ShownBuffer[CHANNELSUSED + 1];
 #define MAXMICROS 2500
 #define constrain(a, l, h) ((a) < (l) ? (l) : ((a) > (h) ? (h) : (a)))
 static uint16_t ChannelMin[CHANNELSUSED + 1], ChannelCentre[CHANNELSUSED + 1], ChannelMax[CHANNELSUSED + 1];
-''' + statics + '\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + r'''
+#include <map>
+static uint8_t MinDegrees[5][CHANNELSUSED + 1], MidLowDegrees[5][CHANNELSUSED + 1], CentreDegrees[5][CHANNELSUSED + 1], MidHiDegrees[5][CHANNELSUSED + 1], MaxDegrees[5][CHANNELSUSED + 1];
+static uint8_t InPutStick[CHANNELSUSED + 1];
+static char ChannelNames[CHANNELSUSED][11];
+static char pSticksView[] = "page SticksView";
+#define STICKSVIEW 1
+static int CurrentView = 0; static uint32_t ModelNumber = 7;
+static bool confirmAnswer = true; static int saves = 0, asks = 0, redraws = 0;
+static std::vector<std::string> prompts, msgs; static std::map<std::string, int> values;
+static bool GetConfirmation(char *, char *p) { ++asks; prompts.push_back(p); return confirmAnswer; }
+static void MsgBox(char *, char *p) { msgs.push_back(p); }
+static void SaveOneModel(uint32_t) { ++saves; }
+static void SendValue(char *n, int v) { values[n] = v; }
+static void UpdateModelsNameEveryWhere() {}
+static void ClearText() {}
+void StickEndsShow();
+static void UpdateButtonLabels() { ++redraws; StickEndsShow(); }   // (the real one sends the labels, then the switch)
+''' + statics + '\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + lift('src/main.cpp', 'FLASHMEM static void StickEndsHalf(') + lift('src/main.cpp', 'FLASHMEM uint8_t StickEndsApply(') + lift('src/main.cpp', 'FLASHMEM bool StickEndsAreNarrow()') + lift('src/main.cpp', 'FLASHMEM void StickEndsShow()') + lift('src/main.cpp', 'FLASHMEM void StickEndsTapped()') + r'''
 // the commands sent since the last look: "us3=1500" each (anything else is a fault)
 static std::vector<std::string> sent() {
     std::vector<std::string> r; std::string &o = NEXTION.out; size_t p = 0;
@@ -143,6 +164,56 @@ int main() {
     NEXTION.room = 10; nowMs += 40; ShowGraphMicros(1700, 1800); CHECK(NEXTION.out.empty() && NEXTION.over == 0);   // no room: nothing, not half
     NEXTION.room = 1 << 30; nowMs += 40; ShowGraphMicros(1700, 1800);
     CHECK(NEXTION.out == std::string("Input.val=1700\xFF\xFF\xFFOutput.val=1800\xFF\xFF\xFF")); NEXTION.out.clear();
+    // ---- B111: the Channels page's switch "Stick ends at 944 and 2055" ----
+    auto setCurve = [](int b, int ch, int a, int bb, int c, int d, int e) { MinDegrees[b][ch] = a; MidLowDegrees[b][ch] = bb; CentreDegrees[b][ch] = c; MidHiDegrees[b][ch] = d; MaxDegrees[b][ch] = e; };
+    auto is = [](int b, int ch, int a, int bb, int c, int d, int e) { return MinDegrees[b][ch] == a && MidLowDegrees[b][ch] == bb && CentreDegrees[b][ch] == c && MidHiDegrees[b][ch] == d && MaxDegrees[b][ch] == e; };
+    const char *nm[4] = {"Aileron", "Elevator", "Collective", "Rudder"};
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) { InPutStick[ch] = (uint8_t)ch; snprintf(ChannelNames[ch], 11, "%s", ch < 4 ? nm[ch] : "Ch"); for (int b = 0; b <= 4; ++b) setCurve(b, ch, 30, 60, 90, 120, 150); }
+    // 11. on: the four stick channels, all four banks, a straight line kept straight; the others and bank 0 untouched
+    CHECK(!StickEndsAreNarrow());
+    confirmAnswer = true; StickEndsTapped();
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) CHECK(is(b, ch, 40, 65, 90, 115, 140));
+    for (int b = 1; b <= 4; ++b) for (int ch = 4; ch < CHANNELSUSED; ++ch) CHECK(is(b, ch, 30, 60, 90, 120, 150));
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) CHECK(is(0, ch, 30, 60, 90, 120, 150));
+    CHECK(asks == 1 && saves == 1 && StickEndsAreNarrow() && values["se"] == 1);
+    CHECK(prompts.back().find("(Aileron, Elevator, Collective, Rudder)") != std::string::npos && prompts.back().find("to 944 and 2055") != std::string::npos);
+    CHECK(msgs.back().find("Done: 4 channels now end at 944 and 2055.") == 0);
+    CHECK(CurrentView == STICKSVIEW && ShownBuffer[0] == 242 && redraws == 1);     // the page drawn again after the question
+    // 12. off: back to 833 and 2166, exactly where it was
+    StickEndsTapped();
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) CHECK(is(b, ch, 30, 60, 90, 120, 150));
+    CHECK(asks == 2 && saves == 2 && !StickEndsAreNarrow() && values["se"] == 0);
+    CHECK(prompts.back().find("back to 833 and 2166") != std::string::npos && msgs.back().find("Done: 4 channels now end at 833 and 2166.") == 0);
+    // 13. No: nothing changed, nothing saved, the switch as things are (the touch had flipped it)
+    confirmAnswer = false; values["se"] = 1; StickEndsTapped();
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) CHECK(is(b, ch, 30, 60, 90, 120, 150));
+    CHECK(asks == 3 && saves == 2 && values["se"] == 0);
+    confirmAnswer = true;
+    // 14. shapes: the Havok's aileron (151), a curve the wrong way round, a centre off the middle, a centre past the ends, a flat half
+    setCurve(1, 0, 30, 60, 90, 120, 151); setCurve(1, 1, 150, 120, 90, 60, 30); setCurve(1, 2, 30, 65, 100, 130, 160); setCurve(1, 3, 30, 60, 145, 150, 150);
+    StickEndsApply(STICK_END_LOW, STICK_END_HIGH);
+    CHECK(is(1, 0, 40, 65, 90, 115, 140));                              // 90 + 30 x 50/61 = 114.6
+    CHECK(is(1, 1, 140, 115, 90, 65, 40));                              // the wrong way round stays so
+    CHECK(is(1, 2, 40, 70, 100, 120, 140));                             // each half about its own centre: 100 - 35 x 60/70, 100 + 30 x 40/60
+    CHECK(is(1, 3, 30, 60, 145, 150, 150));                             // a centre at or past 140: left alone
+    setCurve(2, 0, 30, 60, 90, 90, 90); StickEndsApply(STICK_END_LOW, STICK_END_HIGH);
+    CHECK(is(2, 0, 40, 65, 90, 90, 90));                                // a flat half: left alone, the other half done
+    // 15. "on" means every stick channel in every bank: one bank short of it is off, and a touch puts all of them on
+    for (int b = 1; b <= 4; ++b) for (int ch = 0; ch < 4; ++ch) setCurve(b, ch, 40, 65, 90, 115, 140);
+    setCurve(1, 1, 140, 115, 90, 65, 40);                               // (the wrong way round counts)
+    CHECK(StickEndsAreNarrow());
+    setCurve(3, 2, 30, 60, 90, 120, 150); CHECK(!StickEndsAreNarrow());
+    StickEndsTapped(); CHECK(StickEndsAreNarrow() && is(3, 2, 40, 65, 90, 115, 140) && is(1, 1, 140, 115, 90, 65, 40));
+    // 16. no stick channel: says so, changes nothing, asks nothing
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) InPutStick[ch] = (uint8_t)(4 + ch % 12);
+    const int a0 = asks, s0 = saves; StickEndsTapped();
+    CHECK(asks == a0 && saves == s0 && msgs.back() == "No channel here is driven by a stick." && !StickEndsAreNarrow());
+    // 17. other inputs: a stick may drive any channel (a switch on 1, the throttle stick on 6)
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) { InPutStick[ch] = 9; for (int b = 1; b <= 4; ++b) setCurve(b, ch, 30, 60, 90, 120, 150); }
+    InPutStick[5] = 2; InPutStick[0] = 8;
+    StickEndsTapped();
+    CHECK(is(1, 5, 40, 65, 90, 115, 140) && is(4, 5, 40, 65, 90, 115, 140) && is(1, 0, 30, 60, 90, 120, 150));
+    CHECK(prompts.back().find("(Ch)") != std::string::npos && msgs.back().find("Done: 1 channel now ends at 944 and 2055.") == 0);
     printf("%d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -175,6 +246,17 @@ for n, deg in (('n1', 'MinDegrees'), ('n2', 'MidLowDegrees'), ('n3', 'CentreDegr
 check('DegsToPercent' not in dc, 'no point in per cent')
 dcs = lift('src/main.cpp', 'FASTRUN void DisplayCurveAndServoPos()')
 check(re.search(r'GraphShown\[i\] = 0;', dcs) is not None and dcs.index('GraphShown') < dcs.index('ShowServoPos();'), 'the curve page opened: Input and Output shown afresh')
+# B111: a user option, not automatic - new models keep 833 and 2166
+sdv = lift('src/main.cpp', 'void SetDefaultValues(bool Calibrating)')
+check(all(x in sdv for x in ('MaxDegrees[j][i] = 150;', 'MidHiDegrees[j][i] = 120;', 'CentreDegrees[j][i] = 90;', 'MidLowDegrees[j][i] = 60;', 'MinDegrees[j][i] = 30;')), 'new models keep their ends (833 and 2166): the narrow ends are only ever the pilot\'s choice')
+check(re.search(r'RatesCurvesOk,\s*// 218[^\n]*\n\s*StickEndsTapped\s*// 219', main) is not None and '#define LASTFUNCTION1 220' in main, 'code 219 is StickEndsTapped')
+ubl = lift('src/main.cpp', 'void UpdateButtonLabels()')
+blk = ubl[ubl.index('if (CurrentView == STICKSVIEW)'):ubl.index('if (CurrentView == FAILSAFE_VIEW)')]
+check(blk.count('StickEndsShow();') == 1 and blk.index('StickEndsShow();') > blk.index('SendText(ChannelLabels[i], LabelText);'), 'the switch shown whenever the Channels page\'s labels are')
+def imap(x, a, b, c, d): return int((x - a) * (d - c) / (b - a)) + c   # Arduino map (whole numbers, toward 0)
+check([imap(dg, 0, 180, 500, 2500) for dg in (40, 140, 30, 150)] == [944, 2055, 833, 2166], 'the degrees are the microseconds the words say')
+help_ch = open(os.path.join(ROOT, 'Help files for SD', 'CHANNELS.TXT')).read()
+check('STICK ENDS:' in help_ch and '944 and 2055' in help_ch and '833 and 2166' in help_ch and all(len(l) <= 66 for l in help_ch.split('\n')), 'CHANNELS.TXT: the switch')
 help_c = open(os.path.join(ROOT, 'Help files for SD', 'CURVES.TXT')).read()
 check("'Input'" in help_c and "'Output'" in help_c and 'microseconds' in help_c and '-100 to 100' not in help_c, 'CURVES.TXT speaks of microseconds')
 check(all(len(l) <= 66 for l in help_c.split('\n')), 'CURVES.TXT lines no longer than its longest before (66)')
@@ -212,6 +294,12 @@ if os.path.exists(P):
         bar = by['Ch%d' % i]
         check(abs((u['y'] + u['h'] / 2) - (bar['y'] + bar['h'] / 2)) <= 1, 'us%d: centred on its bar' % i)
     for i in range(1, 17): check(by['Sch%d' % i]['a']['xcen'] == (2 if i % 2 else 0), 'Sch%d: words to the %s' % (i, 'right' if i % 2 else 'left'))
+    se, lse, okb = by.get('se'), by.get('lse'), by['b10']
+    check(se is not None and se['t'] == 'switch' and se['g'] == 'g' and se['ev'].get('r') == 'va0.val=219<<8\nprint va0.val', 'the switch: global, code 219')
+    check(lse is not None and lse['txt'] == 'Stick ends at 944 and 2055' and lse['ev'].get('r') == 'va0.val=219<<8\nprint va0.val', 'its words, code 219 too')
+    if se and lse:
+        check(not overlap(se, lse) and not overlap(se, okb) and not overlap(lse, okb) and se['y'] >= by['Sch15']['y'] + by['Sch15']['h'], 'bottom left, clear of OK and the buttons above')
+        check(width(lse['font'], lse['txt']) <= lse['w'] and order.index('se') > order.index('card'), 'the words fit; drawn over the card')
     p21 = json.load(open(os.path.join(EMU, 'sd', 'hmi', 'pages', '21.json'))); b21 = {c['n']: c for c in p21['comps']}
     check(p21['name'] == 'GraphView' and b21['t1']['txt'] == 'Input' and b21['t2']['txt'] == 'Output', 'the curve page says Input and Output')
     for n in ('Input', 'Output', 'n1', 'n2', 'n3', 'n4', 'n5'):

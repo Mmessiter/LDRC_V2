@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B110 16/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B111 16/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1239,6 +1239,8 @@ void RatesTypePickCancel();
 void RatesCurvesTapped();   // B107: the Rates page's "Curves ..." (page 83, RatesCurveView)
 void RatesCurvesOk();
 void RatesCurvesPageBack();
+void StickEndsTapped(); // B111: the Channels page's switch "Stick ends at 944 and 2055" (main.cpp)
+void StickEndsShow();
 void RatesCurvePoll();
 void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex);
 void ReadRatesBytesFromAckPayload(uint8_t n, uint8_t m);
