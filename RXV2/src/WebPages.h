@@ -3973,6 +3973,7 @@ inline void registerWebRoutes() {
     server.on("/rotorflight-ports", []() { if (!serveLittleFsFile("/rotorflight-ports.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/rotorflight-filters", []() { if (!serveLittleFsFile("/rotorflight-filters.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/cli",                   []() { if (!serveLittleFsFile("/cli.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
+    server.on("/rotorflight-diff",      []() { if (!serveLittleFsFile("/rotorflight-diff.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });   // 0.9.895: Diff & execute (the files live in the app)
     server.on("/api/cli",               handleCliApi);          // USB only: one Rotorflight command, its printed reply
     server.on("/api/cli/out",           HTTP_GET, handleCliOut);   // 0.9.883: the rest of a long reply
     server.on("/api/cli/leave",         HTTP_POST, handleCliLeave);

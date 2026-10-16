@@ -294,6 +294,49 @@ final class BleSchemeHandler: NSObject, WKURLSchemeHandler {
                     body: ota.progressJSON)
             return
         }
+        // DIFF & EXECUTE (0.9.895, Malcolm 16 Oct 2026: "I think diff to sd is great too - and we don't yet have this on
+        // the phones (diff and execute) maybe we could ?"): the transmitter's Diff to card on the phone. The page
+        // (rotorflight-diff.html) does the command line through the receiver; the APP keeps the files - one text file a
+        // diff, Documents/diffs/<Model>_<stamp>.txt as the transmitter names them - and lists, reads, shares and deletes them.
+        if path.hasPrefix("/app/diff/") {
+            let name = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "name" })?.value ?? ""
+            func answer(_ o: [String: Any]) {
+                let d = (try? JSONSerialization.data(withJSONObject: o)) ?? Data("{\"ok\":false}".utf8)
+                deliver(task, url: url, code: 200, type: "application/json", body: d)
+            }
+            switch path {
+            case "/app/diff/list":
+                answer(["ok": true, "files": (demo || replay) ? [] : DiffStore.list()])
+            case "/app/diff/save":
+                if demo || replay { answer(["ok": false, "error": "this is the demo \u{2014} nothing here is really connected"]) }
+                else { answer(DiffStore.save(name: name, data: task.request.httpBody ?? Data())) }
+            case "/app/diff/load":
+                answer(DiffStore.load(name: name))
+            case "/app/diff/delete":
+                answer(DiffStore.delete(name: name))
+            case "/app/diff/share":
+                guard let file = DiffStore.existing(name) else { answer(["ok": false, "error": "no such diff on this phone"]); return }
+                DispatchQueue.main.async {
+                    let av = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+                    if let top = BackupFilePicker.topViewController() {
+                        av.popoverPresentationController?.sourceView = top.view
+                        av.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 1, height: 1)
+                        top.present(av, animated: true)
+                    }
+                }
+                answer(["ok": true])
+            default:
+                answer(["ok": false, "error": "unknown"])
+            }
+            return
+        }
+        // The screen kept on while a page's job runs (Diff & execute: a phone that sleeps stops the page part way).
+        if path == "/app/awake" {
+            let s = Double(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "s" })?.value ?? "") ?? 0
+            if s > 0 { ScreenAwake.hold(seconds: min(s, 900)) } else { ScreenAwake.release() }
+            deliver(task, url: url, code: 200, type: "application/json", body: Data("{\"ok\":true}".utf8))
+            return
+        }
         // The pages ask the APP for the public release manifest — the phone
         // has internet at the field, the receiver (Bluetooth-only) does not.
         if path == "/app/manifest" {
@@ -948,4 +991,50 @@ final class DebugShareItem: NSObject, UIActivityItemSource {
     func activityViewControllerPlaceholderItem(_ c: UIActivityViewController) -> Any { file }
     func activityViewController(_ c: UIActivityViewController, itemForActivityType t: UIActivity.ActivityType?) -> Any? { file }
     func activityViewController(_ c: UIActivityViewController, subjectForActivityType t: UIActivity.ActivityType?) -> String { subject }
+}
+
+// MARK: - Diff files (Diff & execute, 0.9.895)
+// One text file a diff in Documents/diffs, named as the transmitter names them ("Havok_2026-10-16_1548.txt"): letters,
+// digits, '-' and '_' then ".txt" - so a name can never leave the folder. 200 files and 64 kB a file at most.
+enum DiffStore {
+    static let maxFiles = 200, maxBytes = 65536
+    static var dir: URL {
+        let d = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("diffs", isDirectory: true)
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
+    }
+    static func nameOk(_ n: String) -> Bool {
+        guard n.count >= 5, n.count <= 64, n.hasSuffix(".txt") else { return false }
+        return n.dropLast(4).allSatisfy { ("a"..."z").contains($0) || ("A"..."Z").contains($0) || ("0"..."9").contains($0) || $0 == "-" || $0 == "_" }
+    }
+    static func existing(_ n: String) -> URL? {
+        guard nameOk(n) else { return nil }
+        let u = dir.appendingPathComponent(n)
+        return FileManager.default.fileExists(atPath: u.path) ? u : nil
+    }
+    static func list() -> [[String: Any]] {
+        let urls = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])) ?? []
+        return urls.filter { nameOk($0.lastPathComponent) }.map { u in
+            ["name": u.lastPathComponent, "bytes": (try? u.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0]
+        }
+    }
+    static func save(name: String, data: Data) -> [String: Any] {
+        guard nameOk(name) else { return ["ok": false, "error": "not a diff file name"] }
+        guard !data.isEmpty, data.count <= maxBytes else { return ["ok": false, "error": data.isEmpty ? "nothing to keep" : "too big for a diff (64 kB at most)"] }
+        let u = dir.appendingPathComponent(name)
+        if !FileManager.default.fileExists(atPath: u.path) && list().count >= maxFiles {
+            return ["ok": false, "error": "\(maxFiles) diffs on this phone: delete some first"]
+        }
+        do { try data.write(to: u, options: .atomic) } catch { return ["ok": false, "error": "the phone would not write it"] }
+        return ["ok": true]
+    }
+    static func load(name: String) -> [String: Any] {
+        guard let u = existing(name), let d = try? Data(contentsOf: u) else { return ["ok": false, "error": "no such diff on this phone"] }
+        return ["ok": true, "text": String(decoding: d, as: UTF8.self)]
+    }
+    static func delete(name: String) -> [String: Any] {
+        guard let u = existing(name) else { return ["ok": false, "error": "no such diff on this phone"] }
+        do { try FileManager.default.removeItem(at: u) } catch { return ["ok": false, "error": "the phone would not delete it"] }
+        return ["ok": true]
+    }
 }

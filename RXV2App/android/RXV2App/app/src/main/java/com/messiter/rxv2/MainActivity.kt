@@ -2147,6 +2147,72 @@ class MainActivity : AppCompatActivity() {
                 }.start()
                 return
             }
+            // DIFF & EXECUTE (0.9.895, Malcolm 16 Oct 2026: "I think diff to sd is great too - and we don't yet have this on
+            // the phones (diff and execute) maybe we could ?"): the page (rotorflight-diff.html) does the command line through
+            // the receiver; the APP keeps the files - one text file a diff, filesDir/diffs/<Model>_<stamp>.txt as the
+            // transmitter names them (letters, digits, '-' and '_' then ".txt": a name never leaves the folder; 200 files and
+            // 64 kB a file at most) - and lists, reads, shares and deletes them. /app/awake keeps the screen on while a job runs.
+            if (p.startsWith("/app/diff/") || p == "/app/awake") {
+                fun answer(json: String) = runOnUiThread {
+                    val w = webView ?: return@runOnUiThread
+                    val b64 = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                    w.evaluateJavascript(
+                        "window.__bleResolve($id,200,${JSONObject.quote("application/json")},${JSONObject.quote(b64)})", null)
+                }
+                fun err(why: String) = JSONObject().put("ok", false).put("error", why).toString()
+                val name = uri.getQueryParameter("name") ?: ""
+                val nameOk = name.length in 5..64 && name.endsWith(".txt") &&
+                             name.dropLast(4).all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '-' || it == '_' }
+                val dir = java.io.File(filesDir, "diffs").apply { mkdirs() }
+                val file = java.io.File(dir, name)
+                fun listed() = dir.listFiles()?.filter { f -> f.isFile && f.name.length in 5..64 && f.name.endsWith(".txt") &&
+                    f.name.dropLast(4).all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '-' || it == '_' } } ?: emptyList()
+                when (p) {
+                    "/app/awake" -> {
+                        val sec = uri.getQueryParameter("s")?.toIntOrNull() ?: 0
+                        runOnUiThread {
+                            if (sec > 0) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        }
+                        answer("{\"ok\":true}")
+                    }
+                    "/app/diff/list" -> {
+                        val arr = org.json.JSONArray()
+                        if (!demoMode && !reviewMode) listed().forEach { arr.put(JSONObject().put("name", it.name).put("bytes", it.length())) }
+                        answer(JSONObject().put("ok", true).put("files", arr).toString())
+                    }
+                    "/app/diff/save" -> answer(when {
+                        demoMode || reviewMode -> err("this is the demo \u2014 nothing here is really connected")
+                        !nameOk -> err("not a diff file name")
+                        body.isEmpty() -> err("nothing to keep")
+                        body.toByteArray(Charsets.UTF_8).size > 65536 -> err("too big for a diff (64 kB at most)")
+                        !file.exists() && listed().size >= 200 -> err("200 diffs on this phone: delete some first")
+                        else -> runCatching { file.writeText(body); "{\"ok\":true}" }.getOrElse { err("the phone would not write it") }
+                    })
+                    "/app/diff/load" -> answer(if (!nameOk || !file.isFile) err("no such diff on this phone")
+                                              else JSONObject().put("ok", true).put("text", file.readText()).toString())
+                    "/app/diff/delete" -> answer(if (!nameOk || !file.isFile) err("no such diff on this phone")
+                                                else if (file.delete()) "{\"ok\":true}" else err("the phone would not delete it"))
+                    "/app/diff/share" -> {
+                        if (!nameOk || !file.isFile) answer(err("no such diff on this phone"))
+                        else {
+                            val shareDir = java.io.File(cacheDir, "backups").apply { mkdirs() }
+                            val copy = java.io.File(shareDir, name).apply { writeText(file.readText()) }
+                            val u = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", copy)
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_STREAM, u)
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Rotorflight diff \u2014 $name")
+                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            runOnUiThread { startActivity(android.content.Intent.createChooser(send, "Share diff")) }
+                            answer("{\"ok\":true}")
+                        }
+                    }
+                    else -> answer(err("unknown"))
+                }
+                return
+            }
             if (p == "/app/declare" || p == "/app/declared" || p == "/app/backup/export" ||
                 p == "/app/debug/export" || p == "/app/compare/models" || p == "/app/compare/entries" ||
                 p == "/app/backup/import" || p == "/app/backup/import/status") {

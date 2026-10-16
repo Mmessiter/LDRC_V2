@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.895-diff-and-execute": "Diff & execute on the phone (Rotorflight > Backup & restore, or A la carte): Diff to phone keeps every Rotorflight setting as text (diff all, as the transmitter's Diff to card); Execute sends a kept diff back to the model and saves. Needs the USB cable.",
   "RXV2-0.9.894-easy-tuning-moved-only": "Easy tuning: a slider you do not move never changes its numbers (moving Cyclic used to round the tail's gains too, and the PID spool-up tick alone rewrote the start settings); a governor choice outside Rotorflight's lists is never written back.",
   "RXV2-0.9.893-governor-choices-in-range": "Governor (global): the throttle type is now chosen from Rotorflight's three (NORMAL, SWITCH, FUNCTION); a value the flight controller holds outside its list shows as not valid and Save waits for a real choice. The receiver never passes an out-of-range governor mode or throttle type on from the transmitter.",
   "RXV2-0.9.892-hobbywing-program-box": "The ESC pages now recommend Hobbywing's LCD program box for a Hobbywing ESC: quick and easy, and well worth having.",
