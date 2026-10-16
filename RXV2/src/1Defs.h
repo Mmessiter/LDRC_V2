@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.896-rates-type-start-values";
+constexpr const char* FW_VERSION = "RXV2-0.9.897-exact-rates-curves";
 
 //*********************************************************************
 //  Auto-update manifest URLs

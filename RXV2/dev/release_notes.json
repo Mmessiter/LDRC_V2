@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.897-exact-rates-curves": "Rates curves drawn with Rotorflight's own formulas (Shape now counts); Max Vel is the true full-stick speed; the transmitter draws the same curves (B107).",
   "RXV2-0.9.896-rates-type-start-values": "Rates type: a new type gives its starting values (as Rotorflight's Configurator), never a type Rotorflight lacks; the hello wave removed; Receiver settings: a Cells list for the receiver battery.",
   "RXV2-0.9.895-diff-and-execute": "Diff & execute on the phone (Rotorflight > Backup & restore, or A la carte): Diff to phone keeps every Rotorflight setting as text (diff all, as the transmitter's Diff to card); Execute sends a kept diff back to the model and saves. Needs the USB cable.",
   "RXV2-0.9.894-easy-tuning-moved-only": "Easy tuning: a slider you do not move never changes its numbers (moving Cyclic used to round the tail's gains too, and the PID spool-up tick alone rewrote the start settings); a governor choice outside Rotorflight's lists is never written back.",

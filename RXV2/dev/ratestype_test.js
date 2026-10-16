@@ -5,6 +5,9 @@
 // writes the type and those values and keeps every other byte; ROTORFLIGHT is not offered before Rotorflight 2.3; a type
 // Rotorflight does not have is never written back. And the starting values: the transmitter's table (TXV1B RF_Rates.h
 // RatesStart) is the same, and Rotorflight's own formulas give 240-250 / 400 deg/s and 12.5 deg at full stick.
+// 0.9.897: the curves - the page's rfRate against Rotorflight 4.6's formulas (fc/rc_rates.c, ported below) for every type
+// and 4000 random settings (the transmitter's RfRatesCurve is checked against the same formulas: TXV1B dev/test_rates);
+// the read-only Max Vel is the true full-stick speed (the Havok's ACTUAL Centre 500 / Max Rate 120 flew 500, and said 120).
 //   node dev/ratestype_test.js
 const fs = require('fs'), path = require('path'), vm = require('vm');
 let fails = 0, passes = 0; const ok = (c, m) => { if (c) passes++; else { fails++; console.log('FAIL ' + m); } };
@@ -144,14 +147,15 @@ const START = [[[0,0,0],[0,0,0],[0,0,0],[0,0,0]], [[120,0,0],[120,0,0],[200,0,0]
         z = Math.sqrt(x); if (b & 8) y *= z; z = Math.sqrt(z); if (b & 4) y *= z; z = Math.sqrt(z); if (b & 2) y *= z; z = Math.sqrt(z); if (b & 1) y *= z; return y; };
     const curve = (t, rc, sr, ex, x) => {
         const e = ex / 100;
-        if (t === 1) { let r = rc * 2; if (r > 400) r += 14.54 * (r - 400); let f = x * (1 - e) + P(x, 4) * e; const s = sr / 100; if (s) f = f / Math.max(1 - f * s, 0.01); return r * f; }
+        if (t === 1) { let r = rc * 2; if (r > 400) r += 14.54 * (r - 400); const f = x * (1 - e) + P(x, 4) * e; return r * f / Math.min(Math.max(1 - x * sr / 100, 0.01), 1); }
         if (t === 2) { const r = rc * 10, s = sr / 100; let f = x * (1 - e) + P(x, 3) * e; f += f * x * s; return r * f; }
         if (t === 3) { const r = rc * 2, s = sr / 100, f = x * (1 - e) + P(x, 3) * e; return r * f / Math.min(Math.max(1 - x * s, 0.01), 1); }
         if (t === 4) { const r = rc * 10, s = sr * 10, a = Math.max(0, s - r), f = x * (1 - e) + P(x, 5) * e; return x * (r + a * f); }
-        if (t === 5) { const r = rc * 2, s = sr * 10, f = x * (1 - e) + P(x, 3) * e, m = Math.max(s, r), su = 1 - r / m; return r * x / Math.min(Math.max(1 - f * su, 0.01), 1); }
+        if (t === 5) { const r = rc * 2, s = sr * 10, f = x * (1 - e) + P(x, 3) * e, m = Math.max(s, r); if (m <= 0) return 0; const su = 1 - r / m; return r * x / Math.min(Math.max(1 - f * su, 0.01), 1); }
         if (t === 6) { const r = rc * 5; return r * (x * (1 - e) + rfPow(x, sr) * e); }
         return 500 * x;
     };
+    const rf46 = (t, rc, sr, ex, x) => Math.min(curve(t, rc, sr, ex, x), 2000);   // (applyRatesCurve: then at most SETPOINT_RATE_LIMIT)
     for (let t = 0; t <= 6; t++) {
         const [roll, pitch, yaw, coll] = START[t].map(([rc, sr, ex]) => curve(t, rc, sr, ex, 1));
         const deg = coll * 2.083333 / 1000 * 12;
@@ -160,6 +164,25 @@ const START = [[[0,0,0],[0,0,0],[0,0,0],[0,0,0]], [[120,0,0],[120,0,0],[200,0,0]
     }
     // (and the Havok's trap, in the same formulas: ACTUAL read Rotorflight's numbers as a straight 500 deg/s and 25 deg)
     ok(Math.abs(curve(4, 50, 12, 40, 1) - 500) < 0.01 && Math.abs(curve(4, 50, 12, 40, 0.5) - 250) < 0.01 && Math.abs(curve(4, 100, 12, 0, 1) * 2.083333 / 1000 * 12 - 25) < 0.1, 'the Havok\'s numbers as ACTUAL: a straight 500 deg/s, 25 deg collective');
+
+    // 12. the page's curves: rfRate against Rotorflight's formulas, every type, 4000 random settings
+    p = await loaded({ bytes: havok, api: 9 });
+    let seed = 7, differ = 0, worst = '';
+    const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return (seed >>> 8) & 0xFFFF; };
+    for (let n = 0; n < 4000; n++) {
+        const t = rnd() % 8, rc = rnd() % 256, sr = rnd() % 256, ex = rnd() % 101, x = (rnd() % 1001) / 1000;
+        const got = p.run('rfRate(' + [t, rc, sr, ex, x].join(',') + ')'), want = rf46(t, rc, sr, ex, x);
+        if (!(Math.abs(got - want) <= 1e-6 + 1e-9 * Math.abs(want))) { differ++; if (!worst) worst = [t, rc, sr, ex, x, got, want].join(' '); }
+    }
+    ok(differ === 0, 'the page\'s curves are Rotorflight 4.6\'s formulas (4000 points' + (differ ? ', ' + differ + ' differ: ' + worst : '') + ')');
+    // 13. Max Vel: the true full-stick speed - the Havok's trap says 500, not 120
+    p = await loaded({ bytes: havok, api: 9 });
+    ok(p.els.r_Roll_3.value === '500' && p.els.r_Yaw_3.value === '800' && p.els.r_Collective_3.value === '25', 'the Havok as ACTUAL: Max Vel 500 / 800 deg/s and 25 deg (it copied Max Rate: 120): ' + [p.els.r_Roll_3.value, p.els.r_Yaw_3.value, p.els.r_Collective_3.value]);
+    p = await loaded({ bytes: havok.map((b, i) => (i === 0 ? 6 : b)), api: 9 });
+    ok(p.els.r_Roll_3.value === '250' && p.els.r_Yaw_3.value === '400' && p.els.r_Collective_3.value === '12.5', 'ROTORFLIGHT 250 / 400 / 12.5: Max Vel 250, 400 and 12.5 deg');
+    // ... and it follows the table as it is typed in
+    p.els.r_Roll_0.value = '300'; p.run("syncCell('Roll', 0)");
+    ok(p.els.r_Roll_3.value === '300', 'Rate typed 300: Max Vel 300');
 
     console.log(passes + ' checks, ' + fails + ' failures');
     console.log(fails ? 'FAILED' : 'ALL PASS');

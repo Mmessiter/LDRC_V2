@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.897-exact-rates-curves",
+      "url": "https://messiter.com/rxv2/release/v0.9.897/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.897/littlefs.bin",
+      "fs_md5": "b158805af954164c0c691f50425acaf0",
+      "notes": "Rates curves drawn with Rotorflight's own formulas (Shape now counts); Max Vel is the true full-stick speed; the transmitter draws the same curves (B107)."
+    },
+    {
       "name": "RXV2-0.9.896-rates-type-start-values",
       "url": "https://messiter.com/rxv2/release/v0.9.896/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.896/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.886/littlefs.bin",
       "fs_md5": "35226fead119b3b4a425619ba9b71452",
       "notes": "The phone's Switches page keeps its live line while the model is armed: the receiver answers that one read (MSP_RC) from its own output without a word to the flight controller, the ARMED banner is a strip on that page, and an arm switch written from a page moves the arming channel the receiver watches at once (it was learned once at boot and never again)."
-    },
-    {
-      "name": "RXV2-0.9.885-failsafe-ticks",
-      "url": "https://messiter.com/rxv2/release/v0.9.885/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.885/littlefs.bin",
-      "fs_md5": "017a9a3492967663a43b3c31637e491d",
-      "notes": "The receiver honours the transmitter's failsafe ticks: only the ticked channels move on signal loss, the rest hold (older firmware moved all 16). Rescue page: climb time 0 means no climb, it levels and hovers. Governor page: idle and auto throttle shown and typed in per cent, and the bail-out help put right."
     }
   ],
   "rotorflight": {
