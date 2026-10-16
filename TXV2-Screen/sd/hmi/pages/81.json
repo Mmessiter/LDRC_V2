@@ -15,7 +15,7 @@
   "right": 255
  },
  "ev": {
-  "preinitialize": "vis busy,0\nEasyView.pic=Screen_Background"
+  "preinitialize": "vis busy,0\nvis lvb,0\nvis lv0,0\nvis lv1,0\nvis lv2,0\nvis lv3,0\nvis lv4,0\nEasyView.pic=Screen_Background"
  },
  "comps": [
   {
@@ -283,8 +283,9 @@
     "minval": 0
    },
    "ev": {
-    "m": "va0.val=208<<8\nprint va0.val",
-    "r": "va0.val=208<<8\nprint va0.val"
+    "p": "lvb.bco=65497\nlv0.bco=65497\nlv1.bco=65497\nlv2.bco=65497\nlv3.bco=65497\nlv4.bco=65497\nlv0.txt=\"\"\nlv1.txt=\"\"\nlv2.txt=\"\"\nlv3.txt=\"\"\nlv4.txt=\"\"\nvis lvb,1\nvis lv0,1\nvis lv1,1\nvis lv2,1\nvis lv3,1\nvis lv4,1\nva0.val=s0.val+1<<24+(208<<8)\nprint va0.val",
+    "m": "va0.val=s0.val+1<<24+(208<<8)\nprint va0.val",
+    "r": "vis lv4,0\nvis lv3,0\nvis lv2,0\nvis lv1,0\nvis lv0,0\nvis lvb,0\nva0.val=s0.val+65<<24+(208<<8)\nprint va0.val"
    },
    "i": 10
   },
@@ -317,68 +318,12 @@
    }
   },
   {
-   "n": "lP",
+   "n": "lA",
    "i": 12,
    "t": "text",
    "g": "g",
    "x": 44,
    "y": 130,
-   "w": 624,
-   "h": 36,
-   "font": 2,
-   "sta": 1,
-   "c": {
-    "pco": 0,
-    "borderc": 0,
-    "bco": 65497
-   },
-   "txt": "Also switch on PID spool-up in every bank (recommended)",
-   "a": {
-    "style": 0,
-    "key": 255,
-    "borderw": 2,
-    "xcen": 1,
-    "ycen": 1,
-    "pw": 0,
-    "txt_maxl": 10,
-    "isbr": 0
-   }
-  },
-  {
-   "n": "sw",
-   "t": "switch",
-   "g": "g",
-   "x": 676,
-   "y": 131,
-   "w": 80,
-   "h": 34,
-   "font": 0,
-   "c": {
-    "pco1": 0,
-    "bco2": 2016,
-    "pco": 65535,
-    "bco": 33808,
-    "pco2": 65535
-   },
-   "txt": " / ",
-   "val": 1,
-   "a": {
-    "dez": 0,
-    "dis": 100,
-    "txt_maxl": 24
-   },
-   "ev": {
-    "r": "va0.val=213<<8\nprint va0.val"
-   },
-   "i": 13
-  },
-  {
-   "n": "lA",
-   "i": 14,
-   "t": "text",
-   "g": "g",
-   "x": 44,
-   "y": 170,
    "w": 109,
    "h": 36,
    "font": 2,
@@ -402,11 +347,11 @@
   },
   {
    "n": "e1L",
-   "i": 15,
+   "i": 13,
    "t": "text",
    "g": "g",
    "x": 161,
-   "y": 170,
+   "y": 130,
    "w": 115,
    "h": 36,
    "font": 2,
@@ -433,7 +378,7 @@
    "t": "slider",
    "g": "g",
    "x": 284,
-   "y": 172,
+   "y": 132,
    "w": 354,
    "h": 32,
    "sta": 1,
@@ -453,18 +398,19 @@
     "minval": 0
    },
    "ev": {
-    "m": "va0.val=209<<8\nprint va0.val",
-    "r": "va0.val=209<<8\nprint va0.val"
+    "p": "lvb.bco=57215\nlv0.bco=57215\nlv1.bco=57215\nlv2.bco=57215\nlv3.bco=57215\nlv4.bco=57215\nlv0.txt=\"\"\nlv1.txt=\"\"\nlv2.txt=\"\"\nlv3.txt=\"\"\nlv4.txt=\"\"\nvis lvb,1\nvis lv0,1\nvis lv1,1\nvis lv2,1\nvis lv3,1\nvis lv4,1\nva0.val=s1.val+1<<24+(209<<8)\nprint va0.val",
+    "m": "va0.val=s1.val+1<<24+(209<<8)\nprint va0.val",
+    "r": "vis lv4,0\nvis lv3,0\nvis lv2,0\nvis lv1,0\nvis lv0,0\nvis lvb,0\nva0.val=s1.val+65<<24+(209<<8)\nprint va0.val"
    },
-   "i": 16
+   "i": 14
   },
   {
    "n": "e1R",
-   "i": 17,
+   "i": 15,
    "t": "text",
    "g": "g",
    "x": 646,
-   "y": 170,
+   "y": 130,
    "w": 110,
    "h": 36,
    "font": 2,
@@ -488,11 +434,11 @@
   },
   {
    "n": "lE",
-   "i": 18,
+   "i": 16,
    "t": "text",
    "g": "g",
    "x": 44,
-   "y": 210,
+   "y": 170,
    "w": 109,
    "h": 36,
    "font": 2,
@@ -516,11 +462,11 @@
   },
   {
    "n": "e2L",
-   "i": 19,
+   "i": 17,
    "t": "text",
    "g": "g",
    "x": 161,
-   "y": 210,
+   "y": 170,
    "w": 115,
    "h": 36,
    "font": 2,
@@ -547,7 +493,7 @@
    "t": "slider",
    "g": "g",
    "x": 284,
-   "y": 212,
+   "y": 172,
    "w": 354,
    "h": 32,
    "sta": 1,
@@ -567,18 +513,19 @@
     "minval": 0
    },
    "ev": {
-    "m": "va0.val=210<<8\nprint va0.val",
-    "r": "va0.val=210<<8\nprint va0.val"
+    "p": "lvb.bco=57215\nlv0.bco=57215\nlv1.bco=57215\nlv2.bco=57215\nlv3.bco=57215\nlv4.bco=57215\nlv0.txt=\"\"\nlv1.txt=\"\"\nlv2.txt=\"\"\nlv3.txt=\"\"\nlv4.txt=\"\"\nvis lvb,1\nvis lv0,1\nvis lv1,1\nvis lv2,1\nvis lv3,1\nvis lv4,1\nva0.val=s2.val+1<<24+(210<<8)\nprint va0.val",
+    "m": "va0.val=s2.val+1<<24+(210<<8)\nprint va0.val",
+    "r": "vis lv4,0\nvis lv3,0\nvis lv2,0\nvis lv1,0\nvis lv0,0\nvis lvb,0\nva0.val=s2.val+65<<24+(210<<8)\nprint va0.val"
    },
-   "i": 20
+   "i": 18
   },
   {
    "n": "e2R",
-   "i": 21,
+   "i": 19,
    "t": "text",
    "g": "g",
    "x": 646,
-   "y": 210,
+   "y": 170,
    "w": 110,
    "h": 36,
    "font": 2,
@@ -602,11 +549,11 @@
   },
   {
    "n": "lC",
-   "i": 22,
+   "i": 20,
    "t": "text",
    "g": "g",
    "x": 44,
-   "y": 250,
+   "y": 210,
    "w": 109,
    "h": 36,
    "font": 2,
@@ -630,11 +577,11 @@
   },
   {
    "n": "e3L",
-   "i": 23,
+   "i": 21,
    "t": "text",
    "g": "g",
    "x": 161,
-   "y": 250,
+   "y": 210,
    "w": 115,
    "h": 36,
    "font": 2,
@@ -661,7 +608,7 @@
    "t": "slider",
    "g": "g",
    "x": 284,
-   "y": 252,
+   "y": 212,
    "w": 354,
    "h": 32,
    "sta": 1,
@@ -681,18 +628,19 @@
     "minval": 0
    },
    "ev": {
-    "m": "va0.val=211<<8\nprint va0.val",
-    "r": "va0.val=211<<8\nprint va0.val"
+    "p": "lvb.bco=59323\nlv0.bco=59323\nlv1.bco=59323\nlv2.bco=59323\nlv3.bco=59323\nlv4.bco=59323\nlv0.txt=\"\"\nlv1.txt=\"\"\nlv2.txt=\"\"\nlv3.txt=\"\"\nlv4.txt=\"\"\nvis lvb,1\nvis lv0,1\nvis lv1,1\nvis lv2,1\nvis lv3,1\nvis lv4,1\nva0.val=s3.val+1<<24+(211<<8)\nprint va0.val",
+    "m": "va0.val=s3.val+1<<24+(211<<8)\nprint va0.val",
+    "r": "vis lv4,0\nvis lv3,0\nvis lv2,0\nvis lv1,0\nvis lv0,0\nvis lvb,0\nva0.val=s3.val+65<<24+(211<<8)\nprint va0.val"
    },
-   "i": 24
+   "i": 22
   },
   {
    "n": "e3R",
-   "i": 25,
+   "i": 23,
    "t": "text",
    "g": "g",
    "x": 646,
-   "y": 250,
+   "y": 210,
    "w": 110,
    "h": 36,
    "font": 2,
@@ -716,11 +664,11 @@
   },
   {
    "n": "lT",
-   "i": 26,
+   "i": 24,
    "t": "text",
    "g": "g",
    "x": 44,
-   "y": 290,
+   "y": 250,
    "w": 109,
    "h": 36,
    "font": 2,
@@ -744,11 +692,11 @@
   },
   {
    "n": "e4L",
-   "i": 27,
+   "i": 25,
    "t": "text",
    "g": "g",
    "x": 161,
-   "y": 290,
+   "y": 250,
    "w": 115,
    "h": 36,
    "font": 2,
@@ -775,7 +723,7 @@
    "t": "slider",
    "g": "g",
    "x": 284,
-   "y": 292,
+   "y": 252,
    "w": 354,
    "h": 32,
    "sta": 1,
@@ -795,18 +743,19 @@
     "minval": 0
    },
    "ev": {
-    "m": "va0.val=212<<8\nprint va0.val",
-    "r": "va0.val=212<<8\nprint va0.val"
+    "p": "lvb.bco=59323\nlv0.bco=59323\nlv1.bco=59323\nlv2.bco=59323\nlv3.bco=59323\nlv4.bco=59323\nlv0.txt=\"\"\nlv1.txt=\"\"\nlv2.txt=\"\"\nlv3.txt=\"\"\nlv4.txt=\"\"\nvis lvb,1\nvis lv0,1\nvis lv1,1\nvis lv2,1\nvis lv3,1\nvis lv4,1\nva0.val=s4.val+1<<24+(212<<8)\nprint va0.val",
+    "m": "va0.val=s4.val+1<<24+(212<<8)\nprint va0.val",
+    "r": "vis lv4,0\nvis lv3,0\nvis lv2,0\nvis lv1,0\nvis lv0,0\nvis lvb,0\nva0.val=s4.val+65<<24+(212<<8)\nprint va0.val"
    },
-   "i": 28
+   "i": 26
   },
   {
    "n": "e4R",
-   "i": 29,
+   "i": 27,
    "t": "text",
    "g": "g",
    "x": 646,
-   "y": 290,
+   "y": 250,
    "w": 110,
    "h": 36,
    "font": 2,
@@ -827,6 +776,62 @@
     "txt_maxl": 30,
     "isbr": 0
    }
+  },
+  {
+   "n": "lP",
+   "i": 28,
+   "t": "text",
+   "g": "g",
+   "x": 44,
+   "y": 290,
+   "w": 624,
+   "h": 36,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Also switch on PID spool-up in every bank (recommended)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 60,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "sw",
+   "t": "switch",
+   "g": "g",
+   "x": 676,
+   "y": 291,
+   "w": 80,
+   "h": 34,
+   "font": 0,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": " / ",
+   "val": 1,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "ev": {
+    "r": "va0.val=213<<8\nprint va0.val"
+   },
+   "i": 29
   },
   {
    "n": "note",
@@ -921,8 +926,176 @@
    }
   },
   {
-   "n": "busy",
+   "n": "lvb",
    "i": 33,
+   "t": "text",
+   "g": "g",
+   "x": 44,
+   "y": 332,
+   "w": 712,
+   "h": 116,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 65497,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 80,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lv0",
+   "i": 34,
+   "t": "text",
+   "g": "g",
+   "x": 52,
+   "y": 340,
+   "w": 140,
+   "h": 100,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 65497,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 80,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lv1",
+   "i": 35,
+   "t": "text",
+   "g": "g",
+   "x": 192,
+   "y": 340,
+   "w": 139,
+   "h": 100,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 65497,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 80,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lv2",
+   "i": 36,
+   "t": "text",
+   "g": "g",
+   "x": 331,
+   "y": 340,
+   "w": 139,
+   "h": 100,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 65497,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 80,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lv3",
+   "i": 37,
+   "t": "text",
+   "g": "g",
+   "x": 470,
+   "y": 340,
+   "w": 139,
+   "h": 100,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 65497,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 80,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lv4",
+   "i": 38,
+   "t": "text",
+   "g": "g",
+   "x": 609,
+   "y": 340,
+   "w": 139,
+   "h": 100,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 65497,
+    "bco": 65497
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 80,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "busy",
+   "i": 39,
    "t": "text",
    "g": "l",
    "x": 110,

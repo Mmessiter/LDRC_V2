@@ -2,7 +2,7 @@
 """Look for visual flaws in the pages the screen shows, using the screen's own font widths (hmi/fontw.py):
 text wider or taller than its box (as main.cpp drawTextIn lays it out), parts that overlap without one holding the other,
 and parts that cross the edge of the navy card. Run: python3 hmi/lint_pages.py [page ids...] (default: every restyled page)."""
-import json, os, sys
+import json, os, re, sys
 from fontw import width, W as WIDTHS
 HERE = os.path.dirname(os.path.abspath(__file__))
 PAGES = os.path.join(HERE, '..', 'sd', 'hmi', 'pages')
@@ -70,9 +70,13 @@ def lint(pid):
             apart = x1 <= cx0 or x0 >= cx1 or y1 <= cy0 or y0 >= cy1
             if not inside and not apart: found.append(f'{c["n"]} ({x0},{y0},{c["w"]},{c["h"]}) crosses the card edge')
             elif inside and min(x0 - cx0, cx1 - x1, y0 - cy0, cy1 - y1) < 4: found.append(f'{c["n"]} ({x0},{y0},{c["w"]},{c["h"]}) is {min(x0 - cx0, cx1 - x1, y0 - cy0, cy1 - y1)} px from the card edge')
+    # (1.11.76: a part the page hides as it opens - preinitialize "vis NAME,0" - is an overlay, shown over the page only
+    # while it is wanted, as the Easy tuning page's numbers box is while a finger is on a slider: not an overlap)
+    hidden = set(re.findall(r'^\s*vis\s+(\w+)\s*,\s*0\s*$', pg.get('ev', {}).get('preinitialize', ''), re.M))
     for i, a in enumerate(comps):
         for b in comps[i + 1:]:
             if 'card' in (a['n'], b['n']): continue
+            if (a['n'] in hidden) != (b['n'] in hidden): continue
             ax1, ay1, bx1, by1 = a['x'] + a['w'], a['y'] + a['h'], b['x'] + b['w'], b['y'] + b['h']
             if a['x'] >= bx1 or b['x'] >= ax1 or a['y'] >= by1 or b['y'] >= ay1: continue
             a_holds = a['x'] <= b['x'] and a['y'] <= b['y'] and ax1 >= bx1 and ay1 >= by1

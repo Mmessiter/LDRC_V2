@@ -186,6 +186,25 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Easy tuning: the numbers while you slide; the spool-up switch at the bottom (Teensy B105, screen 1.11.76, 16 Oct 2026)
+
+Malcolm, of B104's page: "Very very good !!!!! I love it! ... please move it to the bottom of the options and change the
+colour because it looks rather like a divider. If possible please add a temporary display of affected pid etc values in
+the space below so that as we slide a slider we can see them change. This should appear when finger lands, update as it
+slides, vanish on finger lift." **While a finger is on a slider**, a box under the sliders (in that row's shade) shows the
+numbers it moves, as their own pages name them: what the model has now -> what 'Save' would write (one number where Save
+leaves it) - Start: the Governor's spool-up, handover and startup; Agility: Max rate and Centre (Rate on Rotorflight's own
+rates type) of roll, pitch and yaw; Stick feel: their Expo; Cyclic: P, I, D, F of roll and pitch; Tail: those of yaw. It
+appears as the finger lands, follows it, and goes as it lifts - the screen shows and hides the box itself, so a message
+lost on the way can never leave it up. Each slider's message now carries its place (the code word's top byte:
+ButtonWasPressed's ScreenEventArg), so the numbers keep up without a 55 ms "get" each step; 'Save' still asks every slider
+and the switch first, so what shows is what is saved. A slider let go at the end of its travel says so in the line under
+the sliders. **Also switch on PID spool-up in every bank (recommended)** is now the last row, in white words like the
+sliders' ends (no pale bar). The help explains PID spool-up: the governor raises the head speed itself, at a steady rate,
+from the handover point to the bank's head speed, instead of the throttle rising until the head is almost at speed.
+Memory unchanged (RAM1 free 76,352). Host tests: test_easy 24,839 checks (the box for every slider and rates type, the
+place in the word and the old "get", main.cpp's own sums, and page 81's scripts worked out as the screen does).
+
 ## Easy tuning: the phone's sliders on the transmitter (Teensy B104, screen 1.11.75, receivers 0.9.894, 16 Oct 2026)
 
 Malcolm, of what the phone has and the transmitter lacks: "The one of these that strikes me as most useful at the field is

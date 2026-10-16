@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B104 16/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B105 16/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1988,6 +1988,7 @@ bool AgeGapChecked = false;
 bool BankCheckIsNeeded = false;
 
 bool BlockBankChanges = false; // used to block bank changes when Param go to or from Nexus
+uint8_t ScreenEventArg = 0;    // B105: the top byte of the screen's last 24-bit code word (a slider's place; 0: none sent)
 bool RfLeaveAfterSave = false; // B102: OK's "Save now?" - the page closes once its save has worked (Utilities.h RfSaveFirst)
 int RfLeaveView = -1;
 void (*RfLeaveFn)() = nullptr;

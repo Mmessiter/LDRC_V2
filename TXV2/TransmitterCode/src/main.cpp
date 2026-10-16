@@ -3269,7 +3269,7 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     StartEasyView,           // 205 B104: the menu's Easy tuning ...
     EndEasyView,             // 206 OK
     SaveEasy,                // 207 Save
-    EasyStartMoved,          // 208 the Start slider moved (as it is dragged, and let go)
+    EasyStartMoved,          // 208 the Start slider touched, dragged, let go (B105: its place in the word's top byte)
     EasyAgilityMoved,        // 209 Agility
     EasyStickFeelMoved,      // 210 Stick feel
     EasyCyclicMoved,         // 211 Cyclic
@@ -3413,7 +3413,8 @@ FASTRUN void ButtonWasPressed()
         StartInactvityTimeout();
         ScreenTimeTimer = millis();                       // reset screen timeout counter
         uint32_t NumberedCommand = Command_number & 0x7F; // NextionCommand.FirstDWord & 0x7F; // Just clear the hi BIT ( i.e. -128)
-        uint32_t NumberedCommand1 = Command_number >> 8;  // Shift over to the right to get a number up to 24 BITS
+        uint32_t NumberedCommand1 = ((uint32_t)Command_number >> 8) & 0xFFFF; // the function's number (B105: 16 bits now) ...
+        ScreenEventArg = (uint8_t)((uint32_t)Command_number >> 24);            // ... and the top byte a value the page sends with it (0: none)
 
 #ifdef DB_NEXTION
         if ((TextIn[0] < 128) && (TextIn[0] > 28))

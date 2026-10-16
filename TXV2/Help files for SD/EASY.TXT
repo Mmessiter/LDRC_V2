@@ -6,22 +6,26 @@ It needs the model connected, the safety on, and a Version 2|
 receiver with Bluetooth. It tunes the bank your bank switch is|
 on, and the rates your rates switch is on, as the other pages|
 do. If the flight controller is on another bank, it says so.||
+THE NUMBERS UNDER THE SLIDERS:|
+While your finger is on a slider, a box under the sliders|
+shows the numbers that slider moves: what the model has now|
+-> what 'Save' would write. One number: 'Save' leaves it.|
+The box goes when you lift your finger.||
 THE CENTRE:|
 Each slider's centre is the model's numbers at your last|
 backup ('Backup & restore ...' on the Rotorflight page).|
 After a save a slider stays where you left it, so it shows|
 how far you have come. Back up, and every slider re-centres|
 on that day's numbers.|
-With no backup, the centre is the numbers the page opened with.||
+With no backup, the centre is the numbers the page opened with.|
+A slider at the end of its travel says so when you let it go:|
+a backup re-centres it.||
 START (the same for every bank):|
 Moves three numbers on the Governor page and nothing else:|
 spool-up time, startup time and handover throttle.|
 Full left doubles the two times and lowers the handover 15 %.|
 Full right halves the times and raises the handover 15 %.|
-Saving it restarts the flight controller: blades off.|
-The switch under it also turns on PID spool-up in every bank|
-(recommended). The governor then ramps the head speed itself,|
-so the torque is even all the way up.||
+Saving it restarts the flight controller: blades off.||
 AGILITY AND STICK FEEL (this rate):|
 Agility: how fast roll, pitch and yaw turn at full stick,|
 from half to double the centre.|
@@ -36,11 +40,21 @@ Boost and the HSI offsets are left alone.|
 Wobbles or shakes: softer.|
 Sluggish, drifting or mushy: sharper.|
 Small steps, one flight each.||
-THE LINE UNDER THE SLIDERS:|
-The numbers the slider you moved last will write.|
-A slider you do not move never changes its numbers.||
+PID SPOOL-UP (the switch at the bottom):|
+A Rotorflight governor setting, one in each bank.|
+Off (Rotorflight's own default): as the head spools up, the|
+flight controller raises the throttle at a steady rate. The|
+governor takes over only when the head is almost at speed.|
+On: once the throttle passes the handover point, the governor|
+takes over at once. It raises the HEAD SPEED at a steady rate,|
+right up to your head speed: a smoother spool-up that ends|
+exactly on speed.|
+With the switch on, saving a Start change also turns PID|
+spool-up on in every bank. To do only that, switch it off and|
+on again, then press 'Save'. It never turns PID spool-up off|
+(the phone app can, bank by bank).||
 SAVE AND OK:|
-'Save' writes what you moved, stores it and reads it back.|
+'Save' writes only what you moved, stores it, reads it back.|
 It asks first, and says what it saved.|
 'OK' leaves. With changes not saved it asks 'Save now?':|
 'Save' saves, then leaves. 'Discard' leaves without saving.|

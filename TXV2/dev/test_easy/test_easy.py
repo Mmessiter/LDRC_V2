@@ -9,11 +9,20 @@ pipe and a fake backup file, with the real RF_SaveNow.h. Two parts:
      every bank (each bank chosen, the transmitter's chosen again), the restart and its read-back, the refusals (another
      bank - B102; a governor choice outside the lists - B103; no model; nothing moved), failures part way (the bank put
      back first), the page left, "Save now?" on OK (B102), the bank switch moved, an uncovered rates type.
+  3. B105, THE NUMBERS WHILE A FINGER IS ON A SLIDER: the box's columns (now -> what Save would write) for every slider,
+     the slider's place carried in its word (and the old "get" for a page without it), the line after the lift; the
+     dispatcher's own expressions taken from main.cpp; and the screen's page file (ESP32-board2 sd/hmi/pages/81.json): its
+     sliders' scripts, worked out left to right as the screen does, give the words the main board reads as (slider, place,
+     let go), the box shown in the row's shade and emptied as a finger lands and hidden as it lifts, the switch's row last.
    python3 dev/test_easy/test_easy.py"""
 import json, os, random, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INC = os.path.join(ROOT, 'TransmitterCode', 'include')
 RXV2 = os.path.join(os.path.expanduser('~'), 'Documents', 'GitHub', 'LDRC_V2_ALL', 'RXV2', 'data')
+PAGE81 = os.path.join(os.path.expanduser('~'), 'Documents', 'GitHub', 'ESP32-board2', 'board4', 'nextion-emulator', 'sd', 'hmi', 'pages', '81.json')
+MAIN = open(os.path.join(ROOT, 'TransmitterCode', 'src', 'main.cpp')).read()
+CODE_EXPR = re.search(r'uint32_t NumberedCommand1 = (.+?);', MAIN).group(1)   # (B105: the dispatcher's own sums, ButtonWasPressed)
+ARG_EXPR = re.search(r'ScreenEventArg = (.+?);', MAIN).group(1)
 def src(name): return open(os.path.join(INC, name)).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '')
 
 prog = r'''
@@ -37,6 +46,7 @@ prog = r'''
 #define EASYVIEW 81
 #define ROTORFLIGHTVIEW 47
 static int CurrentView = 0;
+static uint8_t ScreenEventArg = 0;   // (main.cpp ButtonWasPressed: the top byte of the slider's word)
 static bool BoundFlag = true, ModelMatched = true, BlockBankChanges = false;
 static char ModelName[20] = "Havok";
 static uint8_t Bank = 2, DualRateInUse = 2;
@@ -102,6 +112,8 @@ static bool BakBlock(uint8_t fn, int bank, uint8_t *out, int max, int &n) {
     if (h.empty()) return false; n = bytesOf(h, out, max); return true;
 }
 ''' + src('RF_Easy.h') + r'''
+static uint32_t CodeOf(int Command_number) { return ''' + CODE_EXPR + r'''; }   // main.cpp's own expressions
+static uint8_t ArgOf(int Command_number) { return ''' + ARG_EXPR + r'''; }
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
 static void run(int n = 900) { for (int i = 0; i < n && EzStep != EZ_IDLE; ++i) { EasyPoll(); now += 50; } EasyPoll(); }
@@ -156,11 +168,18 @@ static void model() { // the Havok's numbers on the fake flight controller, its 
     BoundFlag = ModelMatched = true; armed = pipeBlocked = false; confirmAnswer = saveAnswer = true; finger.clear();
 }
 static void open() { fcLog.clear(); cmds.clear(); fields.clear(); vals.clear(); boxes = 0; CurrentView = ROTORFLIGHTVIEW; StartEasyView(); run(); }
-static void slide(int k, int v) { char n[4] = {'s', (char) ('0' + k), 0, 0}; finger[n] = (uint32_t) v; if (k == 0) EasyStartMoved(); else if (k == 1) EasyAgilityMoved(); else if (k == 2) EasyStickFeelMoved(); else if (k == 3) EasyCyclicMoved(); else EasyTailMoved(); }
+static void sliderWord(int k, int arg) { ScreenEventArg = (uint8_t) arg; if (k == 0) EasyStartMoved(); else if (k == 1) EasyAgilityMoved(); else if (k == 2) EasyStickFeelMoved(); else if (k == 3) EasyCyclicMoved(); else EasyTailMoved(); ScreenEventArg = 0; }
+static void slide(int k, int v) { sliderWord(k, v + 1); }        // (B105: touched or dragged - the place in the word)
+static void lift(int k, int v) { sliderWord(k, v + 65); }        // (let go)
+static void slideOld(int k, int v) { char n[4] = {'s', (char) ('0' + k), 0, 0}; finger[n] = (uint32_t) v; sliderWord(k, 0); }   // (a page from before B105: asked)
+static std::string lv(int i) { char n[4] = {'l', 'v', (char) ('0' + i), 0}; return fields.count(n) ? fields[n] : std::string("<none>"); }
+static bool table(const char *a, const char *b, const char *c, const char *d, const char *e) { return lv(0) == a && lv(1) == b && lv(2) == c && lv(3) == d && lv(4) == e; }
+static void forget() { for (int i = 0; i < 5; ++i) { char n[4] = {'l', 'v', (char) ('0' + i), 0}; fields.erase(n); } }
 static void save() { fcLog.clear(); boxes = 0; confirms = 0; stores = 0; boots = 0; lastBox = ""; SaveEasy(); run(); }
 
 int main(int argc, char **argv) {
     if (argc > 1 && std::string(argv[1]) == "grid") { grid(); return 0; }
+    if (argc > 1 && std::string(argv[1]) == "decode") { long w; while (std::cin >> w) printf("%u %u\n", (unsigned) CodeOf((int) w), (unsigned) ArgOf((int) w)); return 0; }   // (part 3: the page's words through main.cpp's sums)
     { // governor: mode 3 (ELECTRIC), startup 15.0 s, spool-up 10.0 s, handover 20 %, throttle type 0 (NORMAL)
       uint8_t g[42] = {0}; g[0] = 3; g[1] = 150; g[3] = 100; g[5] = 20; g[19] = 20; g[20] = 20; g[25] = 10; g[28] = 0; GOV0 = hexOf(g, 42); }
     { // rates, Actual: centre 18 (180 deg/s), expo 40, max rate 36 (360) on roll and pitch, 45 (450) on yaw
@@ -182,7 +201,8 @@ int main(int argc, char **argv) {
     // 2. Cyclic +10 %: the note, then a save that writes the cyclic words from the backup's centre - and not the tail's
     cmds.clear(); slide(3, 8);
     CHECK(EzPos[3] == 10 && EzMoved[3] && Ez_Was_Edited && sent("vis b3,1"));
-    CHECK(fields["note"] == "Cyclic gains +10 %: roll P 48->53, D 40->44; pitch P 52->57, D 44->48 (I and F likewise).");
+    CHECK(table("Cyclic +10 %\r\nRoll\r\nPitch", "P\r\n50 -> 53\r\n52 -> 57", "I\r\n100 -> 110\r\n104 -> 114", "D\r\n40 -> 44\r\n44 -> 48", "F\r\n100 -> 110\r\n100 -> 110"));
+    forget(); lift(3, 8); CHECK(lv(0) == "<none>" && fields["note"] == "" && EzPos[3] == 10);   // (let go: the box is the screen's to hide; nothing written to it)
     save();
     CHECK(confirms == 1 && lastQuestion == "Write to the flight controller?\r\nFeel (PIDs, bank 2)");
     CHECK(fns() == "101 202 250 112");
@@ -195,7 +215,7 @@ int main(int argc, char **argv) {
 
     // 3. Agility on the Actual type: the max rate moved, the centre sensitivity in proportion, the expo not touched
     model(); open(); slide(1, 14);   // 70: 360 x 2^0.4 = 475 -> 480 (10 a step); 450 x 2^0.4 = 594 -> 590
-    CHECK(fields["note"] == "Roll and pitch 480 deg/s, yaw 590 deg/s at full stick.");
+    CHECK(table("Agility\r\nMax rate\r\nCentre", "Roll\r\n360 -> 480\r\n180 -> 240", "Pitch\r\n360 -> 480\r\n180 -> 240", "Yaw\r\n450 -> 590\r\n200 -> 260", ""));
     save();
     CHECK(fns() == "101 204 250 111" && lastQuestion == "Write to the flight controller?\r\nAgility (rates, rate 2)");
     CHECK(byteAt(rates[1], 3) == 48 && byteAt(rates[1], 1) == 24 && byteAt(rates[1], 9) == 48 && byteAt(rates[1], 15) == 59 && byteAt(rates[1], 13) == 26);   // (18 x 48 / 36 = 24; 20 x 59 / 45 = 26.2 -> 26)
@@ -204,13 +224,13 @@ int main(int argc, char **argv) {
     // ... and Stick feel on the Rotorflight type: the expo only
     model(); for (int b = 0; b < 6; ++b) rates[b] = fileRates[b] = RATES_RF;
     open(); slide(2, 6);   // 30: 40 - (30 - 50) x 0.7 = 54
-    CHECK(fields["note"] == "Expo 54 on roll, pitch and yaw." && EzPos[2] == 30);
+    CHECK(table("Stick feel\r\nExpo", "Roll\r\n40 -> 54", "Pitch\r\n40 -> 54", "Yaw\r\n40 -> 54", "") && EzPos[2] == 30);   // (Rotorflight's type: the expo as it is)
     save(); CHECK(byteAt(rates[1], 2) == 54 && byteAt(rates[1], 8) == 54 && byteAt(rates[1], 14) == 54 && byteAt(rates[1], 20) == 40 && byteAt(rates[1], 1) == 18);
 
     // 4. Start, with the switch on (as it opens): PID spool-up in every bank, the transmitter's bank again, the governor,
     //    the store, the restart, and the read-back once the flight controller is back (it misses the first ask)
     model(); open(); slide(0, 14);   // 70: k = 2^-0.4 = 0.758: spool-up 10 -> 8, startup 15 -> 11, handover 20 + 6 = 26
-    CHECK(fields["note"] == "Full head speed in about 8 s (spool-up 8, handover 26 %, startup 11).");
+    CHECK(table("Start\r\nGovernor", "Spool-up\r\n10 -> 8 s", "Handover\r\n20 -> 26 %", "Startup\r\n15 -> 11 s", ""));
     CHECK(EasyHoldsBanks() == false);
     fcLog.clear(); boxes = 0; confirms = 0; stores = 0; boots = 0; SaveEasy();
     CHECK(lastQuestion == "Write to the flight controller?\r\nStart (governor): it then restarts,\r\nso blades off.\r\nPID spool-up on in every bank." && BlockBankChanges && EasyHoldsBanks());
@@ -230,7 +250,7 @@ int main(int argc, char **argv) {
     model(); open(); finger["sw"] = 0; EasySpoolTapped(); CHECK(!EzSpool && Ez_Was_Edited);
     save(); CHECK(boxes == 1 && lastBox == "Nothing has changed." && fcLog.empty());
     finger["sw"] = 1; EasySpoolTapped(); CHECK(EzSpool && EzSpoolTouched);
-    CHECK(fields["note"] == "Full head speed in about 10 s (spool-up 10, handover 20 %, startup 15).");
+    CHECK(fields["note"] == "" && lv(0) == "<none>");   // (B105: the switch writes no numbers)
     save();
     CHECK(lastQuestion == "Write to the flight controller?\r\nPID spool-up on in every bank." && count(143) == 0 && count(68) == 0 && stores == 1 && count(149) == 3);
     CHECK(fields["busy"] == "PID spool-up switched on in 3 banks, and stored." && fcPid == 1);
@@ -257,9 +277,10 @@ int main(int argc, char **argv) {
     // 9. no backup: the centres are the numbers the page opened with - and they stay so after a save
     model(); haveFile = false; open();
     CHECK(fields["note"] == "Not in a backup yet, so the sliders are centred on the numbers the page opened with. A backup sets their centre." && !EzBackupCentre);
-    slide(3, 8); CHECK(fields["note"] == "Cyclic gains +10 %: roll P 50->55, D 40->44; pitch P 52->57, D 44->48 (I and F likewise).");
+    slide(3, 8); CHECK(table("Cyclic +10 %\r\nRoll\r\nPitch", "P\r\n50 -> 55\r\n52 -> 57", "I\r\n100 -> 110\r\n104 -> 114", "D\r\n40 -> 44\r\n44 -> 48", "F\r\n100 -> 110\r\n100 -> 110"));
     save(); CHECK(word(pid[1], 0) == 55 && EzPos[3] == 10 && vals["s3"] == 8);
-    slide(3, 6); CHECK(fields["note"] == "Back at the numbers it opened with.");
+    slide(3, 6); CHECK(table("Cyclic 0 %\r\nRoll\r\nPitch", "P\r\n55 -> 50\r\n57 -> 52", "I\r\n110 -> 100\r\n114 -> 104", "D\r\n44 -> 40\r\n48 -> 44", "F\r\n110 -> 100\r\n110 -> 100"));   // (now -> what Save would write)
+    lift(3, 6); CHECK(fields["note"] == "Not in a backup yet, so the sliders are centred on the numbers the page opened with. A backup sets their centre.");
 
     // 10. a failure part way through the walk: the transmitter's bank chosen again first, then the box
     model(); open(); slide(0, 6); refuseFn[148] = 400; refuseBank = 3; save();
@@ -301,12 +322,41 @@ int main(int argc, char **argv) {
     model(); open(); slide(3, 8); armed = true; boxes = 0; fcLog.clear(); SaveEasy(); CHECK(boxes == 1 && fcLog.empty());
 
     // 16. a slider touched but not moved: the numbers shown, nothing to save; the screen not answering: nothing
-    model(); open(); slide(3, 6); CHECK(!EzMoved[3] && !Ez_Was_Edited && fields["note"] == "Back at the last backup's numbers.");
-    finger.erase("s3"); fields["note"] = "x"; EasyCyclicMoved(); CHECK(fields["note"] == "x");
-    // the end of a slider's travel: the hint instead of "I and F likewise"
-    slide(3, 12); CHECK(fields["note"] == "Cyclic gains +30 %: roll P 48->62, D 40->52; pitch P 52->68, D 44->57. At the end of its travel: a backup re-centres it.");
-    slide(4, 0); CHECK(fields["note"] == "Tail gains -30 %: yaw P 58->41, D 30->21. At the end of its travel: a backup re-centres it.");
-    slide(0, 0); CHECK(fields["note"].find("At the end of its travel") != std::string::npos);
+    model(); open(); slide(3, 6); CHECK(!EzMoved[3] && !Ez_Was_Edited && table("Cyclic 0 %\r\nRoll\r\nPitch", "P\r\n50\r\n52", "I\r\n100\r\n104", "D\r\n40\r\n44", "F\r\n100\r\n100"));   // (one number: Save would leave it)
+    forget(); finger.erase("s3"); sliderWord(3, 0); CHECK(lv(0) == "<none>" && !EzMoved[3]);   // (no place in the word and the screen not answering: nothing)
+    // the end of a slider's travel: said under the rows once the finger lifts
+    slide(3, 12); CHECK(table("Cyclic +30 %\r\nRoll\r\nPitch", "P\r\n50 -> 62\r\n52 -> 68", "I\r\n100 -> 130\r\n104 -> 135", "D\r\n40 -> 52\r\n44 -> 57", "F\r\n100 -> 130\r\n100 -> 130"));
+    lift(3, 12); CHECK(fields["note"] == "Cyclic is at the end of its travel: a backup re-centres it.");
+    slide(4, 0); CHECK(table("Tail -30 %\r\nYaw", "P\r\n60 -> 41", "I\r\n120 -> 84", "D\r\n30 -> 21", "F\r\n0"));
+    lift(4, 0); CHECK(fields["note"] == "Tail is at the end of its travel: a backup re-centres it.");
+    slide(0, 0); lift(0, 0); CHECK(fields["note"] == "Start is at the end of its travel: a backup re-centres it.");
+    slide(0, 3); lift(0, 3); CHECK(fields["note"] == "");   // (away from the end: the opening line again - none, with a backup)
+
+    // 18. B105: the place in the word against the place asked for (a page from before B105): the same numbers
+    model(); open(); slideOld(3, 9); const std::string asked = lv(1); model(); open(); slide(3, 9); CHECK(lv(1) == asked && asked == "P\r\n50 -> 55\r\n52 -> 60" && EzPos[3] == 15);
+    // the finger moved on between its last word and the lift: the lift's place is the one kept
+    slide(3, 7); lift(3, 10); CHECK(EzPos[3] == 20 && EzMoved[3]);
+    // words that cannot be a place: ignored (64 alone: let go at -1; Cyclic beyond its 12 steps)
+    forget(); sliderWord(3, 64); sliderWord(3, 14 + 1); CHECK(lv(0) == "<none>" && EzPos[3] == 20);
+    // a save running: the sliders are not taken
+    model(); open(); slide(3, 8); fcLog.clear(); SaveEasy(); forget(); slide(4, 2); CHECK(lv(0) == "<none>" && !EzMoved[4]); run();
+    // Agility on Rotorflight's own rates type: one row, Rate (x 5), as the Rates page has it
+    model(); for (int b = 0; b < 6; ++b) rates[b] = fileRates[b] = RATES_RF;
+    open(); slide(1, 14); CHECK(table("Agility\r\nRate", "Roll\r\n90 -> 120", "Pitch\r\n90 -> 120", "Yaw\r\n100 -> 130", ""));
+    // Stick feel on the Actual type: the expo in hundredths, as the Rates page shows it
+    model(); open(); slide(2, 6); CHECK(table("Stick feel\r\nExpo", "Roll\r\n0.40 -> 0.54", "Pitch\r\n0.40 -> 0.54", "Yaw\r\n0.40 -> 0.54", ""));
+    // a governor time in tenths: shown as the Governor page shows it
+    model(); gov = setByte(GOV0, 3, 75); fileGov = gov; open(); slide(0, 10); CHECK(lv(1) == "Spool-up\r\n7.5 s" && !EzMoved[0]);
+    slide(0, 12); CHECK(lv(1) == "Spool-up\r\n7.5 -> 7 s" && lv(3) == "Startup\r\n15 -> 13 s");
+    // a word lost on the way (the knob shows +15 %, the last word read said +10 %): Save asks every slider first and saves what shows
+    model(); open(); slide(3, 8); finger["s3"] = 9; save(); CHECK(EzPos[3] == 15 && word(pid[1], 0) == 55 && word(pid[1], 4) == 60);   // (48 and 52 x 1.15)
+    // ... and a slider whose every word was lost: still saved; the switch likewise
+    model(); open(); finger["s4"] = 8; save(); CHECK(count(202) == 1 && word(pid[1], 8) == 64 && lastQuestion == "Write to the flight controller?\r\nFeel (PIDs, bank 2)");
+    model(); open(); finger["sw"] = 0; finger["s0"] = 14; save(); CHECK(!EzSpool && count(148) == 0 && count(143) == 1);   // (Start saved, the switch shown off: no walk)
+    // the dispatcher (main.cpp): every code as before; a slider's word gives its code and its place
+    for (int code = 1; code < 214; ++code) CHECK(CodeOf(code << 8) == (uint32_t) code && ArgOf(code << 8) == 0);
+    for (int k = 0; k < 5; ++k) for (int v = 0; v <= 20; ++v) { const int w = ((v + 1) << 24) + ((208 + k) << 8), l = ((v + 65) << 24) + ((208 + k) << 8);
+        CHECK(CodeOf(w) == (uint32_t) (208 + k) && ArgOf(w) == v + 1 && CodeOf(l) == (uint32_t) (208 + k) && ArgOf(l) == v + 65); }
 
     // 17. a request never answered: the read gives up and says so
     model(); silent = true; fcLog.clear(); boxes = 0; CurrentView = ROTORFLIGHTVIEW; StartEasyView();
@@ -388,5 +438,63 @@ for i, c, p, t in diff[:8]: print('  DIFFERENT', line(c), '\n    phone:', p, '\n
 page = subprocess.run([exe], capture_output=True, text=True)
 sys.stdout.write(page.stdout); sys.stderr.write(page.stderr[:6000])
 n_checks = int(re.search(r'(\d+) checks', page.stdout).group(1)) if 'checks' in page.stdout else 0
-print('test_easy: %d checks, %d failures' % (n_checks + len(cases), (1 if page.returncode else 0) * max(1, page.stdout.count('FAIL')) + len(diff) + (len(re.findall('FAIL', page.stderr)))))
-sys.exit(1 if (diff or page.returncode or len(pl) != len(cases)) else 0)
+
+# ---- part 3 (B105): the screen's page file - its sliders' words, worked out as the screen works them out, read by main.cpp's sums
+pg = json.load(open(PAGE81)); by = {c['n']: c for c in pg['comps']}; idx = {c['n']: k for k, c in enumerate(pg['comps'])}
+LIVE = ['lvb', 'lv0', 'lv1', 'lv2', 'lv3', 'lv4']
+pchecks, pfails = 0, []
+def pcheck(ok, what):
+    global pchecks
+    pchecks += 1
+    if not ok: pfails.append(what)
+def nextion_eval(expr, env):   # NextionScript::evalTokens: left to right, no precedence, brackets
+    toks = re.findall(r'\d+|[A-Za-z_]\w*\.\w+|<<|>>|[-+*/()&|]', expr.replace(' ', ''))
+    pos = [0]
+    def run():
+        acc, op, first = 0, None, True
+        while pos[0] < len(toks):
+            t = toks[pos[0]]; pos[0] += 1
+            if t == ')': return acc
+            if t in ('+', '-', '*', '/', '<<', '>>', '&', '|'): op = t; continue
+            v = run() if t == '(' else int(t) if t.isdigit() else env[t]
+            if first: acc, first = v, False
+            else: acc = {'+': acc + v, '-': acc - v, '*': acc * v, '/': int(acc / v), '<<': acc << v, '>>': acc >> v, '&': acc & v, '|': acc | v}[op]
+            acc = (acc + 2 ** 31) % 2 ** 32 - 2 ** 31   # (an int32, as on the screen)
+        return acc
+    return run()
+words, want = [], []
+shade = {0: by['lS']['c']['bco'], 1: by['lA']['c']['bco'], 2: by['lE']['c']['bco'], 3: by['lC']['c']['bco'], 4: by['lT']['c']['bco']}
+for k in range(5):
+    sl = by['s%d' % k]; ev = sl.get('ev', {})
+    pcheck(sl['a']['maxval'] == (20 if k < 3 else 12) and sl['a']['minval'] == 0, 's%d: its steps (0..20, or 0..12 for Cyclic and Tail)' % k)
+    for kind in ('p', 'm', 'r'):
+        lines = ev.get(kind, '').split('\n')
+        asg = [l for l in lines if l.startswith('va0.val=')]
+        pcheck(len(asg) == 1 and lines[-1] == 'print va0.val' and lines[-2] == asg[0], 's%d %s: one word, printed last' % (k, kind))
+        if len(asg) != 1: continue
+        for v in range(sl['a']['maxval'] + 1):
+            words.append(nextion_eval(asg[0][len('va0.val='):], {'s%d.val' % k: v})); want.append((208 + k, v + (65 if kind == 'r' else 1), 's%d %s at %d' % (k, kind, v)))
+    press, lift = ev.get('p', '').split('\n'), ev.get('r', '').split('\n')
+    first_vis = min([i for i, l in enumerate(press) if l.startswith('vis ')] or [999])
+    for n in LIVE:
+        pcheck(('%s.bco=%d' % (n, shade[k])) in press[:first_vis], 's%d press: %s in the row\'s shade before it shows' % (k, n))
+        pcheck(('vis %s,1' % n) in press, 's%d press: %s shown' % (k, n))
+        pcheck(('vis %s,0' % n) in lift, 's%d release: %s hidden' % (k, n))
+        if n != 'lvb': pcheck(('%s.txt=""' % n) in press[:first_vis], 's%d press: %s emptied before it shows' % (k, n))
+    pcheck(not any(l.startswith('vis ') for l in ev.get('m', '').split('\n')), 's%d move: shows or hides nothing' % k)
+dec = subprocess.run([exe, 'decode'], input='\n'.join(map(str, words)) + '\n', capture_output=True, text=True).stdout.split('\n')
+for (code, arg, what), line in zip(want, dec):
+    pcheck(line == '%d %d' % (code, arg), what + ': the word reads as code %d, place byte %d (got %s)' % (code, arg, line))
+pcheck(len(dec) >= len(want), 'every word decoded')
+pre = pg['ev']['preinitialize'].split('\n')
+for n in LIVE:
+    pcheck(('vis %s,0' % n) in pre, 'the page opens with %s hidden' % n)
+    pcheck(idx['b1'] < idx[n] < idx['busy'], '%s above the buttons, under the message box' % n)
+pcheck(by['sw']['y'] > by['s4']['y'] and by['lP']['y'] > by['s4']['y'], 'the switch\'s row is the last (B105)')
+pcheck(by['lP']['c']['bco'] == by['card']['c']['bco'] and by['lP']['c']['pco'] == 65535, 'the switch\'s words are white on the card, not a pale bar (B105)')
+pcheck(by['lvb']['x'] <= min(by[n]['x'] for n in LIVE[1:]) and by['lvb']['x'] + by['lvb']['w'] >= max(by[n]['x'] + by[n]['w'] for n in LIVE[1:]), 'the box holds its columns')
+print('test_easy (page file): %d checks, %d failures' % (pchecks, len(pfails)))
+for f in pfails[:12]: print('  FAIL', f)
+
+print('test_easy: %d checks, %d failures' % (n_checks + len(cases) + pchecks, (1 if page.returncode else 0) * max(1, page.stdout.count('FAIL')) + len(diff) + (len(re.findall('FAIL', page.stderr))) + len(pfails)))
+sys.exit(1 if (diff or page.returncode or len(pl) != len(cases) or pfails) else 0)

@@ -3,8 +3,8 @@
 // with its sliders and its sums line for line, over the Bluetooth pipe (page 81, EasyView, hmi/easy_pages.py):
 //   Start: one slider for the governor's spool-up time, startup time and handover throttle (MSP 142/143 bytes 3-4, 1-2 and
 //     19: the same for every bank). Its save restarts the flight controller (68), as the phone's does: they apply at boot.
-//     The switch under it turns on PID spool-up in every bank (MSP 148/149 byte 15 bit 4, each bank chosen with 210, the
-//     transmitter's bank chosen again after).
+//     The switch (the last row since B105) turns on PID spool-up in every bank (MSP 148/149 byte 15 bit 4, each bank
+//     chosen with 210, the transmitter's bank chosen again after).
 //   Agility and Stick feel: the full-stick rate and the expo of roll, pitch and yaw in the rates bank in use (MSP 111/204;
 //     the Rotorflight, Actual and Quickrates types - the others are left to the Rates page, as on the phone).
 //   Cyclic and Tail: softer or sharper, P I D F of roll and pitch (or of yaw) times 0.7 to 1.3 in the PID bank in use (112/202).
@@ -15,6 +15,10 @@
 // governor mode or throttle type outside Rotorflight's lists is never written back (B103). Like the transmitter's other
 // pages it edits the banks the transmitter is on, and only while the flight controller is on them too (B102). It needs the
 // model: as on the phone, the backup is the sliders' centre, not a stand-in for the model.
+// B105 (Malcolm, 16 Oct: "a temporary display of affected pid etc values ... appear when finger lands, update as it slides,
+// vanish on finger lift"; and the spool-up switch "to the bottom of the options"): while a finger is on a slider, a box
+// under the rows shows the numbers that slider moves, now -> what Save would write (EzLive). Each slider's word carries
+// its place, so the numbers keep up with the finger without a "get" (55 ms) each time.
 #include <Arduino.h>
 #include "1Definitions.h"
 #ifndef RF_EASY_H
@@ -181,50 +185,95 @@ FLASHMEM static void EzBusy(const char *msg)
     SendCommand((char *)(msg && *msg ? "vis busy,1" : "vis busy,0"));
     if (msg && *msg) SendText((char *)"busy", (char *)msg);
 }
-FLASHMEM static void EzEndHint(char *out, size_t n, int v, int lo, int hi)
+// ---------------------------------------------------------------- B105: the numbers while a finger is on a slider
+// The box under the rows (lvb, the slider's shade) holds five columns: lv0 the names, lv1-lv4 the numbers - what the flight
+// controller holds now -> what Save would write, one number where Save would leave it - in the words of the Governor, Rates
+// and PIDs pages. The SCREEN shows the box as the finger lands and hides it as the finger lifts (the sliders' own scripts),
+// so a word lost on the way can never leave it up: the main board only fills it. The rows line up because every column has
+// the same number of lines and none ends in a blank one (the screen leaves those out when it centres the lines).
+struct EzTable { char col[5][64]; int rows; };
+FLASHMEM static void EzRow(EzTable &t, const char *a, const char *b, const char *c, const char *d, const char *e)
 {
-    if (v <= lo || v >= hi) strncat(out, PSTR(" At the end of its travel: a backup re-centres it."), n - strlen(out) - 1);
+    const char *cell[5] = {a, b, c, d, e};
+    for (int i = 0; i < 5; ++i)
+    {
+        const size_t used = strlen(t.col[i]);
+        snprintf(t.col[i] + used, sizeof(t.col[i]) - used, "%s%s", t.rows ? "\r\n" : "", cell[i]);
+    }
+    ++t.rows;
 }
-FLASHMEM static void EzNoteFor(int k) // the numbers a slider gives (the phone's line under each slider)
+FLASHMEM static void EzCell(char *out, size_t n, const char *was, const char *will, const char *unit) // "10 -> 8 s", or "10 s" when Save leaves it
 {
-    char m[230];
-    m[0] = 0;
+    if (strcmp(was, will) == 0) snprintf(out, n, "%s%s", was, unit);
+    else snprintf(out, n, "%s -> %s%s", was, will, unit);
+}
+FLASHMEM static void EzTenths(char *out, size_t n, int t) // tenths of a second as the Governor page shows them: "10", "7.5"
+{
+    if (t % 10) snprintf(out, n, "%d.%d", t / 10, t % 10);
+    else snprintf(out, n, "%d", t / 10);
+}
+FLASHMEM static void EzRateText(char *out, size_t n, int v, bool hundredths) // a rates byte as the Rates page shows it ("0.40" an expo of the Actual type)
+{
+    if (hundredths) snprintf(out, n, "%d.%02d", v / 100, v % 100);
+    else snprintf(out, n, "%d", v);
+}
+FLASHMEM static void EzLive(int k)
+{
+    EzTable t;
+    memset(&t, 0, sizeof(t));
+    char c[4][28], a[16], b[16];
+    for (auto &x : c) x[0] = 0;
     if (k == 0)
-    {
+    { // Start: the governor's three numbers (the same for every bank)
         const EzStartN s = EzStartNums(EzPos[0]);
-        snprintf(m, sizeof(m), PSTR("Full head speed in about %d s (spool-up %d, handover %d %%, startup %d)."), s.spool, s.spool, s.hand, s.start);
-        EzEndHint(m, sizeof(m), EzPos[0], 0, 100);
+        const int sp = EzU16(EzGov, 3), st = EzU16(EzGov, 1), h = EzGov[19];
+        EzTenths(a, sizeof(a), sp); EzTenths(b, sizeof(b), EzMoved[0] ? s.spool * 10 : sp); EzCell(c[0], sizeof(c[0]), a, b, " s");
+        snprintf(a, sizeof(a), "%d", h); snprintf(b, sizeof(b), "%d", EzMoved[0] ? s.hand : h); EzCell(c[1], sizeof(c[1]), a, b, " %");
+        EzTenths(a, sizeof(a), st); EzTenths(b, sizeof(b), EzMoved[0] ? s.start * 10 : st); EzCell(c[2], sizeof(c[2]), a, b, " s");
+        EzRow(t, "Start", "Spool-up", "Handover", "Startup", "");
+        EzRow(t, "Governor", c[0], c[1], c[2], "");
     }
-    else if (k == 1)
-    {
-        snprintf(m, sizeof(m), PSTR("Roll and pitch %d deg/s, yaw %d deg/s at full stick."), EzAgileRp(EzPos[1]), EzAgileYaw(EzPos[1]));
-        EzEndHint(m, sizeof(m), EzPos[1], 0, 100);
-    }
-    else if (k == 2)
-    {
-        snprintf(m, sizeof(m), PSTR("Expo %d on roll, pitch and yaw."), EzExpoAt(EzPos[2]));
-        EzEndHint(m, sizeof(m), EzPos[2], 0, 100);
-    }
-    else
-    {
-        const bool tail = k == 4;
-        const int pct = EzPos[k];
-        if (pct == 0)
-            snprintf(m, sizeof(m), "%s", EzBackupCentre ? PSTR("Back at the last backup's numbers.") : PSTR("Back at the numbers it opened with."));
-        else
+    else if (k == 1 || k == 2)
+    { // Agility: the full-stick rate (and the Actual type's centre, kept in proportion); Stick feel: the expo
+        EzFeel m;
+        if (!EzFeelModel(EzRates[0], m)) return;
+        uint8_t nw[48];
+        EzRatesBytes(nw);
+        const bool rf = m.centreSlot < 0;   // (Rotorflight's own type: Rate x 5, the expo as it is; Actual and Quickrates: x 10, the expo in hundredths)
+        EzRow(t, k == 1 ? "Agility" : "Stick feel", "Roll", "Pitch", "Yaw", "");
+        for (int row = 0; row < (k == 2 ? 1 : rf ? 1 : 2); ++row)
         {
-            static const char *const axis[3] = {"roll", "pitch", "yaw"};
-            int n = snprintf(m, sizeof(m), PSTR("%s gains %s%d %%:"), tail ? "Tail" : "Cyclic", pct > 0 ? "+" : "", pct);
-            for (int a = tail ? 2 : 0; a < (tail ? 3 : 2) && n < (int)sizeof(m); ++a)
+            for (int ax = 0; ax < 3; ++ax)
             {
-                const int p = a * 4, d = a * 4 + 2;   // (P and D of the axis: words 0 and 2 of its four)
-                n += snprintf(m + n, sizeof(m) - n, PSTR("%s %s P %d->%d, D %d->%d"), a == (tail ? 2 : 0) ? "" : ";", axis[a], EzBaseWord(p), EzNudged(p), EzBaseWord(d), EzNudged(d));
+                const int o = 1 + ax * 6, slot = k == 2 ? m.expoSlot : row == 0 ? m.rateSlot : m.centreSlot, f = k == 2 ? 1 : row == 0 ? m.sc : 10;
+                EzRateText(a, sizeof(a), EzRates[o + slot] * f, k == 2 && !rf);
+                EzRateText(b, sizeof(b), nw[o + slot] * f, k == 2 && !rf);
+                EzCell(c[ax], sizeof(c[ax]), a, b, "");
             }
-            if (pct <= -30 || pct >= 30) { strncat(m, ".", sizeof(m) - strlen(m) - 1); EzEndHint(m, sizeof(m), pct, -30, 30); }   // (two lines at most: the hint instead of "I and F likewise")
-            else strncat(m, PSTR(" (I and F likewise)."), sizeof(m) - strlen(m) - 1);
+            EzRow(t, k == 2 ? "Expo" : row == 0 ? (rf ? "Rate" : "Max rate") : "Centre", c[0], c[1], c[2], "");
         }
     }
-    SendText((char *)"note", m);
+    else
+    { // Cyclic and Tail: P I D F of roll and pitch, or of yaw
+        const bool tail = k == 4;
+        snprintf(a, sizeof(a), "%s %s%d %%", tail ? "Tail" : "Cyclic", EzPos[k] > 0 ? "+" : "", EzPos[k]);
+        EzRow(t, a, "P", "I", "D", "F");
+        static const char *const axis[3] = {"Roll", "Pitch", "Yaw"};
+        for (int ax = tail ? 2 : 0; ax < (tail ? 3 : 2); ++ax)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                const int i = ax * 4 + j, was = EzPidWord(i);
+                char w1[8], w2[8];
+                snprintf(w1, sizeof(w1), "%d", was);
+                snprintf(w2, sizeof(w2), "%d", EzMoved[k] ? EzNudged(i) : was);
+                EzCell(c[j], sizeof(c[j]), w1, w2, "");
+            }
+            EzRow(t, axis[ax], c[0], c[1], c[2], c[3]);
+        }
+    }
+    static const char *const box[5] = {"lv0", "lv1", "lv2", "lv3", "lv4"};
+    for (int i = 0; i < 5; ++i) SendText((char *)box[i], (char *)(strspn(t.col[i], "\r\n") == strlen(t.col[i]) ? "" : t.col[i]));   // (a column with nothing in it: empty)
 }
 FLASHMEM static void EzShowSliders()
 {
@@ -253,6 +302,17 @@ FLASHMEM static void EzOpeningNote() // what the page says when it has the bank'
         SendText((char *)"note", (char *)PSTR("Not in a backup yet, so the sliders are centred on the numbers the page opened with. A backup sets their centre."));
     else
         SendText((char *)"note", (char *)"");
+}
+FLASHMEM static void EzLifted(int k) // the finger lifted (the box has gone): the line under the rows says if the slider is at an end
+{
+    static const char *const name[5] = {"Start", "Agility", "Stick feel", "Cyclic", "Tail"};
+    if (EzPos[k] <= (k < 3 ? 0 : -30) || EzPos[k] >= (k < 3 ? 100 : 30))
+    {
+        char m[100];
+        snprintf(m, sizeof(m), PSTR("%s is at the end of its travel: a backup re-centres it."), name[k]);
+        SendText((char *)"note", m);
+    }
+    else EzOpeningNote();
 }
 FLASHMEM static void EzShowAll() { EzHead(); EzShowSliders(); }   // (after a box: the page as it was)
 FLASHMEM static void EzEdited() { if (!Ez_Was_Edited) { Ez_Was_Edited = true; SendCommand((char *)"vis b3,1"); } }
@@ -598,18 +658,25 @@ FLASHMEM void EndEasyView() // OK
     Ez_Was_Edited = false; EzHave = false; EzMsgUntil = 0;
     RotorFlightStart();
 }
-FLASHMEM static void EzSlider(int k) // a slider moved (each step while it is dragged, and when it is let go)
+FLASHMEM static void EzSlider(int k) // a slider touched, dragged or let go (B105: its place in the word, + 1; 64 more when let go)
 {
+    const uint8_t arg = ScreenEventArg;
     if (CurrentView != EASYVIEW || !EzHave || EzStep != EZ_IDLE) return;
     if ((k == 1 || k == 2) && !EzRatesFeel) return;
-    char nm[8];
-    snprintf(nm, sizeof(nm), "s%d", k);
-    const uint32_t v = GetValue(nm);
-    if (v > 20) return;   // (65535: the screen did not answer)
-    const int pos = k < 3 ? (int)v * 5 : (int)EzClamp((long)v * 5 - 30, -30, 30);
+    uint32_t v;
+    if (arg) v = (uint32_t)(arg & 0x3F) - 1;
+    else
+    { // (a page from before B105 sends no place: asked, as then)
+        char nm[8];
+        snprintf(nm, sizeof(nm), "s%d", k);
+        v = GetValue(nm);
+    }
+    if (v > (k < 3 ? 20u : 12u)) return;   // (65535: the screen did not answer)
+    const int pos = k < 3 ? (int)v * 5 : (int)v * 5 - 30;
     if (pos != EzPos[k]) { EzPos[k] = pos; EzMoved[k] = true; EzEdited(); }
     if (EzMsgUntil) { EzMsgUntil = 0; EzBusy(""); }
-    EzNoteFor(k);
+    if (arg & 0x40) EzLifted(k);
+    else EzLive(k);
 }
 FLASHMEM void EasyStartMoved() { EzSlider(0); }
 FLASHMEM void EasyAgilityMoved() { EzSlider(1); }
@@ -624,11 +691,28 @@ FLASHMEM void EasySpoolTapped() // the switch: PID spool-up in every bank
     EzSpool = v == 1;
     EzSpoolTouched = true;
     EzEdited();
-    EzNoteFor(0);   // (the phone: the tick shows the start numbers too)
+}
+// B105: before a save, every slider's place and the switch asked of the screen, so what it shows is what is saved even if a
+// word on the way was lost (the Teensy busy: two words that arrive together are read as one).
+FLASHMEM static void EzSyncSliders()
+{
+    char nm[8];
+    for (int k = 0; k < 5; ++k)
+    {
+        if ((k == 1 || k == 2) && !EzRatesFeel) continue;
+        snprintf(nm, sizeof(nm), "s%d", k);
+        const uint32_t v = GetValue(nm);
+        if (v > (k < 3 ? 20u : 12u)) continue;   // (no answer: as the words had it)
+        const int pos = k < 3 ? (int)v * 5 : (int)v * 5 - 30;
+        if (pos != EzPos[k]) { EzPos[k] = pos; EzMoved[k] = true; EzEdited(); }
+    }
+    const uint32_t sw = GetValue((char *)"sw");
+    if (sw <= 1 && (sw == 1) != EzSpool) { EzSpool = sw == 1; EzSpoolTouched = true; EzEdited(); }
 }
 FLASHMEM void SaveEasy()
 {
     if (CurrentView != EASYVIEW || !EzHave || EzStep != EZ_IDLE) return;
+    EzSyncSliders();
     char why[180];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {

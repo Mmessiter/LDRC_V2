@@ -1,6 +1,7 @@
-# EasyView (page 81), Easy tuning (B104): EzHead (TXV1B RF_Easy.h: t11, ShowRFBank t14, ShowRFRate t8, b3 shown once a
+# EasyView (page 81), Easy tuning (B104, B105): EzHead (TXV1B RF_Easy.h: t11, ShowRFBank t14, ShowRFRate t8, b3 shown once a
 # slider moved), EzShowSliders (s0..s4: 0..20 / 0..12, sw, the agility rows hidden for an uncovered rates type),
-# EzNoteFor / EzOpeningNote (note), EzBusy (busy).
+# EzOpeningNote / EzLifted (note), EzBusy (busy). B105: the numbers box while a finger is on a slider - the slider's
+# press script (the box in the row's shade, emptied, shown), then EzLive (lv0-lv4); its release script hides it.
 Screen_Background=8
 @model 1
 page EasyView
@@ -18,17 +19,171 @@ note.txt=""
 @shot 81_open
 s3.val=8
 vis b3,1
-note.txt="Cyclic gains +10 %: roll P 50->55, D 40->44; pitch P 52->57, D 44->48 (I and F likewise)."
+lvb.bco=59323
+lv0.bco=59323
+lv1.bco=59323
+lv2.bco=59323
+lv3.bco=59323
+lv4.bco=59323
+lv0.txt=""
+lv1.txt=""
+lv2.txt=""
+lv3.txt=""
+lv4.txt=""
+vis lvb,1
+vis lv0,1
+vis lv1,1
+vis lv2,1
+vis lv3,1
+vis lv4,1
+lv0.txt="Cyclic +10 %\r\nRoll\r\nPitch"
+lv1.txt="P\r\n50 -> 53\r\n52 -> 57"
+lv2.txt="I\r\n100 -> 110\r\n104 -> 114"
+lv3.txt="D\r\n40 -> 44\r\n44 -> 48"
+lv4.txt="F\r\n100 -> 110\r\n100 -> 110"
 @shot 81_cyclic
 s3.val=12
-note.txt="Cyclic gains +30 %: roll P 150->195, D 140->182; pitch P 152->198, D 144->187. At the end of its travel: a backup re-centres it."
+lv0.txt="Cyclic +30 %\r\nRoll\r\nPitch"
+lv1.txt="P\r\n150 -> 195\r\n152 -> 198"
+lv2.txt="I\r\n1000 -> 1300\r\n104 -> 135"
+lv3.txt="D\r\n140 -> 182\r\n144 -> 187"
+lv4.txt="F\r\n100 -> 130\r\n100 -> 130"
 @shot 81_long
+vis lv4,0
+vis lv3,0
+vis lv2,0
+vis lv1,0
+vis lv0,0
+vis lvb,0
+note.txt="Cyclic is at the end of its travel: a backup re-centres it."
+@shot 81_lifted
 s0.val=14
-note.txt="Full head speed in about 7 s (spool-up 7, handover 26 %, startup 15)."
+lvb.bco=65497
+lv0.bco=65497
+lv1.bco=65497
+lv2.bco=65497
+lv3.bco=65497
+lv4.bco=65497
+lv0.txt=""
+lv1.txt=""
+lv2.txt=""
+lv3.txt=""
+lv4.txt=""
+vis lvb,1
+vis lv0,1
+vis lv1,1
+vis lv2,1
+vis lv3,1
+vis lv4,1
+lv0.txt="Start\r\nGovernor"
+lv1.txt="Spool-up\r\n10 -> 8 s"
+lv2.txt="Handover\r\n20 -> 26 %"
+lv3.txt="Startup\r\n15 -> 11 s"
+lv4.txt=""
 @shot 81_start
+vis lv4,0
+vis lv3,0
+vis lv2,0
+vis lv1,0
+vis lv0,0
+vis lvb,0
+note.txt=""
+s1.val=14
+lvb.bco=57215
+lv0.bco=57215
+lv1.bco=57215
+lv2.bco=57215
+lv3.bco=57215
+lv4.bco=57215
+lv0.txt=""
+lv1.txt=""
+lv2.txt=""
+lv3.txt=""
+lv4.txt=""
+vis lvb,1
+vis lv0,1
+vis lv1,1
+vis lv2,1
+vis lv3,1
+vis lv4,1
+lv0.txt="Agility\r\nMax rate\r\nCentre"
+lv1.txt="Roll\r\n360 -> 480\r\n180 -> 240"
+lv2.txt="Pitch\r\n360 -> 480\r\n180 -> 240"
+lv3.txt="Yaw\r\n450 -> 590\r\n200 -> 260"
+lv4.txt=""
+@shot 81_agility
+vis lv4,0
+vis lv3,0
+vis lv2,0
+vis lv1,0
+vis lv0,0
+vis lvb,0
+s2.val=6
+lvb.bco=57215
+lv0.bco=57215
+lv1.bco=57215
+lv2.bco=57215
+lv3.bco=57215
+lv4.bco=57215
+lv0.txt=""
+lv1.txt=""
+lv2.txt=""
+lv3.txt=""
+lv4.txt=""
+vis lvb,1
+vis lv0,1
+vis lv1,1
+vis lv2,1
+vis lv3,1
+vis lv4,1
+lv0.txt="Stick feel\r\nExpo"
+lv1.txt="Roll\r\n0.40 -> 0.54"
+lv2.txt="Pitch\r\n0.40 -> 0.54"
+lv3.txt="Yaw\r\n0.40 -> 0.54"
+lv4.txt=""
+@shot 81_feel
+vis lv4,0
+vis lv3,0
+vis lv2,0
+vis lv1,0
+vis lv0,0
+vis lvb,0
+s4.val=0
+lvb.bco=59323
+lv0.bco=59323
+lv1.bco=59323
+lv2.bco=59323
+lv3.bco=59323
+lv4.bco=59323
+lv0.txt=""
+lv1.txt=""
+lv2.txt=""
+lv3.txt=""
+lv4.txt=""
+vis lvb,1
+vis lv0,1
+vis lv1,1
+vis lv2,1
+vis lv3,1
+vis lv4,1
+lv0.txt="Tail -30 %\r\nYaw"
+lv1.txt="P\r\n60 -> 41"
+lv2.txt="I\r\n120 -> 84"
+lv3.txt="D\r\n30 -> 21"
+lv4.txt="F\r\n0"
+@shot 81_tail
+vis lv4,0
+vis lv3,0
+vis lv2,0
+vis lv1,0
+vis lv0,0
+vis lvb,0
 vis b3,0
 s0.val=10
+s1.val=10
+s2.val=10
 s3.val=6
+s4.val=6
 note.txt="Not in a backup yet, so the sliders are centred on the numbers the page opened with. A backup sets their centre."
 @shot 81_nobackup
 vis lA,0
