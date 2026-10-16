@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.894-easy-tuning-moved-only",
+      "url": "https://messiter.com/rxv2/release/v0.9.894/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.894/littlefs.bin",
+      "fs_md5": "5ef1b13d5d59b423aa528d39a76eca79",
+      "notes": "Easy tuning: a slider you do not move never changes its numbers (moving Cyclic used to round the tail's gains too, and the PID spool-up tick alone rewrote the start settings); a governor choice outside Rotorflight's lists is never written back."
+    },
+    {
       "name": "RXV2-0.9.893-governor-choices-in-range",
       "url": "https://messiter.com/rxv2/release/v0.9.893/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.893/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.883/littlefs.bin",
       "fs_md5": "229c6d3d6e6ee62d684462c6fffbcea2",
       "notes": "A command line reply the flight controller is still printing after the wait (a diff all of every bank) now comes back as its start with 202, and /api/cli/out gives the rest until it is whole; before, what had come in six seconds went out as the whole reply. The phone's command line page fetches the rest too."
-    },
-    {
-      "name": "RXV2-0.9.882-cli-diff-all-whole",
-      "url": "https://messiter.com/rxv2/release/v0.9.882/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.882/littlefs.bin",
-      "fs_md5": "25e28987cbe9661d8ddf3e4bb0f1cffa",
-      "notes": "The command line keeps a whole diff all (up to 64 kB; it kept only the last 16,000 characters, so the head of a long diff was lost, on the phone's command line and the transmitter's Diff to card)."
     }
   ],
   "rotorflight": {

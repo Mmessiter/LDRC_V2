@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.893-governor-choices-in-range";
+constexpr const char* FW_VERSION = "RXV2-0.9.894-easy-tuning-moved-only";
 
 //*********************************************************************
 //  Auto-update manifest URLs

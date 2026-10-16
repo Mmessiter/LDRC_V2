@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=394">
-<script src="/app.js?v=394" defer></script>
+<link rel=stylesheet href="/style.css?v=395">
+<script src="/app.js?v=395" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -53,7 +53,7 @@
     <div class=card>
         <h2 data-help="Moves three numbers on the Governor page and nothing else: Spool-up time, Startup time and Handover throttle. The centre is what the model had at your last backup: full left doubles the two times and lowers the handover 15 %, full right halves the times and raises it 15 %. Back up and the slider re-centres on today&rsquo;s numbers. The tick switches on PID spool-up in every bank.">How hard should it start?</h2>
         <p class=sub>Press and hold a heading to see exactly which numbers move.</p>
-        <div class=sl><span>Very gentle</span><input type=range id=s_start min=0 max=100 step=5 value=50 oninput="onStart()"><span>Very fierce</span></div>
+        <div class=sl><span>Very gentle</span><input type=range id=s_start min=0 max=100 step=5 value=50 oninput="onStart(true)"><span>Very fierce</span></div>
         <p class=sub id=startNote></p>
         <div class=fldRow><label data-help="Rotorflight's PID spool-up makes the governor ramp the HEAD SPEED itself instead of the throttle, so the torque is even all the way up. It is a per-bank switch; ticked here, saving switches it on in every bank.">Also switch on PID spool-up in every bank (recommended)</label> <input type=checkbox id=s_pidsp checked onchange="onStart()"></div>
         <a class=more href="/rotorflight-gov-global">See the numbers on the Governor page</a>
@@ -117,9 +117,11 @@ const expoFeel   = e => clamp5(50 + (ratesBase.expo - e) / 0.7);
 let bank = parseInt(localStorage.getItem('rfPidProfile') || '0');
 let govRaw = null, ratesRaw = null, pidRaw = null, pidBase = [];
 let changed = { gov: false, rates: false, pid: false };
-// Which rates slider was actually moved: an untouched one must not rewrite
-// its numbers through the slider's 5-step grid (smoke test caught expo 40 → 39).
-let touched = { agile: false, expo: false };
+// Which slider was actually moved: an untouched one must not rewrite its
+// numbers through the slider's 5-step grid (smoke test caught expo 40 → 39;
+// 0.9.894, the transmitter's port: moving Cyclic rounded the tail's gains too,
+// and the PID spool-up tick alone rewrote the start settings).
+let touched = { agile: false, expo: false, start: false, cyc: false, tail: false };
 let busy = false, live = false;
 
 function setStatus(kind, msg) { const b = document.getElementById('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }   // no banner without a status (Malcolm 2026-09-10)
@@ -148,7 +150,8 @@ async function selectBank(i) {
 }
 
 // ---- slider handlers: notes + change flags, numbers written at Save ----
-function onStart() {
+function onStart(slid) {
+    if (slid) touched.start = true;   // (the tick calls this too: it does not move the start numbers)
     const n = startNums(+$('s_start').value);
     $('startNote').textContent = 'Full head speed in about ' + n.spool + ' s (spool-up ' + n.spool + ', handover ' + n.hand + ' %, startup ' + n.start + ').' + LDRC.endHint(+$('s_start').value, 0, 100);
     changed.gov = true; LDRC.markDirty();
@@ -182,7 +185,7 @@ function onNudge(which) {
     $(which + 'Note').textContent = pct === 0 ? 'Back at the last backup\u2019s numbers.' :
         (which === 'cyc' ? 'Cyclic' : 'Tail') + ' gains ' + (pct > 0 ? '+' : '') + pct + ' %: ' +
         idx.map(i => NAMES[i] + ' ' + (pidBaseObj[PIDKEYS[i]] || pidBase[i]) + '→' + w[i]).join(', ') + ' (I and F likewise).' + LDRC.endHint(pct, -30, 30);
-    changed.pid = true; LDRC.markDirty();
+    touched[which] = true; changed.pid = true; LDRC.markDirty();
 }
 
 // ---- where the FC is now → sliders ----
@@ -210,7 +213,7 @@ function reflect() {
     $('s_cyc').value = nudgePos('cyc'); $('s_tail').value = nudgePos('tail'); $('cycNote').textContent = ''; $('tailNote').textContent = '';
     $('startNote').textContent = LDRC.baseNotice();
     changed = { gov: false, rates: false, pid: false };
-    touched = { agile: false, expo: false };
+    touched = { agile: false, expo: false, start: false, cyc: false, tail: false };
 }
 
 async function load() {
@@ -251,7 +254,10 @@ async function load() {
 // ---- the bytes each slider owns, on the FC's own blobs ----
 function pidBytes() {
     const b = pidRaw.slice(), w = nudgedWords();
-    for (let i = 0; i < 12; i++) { b[i * 2] = w[i] & 0xff; b[i * 2 + 1] = (w[i] >> 8) & 0xff; }
+    for (let i = 0; i < 12; i++) {
+        if (!touched[i < 8 ? 'cyc' : 'tail']) continue;   // (only the moved slider's axis)
+        b[i * 2] = w[i] & 0xff; b[i * 2 + 1] = (w[i] >> 8) & 0xff;
+    }
     return b;
 }
 function ratesBytes() {
@@ -266,6 +272,7 @@ function ratesBytes() {
 }
 function govBytes() {
     const b = govRaw.slice(), n = startNums(+$('s_start').value);
+    if (!touched.start) return b;
     const put = (o, v) => { b[o] = v & 0xff; b[o + 1] = (v >> 8) & 0xff; };
     put(1, n.start * 10); put(3, n.spool * 10); b[19] = n.hand;
     return b;
@@ -289,10 +296,17 @@ async function pidSpoolupOnAllBanks() {
 
 async function save() {
     if (busy || !live) return;
-    const what = [changed.pid && 'Feel (PIDs, bank ' + (bank + 1) + ')', changed.rates && 'Agility (rates, bank ' + (bank + 1) + ')', changed.gov && 'Start (governor, restarts the flight controller)'].filter(Boolean);
+    // The start settings only when their slider moved; the tick alone switches PID spool-up on and stores it (0.9.894)
+    const startW = changed.gov && touched.start, spoolW = changed.gov && $('s_pidsp').checked;
+    const what = [changed.pid && 'Feel (PIDs, bank ' + (bank + 1) + ')', changed.rates && 'Agility (rates, bank ' + (bank + 1) + ')', startW && 'Start (governor, restarts the flight controller)', spoolW && 'PID spool-up in every bank'].filter(Boolean);
     if (!what.length) { setStatus('info', 'Nothing has changed.'); return; }
-    if (!(await LDRC.confirm('Write ' + what.join(', ') + ' to the flight controller?' + (changed.gov ? ' The start settings only apply after a restart: transmitter OFF, blades off.' : ''),
-            { title: 'Save changes', icon: '💾', yes: 'Save', kind: changed.gov ? 'warn' : undefined }))) return;
+    // Rotorflight keeps a governor mode or throttle type outside its own lists, then calls its settings corrupted: never written back (0.9.893)
+    if (startW && (govRaw[0] > 4 || govRaw[28] > 2)) {
+        setStatus('bad', 'Not saved: the governor\u2019s ' + (govRaw[0] > 4 ? 'mode is ' + govRaw[0] + ' (it must be 0 to 4)' : 'throttle type is ' + govRaw[28] + ' (it must be 0 to 2)') + '. Put it right on the Governor page first.');
+        return;
+    }
+    if (!(await LDRC.confirm('Write ' + what.join(', ') + ' to the flight controller?' + (startW ? ' The start settings only apply after a restart: transmitter OFF, blades off.' : ''),
+            { title: 'Save changes', icon: '💾', yes: 'Save', kind: startW ? 'warn' : undefined }))) return;
     busy = true; $('saveBtn').disabled = true;
     const done = [], bad = [];
     try {
@@ -314,16 +328,20 @@ async function save() {
         }
         if (changed.gov) {
             let banks = -1;
-            if ($('s_pidsp').checked) { setStatus('info', 'Switching PID spool-up on in every bank…'); banks = await pidSpoolupOnAllBanks(); }
-            setStatus('info', 'Writing the start settings…');
-            const b = govBytes();
-            await LDRC.msp(143, bytesToHex(b)); await LDRC.msp(250);
-            setStatus('info', 'Restarting the flight controller… (about 7 s)');
-            try { await LDRC.msp(68, null, 1); } catch (e) {}
-            await new Promise(r => setTimeout(r, 7000));
-            let chk = null;
-            for (let a = 0; a < 3 && !chk; a++) { try { chk = hexToBytes(await LDRC.msp(142)); } catch (e) { if (a === 2) throw e; await new Promise(r => setTimeout(r, 3000)); } }
-            if (same(b, chk, 42)) { govRaw = b; done.push('Start' + (banks > 0 ? ' (PID spool-up on in ' + banks + ' bank' + (banks === 1 ? '' : 's') + ')' : '')); } else bad.push('start settings');
+            if (spoolW) { setStatus('info', 'Switching PID spool-up on in every bank…'); banks = await pidSpoolupOnAllBanks(); }
+            if (!startW) {
+                if (banks >= 0) { await LDRC.msp(250); done.push(banks > 0 ? 'PID spool-up on in ' + banks + ' bank' + (banks === 1 ? '' : 's') : 'PID spool-up (on in every bank already)'); }
+            } else {
+                setStatus('info', 'Writing the start settings…');
+                const b = govBytes();
+                await LDRC.msp(143, bytesToHex(b)); await LDRC.msp(250);
+                setStatus('info', 'Restarting the flight controller… (about 7 s)');
+                try { await LDRC.msp(68, null, 1); } catch (e) {}
+                await new Promise(r => setTimeout(r, 7000));
+                let chk = null;
+                for (let a = 0; a < 3 && !chk; a++) { try { chk = hexToBytes(await LDRC.msp(142)); } catch (e) { if (a === 2) throw e; await new Promise(r => setTimeout(r, 3000)); } }
+                if (same(b, chk, 42)) { govRaw = b; done.push('Start' + (banks > 0 ? ' (PID spool-up on in ' + banks + ' bank' + (banks === 1 ? '' : 's') + ')' : '')); } else bad.push('start settings');
+            }
         }
         reflect();
         LDRC.clearDirty();
