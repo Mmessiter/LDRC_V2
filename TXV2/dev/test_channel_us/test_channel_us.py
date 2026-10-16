@@ -25,7 +25,9 @@ def lift(rel, head):
     raise SystemExit('cannot lift %s from %s' % (head, rel))
 main = src('src/main.cpp')
 defs1 = src('include/1Definitions.h')
-DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|MODEL_EXT_OFFSET|TX_EXT_MAGIC|TX_EXT_MAGIC2) ', l)) + '\n'
+DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|TX_EXT_MAGIC|TX_EXT_MAGIC2) ', l)) + '\n'
+sdc = src('include/SDcard.h')
+DEFS += '\n'.join(l for l in sdc.split('\n') if l.startswith('#define MODEL_EXT_OFFSET_B113 ')) + '\n'
 assert DEFS.count('#define') == 5, DEFS
 DEFS += '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (MAXMACROS|BYTESPERMACRO|MACROTRIGGERCHANNEL|MACROMOVECHANNEL|MACROSTARTTIME|MACRODURATION|MACROMOVETOPOSITION|MACRORUNNINGNOW) ', l)) + '\n'
 assert DEFS.count('#define') == 13, DEFS
@@ -104,12 +106,16 @@ static uint8_t MacrosBuffer[16][8]; static uint32_t MacroStartTime[16], MacroSto
 typedef uint8_t u_int8_t;
 void MaxRangeShow();
 static void UpdateButtonLabels() { ++redraws; MaxRangeShow(); }   // (the real one sends the labels, then the choice)
-// the card: models.dat or a .MOD, a byte at a time, with the running checksum as SDcard.h keeps it
-static std::vector<uint8_t> card; static long FileCheckSum = 0; static bool DoingCheckSm = false; static int StartLocation = 0;
+// the card: models.dat or a .MOD, a byte at a time, with the running checksum as SDcard.h keeps it - and as SdFat behaves:
+// a seek BEYOND the file's end fails and the position stays (FatFile::seekSet), a read at the end gives -1 (255), a write
+// at the end appends. A write whose seek failed is counted: the firmware must never do one.
+static std::vector<uint8_t> card; static long FileCheckSum = 0; static bool DoingCheckSm = false; static int StartLocation = 0, SDCardAddress = 0;
+static size_t cardPos = 0; static int seekWriteFails = 0;
 struct FakeFile { size_t size() { return card.size(); } };
 static FakeFile ModelsFileNumber;
-static uint8_t SDRead8BITS(int a) { const uint8_t r = a < (int)card.size() ? card[a] : 255; if (!DoingCheckSm) FileCheckSum += r * (a + 1); return r; }
-static void SDUpdate8BITS(int a, uint8_t v) { if (!DoingCheckSm) FileCheckSum += v * (a + 1); if (a >= (int)card.size()) card.resize(a + 1, 0); card[a] = v; }
+static bool cardSeek(size_t a) { if (a > card.size()) return false; cardPos = a; return true; }
+static uint8_t SDRead8BITS(int a) { cardSeek((size_t)a); const uint8_t r = cardPos < card.size() ? card[cardPos++] : 255; if (!DoingCheckSm) FileCheckSum += r * (a + 1); return r; }
+static void SDUpdate8BITS(int a, uint8_t v) { if (!cardSeek((size_t)a)) ++seekWriteFails; if (!DoingCheckSm) FileCheckSum += v * (a + 1); if (cardPos >= card.size()) card.resize(cardPos + 1, 0); card[cardPos++] = v; }
 ''' + statics + '\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + TEENSY_MAP + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint16_t IntoHigherRes(uint8_t LowRes)') + lift('src/main.cpp', 'FLASHMEM static uint8_t RangeDegrees(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeConvert(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeShow()') + lift('src/main.cpp', 'FLASHMEM static void MaxRangeChosen(') + '\n'.join(l for l in main.split('\n') if l.startswith('FLASHMEM void MaxRange') and 'Tapped() {' in l) + '\n' + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') + lift('include/Utilities.h', 'FASTRUN float MapWithExponential(') + lift('src/main.cpp', 'uint16_t StraightLineInterpolation(') + lift('src/main.cpp', 'uint16_t ExponentialInterpolation(') + lift('src/main.cpp', 'void DoTrimsAndSubtrims()') + lift('include/macros.h', 'void StartMacro(uint8_t m)') + lift('include/macros.h', 'void RunMacro(uint8_t m)') + lift('include/macros.h', 'void StopMacro(uint8_t m)') + lift('include/macros.h', 'void ExecuteMacro()') + r'''
 // the commands sent since the last look: "us3=1500" each (anything else is a fault)
 static std::vector<std::string> sent() {
@@ -261,19 +267,35 @@ int main() {
     MotorEnabled = false; MaxRangeWideTapped();
     CHECK(MaxRangeNarrow == 0 && saves == s0 + 2 && marks(1, 0) && prompts.back().find("500 to 2500? Each point keeps its value:") != std::string::npos);
     CHECK(abs((int)CurveMicros(MinDegrees[1][0]) - 945) <= 6 && abs((int)CurveMicros(MaxDegrees[1][0]) - 2055) <= 6);
-    // 25. the model's own extension: after the checksummed sequence, outside its checksum
-    card.assign(2100, 0); StartLocation = 0; FileCheckSum = 0;
+    // 25. the model's own extension: right after the checksummed sequence (B114), outside its checksum, never a seek beyond the file
+    auto record = [&](size_t len) { card.assign(len, 0); StartLocation = 0; SDCardAddress = (int)len; FileCheckSum = 0; seekWriteFails = 0; };   // (a record's checksum ends at len)
+    record(2100);
     MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card.size() == 2100);                  // never set: the file not lengthened
     MaxRangeNarrow = 1; SaveModelExtension();
-    CHECK(card.size() == MODEL_EXT_OFFSET + 3 && card[MODEL_EXT_OFFSET] == 0x5A && card[MODEL_EXT_OFFSET + 1] == 0xC3 && card[MODEL_EXT_OFFSET + 2] == 1 && FileCheckSum == 0);
+    CHECK(card.size() == 2103 && card[2100] == 0x5A && card[2101] == 0xC3 && card[2102] == 1 && FileCheckSum == 0 && seekWriteFails == 0);   // an append
     MaxRangeNarrow = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 1 && FileCheckSum == 0);
-    MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card[MODEL_EXT_OFFSET + 2] == 0);    // there once: kept true
+    MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card.size() == 2103 && card[2102] == 0 && seekWriteFails == 0);   // there once: kept true
     MaxRangeNarrow = 1; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);
-    card[MODEL_EXT_OFFSET + 2] = 1; card[MODEL_EXT_OFFSET + 1] = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);   // one marker wrong: 500 to 2500
-    card[MODEL_EXT_OFFSET + 1] = 0xC3; card[MODEL_EXT_OFFSET + 2] = 7; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);  // a value not ours: 500 to 2500
-    card.assign(100, 0); ReadModelExtension(); CHECK(MaxRangeNarrow == 0);   // a short file: read past its end (255s), 500 to 2500
-    card.assign(512 + 3 * 3072, 0); StartLocation = 512 + 2 * 3072; MaxRangeNarrow = 1; SaveModelExtension();   // model 3 of models.dat
-    CHECK(card.size() == 512 + 3 * 3072 && card[StartLocation + MODEL_EXT_OFFSET] == 0x5A && card[StartLocation + MODEL_EXT_OFFSET + 2] == 1);
+    card[2102] = 1; card[2101] = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);     // one marker wrong: 500 to 2500
+    card[2101] = 0xC3; card[2102] = 7; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);  // a value not ours: 500 to 2500
+    record(2100); MaxRangeNarrow = 1; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);   // an old record, nothing after it: 500 to 2500 (reads at the end give 255)
+    // models.dat: model 3's record, the file holding more; the markers go in the gap after its checksum, the file no longer
+    record(512 + 5 * 3072); StartLocation = 512 + 2 * 3072; SDCardAddress = StartLocation + 2016;
+    MaxRangeNarrow = 1; SaveModelExtension();
+    CHECK(card.size() == 512 + 5 * 3072 && card[SDCardAddress] == 0x5A && card[SDCardAddress + 1] == 0xC3 && card[SDCardAddress + 2] == 1 && seekWriteFails == 0);
+    MaxRangeNarrow = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 1);
+    MaxRangeNarrow = 0; SaveModelExtension(); ReadModelExtension(); CHECK(MaxRangeNarrow == 0 && card[SDCardAddress + 2] == 0);
+    // B113's place (offset 3064 of the record) is still read, as a fallback, when the file reaches it ...
+    record(512 + 5 * 3072); StartLocation = 512 + 2 * 3072; SDCardAddress = StartLocation + 2016;
+    card[StartLocation + 3064] = 0x5A; card[StartLocation + 3065] = 0xC3; card[StartLocation + 3066] = 1;
+    MaxRangeNarrow = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 1);
+    MaxRangeNarrow = 0; SaveModelExtension(); ReadModelExtension(); CHECK(MaxRangeNarrow == 0);   // ... but what sits after the checksum wins once written (B113's byte still says 1)
+    CHECK(card[StartLocation + 3066] == 1 && card[SDCardAddress + 2] == 0);
+    // ... and never beyond the file: a .MOD (2019 bytes) with B113's accidental layout - its bytes right after the checksum - reads as narrow
+    record(2016); card.resize(2019, 0); card[2016] = 0x5A; card[2017] = 0xC3; card[2018] = 1;
+    MaxRangeNarrow = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 1);
+    record(2016); MaxRangeNarrow = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 0);   // a .MOD too short for B113's place: not looked at
+    MaxRangeNarrow = 0;
     // 26. the curves themselves (the flying path): a curve to the top and bottom ends at the range's ends; the middle is 1500
     ChannelMin[0] = 300; ChannelMidLow[0] = 1150; ChannelCentre[0] = 2000; ChannelMidHi[0] = 2950; ChannelMax[0] = 3900;
     const uint8_t full[5] = {0, 45, 90, 135, 180}; for (int k = 0; k < 5; ++k) CurveDots[k] = full[k];
@@ -368,9 +390,12 @@ r1 = rom[rom.index('bool ReadOneModel(uint32_t Mnum)'):]
 check(r1.index('MaxRangeNarrow = 0;') < r1.index('ModelDefined = SDRead8BITS') and 'ReadCheckSum32();\n    ReadModelExtension();' in r1, 'a model read: 500 to 2500 until its own extension says otherwise')
 check('SaveCheckSum32(); // Save the Model parametres checksm\n    SaveModelExtension();' in rom, 'a model saved: its extension after the checksum')
 mods = glob.glob(os.path.join(TC, 'SD Examples', '*', 'mod', '*.MOD'))
-offs = int(re.search(r'#define MODEL_EXT_OFFSET (\d+)', defs1).group(1))
+offs = int(re.search(r'#define MODEL_EXT_OFFSET_B113 (\d+)', sdc).group(1))
 longest = max(os.path.getsize(m) for m in mods) if mods else 0
-check(mods and longest + 500 < offs and offs + 3 <= 3 * 1024, 'the extension lies clear past the sequence (%d bytes the longest example) and inside the record' % longest)
+check(mods and longest + 500 < offs and offs + 3 <= 3 * 1024, "B113's fallback place lies clear past the sequence (%d bytes the longest example) and inside the record" % longest)
+rme, sme = lift('include/SDcard.h', 'void ReadModelExtension()'), lift('include/SDcard.h', 'void SaveModelExtension()')
+check('const int a = SDCardAddress;' in rme and 'const int a = SDCardAddress;' in sme and 'StartLocation + MODEL_EXT_OFFSET_B113' in rme and 'MODEL_EXT_OFFSET_B113' not in sme, "B114: the extension written right after the checksum (an append at most); B113's place read only as a fallback")
+check('ModelsFileNumber.size() >= b + 3' in rme, 'the fallback never reads beyond the file')
 check(re.search(r'RatesCurvesOk,\s*// 218[^\n]*\n\s*MaxRangeWideTapped,\s*// 219[^\n]*\n\s*MaxRangeNarrowTapped\s*// 220', main) is not None and '#define LASTFUNCTION1 221' in main, 'codes 219 and 220 are the two choices')
 tb = main[main.index('void (*NumberedFunctions1[LASTFUNCTION1])(){'):]
 tb = re.sub(r'//[^\n]*', '', tb[tb.index('){') + 2:tb.index('};')])

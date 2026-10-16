@@ -691,22 +691,38 @@ uint8_t SDRead8BITS(int p_address)
 }
 
 /*********************************************************************************************************************************/
-// B113: each model's own extension - what its record keeps after the checksummed sequence, at a fixed place near the end
-// of its MODELSIZE bytes (MODEL_EXT_OFFSET: the sequence ends near 2100): the transmitter block's two marker bytes, then the
-// max range (0 or 1). Read and written with the checksum off, as the transmitter block's extension is, so a record from
-// before B113 still passes its checksum and reads 500 to 2500. Written only when there is something to say, or when it is
-// already there: a model never set does not lengthen its file (a .MOD backup stays as it was).
+// B113: each model's own extension - what its record keeps AFTER the checksummed sequence: the transmitter block's two
+// marker bytes, then the max range (0 or 1), at the address where the sequence's checksum ends (SDCardAddress as
+// SaveCheckSum32 / ReadCheckSum32 leave it). Read and written with the checksum off, so a record from before B113 still
+// passes its checksum and reads 500 to 2500 (after its checksum: the file's end, or a gap's bytes - not the markers).
+// B114: at the sequence's end, not at a fixed offset near the record's end as B113 had it - the card library refuses a
+// seek beyond a file's end (SdFat FatFile::seekSet: pos > m_fileSize fails, the position stays), so B113's place could be
+// written only inside models.dat, never into a .MOD backup or the file's last record (there the bytes landed at the
+// position the seek left: right after the checksum - where this reads first). B113's place is still read, as a fallback,
+// when the file reaches it. Here the write is an append at most. Written only when there is something to say, or when it
+// is already there: a model never set does not lengthen its file.
+#define MODEL_EXT_OFFSET_B113 3064 // (B113's place in the record: read as a fallback)
 void ReadModelExtension()
 {
-    const int a = StartLocation + MODEL_EXT_OFFSET;
-    DoingCheckSm = true; // (BuildCheckSum() skips while this is set)
-    const uint8_t m0 = SDRead8BITS(a), m1 = SDRead8BITS(a + 1), r = SDRead8BITS(a + 2);
+    const int a = SDCardAddress; // (just past the checksum)
+    DoingCheckSm = true;         // (BuildCheckSum() skips while this is set)
+    uint8_t m0 = SDRead8BITS(a), m1 = SDRead8BITS(a + 1), r = SDRead8BITS(a + 2);
+    if (!(m0 == TX_EXT_MAGIC && m1 == TX_EXT_MAGIC2))
+    {
+        const int b = StartLocation + MODEL_EXT_OFFSET_B113;
+        if ((int)ModelsFileNumber.size() >= b + 3)
+        {
+            m0 = SDRead8BITS(b);
+            m1 = SDRead8BITS(b + 1);
+            r = SDRead8BITS(b + 2);
+        }
+    }
     DoingCheckSm = false;
     MaxRangeNarrow = (m0 == TX_EXT_MAGIC && m1 == TX_EXT_MAGIC2 && r == 1) ? 1 : 0;
 }
 void SaveModelExtension()
 {
-    const int a = StartLocation + MODEL_EXT_OFFSET;
+    const int a = SDCardAddress; // (just past the checksum: at most the file's end, so the write is an append, never a seek beyond it)
     if (!MaxRangeNarrow && (int)ModelsFileNumber.size() <= a)
         return;
     DoingCheckSm = true;

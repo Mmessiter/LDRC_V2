@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B113 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B114 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1802,10 +1802,9 @@ void RxHeardUpdateWord(uint32_t word); // RxUpdate.h: ack item 40
 bool MotorWasEnabled = false;
 uint8_t MotorChannel = 2;
 uint8_t MotorChannelZero = 30;
-uint8_t MaxRangeNarrow = 0; // B113: this model's max range - 0: 500 to 2500, 1: 945 to 2055 (kept after its record's checksummed sequence: SDcard.h ReadModelExtension)
+uint8_t MaxRangeNarrow = 0; // B113: this model's max range - 0: 500 to 2500, 1: 945 to 2055 (kept right after its record's checksum: SDcard.h ReadModelExtension; B114)
 #define RANGE_NARROW_LO 945     // B113: the narrow max range, even about 1500 (+- 555)
 #define RANGE_NARROW_HI 2055
-#define MODEL_EXT_OFFSET 3064   // B113: in each model's record (MODELSIZE 3072, the sequence ends near 2100): 3064-3065 two marker bytes, 3066 the max range
 bool UseMotorKill = true;
 bool SafetyON = false;
 uint8_t BuddyState = BUDDY_OFF; // three possible states now. BUDDY_OFF, BUDDY_NUDGE, BUDDY_ON

@@ -186,6 +186,29 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The max range's byte right after the record's checksum; the stick calibration checked (Teensy B114, screen 1.11.80 unchanged, 17 Oct 2026)
+
+Malcolm, going to bed: "Tomorrow I will test stick recalibration so during the night you might like to check we have not
+inadvertently screwed it up!" Checked: nothing of yesterday touched Calibrate.h, the Calibrate page or its help (git); the
+flow in main.cpp is as it was (start = the defaults + ReduceLimits, nothing saved; Next; Finish = the calibration saved and
+the model read back; OK part way = the card's values back); a calibration runs on the wide range (SetDefaultValues
+resets B113's byte with the other defaults, so ReduceLimits's 0 / 180 reach the bars' ends) and the model's own range comes
+back with the model. New host test dev/test_calibrate: Calibrate.h's own functions over a fake ADC (152 checks: the ends
+are the furthest readings, the centres and quarter points follow, the switch inputs 500 / 1500 / 2500, the bars 0 / 50 / 100
+on either range, B110's Input then reads 1000 / 1500 / 2000 at the calibrated ends and centre) and the flow as source.
+What the check found instead: B113 put the max range's byte at a fixed place near the end of a model's record (offset 3064),
+and the card library refuses a seek beyond a file's end (SdFat FatFile::seekSet) - so in a .MOD backup, or models.dat's
+last record, the byte could never land there (it landed where the seek left the position: right after the checksum, which
+happened to read back). B114 puts it right after the record's checksum by design - an append at most, never a seek beyond
+the end - and still reads B113's place as a fallback (a model set narrow under B113 stays narrow; a .MOD too short for it is
+not looked at). No change in flight. dev/test_channel_us 3159 + 1156 checks (6 more mistakes put in on purpose, all
+caught); its fake card now behaves as SdFat does (a seek beyond the end fails) and counts such writes: none allowed.
+Noticed, not changed: the same library rule means "Reset transmitter" on a card with NO models.dat writes the records one
+after another rather than at their slots (the comment "writes default four times!" and the example MODELS.DAT's size, 90
+records of 2071 bytes end to end, both fit this); each pass of the four moves more slots to their places, but the last few
+(about 87-90) would still read "File error?" until saved again. Cards are prepared from the example folder, so it has not
+bitten; the fix would be to size the file first. For Malcolm to decide.
+
 ## Max range: 500 to 2500, or 945 to 2055 (Teensy B113, screen 1.11.80 unchanged, 17 Oct 2026)
 
 Malcolm, of B111/B112: "I think here we have confused 'stick ends' with 'max range'. We need to control MAX RANGE, but
