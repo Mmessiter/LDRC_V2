@@ -522,6 +522,7 @@ static const uint16_t RcInk[4] = {57798, 17672, 25046, 64608}; // roll red, pitc
 static int16_t RcY[4][RC_SEGS + 1]; // each curve's points on the screen
 static uint8_t RcTwin[4];           // 0: drawn whole; n: lies on n earlier curves, so dashed in their gaps; 255: all zero, not drawn
 static int16_t RcStep = -1;         // the next thing to draw; -1: nothing
+static float RcScale[4];            // each curve's scale (B108: the dots use them)
 FLASHMEM float RcFull(uint8_t a) { return RfRatesCurve(Rate_Values[0], Rate_Values[1 + 3 * a], Rate_Values[2 + 3 * a], Rate_Values[3 + 3 * a], 1.0f); }
 FLASHMEM static void RcPrepare() // the four curves' points and the legend's words
 {
@@ -537,6 +538,7 @@ FLASHMEM static void RcPrepare() // the four curves' points and the legend's wor
     for (uint8_t a = 0; a < 4; ++a)
     {
         const float scale = a == 3 ? (full[3] > 0.0f ? full[3] : 1.0f) : rpy; // (the collective on its own scale, as on the phone)
+        RcScale[a] = scale;
         for (int k = 0; k <= RC_SEGS; ++k)
         {
             const float s = -1.0f + 2.0f * k / RC_SEGS;
@@ -576,6 +578,7 @@ FLASHMEM static void RcPrepare() // the four curves' points and the legend's wor
     }
     SendText((char *)"tt", (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // (the type the curves are of)
 }
+FLASHMEM bool RcPut(const char *c); // (B108: below)
 FLASHMEM static bool RcDraw(int i) // one thing on the plot, straight onto the wire (never waits, never reads: a touch is never lost); false: no room yet
 {
     char c[48];
@@ -611,26 +614,206 @@ FLASHMEM static bool RcDraw(int i) // one thing on the plot, straight onto the w
     }
     else // the dot at the middle
         snprintf(c, sizeof(c), "cirs %d,%d,5,64937", cx, cy);
+    return RcPut(c);
+}
+// ************************************************************************************************************/
+// B108 (Malcolm, of the curves: "Looks very very good !" - and to a dot on each curve that moves with the sticks: "Yes
+// please!!"): each curve carries a dot where Rotorflight has that stick now - from what this transmitter sends on the
+// axis' channel, read as Rotorflight reads it (fc/rc.c updateRcCommands: the centre, the deadband, the deflection; the
+// channel from its map). The flight controller is asked its map (MSP_RX_MAP) and its centre, deflection and deadbands
+// (MSP_RC_CONFIG) as the page opens; until it answers, or with no model, Rotorflight's own defaults (AETRC: roll on
+// channel 1, pitch 2, yaw 4, collective 5; 1500, 510, 5). A dot that moves is rubbed out - its little square filled
+// again, and the grid, the axes, the curve pieces and the other dots through it drawn again - then drawn where it now
+// is; only when its stick has moved, never more than the wire to the screen holds, as the curves are.
+#define RC_DOT_R 6
+#define RC_DOT_BOX (2 * RC_DOT_R + 3)      // the square a dot is rubbed out with
+#define RC_DOT_OTHERS (RC_CURVES + 1)      // the ops: 0..RC_CURVES rub out (as RcDraw's, inside the square), then the other dots (2 each), then the dot
+#define RC_DOT_NEW (RC_DOT_OTHERS + 8)
+static uint8_t RcMap[4] = {0, 1, 3, 4};    // the channel (0-based) of roll, pitch, yaw, collective (Rotorflight's AETRC)
+static int16_t RcCentre = 1500, RcDefl = 510;
+static uint8_t RcDead[4] = {5, 5, 5, 0};   // (rc_deadband for roll and pitch, rc_yaw_deadband, the collective none)
+static int16_t RcDotX[4] = {-1, -1, -1, -1}, RcDotY[4]; // where each dot is drawn (-1: not drawn)
+static int8_t RcDotNow = -1;               // the dot being moved
+static int16_t RcDotStep = 0, RcOldX = -1, RcOldY = -1;
+static uint32_t RcDotLook = 0;             // when the sticks were last looked at
+static int RcAskId = -1;
+static uint8_t RcAskStep = 0;              // the questions: 0 none, 1 the map asked, 2 the centre etc. asked, 3 answered or given up
+FLASHMEM bool RcPut(const char *c) // one command straight onto the wire, or nothing if it does not fit (never waits, never reads)
+{
     const int n = (int)strlen(c);
+    if (n == 0)
+        return true;
     if (NEXTION.availableForWrite() < n + 3)
         return false;
     NEXTION.write((const uint8_t *)c, n);
     NEXTION.write((const uint8_t *)"\xFF\xFF\xFF", 3);
     return true;
 }
+FLASHMEM float RcDeflection(uint8_t a) // the stick as Rotorflight reads it: -1 .. 1
+{
+    float d = (float)SendBuffer[RcMap[a]] - RcCentre;
+    const float db = RcDead[a], range = RcDefl - db;
+    d = d > db ? d - db : (d < -db ? d + db : 0.0f);
+    return range > 0.0f ? constrain(d / range, -1.0f, 1.0f) : 0.0f;
+}
+FLASHMEM static void RcDotWant(uint8_t a, int16_t &x, int16_t &y) // where its dot belongs: on its curve, kept wholly on the plot
+{
+    const float d = RcDeflection(a);
+    float v = RfRatesCurve(Rate_Values[0], Rate_Values[1 + 3 * a], Rate_Values[2 + 3 * a], Rate_Values[3 + 3 * a], fabsf(d));
+    if (d < 0.0f)
+        v = -v;
+    const int cy = RC_PLOT_Y + RC_PLOT_H / 2;
+    x = (int16_t)constrain(RC_PLOT_X + (int)lroundf((d + 1.0f) * 0.5f * (RC_PLOT_W - 1)), RC_PLOT_X + RC_DOT_R + 1, RC_PLOT_X + RC_PLOT_W - RC_DOT_R - 2);
+    y = (int16_t)constrain(cy - (int)lroundf(v / RcScale[a] * (RC_PLOT_H / 2) * 0.92f), RC_PLOT_Y + RC_DOT_R + 1, RC_PLOT_Y + RC_PLOT_H - RC_DOT_R - 2);
+}
+FLASHMEM static bool RcBoxesMeet(int ax, int ay, int bx, int by) { return abs(ax - bx) < RC_DOT_BOX && abs(ay - by) < RC_DOT_BOX; }
+FLASHMEM static bool RcDotOp(int i) // one step of moving dot RcDotNow from (RcOldX, RcOldY) to where RcDotX/Y say; false: no room yet
+{
+    char c[48];
+    c[0] = 0;
+    const int a = RcDotNow, bx = RcOldX - RC_DOT_R - 1, by = RcOldY - RC_DOT_R - 1, bw = RC_DOT_BOX;
+    const int cx = RC_PLOT_X + RC_PLOT_W / 2, cy = RC_PLOT_Y + RC_PLOT_H / 2;
+    if (i == 0)
+        snprintf(c, sizeof(c), "fill %d,%d,%d,%d,65535", bx, by, bw, bw);
+    else if (i <= 6) // the grid's pieces in the square
+    {
+        const int k = (i - 1) % 3 + 1, x = (i <= 3) ? cx - k * RC_PLOT_W / 8 : cx + k * RC_PLOT_W / 8;
+        if (x >= bx && x < bx + bw)
+            snprintf(c, sizeof(c), "line %d,%d,%d,%d,59164", x, by, x, by + bw - 1);
+    }
+    else if (i <= 12)
+    {
+        const int k = (i - 7) % 3 + 1, y = (i <= 9) ? cy - k * RC_PLOT_H / 8 : cy + k * RC_PLOT_H / 8;
+        if (y >= by && y < by + bw)
+            snprintf(c, sizeof(c), "line %d,%d,%d,%d,59164", bx, y, bx + bw - 1, y);
+    }
+    else if (i <= 16) // the axes' pieces
+    {
+        const int r = (i <= 14) ? cy + (i - 13) : cx + (i - 15);
+        if (i <= 14 && r >= by && r < by + bw)
+            snprintf(c, sizeof(c), "line %d,%d,%d,%d,16904", bx, r, bx + bw - 1, r);
+        else if (i > 14 && r >= bx && r < bx + bw)
+            snprintf(c, sizeof(c), "line %d,%d,%d,%d,16904", r, by, r, by + bw - 1);
+    }
+    else if (i < RC_CURVES) // the curve pieces through the square, whole and in the plot's order (so a twin's dashes stay on top)
+    {
+        const int j = i - 17, ca = j / (RC_SEGS * 2), k = (j / 2) % RC_SEGS, t = j % 2;
+        const uint8_t tw = RcTwin[ca];
+        if (tw == 255 || ((k >> 1) % (tw + 1)) != tw)
+            return true;
+        const int xa = RC_PLOT_X + k * (RC_PLOT_W - 1) / RC_SEGS, xb = RC_PLOT_X + (k + 1) * (RC_PLOT_W - 1) / RC_SEGS;
+        const int ya = min(RcY[ca][k], RcY[ca][k + 1]), yb = max(RcY[ca][k], RcY[ca][k + 1]) + 1;
+        if (xb < bx || xa >= bx + bw || yb < by || ya >= by + bw)
+            return true;
+        snprintf(c, sizeof(c), "line %d,%d,%d,%d,%u", xa, RcY[ca][k] + t, xb, RcY[ca][k + 1] + t, (unsigned)RcInk[ca]);
+    }
+    else if (i == RC_CURVES) // the middle's dot
+    {
+        if (RcBoxesMeet(RcOldX, RcOldY, cx, cy))
+            snprintf(c, sizeof(c), "cirs %d,%d,5,64937", cx, cy);
+    }
+    else if (i < RC_DOT_NEW) // the other dots it lay on, drawn again
+    {
+        const int b = (i - RC_DOT_OTHERS) / 2;
+        if (b == a || RcDotX[b] < 0 || !RcBoxesMeet(RcOldX, RcOldY, RcDotX[b], RcDotY[b]))
+            return true;
+        if ((i - RC_DOT_OTHERS) % 2 == 0)
+            snprintf(c, sizeof(c), "cirs %d,%d,%d,16904", RcDotX[b], RcDotY[b], RC_DOT_R);
+        else
+            snprintf(c, sizeof(c), "cirs %d,%d,%d,%u", RcDotX[b], RcDotY[b], RC_DOT_R - 2, (unsigned)RcInk[b]);
+    }
+    else if (i == RC_DOT_NEW) // the dot where it now is: a dark ring, its curve's colour inside
+        snprintf(c, sizeof(c), "cirs %d,%d,%d,16904", RcDotX[a], RcDotY[a], RC_DOT_R);
+    else
+        snprintf(c, sizeof(c), "cirs %d,%d,%d,%u", RcDotX[a], RcDotY[a], RC_DOT_R - 2, (unsigned)RcInk[a]);
+    return RcPut(c);
+}
+FLASHMEM static void RcAskPoll() // the flight controller's map, then its centre, deflection and deadbands
+{
+    if (RcAskStep != 1 && RcAskStep != 2)
+        return;
+    if (!PipeReplyReady(RcAskId))
+    {
+        if (PipeReplyLate())
+            RcAskStep = 3; // (no answer: the defaults stay)
+        return;
+    }
+    uint8_t b[16];
+    const int n = PipeRepCode == 200 ? PipeReplyBytes(b, sizeof(b)) : 0;
+    if (RcAskStep == 1)
+    { // MSP_RX_MAP: for roll, pitch, yaw, collective, throttle ... the channel each reads
+        if (n >= 4)
+            for (uint8_t a = 0; a < 4; ++a)
+                if (b[a] < 16)
+                    RcMap[a] = b[a];
+        RcAskId = MspAsk(66, nullptr, 0); // MSP_RC_CONFIG
+        RcAskStep = 2;
+        return;
+    }
+    if (n >= 12)
+    { // centre, deflection (16 bits each), 0, the throttle's ends, then the deadbands
+        const int ce = b[0] | (b[1] << 8), de = b[2] | (b[3] << 8);
+        if (ce >= 1000 && ce <= 2000 && de >= 100 && de <= 1000 && b[10] < de && b[11] < de)
+        {
+            RcCentre = (int16_t)ce;
+            RcDefl = (int16_t)de;
+            RcDead[0] = RcDead[1] = b[10];
+            RcDead[2] = b[11];
+        }
+    }
+    RcAskStep = 3;
+    RcDotLook = 0; // (the dots placed again, by the flight controller's own numbers)
+}
 FLASHMEM void RatesCurvePoll()
 {
-    if (RcStep < 0)
-        return;
     if (CurrentView != RATESCURVEVIEW)
     {
         RcStep = -1;
+        RcDotNow = -1;
         return;
     }
-    while (RcStep <= RC_CURVES && RcDraw(RcStep))
-        ++RcStep;
-    if (RcStep > RC_CURVES)
-        RcStep = -1;
+    RcAskPoll();
+    if (RcStep >= 0) // the plot first
+    {
+        while (RcStep <= RC_CURVES && RcDraw(RcStep))
+            ++RcStep;
+        if (RcStep > RC_CURVES)
+        {
+            RcStep = -1;
+            RcDotLook = 0;
+        }
+        return;
+    }
+    if (RcDotNow >= 0) // a dot on its way
+    {
+        while (RcDotStep <= RC_DOT_NEW + 1 && RcDotOp(RcDotStep))
+            ++RcDotStep;
+        if (RcDotStep > RC_DOT_NEW + 1)
+        {
+            RcDotNow = -1;
+            RcDotLook = 0; // (the next that moved, at once)
+        }
+        return;
+    }
+    if (RcDotLook && millis() - RcDotLook < 50)
+        return;
+    RcDotLook = millis();
+    for (uint8_t a = 0; a < 4; ++a)
+    {
+        if (RcTwin[a] == 255)
+            continue; // (no curve, no dot)
+        int16_t x, y;
+        RcDotWant(a, x, y);
+        if (RcDotX[a] >= 0 && abs(x - RcDotX[a]) < 2 && abs(y - RcDotY[a]) < 2)
+            continue;
+        RcOldX = RcDotX[a];
+        RcOldY = RcDotY[a];
+        RcDotX[a] = x;
+        RcDotY[a] = y;
+        RcDotNow = (int8_t)a;
+        RcDotStep = RcOldX >= 0 ? 0 : RC_DOT_NEW; // (not drawn before: nothing to rub out)
+        return;
+    }
 }
 FLASHMEM void RatesCurvesTapped() // "Curves ...": the page, its curves from what the Rates page shows
 {
@@ -645,6 +828,20 @@ FLASHMEM void RatesCurvesTapped() // "Curves ...": the page, its curves from wha
     SendText((char *)"t9", b);
     SendText((char *)"t11", ModelName);
     RcStep = -1; // (drawn when the page says it is there: RatesCurvesPageBack)
+    // B108: the dots by Rotorflight's own defaults, until the flight controller says its own (asked only with a model)
+    static const uint8_t aetrc[4] = {0, 1, 3, 4};
+    memcpy(RcMap, aetrc, 4);
+    RcCentre = 1500;
+    RcDefl = 510;
+    RcDead[0] = RcDead[1] = RcDead[2] = 5;
+    RcDead[3] = 0;
+    RcAskStep = 0;
+    char why[80];
+    if (RfLive() && !RfPipeBlocked(why, sizeof(why)))
+    {
+        RcAskId = MspAsk(64, nullptr, 0); // MSP_RX_MAP
+        RcAskStep = 1;
+    }
 }
 FLASHMEM void RatesCurvesPageBack() // "ldrcrcv": the page is on the screen (opened, back from Help or the screen saver): drawn afresh
 {
@@ -652,6 +849,9 @@ FLASHMEM void RatesCurvesPageBack() // "ldrcrcv": the page is on the screen (ope
         return;
     RcPrepare();
     RcStep = 0;
+    RcDotNow = -1; // B108: the plot is drawn afresh, so are the dots after it
+    for (uint8_t a = 0; a < 4; ++a)
+        RcDotX[a] = -1;
 }
 FLASHMEM void RatesCurvesOk()
 {

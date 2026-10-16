@@ -64,6 +64,9 @@ Roll, Pitch and Yaw share one scale; Collective (degrees of|
 blade pitch) has its own. The boxes on the left give each|
 one's value at full stick. A curve lying on another (Pitch|
 the same as Roll) is drawn dashed, so both show.|
+THE DOTS: each curve has a dot where its stick is now, as the|
+flight controller reads it. Move a stick: its dot rides along|
+its curve, and shows how fast the model would turn there.|
 'OK' goes back to the numbers.||
 'Dynamics ...' opens 'Rates: dynamics' for the same rate.|
 It asks first if you have unsaved changes.|

@@ -10,6 +10,8 @@ B107: the curves page (RatesCurveView): RfRatesCurve against Rotorflight 4.6's f
 every type and 4000 random settings; the drawing - what is drawn, inside the plot, a twin dashed, never more than the wire
 to the screen holds, the legend's words; OK and the bank switch; the page files (if ESP32-board2 is here) agree on the
 plot and the codes. RC_SCENARIO=path writes the commands drawn, for the page renderer (hmi/scenarios/83.txt).
+B108: the dots - where Rotorflight has each stick (its map and centre / deflection / deadbands asked, or its defaults),
+on the curve, rubbed out and drawn anew only when a stick moves, within the wire's room; RC_DOTS=path writes a stick move.
    python3 dev/test_rates/test_rates.py"""
 import json, math, os, random, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,7 +26,7 @@ prog = r'''
 #include <vector>
 #include <cmath>
 #include <algorithm>
-using std::max;
+using std::max; using std::min;
 template <class T> static T constrain(T v, T lo, T hi) { return v < lo ? lo : (v > hi ? hi : v); }
 // the wire to the screen: room as the hardware's buffer has it, every write kept
 struct FakeNextion { int room = 1 << 30; int over = 0; std::string out; int availableForWrite() { return room; } size_t write(const uint8_t *b, size_t n) { if ((int)n > room) ++over; room -= (int)n; out.append((const char *)b, n); return n; } };
@@ -55,7 +57,14 @@ static char Rate_Types[7][16] = {"0 - NONE", "1 - BETAFLIGHT", "2 - RACEFLIGHT",
 const float FactorTableRF2_2[13] = {1, 10, 10, .01, 10, 10, .01, 10, 10, .01, .25, .25, .01};
 const float FactorTableRF2_3[13] = {1, 5, 1, 1, 5, 1, 1, 5, 1, 1, .125, 1, 1};
 static bool RfValueWasCut = false, Rates_Were_Edited = false, Reading_RATES_Now = false, BlockBankChanges = false, Wait_for_Advanced_Rates_to_Be_Sent_Too = false, live = true;
-static uint32_t RATES_Send_Duration = 0, RATES_Start_Time = 0; static uint32_t millis() { return 1000; }
+static uint32_t RATES_Send_Duration = 0, RATES_Start_Time = 0; static uint32_t nowMs = 1000; static uint32_t millis() { return nowMs; }
+// B108: what the transmitter sends (its channels), and the pipe's questions to the flight controller
+static uint16_t SendBuffer[21];
+static int PipeRepCode = 200, askedFn = -1, askId = 0, readyId = -1; static bool lateAsk = false; static std::vector<uint8_t> replyBytes;
+static int MspAsk(uint8_t fn, const uint8_t *, int) { askedFn = fn; return ++askId; }
+static bool PipeReplyReady(int id) { return id == readyId; }
+static bool PipeReplyLate() { return lateAsk; }
+static int PipeReplyBytes(uint8_t *out, int mx) { const int n = std::min((int)replyBytes.size(), mx); memcpy(out, replyBytes.data(), n); return n; }
 static int ModelNumber = 1; static char ModelName[20] = "Goblin"; static int saves = 0, sounds = 0, boxes = 0; static std::string lastBox;
 static std::map<std::string, std::string> fields; static std::vector<std::string> cmds; static std::vector<int> queued;
 static void SendText(char *n, char *t) { fields[n] = t; }
@@ -237,6 +246,64 @@ int main() {
         int curves = 0; for (const std::string &c : cmdsOf(NEXTION.out)) { unsigned col = 0; int a, b, cc, d; if (sscanf(c.c_str(), "line %d,%d,%d,%d,%u", &a, &b, &cc, &d, &col) == 5 && (col == 57798 || col == 17672 || col == 25046 || col == 64608)) ++curves; }
         CHECK(curves == 0);
         RatesCurvesOk(); RcStep = -1;
+        // 8. B108: the dots
+        {
+            auto pollUntilQuiet = [&](int maxPolls) { int n = 0; for (; n < maxPolls; ++n) { NEXTION.room = 64; size_t before = NEXTION.out.size(); RatesCurvePoll(); if (RcStep < 0 && RcDotNow < 0 && NEXTION.out.size() == before) { nowMs += 60; NEXTION.room = 64; RatesCurvePoll(); if (RcStep < 0 && RcDotNow < 0 && NEXTION.out.size() == before) break; } } return n; };
+            for (int c = 0; c < 21; ++c) SendBuffer[c] = 1500;
+            memcpy(Rate_Values, rf, 13); live = true; CurrentView = RATESVIEW_RF; fields.clear(); DisplayRatesValues(0, 13);
+            askedFn = -1; RatesCurvesTapped(); CHECK(askedFn == 64 && RcAskStep == 1);   // (the map asked as the page opens)
+            RatesCurvesPageBack(); NEXTION.out.clear(); NEXTION.over = 0; pollUntilQuiet(3000);
+            std::vector<std::string> all = cmdsOf(NEXTION.out);
+            // after the plot, the four dots at the middle, each a dark ring and its colour
+            std::vector<std::string> dots; for (const std::string &c : all) if (c.rfind("cirs 503,237,", 0) == 0) dots.push_back(c);
+            CHECK(NEXTION.over == 0 && dots.size() == 9 && dots[0] == "cirs 503,237,5,64937" && dots[1] == "cirs 503,237,6,16904" && dots[2] == "cirs 503,237,4,57798" && dots[8] == "cirs 503,237,4,64608");
+            CHECK(RcDotX[0] == 503 && RcDotY[0] == 237 && RcDotX[3] == 503 && RcDotY[3] == 237);
+            // nothing moved: nothing sent
+            NEXTION.out.clear(); nowMs += 100; pollUntilQuiet(50); CHECK(NEXTION.out.empty());
+            // the flight controller answers: its map (AERCT: yaw on channel 3, the collective on 4), then its centre etc.
+            readyId = askId; replyBytes = {0, 1, 2, 3, 4, 5, 6, 7}; NEXTION.room = 64; RatesCurvePoll();
+            CHECK(RcMap[0] == 0 && RcMap[1] == 1 && RcMap[2] == 2 && RcMap[3] == 3 && askedFn == 66 && RcAskStep == 2);
+            readyId = askId; replyBytes = {0xDC, 0x05, 0xF4, 0x01, 0, 0, 0, 0, 0, 0, 10, 4}; NEXTION.room = 64; RatesCurvePoll();   // (1500, 500, ..., deadbands 10 and 4)
+            CHECK(RcAskStep == 3 && RcCentre == 1500 && RcDefl == 500 && RcDead[0] == 10 && RcDead[1] == 10 && RcDead[2] == 4 && RcDead[3] == 0);
+            // Rotorflight's reading: inside the deadband nothing, then (us - 1500 - 10) / 490; the collective has none
+            SendBuffer[1] = 1509; CHECK(RcDeflection(1) == 0.0f); SendBuffer[1] = 1500 + 255; CHECK(fabsf(RcDeflection(1) - 0.5f) < 1e-6f);
+            SendBuffer[1] = 2100; CHECK(RcDeflection(1) == 1.0f); SendBuffer[1] = 900; CHECK(RcDeflection(1) == -1.0f); SendBuffer[1] = 1500;
+            SendBuffer[3] = 1500 + 250; CHECK(fabsf(RcDeflection(3) - 0.5f) < 1e-6f); SendBuffer[3] = 1500;   // (the collective, on its own channel 4 now)
+            SendBuffer[4] = 2000; CHECK(RcDeflection(3) == 0.0f); SendBuffer[4] = 1500;   // (channel 5 is not the collective any more)
+            // roll to full right: its dot goes to the curve's end - rubbed out at the middle, the others there drawn again
+            SendBuffer[0] = 1500 + 10 + 490; NEXTION.out.clear(); NEXTION.over = 0; nowMs += 60; pollUntilQuiet(500);
+            all = cmdsOf(NEXTION.out);
+            CHECK(NEXTION.over == 0 && !all.empty() && all.front() == "fill 496,230,15,15,65535");
+            CHECK(RcDotX[0] == 748 && RcDotY[0] == RcY[0][RC_SEGS] && all[all.size() - 2] == "cirs 748,152,6,16904" && all.back() == "cirs 748,152,4,57798");
+            int again = 0, middle = 0, outside = 0;
+            for (const std::string &c : all) { again += c == "cirs 503,237,6,16904" || c == "cirs 503,237,4,17672"; middle += c == "cirs 503,237,5,64937";
+                int a1, b1, a2, b2; unsigned col; if (sscanf(c.c_str(), "line %d,%d,%d,%d,%u", &a1, &b1, &a2, &b2, &col) == 5 && (col == 59164 || col == 16904)) outside += a1 < 496 || a2 > 510 || b1 < 230 || b2 > 244; }
+            CHECK(again >= 2 && middle == 1 && outside == 0);   // (pitch's dot and the middle's drawn again; the grid and axes only inside the square)
+            // rubbed out where the grid crosses (its first lines out from the middle: x 566, y 201): only the grid's pieces inside the square
+            {
+                RcDotNow = 2; RcOldX = 566; RcOldY = 201; const int16_t keepX = RcDotX[2], keepY = RcDotY[2]; RcDotX[2] = 600; RcDotY[2] = 210;
+                NEXTION.out.clear(); NEXTION.room = 1 << 30; for (int i = 0; i <= RC_DOT_NEW + 1; ++i) RcDotOp(i);
+                int v = 0, h = 0, bad = 0;
+                for (const std::string &c : cmdsOf(NEXTION.out)) { int a1, b1, a2, b2; unsigned col; if (sscanf(c.c_str(), "line %d,%d,%d,%d,%u", &a1, &b1, &a2, &b2, &col) == 5 && col == 59164) { v += a1 == 566 && a2 == 566; h += b1 == 201 && b2 == 201; bad += a1 < 559 || a2 > 573 || b1 < 194 || b2 > 208; } }
+                CHECK(v == 1 && h == 1 && bad == 0 && cmdsOf(NEXTION.out).front() == "fill 559,194,15,15,65535");
+                RcDotNow = -1; RcDotX[2] = keepX; RcDotY[2] = keepY;
+            }
+            // a stick moved a pixel: nothing sent
+            SendBuffer[0] = 1500 + 10 + 488; NEXTION.out.clear(); nowMs += 60; pollUntilQuiet(50); CHECK(NEXTION.out.empty() && RcDotX[0] == 748);
+            if (getenv("RC_DOTS")) { FILE *f = fopen(getenv("RC_DOTS"), "w"); if (f) { for (const std::string &c : all) fprintf(f, "%s\n", c.c_str()); fclose(f); } }
+            // the page left: the dots stop
+            SendBuffer[0] = 1500; CurrentView = RATESVIEW_RF; NEXTION.out.clear(); nowMs += 60; pollUntilQuiet(50); CHECK(NEXTION.out.empty() && RcDotNow == -1); CurrentView = RATESCURVEVIEW;
+            // the plot drawn again (Help, the screen saver): the dots forgotten, drawn after it
+            RatesCurvesPageBack(); CHECK(RcDotX[0] == -1 && RcStep == 0); NEXTION.out.clear(); pollUntilQuiet(3000); CHECK(RcDotX[0] == 503 && RcDotX[1] == 503);
+            // no model: nothing asked, Rotorflight's defaults (AETRC, 1500 / 510 / 5)
+            live = false; CurrentView = RATESVIEW_RF; askedFn = -1; RatesCurvesTapped();
+            CHECK(askedFn == -1 && RcAskStep == 0 && RcMap[2] == 3 && RcMap[3] == 4 && RcCentre == 1500 && RcDefl == 510 && RcDead[0] == 5 && RcDead[3] == 0);
+            // no answer in time: the defaults stay; a nonsense answer is not taken
+            live = true; CurrentView = RATESVIEW_RF; RatesCurvesTapped(); lateAsk = true; readyId = -1; RatesCurvePoll(); CHECK(RcAskStep == 3 && RcMap[3] == 4); lateAsk = false;
+            CurrentView = RATESVIEW_RF; RatesCurvesTapped(); readyId = askId; replyBytes = {9, 9, 9, 9}; RatesCurvePoll(); readyId = askId; replyBytes = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5}; RatesCurvePoll();
+            CHECK(RcAskStep == 3 && RcMap[0] == 9 && RcCentre == 1500 && RcDefl == 510);   // (a map within the 16 channels is taken; a centre of 0 is not)
+            RatesCurvesOk(); RcStep = -1; RcDotNow = -1; readyId = -1;
+        }
         // the curve itself, for the comparison with Rotorflight's formulas (the Python below)
         uint32_t seed = 12345; auto rnd = [&]() { seed = seed * 1103515245u + 12345u; return (seed >> 8) & 0xFFFF; };
         for (int n = 0; n < 4000; ++n)

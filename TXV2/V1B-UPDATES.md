@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A dot on each rates curve, where the stick is (Teensy B108, screen 1.11.79 unchanged, 16 Oct 2026)
+
+Malcolm, of B107's curves: "Looks very very good !" - and, offered a dot on each curve that moves with the sticks: "Yes
+please!!" Each curve now carries a dot (a dark ring, its curve's colour inside) where Rotorflight has that stick at this
+moment: from what the transmitter sends on the axis' channel, read as Rotorflight reads it (fc/rc.c: centre, deadband,
+deflection). As the page opens the flight controller is asked its channel map (MSP_RX_MAP) and its centre, deflection
+and deadbands (MSP_RC_CONFIG); until it answers, or with no model, Rotorflight's defaults (AETRC: roll 1, pitch 2,
+yaw 4, collective 5; 1500 / 510 / 5). A dot that moves is rubbed out - its little square refilled, the grid, the axes,
+the curve pieces and any other dot through it drawn again - and drawn where it now is: only when a stick has moved
+(2 px or more), and never more than the wire to the screen holds, as the curves are. Help RATES1.TXT "THE DOTS";
+dev/test_rates 102 checks (10 mistakes put in on purpose, all caught).
+
 ## The rates curves on the transmitter (Teensy B107, screen 1.11.79, receivers 0.9.897, 16 Oct 2026)
 
 Malcolm, with a photo of the phone's Rates curves: "I wonder if it might be possible to have these curves on the
