@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The curve page in microseconds: Input, Output and the points (Teensy B110, screen 1.11.80 unchanged, 16 Oct 2026)
+
+Malcolm, after B109 ("It looks very right!"), of the curve page: "we see on the right stick input and servo output and then
+numbers which are a percentage - not a very useful number. I think probably it should say more simply input and output,
+and probably the numbers should be microseconds." Now "Input" and "Output" (page 21's words), and microseconds: Output is
+what the channel sends (as on the Channels page); Input is the stick (or switch, or knob) on the usual scale - its
+calibrated low end 1000, centre 1500, high end 2000 - each half by its own calibration, as the curve itself takes it (the
+old percentage, and the line across the graph, used the high half's for both); the points along the top are microseconds
+too (500 to 2500). Steadied and sent as the Channels page's numbers are (one rule now, UsSteadyChange). Help CURVES.TXT
+"THE NUMBERS", with: for Rotorflight on CRSF, ends at 1000 and 2000 use the whole stick. dev/test_channel_us 88 + 1037
+checks (9 more mistakes put in on purpose, all caught; B109's 6 again, on the shared rule).
+
 ## Each channel's microseconds on the Channels page; its right-hand buttons as they were (Teensy B109, screen 1.11.80, 16 Oct 2026)
 
 Malcolm, of the Channels page: "I forgot to include the numeric indication of how many microseconds that channel is

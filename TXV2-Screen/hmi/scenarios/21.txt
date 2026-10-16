@@ -1,17 +1,19 @@
 # 21 GraphView (Curves) - what the Teensy sends (TXV1B/TransmitterCode/src/main.cpp DisplayCurve, updateInterpolationTypes,
 # UpdateModelsNameEveryWhere, ShowServoPos; the curve lines worked out with the same formulas).
 # Written 10 Oct 2026 for the polish; b3/b4/b7/b8 are Version 1 buttons the page no longer has (the Teensy still hides them).
+# B110 (16 Oct 2026): the numbers in microseconds - the points n1-n5 and Output 500 .. 2500 (were -100 .. 100 x 10 + 1500),
+# Input the stick on 1000 .. 2000 (was -100 .. 100 x 5 + 1500).
 Screen_Background=8
 @model 1
 # "Setup N" from the channels page (main.cpp: page GraphView, DisplayCurve, updateInterpolationTypes,
 # UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
 page GraphView
 fill 36,36,360,360,0
-n1.val=-100
-n2.val=-50
-n3.val=0
-n4.val=50
-n5.val=100
+n1.val=500
+n2.val=1000
+n3.val=1500
+n4.val=2000
+n5.val=2500
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -46,14 +48,14 @@ ModelName.txt="RAW 420 MCM (3)"
 Channel.txt="Aileron"
 fmode.txt="Bank 1"
 callfm.val=0
-Input.val=24
-Output.val=24
+Input.val=1620
+Output.val=1740
 fill 36,36,360,360,0
-n1.val=-100
-n2.val=-50
-n3.val=0
-n4.val=50
-n5.val=100
+n1.val=500
+n2.val=1000
+n3.val=1500
+n4.val=2000
+n5.val=2500
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -90,11 +92,11 @@ line 258,38,258,392,65504
 # UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
 page GraphView
 fill 36,36,360,360,0
-n1.val=-60
-n2.val=-10
-n3.val=20
-n4.val=60
-n5.val=90
+n1.val=900
+n2.val=1400
+n3.val=1700
+n4.val=2100
+n5.val=2400
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -155,14 +157,14 @@ ModelName.txt="RAW 420 MCM (3)"
 Channel.txt="Collective"
 fmode.txt="Idle up 1"
 callfm.val=0
-Input.val=-40
-Output.val=-40
+Input.val=1300
+Output.val=1100
 fill 36,36,360,360,0
-n1.val=-60
-n2.val=-10
-n3.val=20
-n4.val=60
-n5.val=90
+n1.val=900
+n2.val=1400
+n3.val=1700
+n4.val=2100
+n5.val=2400
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -225,11 +227,11 @@ line 144,38,144,392,65504
 # UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
 page GraphView
 fill 36,36,360,360,0
-n1.val=-100
-n2.val=-50
-n3.val=0
-n4.val=50
-n5.val=100
+n1.val=500
+n2.val=1000
+n3.val=1500
+n4.val=2000
+n5.val=2500
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -286,14 +288,14 @@ ModelName.txt="RAW 420 MCM (3)"
 Channel.txt="Elevator"
 fmode.txt="Bank 2"
 callfm.val=0
-Input.val=60
-Output.val=60
+Input.val=1800
+Output.val=2100
 fill 36,36,360,360,0
-n1.val=-100
-n2.val=-50
-n3.val=0
-n4.val=50
-n5.val=100
+n1.val=500
+n2.val=1000
+n3.val=1500
+n4.val=2000
+n5.val=2500
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -350,11 +352,11 @@ line 323,38,323,392,65504
 @shot 21_expo
 # Straight pressed while in expo ("Exrite"): the Teensy redraws, then hides the expo controls - the curve must survive
 fill 36,36,360,360,0
-n1.val=-100
-n2.val=-50
-n3.val=0
-n4.val=50
-n5.val=100
+n1.val=500
+n2.val=1000
+n3.val=1500
+n4.val=2000
+n5.val=2500
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -391,11 +393,11 @@ vis Ex1,0
 # UpdateModelsNameEveryWhere, callfm=0), then ShowServoPos every 40 ms: Input/Output, DisplayCurve, the stick line
 page GraphView
 fill 36,36,360,360,0
-n1.val=-100
-n2.val=-100
-n3.val=-100
-n4.val=-100
-n5.val=-100
+n1.val=500
+n2.val=500
+n3.val=500
+n4.val=500
+n5.val=500
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488
@@ -452,14 +454,14 @@ ModelName.txt="WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW (90)"
 Channel.txt="WWWWWWWWWW"
 fmode.txt="Flight mode 1"
 callfm.val=0
-Input.val=-100
-Output.val=-100
+Input.val=1000
+Output.val=500
 fill 36,36,360,360,0
-n1.val=-100
-n2.val=-100
-n3.val=-100
-n4.val=-100
-n5.val=-100
+n1.val=500
+n2.val=500
+n3.val=500
+n4.val=500
+n5.val=500
 draw 35,35,395,395,65504
 line 35,217,395,217,63488
 line 215,35,215,395,63488

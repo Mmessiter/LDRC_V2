@@ -11,11 +11,14 @@ banks when you press 'OK'.|
 - Press 'OK' to save.|
 Each bank has its own curve.|
 Move the bank switch to change another bank's curve.||
-THE NUMBERS:|
-The numbers along the top are the points' heights, -100 to 100.|
+THE NUMBERS (microseconds):|
+Along the top: each point's height, 500 to 2500 (middle 1500).|
 The upright line is where the stick is now.|
-'Stick input' and 'Servo output' show where the stick and the|
-servo are now (-100 to 100).||
+'Input': where the stick is, on the usual 1000 to 2000 scale.|
+'Output': what this channel sends now, with rates, trims and|
+mixes (as on the Channels page).|
+For Rotorflight on CRSF, ends at 1000 and 2000 use the whole|
+stick: it reads nothing beyond them.||
 THE SHAPES:|
 1. Straight: four straight lines join the five points.|
 2. Smooth: a smooth curve through the five points.|

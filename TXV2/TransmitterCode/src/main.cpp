@@ -365,6 +365,17 @@ void GreenLedOn()
 static uint16_t UsShown[CHANNELSUSED];   // what each box shows (0: nothing yet - Force_ReDisplay)
 static uint32_t UsMovedAt[CHANNELSUSED]; // since when the channel has differed from it (0: it has not)
 static uint8_t UsNext = 0;               // where the next pass starts
+FLASHMEM bool UsSteadyChange(uint16_t v, uint16_t shown, uint32_t &movedAt, uint32_t now) // should a shown number become v now?
+{
+    if (v == shown)
+    {
+        movedAt = 0;
+        return false;
+    }
+    if (!movedAt)
+        movedAt = now ? now : 1; // (not now | 1: that can be a millisecond ahead of now, and now minus it a huge age)
+    return abs((int)v - (int)shown) >= 3 || now - movedAt >= 500; // (an empty box, 0, is always 500 or more away)
+}
 FLASHMEM void ShowChannelMicros()
 {
     const uint32_t now = millis();
@@ -372,14 +383,7 @@ FLASHMEM void ShowChannelMicros()
     {
         const int i = (UsNext + k) % CHANNELSUSED;
         const uint16_t v = SendBuffer[i];
-        if (v == UsShown[i])
-        {
-            UsMovedAt[i] = 0;
-            continue;
-        }
-        if (!UsMovedAt[i])
-            UsMovedAt[i] = now ? now : 1; // (not now | 1: that can be a millisecond ahead of now, and now minus it a huge age)
-        if (abs((int)v - (int)UsShown[i]) < 3 && now - UsMovedAt[i] < 500) // (an empty box, 0, is always 500 or more away)
+        if (!UsSteadyChange(v, UsShown[i], UsMovedAt[i], now))
             continue;
         char c[24];
         snprintf(c, sizeof(c), "us%d.txt=\"%u\"", i + 1, (unsigned)v);
@@ -390,6 +394,42 @@ FLASHMEM void ShowChannelMicros()
         }
         UsShown[i] = v;
         UsMovedAt[i] = 0;
+    }
+}
+/*********************************************************************************************************************************/
+// B110 (Malcolm, 16 Oct 2026, of the curve page: "we see on the right stick input and servo output and then numbers which
+// are a percentage - not a very useful number. I think probably it should say more simply input and output, and probably
+// the numbers should be microseconds"): Input is where the stick (or switch, or knob) is, on the usual scale - its
+// calibrated low end 1000, its centre 1500, its high end 2000, each half by its own calibration, as the curve takes it
+// (ExponentialInterpolation); Output is what the channel sends (SendBuffer, as on the Channels page). Steadied and sent as
+// the Channels page's numbers are (UsSteadyChange, RcPut).
+FLASHMEM int StickMicros(uint8_t dev, int raw)
+{
+    const int lo = ChannelMin[dev], mid = ChannelCentre[dev], hi = ChannelMax[dev];
+    float f = 0.0f;
+    if (raw >= mid && hi > mid)
+        f = (float)(raw - mid) / (float)(hi - mid);
+    else if (raw < mid && mid > lo)
+        f = -(float)(mid - raw) / (float)(mid - lo);
+    return constrain((int)lroundf(1500.0f + 500.0f * f), MINMICROS, MAXMICROS); // (past a calibrated end it goes on; not past the scale)
+}
+static uint16_t GraphShown[2];   // what Input and Output show (0: nothing yet - DisplayCurveAndServoPos)
+static uint32_t GraphMovedAt[2];
+FLASHMEM void ShowGraphMicros(uint16_t in, uint16_t out)
+{
+    const uint16_t v[2] = {in, out};
+    static const char *const box[2] = {"Input", "Output"};
+    const uint32_t now = millis();
+    for (int i = 0; i < 2; ++i)
+    {
+        if (!UsSteadyChange(v[i], GraphShown[i], GraphMovedAt[i], now))
+            continue;
+        char c[24];
+        snprintf(c, sizeof(c), "%s.val=%u", box[i], (unsigned)v[i]);
+        if (!RcPut(c))
+            return; // (no room: next time)
+        GraphShown[i] = v[i];
+        GraphMovedAt[i] = 0;
     }
 }
 /*********************************************************************************************************************************/
@@ -406,12 +446,9 @@ FASTRUN void ShowServoPos()
     CRUMB(CRUMB_SERVOPOS);
 
     char Ch_Lables[16][5] = {"Ch1", "Ch2", "Ch3", "Ch4", "Ch5", "Ch6", "Ch7", "Ch8", "Ch9", "Ch10", "Ch11", "Ch12", "Ch13", "Ch14", "Ch15", "Ch16"};
-    char ChannelInput[] = "Input";
-    char ChannelOutput[] = "Output";
     uint16_t StickPosition = 54321;
     int InputDevice = 0;
     int InputAmount = 0;
-    int OutputAmount = 0;
 
     // The first 8 channels are displayed on all three of these screens
     if ((CurrentView == STICKSVIEW) || (CurrentView == FRONTVIEW) || (CurrentView == CALIBRATEVIEW))
@@ -454,10 +491,9 @@ FASTRUN void ShowServoPos()
             InputAmount = InputUnused(InputDevice) ? ChannelCentre[InputDevice] : AnalogueReed(InputDevice); // (B38)
         else
             InputAmount = ReadThreePositionSwitch(InputDevice);                                                   // not analogue
-        InputAmount = map(InputAmount, ChannelCentre[InputDevice], ChannelMax[InputDevice], 0, 100);              // input stick position
-        OutputAmount = map(SendBuffer[ChanneltoSet - 1], MINMICROS, MAXMICROS, -100, 100);                        // output servo position (was SendBuffer[InputDevice] -- ClaudeFix-2-7-2026 wrong channel whenever input is remapped)
-        SendValue(ChannelInput, InputAmount);                                                                     // input stick position
-        SendValue(ChannelOutput, OutputAmount);                                                                   // output servo position
+        const int InputUs = StickMicros(InputDevice, InputAmount);                                                // B110: the stick, 1000 .. 2000
+        InputAmount = (InputUs - 1500) / 5;                                                                       // its place, -100 .. 100 (B110: each half by its own calibration; it was the high half's for both)
+        ShowGraphMicros(InputUs, SendBuffer[ChanneltoSet - 1]);                                                   // B110: Input and Output in microseconds (they were -100 .. 100; Output: SendBuffer[ChanneltoSet - 1], ClaudeFix-2-7-2026 - not SendBuffer[InputDevice])
         StickPosition = map(constrain((InputAmount + 100) / 2, 0, 100), 0, 100, BOXLEFT + 2, BOXRIGHT - BOXLEFT); // map to box size
         StickPosition = constrain(StickPosition, BOXLEFT + 2, (BOXRIGHT - BOXLEFT) - 1);                          // not outside box!
 
@@ -1890,23 +1926,23 @@ FASTRUN void DisplayCurve()
     strcat(cmdBuffer, endMarker);
 
     // Top row values - sent in a single batch
-    sprintf(tempCmd, "n1.val=%d", DegsToPercent(MinDegrees[Bank][ChanneltoSet - 1]));
+    sprintf(tempCmd, "n1.val=%d", IntoHigherRes(MinDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n2.val=%d", DegsToPercent(MidLowDegrees[Bank][ChanneltoSet - 1]));
+    sprintf(tempCmd, "n2.val=%d", IntoHigherRes(MidLowDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n3.val=%d", DegsToPercent(CentreDegrees[Bank][ChanneltoSet - 1]));
+    sprintf(tempCmd, "n3.val=%d", IntoHigherRes(CentreDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n4.val=%d", DegsToPercent(MidHiDegrees[Bank][ChanneltoSet - 1]));
+    sprintf(tempCmd, "n4.val=%d", IntoHigherRes(MidHiDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    sprintf(tempCmd, "n5.val=%d", DegsToPercent(MaxDegrees[Bank][ChanneltoSet - 1]));
+    sprintf(tempCmd, "n5.val=%d", IntoHigherRes(MaxDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100)
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
@@ -2643,6 +2679,11 @@ FASTRUN void DisplayCurveAndServoPos()
     ClearBox();
     DelayWithDog(5);
     SavedLineX = 52735; // just to be massvely different
+    for (int i = 0; i < 2; ++i)
+    {
+        GraphShown[i] = 0; // B110: Input and Output shown afresh
+        GraphMovedAt[i] = 0;
+    }
     ShowServoPos();     // this calls displaycurve!!!
     ClearText();
 }
