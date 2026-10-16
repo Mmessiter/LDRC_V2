@@ -28,6 +28,7 @@ prog = r'''
 #define BATSENSORSVIEW 75
 #define BLACKBOXVIEW 73
 #define LEVELVIEW 74
+#define RFSETUPVIEW 61
 static int CurrentView = 0, PipeState = 2;
 static bool BoundFlag = true, ModelMatched = true, offline = false;
 static char ModelName[20] = "Goblin";
@@ -37,11 +38,13 @@ static std::map<std::string, std::string> fields; static std::map<std::string, i
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendValue(char *n, int v) { vals[n] = v; }
-static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; }
+static std::string lastPage; static int gathers = 0; static bool armedFake = false;
+static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; lastPage = page; }
+static void RFSettingsGather() { ++gathers; }   // (B104: Calibrate opened from the settings page keeps its edits first)
 static bool GetConfirmation(char *page, char *prompt) { ++asked; lastBox = prompt; return confirmAnswer; }
 static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; CurrentView = 47; }
-static bool ModelSeemsArmed(char *, size_t) { return false; }
+static bool ModelSeemsArmed(char *why, size_t n) { if (armedFake) snprintf(why, n, "armed"); return armedFake; }
 static bool RfPipeBlocked(char *, size_t) { return false; }
 static bool RfNeedsModel(char *, size_t) { return false; }
 static bool BakOffline() { return offline; }
@@ -172,7 +175,14 @@ int main() {
     // ---- 3. calibrate: the trims, the level, calibrate, the trims saved signed
     WrU16(trims, 0, 0); trims[2] = 0xFB; trims[3] = 0xFF;   // pitch 0.0, roll -0.5
     att[0] = 3; att[1] = 0; att[2] = 0xF4; att[3] = 0xFF;  // roll 0.3, pitch -1.2
+    // B104: Calibrate is on the settings page now - opened there, the settings' own edits are kept first; a refusal goes back there
+    CurrentView = RFSETUPVIEW; armedFake = true; boxes = 0; gathers = 0; StartCalibrateView();
+    CHECK(boxes == 1 && lastPage == "page RFSetupView" && CurrentView == RFSETUPVIEW && gathers == 0);
+    armedFake = false; CurrentView = ROTORFLIGHTVIEW; boxes = 0; StartCalibrateView(); CHECK(gathers == 0 && CurrentView == LEVELVIEW);
+    CurrentView = RFSETUPVIEW; armedFake = true; StartCalibrateView(); CHECK(lastPage == "page RFSetupView"); armedFake = false;
+    CurrentView = RFSETUPVIEW;
     fcLog.clear(); StartCalibrateView(); runCal(30);
+    CHECK(gathers == 1 && CurrentView == LEVELVIEW);
     CHECK(CalHave && fields["tn2"] == "0.0" && fields["tn3"] == "-0.5" && writes(108) >= 2 && fields["tn0"] == "Roll 0.3   Pitch -1.2 deg" && fields["tn1"] == "Level");
     att[0] = 0x2C; att[1] = 0x01;  // roll 30.0: not level
     runCal(30); CHECK(fields["tn1"].find("Not level") == 0);

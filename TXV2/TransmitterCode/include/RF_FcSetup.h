@@ -81,7 +81,7 @@ FLASHMEM static bool FsEntryRefused() // the menu's guard for a page that reads 
     if (RfNeedsModel(why, sizeof(why)) || ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page RFView", why);
+        MsgBox((char *)(CurrentView == RFSETUPVIEW ? "page RFSetupView" : "page RFView"), why);   // (B104: Calibrate is on the settings page)
         return true;
     }
     return false;
@@ -695,9 +695,10 @@ FLASHMEM void CalibratePoll()
         return;
     }
 }
-FLASHMEM void StartCalibrateView() // the menu's Calibrate ...
+FLASHMEM void StartCalibrateView() // the settings page's Calibrate ... (B104; the menu's before)
 {
     if (FsEntryRefused()) return;
+    if (CurrentView == RFSETUPVIEW) RFSettingsGather();   // B104: Calibrate moved to the settings page - its own edits kept, as First-time basics keeps them
     SendCommand((char *)"page LevelView");
     CurrentView = LEVELVIEW;
     CalHave = false; Cal_Was_Edited = false; CalLevelKnown = false;

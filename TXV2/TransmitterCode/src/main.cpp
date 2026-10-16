@@ -179,6 +179,7 @@
 #include "Calibrate.h"
 #include "RF_Governor_Profile.h"
 #include "RF_Governor_Global.h"
+#include "RF_Easy.h" // B104: Easy tuning, the phone app's sliders, over the pipe (after RF_Backup.h: the backup is the sliders' centre)
 #include "Model_IDs.h"
 #include "Motor_sign.h"
 #include "FlightGuard.h" // V1B: the screen is told what the transmitter is doing; a fingerprint of how the settings are read
@@ -3057,7 +3058,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 205 // One more than final one
+#define LASTFUNCTION1 214 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3264,7 +3265,16 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     BasicsPort6Tapped,       // 201
     StartEscCalView,         // 202 Next > (the ESC throttle calibration)
     EndEscCalView,           // 203 < Previous (the ports)
-    EscCalTapped             // 204 Full throttle / Minimum
+    EscCalTapped,            // 204 Full throttle / Minimum
+    StartEasyView,           // 205 B104: the menu's Easy tuning ...
+    EndEasyView,             // 206 OK
+    SaveEasy,                // 207 Save
+    EasyStartMoved,          // 208 the Start slider moved (as it is dragged, and let go)
+    EasyAgilityMoved,        // 209 Agility
+    EasyStickFeelMoved,      // 210 Stick feel
+    EasyCyclicMoved,         // 211 Cyclic
+    EasyTailMoved,           // 212 Tail
+    EasySpoolTapped          // 213 the switch: PID spool-up in every bank
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -5062,6 +5072,7 @@ void FASTRUN ManageTransmitter()
     BatteryPoll();     // B88: the battery page
     BlackboxPoll();    // B88: the black box page
     CalibratePoll();   // B88: the calibrate page
+    EasyPoll();        // B104: the Easy tuning page
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..

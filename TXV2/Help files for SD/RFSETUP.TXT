@@ -38,4 +38,7 @@ tail); 'Ports' (what each UART does); 'Throttle calibration'|
 (the ESC's throttle range).|
 The first two work from the model's backup too; 'Ports' and|
 the calibration need the model itself.|
-A 'Save' there restarts the flight controller.|
+A 'Save' there restarts the flight controller.||
+CALIBRATE:|
+'Calibrate ...' teaches the flight controller which way is|
+level, for self-levelling and rescue. It has its own help.|

@@ -97,6 +97,7 @@ A_DEFS = r'''
 #define RATESVIEW_RF 46
 #define ROTORFLIGHTVIEW 47
 #define RATESADVANCEDVIEW 48
+#define EASYVIEW 81
 #define CLICKZERO 0
 #define ONEMINUTE 2
 #define TWOMINUTES 3
@@ -183,7 +184,7 @@ static char WarnNow[] = "vis Warning,1", WarnOff[] = "vis Warning,0", pTrimView[
 static uint32_t now = 0; static uint32_t millis() { return now; }
 static int motorChanges = 0, safetyChanges = 0, frontViews = 0, delays = 0;
 static void ReadTheSwitchesAndTrims() {}
-static void LogNewRateInUse() {} static void ShowRatesBank() {} static void ShowRatesAdvancedBank() {} static void ShowRFRate() {}
+static void LogNewRateInUse() {} static void ShowRatesBank() {} static void ShowRatesAdvancedBank() {} static void ShowRFRate() {} static void EasyBankChanged() {}
 static void ReadBuddySwitch() {} static void ReadBankSwitch() {} static void ReadChannelSwitches9to12() {} static void BankHasChanged() {}
 static void SafetySwitchChanged() { ++safetyChanges; }
 static void LogTimer(int) {} static void LogRPM(uint32_t) {} static void LogMotor(int) {}

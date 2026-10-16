@@ -34,7 +34,7 @@ add(settings, comp(by['t0'], txt='Rotorflight settings'))
 ROWS = (('t3', 'sw0', 'Link rates and banks', None), ('t4', 't5', 'Rotorflight version', None), ('t6', 'Arming', 'Arming channel', 'Arming channel'), ('t1', 'Ratio', 'Gear ratio (V1 receiver)', 'Gear ratio (V1 receiver)'))   # (15 Oct 2026: the transmitter's own ratio for a V1 receiver's head speed; Rotorflight's "Main gear ratio", the phone app's words, is on page 78)
 # B90: four rows lay out compact (rescue_pages.compact_plan): a card their size, centred on the background picture, the rows in the larger font
 # B99: "Model basics ..." beside OK - the swashplate type, rotor direction, tail type, ESC signal and brand, poles, gear ratios (hmi/basics_pages.py)
-plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b5', 'First-time basics ...', 183), ('b4', 'OK', 82)])   # (15 Oct 2026: the phone app's name; "Model basics" before)
+plan = rp.compact_plan([(lab, words, 0, r, 'switch' if val == 'sw0' else 'num', 0) for r, (lab, val, words, klabel) in enumerate(ROWS)], [('b5', 'First-time basics ...', 183), ('b6', 'Calibrate ...', 170), ('b4', 'OK', 82)])   # (15 Oct 2026: the phone app's name; "Model basics" before; B104: Calibrate from the menu)
 add(settings, comp(by['card'], x=plan['card'][0], y=plan['card'][1], w=plan['card'][2], h=plan['card'][3]))
 header(settings, model='')
 add(settings, comp(by['va0']))
@@ -70,13 +70,15 @@ add(comps, h)
 header(comps)
 add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last
-    ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22), ('b2', 'Governor ...', 50),
-    ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73), ('Travel', 'Travel extents ...', 83),
-    ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116), ('Switches', 'Switches ...', 133),
-    ('CopyBank', 'Copy a bank ...', 145), ('Battery', 'Battery ...', 155), ('Blackbox', 'Black box ...', 161),
-    ('Calibrate', 'Calibrate ...', 170), ('Setup', 'Settings ...', 81), ('Cli', 'Command line ...', 'ldrc cli'),
+    ('Easy', 'Easy tuning ...', 205), ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22),
+    ('b2', 'Governor ...', 50), ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73),
+    ('Travel', 'Travel extents ...', 83), ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116),
+    ('Switches', 'Switches ...', 133), ('CopyBank', 'Copy a bank ...', 145), ('Battery', 'Battery ...', 155),
+    ('Blackbox', 'Black box ...', 161), ('Setup', 'Settings ...', 81), ('Cli', 'Command line ...', 'ldrc cli'),
 ]   # (screen 1.11.42, Malcolm 10 Oct: "Command line" in the grid - the screen's own page, the word never reaches the main
     # board; Backup / Restore at the island's foot, far left, opposite OK)
+    # (B104, 16 Oct 2026, Malcolm: "the sliders ... most useful at the field": Easy tuning first; Calibrate, set once for a
+    # model, moved to the settings page beside First-time basics - so the grid keeps its fifteen)
 proto = by['Pid']
 for k, (name, words, code) in enumerate(BUTTONS):
     b = comp(proto, n=name, x=isl['x0'] + (BW + GX) * (k % 3), y=isl['y0'] + (BH + GY) * (k // 3), w=BW, h=BH, txt=words)

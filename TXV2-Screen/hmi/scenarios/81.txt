@@ -1,0 +1,58 @@
+# EasyView (page 81), Easy tuning (B104): EzHead (TXV1B RF_Easy.h: t11, ShowRFBank t14, ShowRFRate t8, b3 shown once a
+# slider moved), EzShowSliders (s0..s4: 0..20 / 0..12, sw, the agility rows hidden for an uncovered rates type),
+# EzNoteFor / EzOpeningNote (note), EzBusy (busy).
+Screen_Background=8
+@model 1
+page EasyView
+t11.txt="Havok"
+t14.txt="Bank 2"
+t8.txt="Rate 2"
+vis b3,0
+s0.val=10
+s1.val=10
+s2.val=10
+s3.val=6
+s4.val=6
+sw.val=1
+note.txt=""
+@shot 81_open
+s3.val=8
+vis b3,1
+note.txt="Cyclic gains +10 %: roll P 50->55, D 40->44; pitch P 52->57, D 44->48 (I and F likewise)."
+@shot 81_cyclic
+s3.val=12
+note.txt="Cyclic gains +30 %: roll P 150->195, D 140->182; pitch P 152->198, D 144->187. At the end of its travel: a backup re-centres it."
+@shot 81_long
+s0.val=14
+note.txt="Full head speed in about 7 s (spool-up 7, handover 26 %, startup 15)."
+@shot 81_start
+vis b3,0
+s0.val=10
+s3.val=6
+note.txt="Not in a backup yet, so the sliders are centred on the numbers the page opened with. A backup sets their centre."
+@shot 81_nobackup
+vis lA,0
+vis lE,0
+vis s1,0
+vis s2,0
+vis e1L,0
+vis e1R,0
+vis e2L,0
+vis e2R,0
+note.txt="This bank uses the Betaflight, Raceflight or KISS rates type, which the sliders do not cover: use the Rates page."
+@shot 81_ratesoff
+vis lA,1
+vis lE,1
+vis s1,1
+vis s2,1
+vis e1L,1
+vis e1R,1
+vis e2L,1
+vis e2R,1
+note.txt=""
+vis busy,1
+busy.txt="Restarting the flight controller to apply the start settings ..."
+@shot 81_busy
+busy.txt="Saved, and read back the same: Feel, Start.\r\nPID spool-up switched on in 5 banks."
+@shot 81_saved
+vis busy,0

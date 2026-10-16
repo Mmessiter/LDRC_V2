@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B103 15/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B104 16/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -346,6 +346,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define BASICS2VIEW 78           // B99: ... the gear ratios
 #define PORTSVIEW 79             // B100: ... the ports (RF_Basics.h)
 #define ESCCALVIEW 80            // B100: ... the ESC throttle calibration (RF_EscCal.h)
+#define EASYVIEW 81              // B104: Easy tuning, the phone app's sliders (RF_Easy.h)
 #define LEVELVIEW 74             // B88: calibrate the level (B90: it was CALIBRATEVIEW, the stick calibration's number 6 - redefined, so both were 74)
 #define MODELIDVIEW 56
 
@@ -947,6 +948,18 @@ void BackupRun();
 void BakOfferEdits();
 void TravelYawTapped();
 void FilterPoll();                            // B58: RF_Filters.h
+void EasyPoll();                              // B104: RF_Easy.h - Easy tuning
+void StartEasyView();
+void EndEasyView();
+void SaveEasy();
+void EasyStartMoved();
+void EasyAgilityMoved();
+void EasyStickFeelMoved();
+void EasyCyclicMoved();
+void EasyTailMoved();
+void EasySpoolTapped();
+void EasyBankChanged();                       // B104: the bank or the rates bank changed on the Easy tuning page
+bool EasyHoldsBanks();                        // B104: its banks are being read, written or walked: the bank switch held
 void StartFilterView();
 void EndFilterView();
 void SaveFilters();

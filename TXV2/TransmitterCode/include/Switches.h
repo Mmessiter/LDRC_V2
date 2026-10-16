@@ -235,8 +235,8 @@ void ReadBankSwitch()
     static uint32_t blockedQuietSince = 0;
     if (BlockBankChanges)
     {
-        if (ParametersToBeSentPointer || CurrentMode != NORMAL || CopyBankRunning())
-            blockedQuietSince = 0;                    // real transfer — block is doing its job (B45: a bank copy over the pipe too)
+        if (ParametersToBeSentPointer || CurrentMode != NORMAL || CopyBankRunning() || EasyHoldsBanks())
+            blockedQuietSince = 0;                    // real transfer — block is doing its job (B45: a bank copy over the pipe too; B104: Easy tuning's banks)
         else if (!blockedQuietSince)
             blockedQuietSince = millis();
         else if (millis() - blockedQuietSince > 5000)
@@ -343,6 +343,8 @@ void ReadDualRateSwitch()
         {
             ShowRFRate();
         }
+        if (CurrentView == EASYVIEW && !(LinkRatesToBanks && RotorFlight_V))
+            EasyBankChanged(); // B104: the new rates bank's numbers (linked to the banks: BankHasChanged does it)
 
         if (AnnounceBanks)
         {
@@ -468,6 +470,8 @@ void BankHasChanged()
     }
     if (CurrentView == RESCUEVIEW || CurrentView == RESCUE2VIEW)
         RescueBankChanged(); // B54: the new bank's rescue values
+    if (CurrentView == EASYVIEW)
+        EasyBankChanged(); // B104: the new bank's numbers under the sliders
     if (CurrentView == ROTORFLIGHTVIEW || CurrentView == RFBACKUP_RESTOREVIEW)
     {
         ShowRFBank();

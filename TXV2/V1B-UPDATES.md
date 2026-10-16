@@ -186,6 +186,31 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Easy tuning: the phone's sliders on the transmitter (Teensy B104, screen 1.11.75, receivers 0.9.894, 16 Oct 2026)
+
+Malcolm, of what the phone has and the transmitter lacks: "The one of these that strikes me as most useful at the field is
+the sliders for adjusting settings ... Let's implement it!" **Rotorflight > Easy tuning ...** (first on the menu) is the
+phone app's page, in its words: **Start** (Very gentle .. Very fierce: the governor's spool-up time, startup time and
+handover throttle together) with **Also switch on PID spool-up in every bank (recommended)**, **Agility** (Docile ..
+Acrobatic: the full-stick rate of roll, pitch and yaw) and **Stick feel** (Soft centre .. Direct: the expo), **Cyclic** and
+**Tail** (Softer .. Sharper: P, I, D, F times 0.7 to 1.3). The line under the sliders gives the numbers the last one moved
+will write. 'Save' asks first, writes only what was moved, stores it and reads it back (Start restarts the flight controller,
+as on the phone: its numbers apply at boot); 'OK' with changes asks 'Save now?'. Each slider's centre is the model's numbers
+at its last backup on the card (else the numbers the page opened with), so a slider shows how far you have come; a backup
+re-centres them. It tunes the banks the switches are on, and refuses if the flight controller is on another (B102); a
+governor mode or throttle type outside Rotorflight's lists is never written back (B103). It needs the model connected.
+The sums are the phone's line for line - including its rounding: the powers of two are the phone's own numbers in tables
+(no pow or log2: their 5 kB of tables would have taken RAM1). RAM1 free 76,352 (B103 76,736).
+
+Found while porting, put right on the phone too (receivers 0.9.894): moving Cyclic rewrote the tail's gains through the
+slider's 5 % grid (up to 2.5 % change in an axis nobody touched), and the PID spool-up tick alone rewrote the start
+settings; now a slider that is not moved never changes its numbers (as the phone's help always said), and the tick alone
+stores PID spool-up without a restart.
+
+Menu: **Calibrate ...** (set once for a model) moved to **Settings ...**, beside First-time basics, so the grid keeps its
+fifteen. Help: EASY.TXT (new), RFLIGHT.TXT, RFSETUP.TXT. Host tests: test_easy (24,000 random cases through the phone's own
+code and the transmitter's: the same answers; 82 checks of the page; mutation-checked), test_fcsetup (Calibrate from Settings).
+
 ## Execute diff: choose which (screen 1.11.74, Teensy B103 unchanged, 15 Oct 2026)
 
 Malcolm (about to fly and tune the Havok and the 770, a Diff to card after each session): "If it collects many diff files,

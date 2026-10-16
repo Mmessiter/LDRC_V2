@@ -36,6 +36,8 @@ A 'Save' on the PIDs, rates or governor pages goes only into the|
 transmitter's bank. If the flight controller is on another bank|
 ('Bank 2 / FC 1'), nothing is written: check the switch set-up.||
 THE BUTTONS:|
+'Easy tuning ...': the phone app's sliders - start, agility,|
+stick feel, and softer or sharper - for tuning at the field.|
 'PIDs ...' and 'Rates ...': the tuning of each bank.|
 Each has a second page: 'PID + ...' and 'Dynamics ...'.|
 'Governor ...': the head speed and the governor.|
@@ -48,13 +50,14 @@ the swash and tail move, with a bench measure for a pitch gauge.|
 It needs the USB cable between receiver and flight controller.|
 'Switches ...': what each switch makes the flight controller do.|
 'Copy a bank ...': copies the tuning of one bank into another.|
-'Battery ...', 'Black box ...' and 'Calibrate ...':|
-the flight pack, the flight recorder and the level.|
+'Battery ...' and 'Black box ...': the flight pack and the|
+flight recorder.|
 'Settings ...': 'Link rates and banks', the Rotorflight version,|
 the arming channel and 'Gear ratio (V1 receiver)'; and|
 'First-time basics ...': swash type, rotor direction, tail type,|
 ESC signal and brand, motor poles, gear ratios, the ports and|
-the ESC throttle calibration (a new model's whole set-up).|
+the ESC throttle calibration (a new model's whole set-up);|
+and 'Calibrate ...': the level.|
 'OK' goes back to the front page.||
 THE ARMING LINE:|
 The line under the buttons says whether the model will arm:|
@@ -104,5 +107,7 @@ show an older copy kept in the model's file.|
 A 'Save' there changes only that copy.|
 It is not offered to the model when it is next connected.|
 Most other pages need the model, or its backup.|
+'Easy tuning ...' needs the model: its sliders start from the|
+model's own numbers, measured from the backup.|
 'Calibrate level', the black box's memory and the arming line|
 always need the model itself.|
