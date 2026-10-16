@@ -1,8 +1,8 @@
 # SticksView (page 26, "Channels"). GotoSticksView (main.cpp:2899): page SticksView, UpdateButtonLabels (main.cpp:762:
 # odd "Name (n) >", even "< (n) Name"), UpdateModelsNameEveryWhere (ModelName = name + " (number)", t1 = the bank's name),
 # then the live bars Ch1-Ch16 (main.cpp:376-400, SendValue 0-100) and, B109 / screen 1.11.80, each channel's microseconds
-# beside its bar (ShowChannelMicros: us1-us16, 500 + 20 x the bar's value here). B111: the switch se (StickEndsShow:
-# 1 when every stick channel ends at 944 and 2055).
+# beside its bar (ShowChannelMicros: us1-us16, 500 + 20 x the bar's value here). B111/B112: "Stick ends:" se1 / se2
+# (StickEndsShow: se1 when every stick channel ends at 944 and 2055, se2 at 500 and 2500, else neither).
 Screen_Background=8
 @model 1
 page SticksView
@@ -56,7 +56,8 @@ us13.txt="1500"
 us14.txt="900"
 us15.txt="1600"
 us16.txt="1500"
-se.val=1
+se1.val=1
+se2.val=0
 @shot 26_open
 # ---- worst case: ten-letter channel names ("Collective (15) >" = 160 px font 2), the longest bank name, a long model name
 page SticksView

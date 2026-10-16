@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Stick ends: 944 to 2055, or 500 to 2500 (Teensy B112, screen 1.11.80 unchanged, 16 Oct 2026)
+
+Malcolm, of B111's switch (off put the ends back to 833 and 2166): "The current max range is 500-2500 and I think this
+should be one of the two selectable ranges." So the switch became "Stick ends:" with two choices, radio buttons as on the
+Batteries page: 944 to 2055 (code 219) and 500 to 2500 (code 220, the widest: 0 and 180 degrees). A touch asks first
+(the widest with a warning: Rotorflight on CRSF reads only 1000 to 2000, so it gets there at about half stick), then
+changes the curves of every channel a stick drives in all four banks, each keeping its shape, and saves. The choice shown
+is worked out from the curves: neither, when they end elsewhere (new models' 833 and 2166, or a pilot's own). Touching the
+one already chosen does nothing. Still nothing automatic. Help CHANNELS.TXT "STICK ENDS"; dev/test_channel_us 240 + 1143
+checks (12 mistakes put in on purpose, all caught; the button table is now checked to have exactly LASTFUNCTION1 entries).
+
 ## Stick ends at 944 and 2055: a switch on the Channels page (Teensy B111, screen 1.11.80 unchanged, 16 Oct 2026)
 
 After B110 showed the Havok's aileron ending at about 833 and 2166 (new models' ends: Rotorflight on CRSF reads nothing

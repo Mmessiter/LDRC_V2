@@ -6,8 +6,8 @@ small change to the screen?"
 Beside each bar, by its own button, a box of the buttons' size (us1 .. us16: odd channels between the left buttons and
 the bars, even ones between the bars and the right buttons), white words on the card (the theme's colours), in the
 buttons' font. The bars give up the room: 364 -> 248 pixels, their middle line where it was (x 400), their rows as they
-were. The Teensy writes us<n>.txt (main.cpp ShowChannelMicros). B111: the switch "Stick ends at 944 and 2055" bottom
-left (main.cpp StickEndsTapped). Safe to run again."""
+were. The Teensy writes us<n>.txt (main.cpp ShowChannelMicros). B111/B112: "Stick ends:" 944 to 2055 or 500 to 2500,
+bottom left (main.cpp StickEndsChosen). Safe to run again."""
 import json, os
 from fontw import width
 P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'sd', 'hmi', 'pages', '26.json')
@@ -34,22 +34,36 @@ for i in range(1, 17):
     nid += 1
 assert width(FONT, '2500') + 8 <= NUM_W
 # Teensy B111 (Malcolm: "switching to your restricted range ought to be a user option please rather than permanent or
-# automatic"): bottom left, beside OK, the switch "Stick ends at 944 and 2055" (se, global: it keeps what the Teensy last
-# showed when the page comes back from a curve) and its words (lse); either one touched asks the Teensy (code 219), which
-# asks the pilot, changes the curves or not, and sets the switch as things then are.
-pg['comps'] = [c for c in pg['comps'] if c['n'] not in ('se', 'lse')]
+# automatic") and B112 ("The current max range is 500-2500 and I think this should be one of the two selectable ranges"):
+# bottom left, beside OK, "Stick ends:" and two choices as the Batteries page has them (radio buttons, their words
+# beside them): se1 "944 to 2055" (code 219) and se2 "500 to 2500" (code 220). A choice or its words touched marks it and
+# asks the Teensy, which asks the pilot, changes the curves or not, and marks the choice as things then are (neither,
+# when the curves end elsewhere). Global, so a page back from a curve keeps what the Teensy last showed.
+pg['comps'] = [c for c in pg['comps'] if c['n'] not in ('se', 'lse', 'se1', 'se2', 'lse1', 'lse2')]
 nid = max(c['i'] for c in pg['comps']) + 1
 ok = by['b10']
-SW_W, SW_H, GAP_W = 84, 34, 10
-ev = {'r': 'va0.val=219<<8\nprint va0.val'}
-pg['comps'].append({'n': 'se', 'i': nid, 't': 'switch', 'g': 'g', 'x': 10, 'y': ok['y'] + (ok['h'] - SW_H) // 2, 'w': SW_W, 'h': SW_H, 'font': 0,
-                    'c': {'pco1': 0, 'bco2': 2016, 'pco': 65535, 'bco': 33808, 'pco2': 65535}, 'txt': ' / ', 'val': 0,
-                    'a': {'dez': 0, 'dis': 100, 'txt_maxl': 24}, 'ev': dict(ev)})
-LSE_X = 10 + SW_W + GAP_W
-pg['comps'].append({'n': 'lse', 'i': nid + 1, 't': 'text', 'g': 'l', 'x': LSE_X, 'y': ok['y'], 'w': ok['x'] - 12 - LSE_X, 'h': ok['h'], 'font': 6, 'sta': 1,
-                    'c': {'pco': 65535, 'borderc': 0, 'bco': 4426}, 'txt': 'Stick ends at 944 and 2055',
-                    'a': {'style': 0, 'key': 255, 'borderw': 0, 'xcen': 0, 'ycen': 1, 'pw': 0, 'txt_maxl': 40, 'isbr': 0}, 'ev': dict(ev)})
-assert width(6, 'Stick ends at 944 and 2055') <= ok['x'] - 12 - LSE_X
+R_W, R_H, R_GAP, W_GAP = 40, 36, 4, 12          # (the Batteries page's radio buttons: 40 x 36, the words 4 px on)
+def words(n, txt, x, w, ev=None):
+    c = {'n': n, 'i': 0, 't': 'text', 'g': 'l', 'x': x, 'y': ok['y'], 'w': w, 'h': ok['h'], 'font': 6, 'sta': 1,
+         'c': {'pco': 65535, 'borderc': 0, 'bco': 4426}, 'txt': txt,
+         'a': {'style': 0, 'key': 255, 'borderw': 0, 'xcen': 0, 'ycen': 1, 'pw': 0, 'txt_maxl': 25, 'isbr': 0}}
+    if ev: c['ev'] = {'r': ev}
+    assert width(6, txt) <= w, txt
+    return c
+def pick(k, code): return 'se1.val=%d\nse2.val=%d\nva0.val=%d<<8\nprint va0.val' % (k == 1, k == 2, code)
+x = 10
+row = [words('lse', 'Stick ends:', x, width(6, 'Stick ends:') + 4)]
+x += row[-1]['w'] + 8
+for k, (txt, code) in enumerate((('944 to 2055', 219), ('500 to 2500', 220)), start=1):
+    row.append({'n': 'se%d' % k, 'i': 0, 't': 'radio', 'g': 'g', 'x': x, 'y': ok['y'] + (ok['h'] - R_H) // 2, 'w': R_W, 'h': R_H,
+                'c': {'pco': 53248, 'bco': 65535}, 'val': 0, 'ev': {'r': pick(k, code)}})
+    x += R_W + R_GAP
+    row.append(words('lse%d' % k, txt, x, width(6, txt) + 6, pick(k, code)))
+    x += row[-1]['w'] + W_GAP
+assert x - W_GAP <= ok['x'] - 8, x
+for c in row:
+    c['i'] = nid; nid += 1
+    pg['comps'].append(c)
 # the right-hand buttons' words start at the left, as they always did on the Nextion (the left ones end at the right)
 for i in range(2, 17, 2): by['Sch%d' % i]['a']['xcen'] = 0
 for i in range(1, 17, 2): by['Sch%d' % i]['a']['xcen'] = 2
