@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Each channel's microseconds on the Channels page; its right-hand buttons as they were (Teensy B109, screen 1.11.80, 16 Oct 2026)
+
+Malcolm, of the Channels page: "I forgot to include the numeric indication of how many microseconds that channel is
+at. Can you think of a good way to include this by making a small change to the screen?" Beside each bar, by its own
+button, the channel's microseconds as the transmitter sends them (us1-us16: odd channels between the left buttons and
+the bars, even ones between the bars and the right buttons; the buttons' font, the theme's colours). The bars gave up
+the room (364 -> 248 px), their middle line where it was. Sent straight onto the wire, whole commands only and never more
+than it holds (as the curves' dots), what has no room yet in a later pass, starting where the last stopped; a change of
+3 us or more shows at once, a smaller one once it has stood half a second, so a stick's noise does not flicker the last
+digit. And: "the right-hand column of buttons has been centre aligned, but it should be left aligned" - the screen took
+a button's alignment 0 (left) as "none given" and centred it; only those eight buttons say 0 (screen 1.11.80). Help
+CHANNELS.TXT "THE NUMBERS" (with what Rotorflight sees on CRSF: 1000-2000 as 989-2012, nothing beyond); the model name's
+place in its step 1 put right (top left, not the bottom). dev/test_channel_us 70 + 1017 checks (9 mistakes put in on
+purpose, all caught - one found a real fault first: a "half a second" that could wrap and show every flicker at once).
+
 ## A dot on each rates curve, where the stick is (Teensy B108, screen 1.11.79 unchanged, 16 Oct 2026)
 
 Malcolm, of B107's curves: "Looks very very good !" - and, offered a dot on each curve that moves with the sticks: "Yes

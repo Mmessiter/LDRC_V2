@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.79"
+#define SCREEN_VERSION "1.11.80"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1047,7 +1047,10 @@ static void drawComp(Comp &c) {
         const uint16_t bg = on ? c.bco2 : c.bco, fg = needUnmet(c) ? (uint16_t) 0x8410 : c.sta == 3 ? (uint16_t) (on ? c.pco2 : c.pco) : inkOf(c, on);   // greyed out: mid-grey text
         if (c.sta == 3) restoreUnder(c);
         else { gfx->fillRect(c.x, c.y, c.w, c.h, bg); drawFrame(c, bg, on); }
-        drawTextIn(c.x, c.y, c.w, c.h, c.font, fg, c.txt, c.xcen ? c.xcen : 1, c.ycen ? c.ycen : 1, false, 0, c.sta == 3 ? 0 : frameWidth(c));
+        // 1.11.80 (Malcolm, 16 Oct, of the Channels page: "the right-hand column of buttons has been centre aligned, but it should
+        // be left aligned"): a button's own alignment, 0 = left. It was taken as "none given" and centred - the only buttons
+        // that say 0 are those eight (the left column says 2, right; every other button 1).
+        drawTextIn(c.x, c.y, c.w, c.h, c.font, fg, c.txt, c.xcen, c.ycen ? c.ycen : 1, false, 0, c.sta == 3 ? 0 : frameWidth(c));
         return;
     }
     if (t == "progress bar") {
@@ -1401,7 +1404,8 @@ static bool loadPage(const std::string &name) {
         JsonObject col = j["c"]; c.pco = col["pco"] | 65535; c.bco = col["bco"] | 0; c.pco2 = col["pco2"] | 65535; c.bco2 = col["bco2"] | 0; c.borderc = col["borderc"] | 0; c.pco1 = col["pco1"] | 0xC618;
         JsonObject pic = j["pic"]; c.pic = pic["pic"] | -1; c.pic2 = pic["pic2"] | -1;
         c.txt = j["txt"] | ""; c.val = j["val"] | 0;
-        JsonObject a = j["a"]; c.xcen = a["xcen"] | 0; c.ycen = a["ycen"] | 0; c.borderw = a["borderw"] | 0; c.lenth = a["lenth"] | 0; c.dez = a["dez"] | 0;
+        // (1.11.80: a button that gives no alignment is centred; one that says 0 is LEFT, as on the Nextion)
+        JsonObject a = j["a"]; c.xcen = a["xcen"] | ((c.type == "button" || c.type == "dual-state button") ? 1 : 0); c.ycen = a["ycen"] | 0; c.borderw = a["borderw"] | 0; c.lenth = a["lenth"] | 0; c.dez = a["dez"] | 0;
         c.wid = a["wid"] | 20; c.hig = a["hig"] | 20; c.maxval = a["maxval"] | 100; c.minval = a["minval"] | 0; c.mode = a["mode"] | 0; c.tim = a["tim"] | 0; c.en = a["en"] | 0; c.isbr = a["isbr"] | 0;
         c.key = a["key"] | 255; c.txtMaxl = a["txt_maxl"] | 0; c.dis = a["dis"] | 0; c.typeCode = typeCodeOf(c.type);
         c.dir = a["dir"] | 1; c.bco1 = col["bco1"] | 65535; c.pco3 = col["pco3"] | 0x8410; c.style = a["style"] | 0;

@@ -1,6 +1,7 @@
 # SticksView (page 26, "Channels"). GotoSticksView (main.cpp:2899): page SticksView, UpdateButtonLabels (main.cpp:762:
 # odd "Name (n) >", even "< (n) Name"), UpdateModelsNameEveryWhere (ModelName = name + " (number)", t1 = the bank's name),
-# then the live bars Ch1-Ch16 (main.cpp:376-400, SendValue 0-100).
+# then the live bars Ch1-Ch16 (main.cpp:376-400, SendValue 0-100) and, B109 / screen 1.11.80, each channel's microseconds
+# beside its bar (ShowChannelMicros: us1-us16, 500 + 20 x the bar's value here).
 Screen_Background=8
 @model 1
 page SticksView
@@ -38,6 +39,22 @@ Ch13.val=50
 Ch14.val=20
 Ch15.val=55
 Ch16.val=50
+us1.txt="1500"
+us2.txt="1100"
+us3.txt="1900"
+us4.txt="1300"
+us5.txt="1740"
+us6.txt="2400"
+us7.txt="700"
+us8.txt="1500"
+us9.txt="1500"
+us10.txt="1500"
+us11.txt="2100"
+us12.txt="1500"
+us13.txt="1500"
+us14.txt="900"
+us15.txt="1600"
+us16.txt="1500"
 @shot 26_open
 # ---- worst case: ten-letter channel names ("Collective (15) >" = 160 px font 2), the longest bank name, a long model name
 page SticksView
@@ -64,6 +81,22 @@ Ch2.val=100
 Ch3.val=0
 Ch4.val=100
 Ch16.val=100
+us1.txt="500"
+us2.txt="2500"
+us3.txt="500"
+us4.txt="2500"
+us5.txt="1740"
+us6.txt="2400"
+us7.txt="700"
+us8.txt="1500"
+us9.txt="1500"
+us10.txt="1500"
+us11.txt="2100"
+us12.txt="1500"
+us13.txt="1500"
+us14.txt="900"
+us15.txt="1600"
+us16.txt="2500"
 @shot 26_long
 # ---- ten-letter names (ChannelNames[16][11]): the widest real ones keep their number and arrow ("Smoke pump (13) >" 193 px)
 page SticksView
@@ -77,11 +110,59 @@ Sch15.txt="Gear doors (15) >"
 Sch16.txt="< (16) Arm switch"
 ModelName.txt="RAW 420 MCM (3)"
 t1.txt="Bank 1"
+us1.txt="500"
+us2.txt="2500"
+us3.txt="500"
+us4.txt="2500"
+us5.txt="1740"
+us6.txt="2400"
+us7.txt="700"
+us8.txt="1500"
+us9.txt="1500"
+us10.txt="1500"
+us11.txt="2100"
+us12.txt="1500"
+us13.txt="1500"
+us14.txt="900"
+us15.txt="1600"
+us16.txt="2500"
 @shot 26_names
 @theme white
 page SticksView
+us1.txt="500"
+us2.txt="2500"
+us3.txt="500"
+us4.txt="2500"
+us5.txt="1740"
+us6.txt="2400"
+us7.txt="700"
+us8.txt="1500"
+us9.txt="1500"
+us10.txt="1500"
+us11.txt="2100"
+us12.txt="1500"
+us13.txt="1500"
+us14.txt="900"
+us15.txt="1600"
+us16.txt="2500"
 @shot 26_white
 @theme wine
 page SticksView
+us1.txt="500"
+us2.txt="2500"
+us3.txt="500"
+us4.txt="2500"
+us5.txt="1740"
+us6.txt="2400"
+us7.txt="700"
+us8.txt="1500"
+us9.txt="1500"
+us10.txt="1500"
+us11.txt="2100"
+us12.txt="1500"
+us13.txt="1500"
+us14.txt="900"
+us15.txt="1600"
+us16.txt="2500"
 @shot 26_wine
 @theme navy

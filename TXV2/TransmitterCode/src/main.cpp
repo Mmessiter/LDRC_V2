@@ -356,6 +356,43 @@ void GreenLedOn()
 }
 
 /*********************************************************************************************************************************/
+// B109 (Malcolm, 16 Oct 2026, of the Channels page: "I forgot to include the numeric indication of how many microseconds
+// that channel is at"): beside each bar, by its own button, what the channel is sending, in microseconds (us1 .. us16,
+// screen 1.11.80). Each one goes straight onto the wire, a whole command or nothing (RcPut, RF_Rates.h: it never waits and
+// never reads, so the radio is not held up and no touch is lost); what has no room yet goes in a later pass, starting
+// where this one stopped. A change of 3 or more shows at once; a smaller one once it has stood for half a second (else the
+// last digit would flicker with a stick's own noise).
+static uint16_t UsShown[CHANNELSUSED];   // what each box shows (0: nothing yet - Force_ReDisplay)
+static uint32_t UsMovedAt[CHANNELSUSED]; // since when the channel has differed from it (0: it has not)
+static uint8_t UsNext = 0;               // where the next pass starts
+FLASHMEM void ShowChannelMicros()
+{
+    const uint32_t now = millis();
+    for (int k = 0; k < CHANNELSUSED; ++k)
+    {
+        const int i = (UsNext + k) % CHANNELSUSED;
+        const uint16_t v = SendBuffer[i];
+        if (v == UsShown[i])
+        {
+            UsMovedAt[i] = 0;
+            continue;
+        }
+        if (!UsMovedAt[i])
+            UsMovedAt[i] = now ? now : 1; // (not now | 1: that can be a millisecond ahead of now, and now minus it a huge age)
+        if (abs((int)v - (int)UsShown[i]) < 3 && now - UsMovedAt[i] < 500) // (an empty box, 0, is always 500 or more away)
+            continue;
+        char c[24];
+        snprintf(c, sizeof(c), "us%d.txt=\"%u\"", i + 1, (unsigned)v);
+        if (!RcPut(c))
+        {
+            UsNext = (uint8_t)i;
+            return;
+        }
+        UsShown[i] = v;
+        UsMovedAt[i] = 0;
+    }
+}
+/*********************************************************************************************************************************/
 
 FASTRUN void ShowServoPos()
 {
@@ -405,6 +442,8 @@ FASTRUN void ShowServoPos()
             }
         }
     }
+    if (CurrentView == STICKSVIEW)
+        ShowChannelMicros(); // B109: the numbers beside the bars
     if ((CurrentView == GRAPHVIEW))
     {
         if (ChanneltoSet < 1 || ChanneltoSet > 16)
@@ -847,7 +886,12 @@ void UpdateButtonLabels()
 void Force_ReDisplay()
 {
     for (int i = 0; i < CHANNELSUSED; ++i)
+    {
         ShownBuffer[i] = 242; // to force a re-show of servo positions
+        UsShown[i] = 0;       // B109: and of their numbers on the Channels page
+        UsMovedAt[i] = 0;
+    }
+    UsNext = 0;
 }
 
 /*********************************************************************************************************************************/
