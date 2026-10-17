@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Every curve point keeps its height (Teensy B121, screen 1.11.84 unchanged, 17 Oct 2026)
+
+Malcolm: "if you set a curve with several points, then you change to another number of points, and then you change back
+to the former number of points. It's lost their values, so you have to do them all over again. I wonder if it might be
+possible to store them?" Now every point keeps its height. A curve of any count has its points at 13 possible stick
+positions - the eighths (the ends, the quarters and the centre among them) and the sixths of seven points - and a store
+per bank and channel holds the height each has been given (never set: nothing). The count's own points are a view of it:
+an edit goes into the store, and a change of count takes the stored heights, placing on the curve as it is only those
+never set. So 9 points to 5 and back brings the nine back exactly; 9 to 7 to 3 to 9 likewise; an edit made at 7 is there
+when 7 comes round again; a change of max range converts the remembered heights too; Copy to all banks copies them. The
+file keeps the store (0x5A 0xC6 after the max range's bytes, 851 bytes, checksummed; B118's block is still read, its
+points becoming the store); the five of old stay a sampling of the active curve for any older firmware, and the
+fingerprint folds in the active points only. Help CURVES.TXT. Test dev/test_curve_points: the scenarios above over random
+curves and banks, the file round trip, a corrupted block, B118's block, back to five with heights remembered.
+
 ## The curve page's numbers lined up with the words (screen 1.11.84, Teensy B120 unchanged, 17 Oct 2026)
 
 Malcolm: "the input and output numbers and the exponential number could be lined up with the words straight smooth

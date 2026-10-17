@@ -979,11 +979,36 @@ void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five)
     default: five[1] = p[1]; five[3] = p[3]; break;
     }
 }
-void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi) // the points on the straight line lo .. hi
+// B121: the store's place of point k of a curve of n points (1Definitions.h CurveStore)
+uint8_t CurveStorePos(uint8_t n, uint8_t k)
+{
+    static const uint8_t Seven[7] = {0, 9, 10, 4, 11, 12, 8}; // the ends and the centre are eighths too; the sixths are the store's last four
+    switch (n)
+    {
+    case 3: return k * 4;                  // 0, 4, 8
+    case 7: return k < 7 ? Seven[k] : 0;
+    case 9: return k;
+    default: return k * 2;                 // 5: 0, 2, 4, 6, 8
+    }
+}
+void CurveStoreSync(uint8_t b, uint8_t ch) // the active points into the store (after an edit, or a change of count)
+{
+    const uint8_t n = CurveN(ch);
+    for (uint8_t k = 0; k < n; ++k)
+        CurveStore[b][ch][CurveStorePos(n, k)] = CurvePoint[b][ch][k];
+}
+void CurveStoreClear(uint8_t b, uint8_t ch) // nothing remembered
+{
+    for (uint8_t s = 0; s < CURVE_STORE_MAX; ++s)
+        CurveStore[b][ch][s] = CURVE_UNSET;
+}
+void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi) // the points on the straight line lo .. hi (and nothing else remembered)
 {
     const uint8_t n = CurveN(ch);
     for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k)
         CurvePoint[b][ch][k] = k < n ? lo + ((hi - lo) * k + (n - 1) / 2) / (n - 1) : 0;
+    CurveStoreClear(b, ch);
+    CurveStoreSync(b, ch);
 }
 uint8_t IntoLowerRes(uint16_t HiRes) // convert to lower resolution for screen display (B113: a bar spans this model's max range)
 {

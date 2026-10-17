@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B120 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B121 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1254,6 +1254,9 @@ void MaxRangeShow();
 void ReadModelExtension();   // B113: SDcard.h
 void SaveModelExtension();
 uint8_t CurveN(uint8_t ch);                                               // B118: a channel's curve points (Utilities.h)
+uint8_t CurveStorePos(uint8_t n, uint8_t k);                              // B121: the store (Utilities.h)
+void CurveStoreSync(uint8_t b, uint8_t ch);
+void CurveStoreClear(uint8_t b, uint8_t ch);
 uint8_t CurveMid(uint8_t n);
 uint16_t CurveX(uint8_t in, uint8_t k, uint8_t n);
 void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five);
@@ -1433,6 +1436,15 @@ uint16_t PreMixBuffer[CHANNELSUSED + 1];              //    Data collected from 
 #define CURVE_POINTS_MAX 9
 uint8_t CurvePointCount[CHANNELSUSED + 1];            //    3, 5, 7 or 9 points (B118)
 uint8_t CurvePoint[5][CHANNELSUSED + 1][CURVE_POINTS_MAX]; // the points, in degrees (B118; banks 1 .. 4)
+// B121 (Malcolm, 17 Oct 2026: a curve set with several points, changed to another count and back, "has lost their values ...
+// I wonder if it might be possible to store them?"). Every point keeps its height: the store holds, per bank and channel, the
+// 13 stick positions a curve of any count can have - the eighths (0 .. 8: the ends, the quarters and the centre among them)
+// and the sixths of seven points (9 .. 12: 1/6, 1/3, 2/3, 5/6) - 255 where never set. CurvePoint (the count's own points) is
+// a view of it: an edit goes into the store (CurveStoreSync); a change of count takes the stored heights and places only
+// the never-set ones on the curve as it is (CurveResample). The file keeps the store (SDcard.h, block 0x5A 0xC6).
+#define CURVE_STORE_MAX 13
+#define CURVE_UNSET 255
+uint8_t CurveStore[5][CHANNELSUSED + 1][CURVE_STORE_MAX];
 uint8_t SubTrims[CHANNELSUSED + 1];                   //    Subtrims
 uint8_t SubTrimToEdit = 1;
 uint32_t LastPacketSentTime = 0;
@@ -1641,7 +1653,8 @@ bool SwitchReversed[8] = {false, false, false, false, false, false, false, false
 #define TX_EXT_ADDR 500                   // B32-B35: near the end of the TX block (TXSIZE 512, the sequence ends near 276): 500-501 two marker bytes, 502 switches 5-8 reversed (bits 0-3), 503-510 the switches of inputs 5-8 and 13-16
 #define TX_EXT_MAGIC 0x5A
 #define TX_EXT_MAGIC2 0xC3
-#define TX_EXT_MAGIC3 0xC5 // B118: the curves' count and points follow the max range's bytes
+#define TX_EXT_MAGIC3 0xC5 // B118: the curves' count and points followed the max range's bytes (read as a fallback)
+#define TX_EXT_MAGIC4 0xC6 // B121: the curves' count and store (every point's height) follow the max range's bytes
 uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings, taken once a frame (only when a job uses one, or their page shows)
 // B38 (Malcolm: a front switch's default marking should be its channel, "If anyone actually does select not used ... they
 // should do nothing at all"): bits 0-3 = switches 5-8 marked Not used: the input of that channel sits at its centre. With

@@ -200,6 +200,9 @@ bool ReadOneModel(uint32_t Mnum)
             ++SDCardAddress;
             CurvePoint[j][i][0] = SDRead8BITS(SDCardAddress);
             ++SDCardAddress;
+            CurveStoreClear(j, i); // B121: the five of old are the eighths 0, 2, 4, 6, 8 of the store; nothing else until the extension
+            for (uint8_t k = 0; k < 5; ++k)
+                CurveStore[j][i][k * 2] = CurvePoint[j][i][k];
         }
     }
     for (j = 0; j < MAXMIXES; ++j)
@@ -705,12 +708,16 @@ uint8_t SDRead8BITS(int p_address)
 // when the file reaches it. Here the write is an append at most. Written only when there is something to say, or when it
 // is already there: a model never set does not lengthen its file.
 #define MODEL_EXT_OFFSET_B113 3064 // (B113's place in the record: read as a fallback)
-// B118: after the max range's three bytes, the curves' block - 0x5A 0xC5, the count of every channel (16), the points of
-// every bank and channel (4 x 16 x 9, in degrees; the unused ones 0), and a checksum byte (the sum of all after the
-// markers) - written when any channel has other than five points, or once it is there; taken on reading only whole and
-// sound (the markers, the checksum, every count 3 5 7 or 9, every point 0 .. 180), else the five of old stand.
-#define MODEL_EXT2_LEN (2 + CHANNELSUSED + 4 * CHANNELSUSED * CURVE_POINTS_MAX + 1)
-#define MODEL_EXT2_AT(b, c, k) (2 + CHANNELSUSED + ((b) * CHANNELSUSED + (c)) * CURVE_POINTS_MAX + (k))
+// B118/B121: after the max range's three bytes, the curves' block. B121's: 0x5A 0xC6, the count of every channel (16), the
+// STORE of every bank and channel (4 x 16 x 13: every height a curve of any count has been given, 255 where never set), and
+// a checksum byte (the sum of all after the markers) - 851 bytes; written when any channel has other than five points, or any
+// height beyond the five of old is remembered, or once it is there; taken on reading only whole and sound (the markers, the
+// checksum, every count 3 5 7 or 9, the five of old's places set, every height 0 .. 180 or 255). B118's block (0x5A 0xC5,
+// the count and nine points a bank and channel, 595 bytes) is still read, as a fallback: its points become the store.
+#define MODEL_EXT2_LEN (2 + CHANNELSUSED + 4 * CHANNELSUSED * CURVE_STORE_MAX + 1)
+#define MODEL_EXT2_AT(b, c, s) (2 + CHANNELSUSED + ((b) * CHANNELSUSED + (c)) * CURVE_STORE_MAX + (s))
+#define MODEL_EXT2_LEN_B118 (2 + CHANNELSUSED + 4 * CHANNELSUSED * CURVE_POINTS_MAX + 1)
+#define MODEL_EXT2_AT_B118(b, c, k) (2 + CHANNELSUSED + ((b) * CHANNELSUSED + (c)) * CURVE_POINTS_MAX + (k))
 static uint8_t Ext2Sum(const uint8_t *p, int n)
 {
     uint8_t s = 0;
@@ -718,6 +725,7 @@ static uint8_t Ext2Sum(const uint8_t *p, int n)
         s += p[i];
     return s;
 }
+static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }
 void ReadModelExtension()
 {
     const int a = SDCardAddress; // (just past the checksum)
@@ -735,20 +743,65 @@ void ReadModelExtension()
         }
     }
     MaxRangeNarrow = (m0 == TX_EXT_MAGIC && m1 == TX_EXT_MAGIC2 && r == 1) ? 1 : 0;
-    if (first && (int)ModelsFileNumber.size() >= a + 3 + MODEL_EXT2_LEN && SDRead8BITS(a + 3) == TX_EXT_MAGIC && SDRead8BITS(a + 4) == TX_EXT_MAGIC3)
-    {
+    const int size = (int)ModelsFileNumber.size();
+    if (first && size >= a + 5 && SDRead8BITS(a + 3) == TX_EXT_MAGIC && SDRead8BITS(a + 4) == TX_EXT_MAGIC4 && size >= a + 3 + MODEL_EXT2_LEN)
+    { // B121: the count and the store
         uint8_t blk[MODEL_EXT2_LEN];
         for (int i = 0; i < MODEL_EXT2_LEN; ++i)
             blk[i] = SDRead8BITS(a + 3 + i);
         bool ok = Ext2Sum(blk + 2, MODEL_EXT2_LEN - 3) == blk[MODEL_EXT2_LEN - 1];
         for (int c = 0; ok && c < CHANNELSUSED; ++c)
         {
+            if (!CurveCountOk(blk[2 + c]))
+                ok = false;
+            for (int b = 0; ok && b < 4; ++b)
+                for (int s = 0; s < CURVE_STORE_MAX; ++s)
+                {
+                    const uint8_t v = blk[MODEL_EXT2_AT(b, c, s)];
+                    if (v > 180 && v != CURVE_UNSET)
+                        ok = false;
+                    if (s <= 8 && (s % 2) == 0 && v == CURVE_UNSET) // (the five of old are always set)
+                        ok = false;
+                }
+        }
+        if (ok)
+            for (int c = 0; c < CHANNELSUSED; ++c)
+            {
+                CurvePointCount[c] = blk[2 + c];
+                for (int b = 0; b < 4; ++b)
+                {
+                    for (int s = 0; s < CURVE_STORE_MAX; ++s)
+                        CurveStore[b + 1][c][s] = blk[MODEL_EXT2_AT(b, c, s)];
+                    for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k) // the active points: the count's view of the store
+                        CurvePoint[b + 1][c][k] = k < CurveN(c) ? CurveStore[b + 1][c][CurveStorePos(CurveN(c), k)] : 0;
+                }
+                for (int b = 1; b <= 4; ++b) // (a never-set height among the active points: this channel back to the five of old)
+                    for (uint8_t k = 0; k < CurveN(c); ++k)
+                        if (CurvePoint[b][c][k] == CURVE_UNSET)
+                        {
+                            CurvePointCount[c] = 5;
+                            for (int bb = 1; bb <= 4; ++bb)
+                                for (uint8_t kk = 0; kk < CURVE_POINTS_MAX; ++kk)
+                                    CurvePoint[bb][c][kk] = kk < 5 ? CurveStore[bb][c][kk * 2] : 0;
+                            b = 5;
+                            break;
+                        }
+            }
+    }
+    else if (first && size >= a + 5 && SDRead8BITS(a + 3) == TX_EXT_MAGIC && SDRead8BITS(a + 4) == TX_EXT_MAGIC3 && size >= a + 3 + MODEL_EXT2_LEN_B118)
+    { // B118's block: the count and the active points - into the store
+        uint8_t blk[MODEL_EXT2_LEN_B118];
+        for (int i = 0; i < MODEL_EXT2_LEN_B118; ++i)
+            blk[i] = SDRead8BITS(a + 3 + i);
+        bool ok = Ext2Sum(blk + 2, MODEL_EXT2_LEN_B118 - 3) == blk[MODEL_EXT2_LEN_B118 - 1];
+        for (int c = 0; ok && c < CHANNELSUSED; ++c)
+        {
             const uint8_t n = blk[2 + c];
-            if (n != 3 && n != 5 && n != 7 && n != 9)
+            if (!CurveCountOk(n))
                 ok = false;
             for (int b = 0; ok && b < 4; ++b)
                 for (int k = 0; k < n; ++k)
-                    if (blk[MODEL_EXT2_AT(b, c, k)] > 180)
+                    if (blk[MODEL_EXT2_AT_B118(b, c, k)] > 180)
                         ok = false;
         }
         if (ok)
@@ -756,8 +809,11 @@ void ReadModelExtension()
             {
                 CurvePointCount[c] = blk[2 + c];
                 for (int b = 0; b < 4; ++b)
+                {
                     for (int k = 0; k < CURVE_POINTS_MAX; ++k)
-                        CurvePoint[b + 1][c][k] = blk[MODEL_EXT2_AT(b, c, k)];
+                        CurvePoint[b + 1][c][k] = blk[MODEL_EXT2_AT_B118(b, c, k)];
+                    CurveStoreSync(b + 1, c); // (the five of old stay in the store from the read above; the count's points join them)
+                }
             }
     }
     DoingCheckSm = false;
@@ -768,11 +824,17 @@ void SaveModelExtension()
     const int size = (int)ModelsFileNumber.size();
     bool curves = false, had2 = false;
     for (int c = 0; c < CHANNELSUSED; ++c)
+    {
         if (CurveN(c) != 5)
             curves = true;
+        for (int b = 1; b <= 4; ++b)
+            for (int s = 0; s < CURVE_STORE_MAX; ++s)
+                if (!(s <= 8 && (s % 2) == 0) && CurveStore[b][c][s] != CURVE_UNSET)
+                    curves = true; // (a height remembered beyond the five of old)
+    }
     DoingCheckSm = true;
     if (size >= a + 5)
-        had2 = SDRead8BITS(a + 3) == TX_EXT_MAGIC && SDRead8BITS(a + 4) == TX_EXT_MAGIC3;
+        had2 = SDRead8BITS(a + 3) == TX_EXT_MAGIC && (SDRead8BITS(a + 4) == TX_EXT_MAGIC4 || SDRead8BITS(a + 4) == TX_EXT_MAGIC3);
     if (MaxRangeNarrow || curves || had2 || size > a)
     {
         SDUpdate8BITS(a, TX_EXT_MAGIC);
@@ -782,13 +844,13 @@ void SaveModelExtension()
         {
             uint8_t blk[MODEL_EXT2_LEN];
             blk[0] = TX_EXT_MAGIC;
-            blk[1] = TX_EXT_MAGIC3;
+            blk[1] = TX_EXT_MAGIC4;
             for (int c = 0; c < CHANNELSUSED; ++c)
                 blk[2 + c] = CurveN(c);
             for (int b = 0; b < 4; ++b)
                 for (int c = 0; c < CHANNELSUSED; ++c)
-                    for (int k = 0; k < CURVE_POINTS_MAX; ++k)
-                        blk[MODEL_EXT2_AT(b, c, k)] = k < CurveN(c) ? CurvePoint[b + 1][c][k] : 0;
+                    for (int s = 0; s < CURVE_STORE_MAX; ++s)
+                        blk[MODEL_EXT2_AT(b, c, s)] = CurveStore[b + 1][c][s];
             blk[MODEL_EXT2_LEN - 1] = Ext2Sum(blk + 2, MODEL_EXT2_LEN - 3);
             for (int i = 0; i < MODEL_EXT2_LEN; ++i)
                 SDUpdate8BITS(a + 3 + i, blk[i]);

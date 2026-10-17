@@ -917,6 +917,9 @@ FLASHMEM void MaxRangeConvert(uint8_t narrow) // every curve point into the new 
         {
             for (int k = 0; k < CurveN(ch); ++k) // (B118: every point of the curve)
                 CurvePoint[b][ch][k] = RangeDegrees(CurveMicros(CurvePoint[b][ch][k]), lo, hi);
+            for (int s = 0; s < CURVE_STORE_MAX; ++s) // (B121: and every height remembered for the other counts)
+                if (CurveStore[b][ch][s] != CURVE_UNSET)
+                    CurveStore[b][ch][s] = RangeDegrees(CurveMicros(CurveStore[b][ch][s]), lo, hi);
         }
     for (int m = 0; m < MAXMACROS; ++m) // (a macro's place is a point of the range too: macros.h RunMacro)
         MacrosBuffer[m][MACROMOVETOPOSITION] = RangeDegrees(CurveMicros(MacrosBuffer[m][MACROMOVETOPOSITION]), lo, hi);
@@ -1953,6 +1956,8 @@ FLASHMEM static void CurveResample(uint8_t ch, uint8_t n)
         {
             if (k >= n)
                 fresh[k] = 0;
+            else if (CurveStore[b][ch][CurveStorePos(n, k)] != CURVE_UNSET)
+                fresh[k] = CurveStore[b][ch][CurveStorePos(n, k)]; // B121: its height as it was left
             else if (k == 0)
                 fresh[k] = CurvePoint[b][ch][0];
             else if (k == CurveMid(n))
@@ -1967,6 +1972,8 @@ FLASHMEM static void CurveResample(uint8_t ch, uint8_t n)
     }
     Bank = SavedBank;
     CurvePointCount[ch] = n;
+    for (uint8_t b = 1; b <= 4; ++b)
+        CurveStoreSync(b, ch);           // B121: the new count's points remembered (the never-set ones just placed)
     GetCurveDots(ch, DualRateValue); // (the dots are a global: the bank in use back)
 }
 FLASHMEM void CurvePointsChosen(uint8_t n)
@@ -2409,9 +2416,10 @@ int GetDifference(int YtouchPlace, int oldy)
 }
 /*********************************************************************************************************************************/
 void MoveCurrentPointUp()
-{ // (B118: the current point of up to nine; DisplayCurve keeps it within 0 .. 180)
-    if (CurrentPoint >= 1 && CurrentPoint <= CurveN(ChanneltoSet - 1))
+{ // (B118: the current point of up to nine)
+    if (CurrentPoint >= 1 && CurrentPoint <= CurveN(ChanneltoSet - 1) && CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1] < 180)
         ++CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1];
+    CurveStoreSync(Bank, ChanneltoSet - 1); // (B121: remembered)
     DisplayCurve();
 }
 
@@ -2420,6 +2428,7 @@ void MoveCurrentPointDown()
 {
     if (CurrentPoint >= 1 && CurrentPoint <= CurveN(ChanneltoSet - 1) && CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1])
         --CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1];
+    CurveStoreSync(Bank, ChanneltoSet - 1); // (B121: remembered)
     DisplayCurve();
 }
 
@@ -2465,6 +2474,7 @@ void MovePoint()
         if (deg <= 180 - rjump)
             deg += rjump;
     }
+    CurveStoreSync(Bank, ch); // (B121: remembered)
 }
 
 /*********************************************************************************************************************************/
@@ -3039,6 +3049,8 @@ void WriteNewCurve()
             {
                 for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k) // (B118: every point; the count is the channel's, the same in every bank)
                     CurvePoint[p][ChanneltoSet - 1][k] = CurvePoint[Bank][ChanneltoSet - 1][k];
+                for (uint8_t s = 0; s < CURVE_STORE_MAX; ++s) // (B121: with every height remembered for the other counts)
+                    CurveStore[p][ChanneltoSet - 1][s] = CurveStore[Bank][ChanneltoSet - 1][s];
                 InterpolationTypes[p][ChanneltoSet - 1] = InterpolationTypes[Bank][ChanneltoSet - 1];
                 Exponential[p][ChanneltoSet - 1] = Exponential[Bank][ChanneltoSet - 1];
             }

@@ -25,10 +25,10 @@ HOW MANY POINTS:|
 'Points: 3 5 7 9' sets how many points this channel's curve has,|
 in every bank (it shows for Straight and Smooth). The ends and|
 the centre are always points; the rest are spaced evenly between|
-them. When you change the count, the new points are placed on|
-the curve as it is, so nothing moves. (With 7 or 3, a corner that|
-sat on an old quarter point is redrawn through the new points.)|
-More points give finer control. The choice is saved at once.|
+them. Every point keeps its height: change the count and back,|
+and the points return as you left them. A point you have never|
+set is placed on the curve as it is, so nothing moves. More|
+points give finer control. The choice is saved at once.|
 Exponential always uses three.||
 THE SHAPES:|
 1. Straight: straight lines join the points.|

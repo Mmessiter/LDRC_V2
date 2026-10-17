@@ -25,12 +25,12 @@ def lift(rel, head):
     raise SystemExit('cannot lift %s from %s' % (head, rel))
 main = src('src/main.cpp')
 defs1 = src('include/1Definitions.h')
-DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|TX_EXT_MAGIC|TX_EXT_MAGIC2|TX_EXT_MAGIC3|CURVE_POINTS_MAX) ', l)) + '\n'
+DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|TX_EXT_MAGIC|TX_EXT_MAGIC2|TX_EXT_MAGIC3|TX_EXT_MAGIC4|CURVE_POINTS_MAX|CURVE_STORE_MAX|CURVE_UNSET) ', l)) + '\n'
 sdc = src('include/SDcard.h')
 DEFS += '\n'.join(l for l in sdc.split('\n') if l.startswith('#define MODEL_EXT_OFFSET_B113 ') or l.startswith('#define MODEL_EXT2_')) + '\n'
-assert DEFS.count('#define') == 9, DEFS
+assert DEFS.count('#define') == 14, DEFS
 DEFS += '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (MAXMACROS|BYTESPERMACRO|MACROTRIGGERCHANNEL|MACROMOVECHANNEL|MACROSTARTTIME|MACRODURATION|MACROMOVETOPOSITION|MACRORUNNINGNOW) ', l)) + '\n'
-assert DEFS.count('#define') == 17, DEFS
+assert DEFS.count('#define') == 22, DEFS
 util = src('include/Utilities.h')
 INLINES = '\n'.join(l for l in util.split('\n') if re.match(r'inline uint16_t (RangeLo|RangeHi|CurveMicros)\(', l)) + '\n'
 assert INLINES.count('inline') == 3, INLINES
@@ -78,12 +78,14 @@ static uint32_t millis() { return nowMs; }
 static uint16_t SendBuffer[CHANNELSUSED + 1], ShownBuffer[CHANNELSUSED + 1];
 #include <cmath>
 #define CURVE_POINTS_MAX 9
+#define CURVE_STORE_MAX 13
+#define CURVE_UNSET 255
 #define MINMICROS 500
 #define MAXMICROS 2500
 #define constrain(a, l, h) ((a) < (l) ? (l) : ((a) > (h) ? (h) : (a)))
 static uint16_t ChannelMin[CHANNELSUSED + 1], ChannelCentre[CHANNELSUSED + 1], ChannelMax[CHANNELSUSED + 1];
 #include <map>
-static uint8_t CurvePointCount[CHANNELSUSED + 1], CurvePoint[5][CHANNELSUSED + 1][9];   // (B118; the defines come later in this program: 9 = CURVE_POINTS_MAX)
+static uint8_t CurvePointCount[CHANNELSUSED + 1], CurvePoint[5][CHANNELSUSED + 1][9], CurveStore[5][CHANNELSUSED + 1][13];   // (B118/B121; the defines come later in this program: 9 = CURVE_POINTS_MAX, 13 = CURVE_STORE_MAX)
 static uint8_t InPutStick[CHANNELSUSED + 1];
 static char ChannelNames[CHANNELSUSED][11];
 static char pSticksView[] = "page SticksView";
@@ -117,7 +119,7 @@ static FakeFile ModelsFileNumber;
 static bool cardSeek(size_t a) { if (a > card.size()) return false; cardPos = a; return true; }
 static uint8_t SDRead8BITS(int a) { cardSeek((size_t)a); const uint8_t r = cardPos < card.size() ? card[cardPos++] : 255; if (!DoingCheckSm) FileCheckSum += r * (a + 1); return r; }
 static void SDUpdate8BITS(int a, uint8_t v) { if (!cardSeek((size_t)a)) ++seekWriteFails; if (!DoingCheckSm) FileCheckSum += v * (a + 1); if (cardPos >= card.size()) card.resize(cardPos + 1, 0); card[cardPos++] = v; }
-''' + statics + '\n' + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'uint16_t CurveX(uint8_t in, uint8_t k, uint8_t n)') + lift('include/Utilities.h', 'void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five)') + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/SDcard.h', 'static uint8_t Ext2Sum(const uint8_t *p, int n)') + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + TEENSY_MAP + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint16_t IntoHigherRes(uint8_t LowRes)') + lift('src/main.cpp', 'FLASHMEM static uint8_t RangeDegrees(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeConvert(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeShow()') + lift('src/main.cpp', 'FLASHMEM static void MaxRangeChosen(') + '\n'.join(l for l in main.split('\n') if l.startswith('FLASHMEM void MaxRange') and 'Tapped() {' in l) + '\n' + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') + lift('include/Utilities.h', 'FASTRUN float MapWithExponential(') + lift('src/main.cpp', 'uint16_t StraightLineInterpolation(') + lift('src/main.cpp', 'uint16_t ExponentialInterpolation(') + lift('src/main.cpp', 'void DoTrimsAndSubtrims()') + lift('include/macros.h', 'void StartMacro(uint8_t m)') + lift('include/macros.h', 'void RunMacro(uint8_t m)') + lift('include/macros.h', 'void StopMacro(uint8_t m)') + lift('include/macros.h', 'void ExecuteMacro()') + r'''
+''' + statics + '\n' + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'uint16_t CurveX(uint8_t in, uint8_t k, uint8_t n)') + lift('include/Utilities.h', 'void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five)') + lift('include/Utilities.h', 'uint8_t CurveStorePos(uint8_t n, uint8_t k)') + lift('include/Utilities.h', 'void CurveStoreSync(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveStoreClear(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/SDcard.h', 'static uint8_t Ext2Sum(const uint8_t *p, int n)') + 'static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + TEENSY_MAP + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint16_t IntoHigherRes(uint8_t LowRes)') + lift('src/main.cpp', 'FLASHMEM static uint8_t RangeDegrees(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeConvert(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeShow()') + lift('src/main.cpp', 'FLASHMEM static void MaxRangeChosen(') + '\n'.join(l for l in main.split('\n') if l.startswith('FLASHMEM void MaxRange') and 'Tapped() {' in l) + '\n' + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') + lift('include/Utilities.h', 'FASTRUN float MapWithExponential(') + lift('src/main.cpp', 'uint16_t StraightLineInterpolation(') + lift('src/main.cpp', 'uint16_t ExponentialInterpolation(') + lift('src/main.cpp', 'void DoTrimsAndSubtrims()') + lift('include/macros.h', 'void StartMacro(uint8_t m)') + lift('include/macros.h', 'void RunMacro(uint8_t m)') + lift('include/macros.h', 'void StopMacro(uint8_t m)') + lift('include/macros.h', 'void ExecuteMacro()') + r'''
 // the commands sent since the last look: "us3=1500" each (anything else is a fault)
 static std::vector<std::string> sent() {
     std::vector<std::string> r; std::string &o = NEXTION.out; size_t p = 0;
@@ -269,6 +271,7 @@ int main() {
     CHECK(MaxRangeNarrow == 0 && saves == s0 + 2 && marks(1, 0) && prompts.back().find("500 to 2500? Each point keeps its value:") != std::string::npos);
     CHECK(abs((int)CurveMicros(CurvePoint[1][0][0]) - 945) <= 6 && abs((int)CurveMicros(CurvePoint[1][0][4]) - 2055) <= 6);
     // 25. the model's own extension: right after the checksummed sequence (B114), outside its checksum, never a seek beyond the file
+    for (int b = 0; b <= 4; ++b) for (int c = 0; c <= CHANNELSUSED; ++c) { CurveStoreClear(b, c); CurveStoreSync(b, c); }   // (B121: nothing remembered beyond the five of old, as a model just read)
     auto record = [&](size_t len) { card.assign(len, 0); StartLocation = 0; SDCardAddress = (int)len; FileCheckSum = 0; seekWriteFails = 0; };   // (a record's checksum ends at len)
     record(2100);
     MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card.size() == 2100);                  // never set: the file not lengthened

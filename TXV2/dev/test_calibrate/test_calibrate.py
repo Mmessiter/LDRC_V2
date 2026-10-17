@@ -21,8 +21,8 @@ def lift(rel, head):
                     return '\n'.join(lines[i:j + 1]) + '\n'
     raise SystemExit('cannot lift %s from %s' % (head, rel))
 main = src('src/main.cpp'); cal = src('include/Calibrate.h'); util = src('include/Utilities.h'); defs1 = src('include/1Definitions.h')
-DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|MAXRESOLUTION|PROPOCHANNELS|CHANNELSUSED|MINMICROS|MAXMICROS|CURVE_POINTS_MAX) ', l)) + '\n'
-assert DEFS.count('#define') == 8, DEFS
+DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|MAXRESOLUTION|PROPOCHANNELS|CHANNELSUSED|MINMICROS|MAXMICROS|CURVE_POINTS_MAX|CURVE_STORE_MAX|CURVE_UNSET) ', l)) + '\n'
+assert DEFS.count('#define') == 10, DEFS
 INLINES = '\n'.join(l for l in util.split('\n') if re.match(r'inline uint16_t (RangeLo|RangeHi|CurveMicros)\(', l)) + '\n'
 assert INLINES.count('inline') == 3, INLINES
 PROG = r'''
@@ -52,7 +52,7 @@ long map(T _x, A _in_min, B _in_max, C _out_min, D _out_max, typename std::enabl
 }
 ''' + DEFS + r'''
 static uint16_t ChannelMin[CHANNELSUSED + 1], ChannelMidLow[CHANNELSUSED + 1], ChannelCentre[CHANNELSUSED + 1], ChannelMidHi[CHANNELSUSED + 1], ChannelMax[CHANNELSUSED + 1];
-static uint8_t CurvePointCount[CHANNELSUSED + 1], CurvePoint[5][CHANNELSUSED + 1][CURVE_POINTS_MAX];   // (B118: the curve points, 3 5 7 or 9 a channel)
+static uint8_t CurvePointCount[CHANNELSUSED + 1], CurvePoint[5][CHANNELSUSED + 1][CURVE_POINTS_MAX], CurveStore[5][CHANNELSUSED + 1][CURVE_STORE_MAX];   // (B118/B121: the curve points, 3 5 7 or 9 a channel, and every height remembered)
 static uint8_t Bank = 1, MaxRangeNarrow = 0; static int DualRateValue = 0; static bool NewCompressNeeded = true;
 static int reading[PROPOCHANNELS];                      // the fake ADC: what each input reads now
 struct FakeAdc { int analogRead(int pin) { return reading[pin]; } };
@@ -65,7 +65,7 @@ static void CalculateAllOutputs() { ++outputsDone; }
 static void ShowServoPos() { ++barsShown; }
 static void GetNewChannelValues() { ++pipelines; }
 static void CalibrateEdgeSwitches() { ++edgeSwitches; }
-''' + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/Calibrate.h', 'void ReduceLimits()') + lift('include/Calibrate.h', 'void CalibrateSticks()') + lift('include/Calibrate.h', 'void ChannelCentres()') + lift('include/Calibrate.h', 'FLASHMEM void InitMaxMin()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + r'''
+''' + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'uint8_t CurveStorePos(uint8_t n, uint8_t k)') + lift('include/Utilities.h', 'void CurveStoreSync(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveStoreClear(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/Calibrate.h', 'void ReduceLimits()') + lift('include/Calibrate.h', 'void CalibrateSticks()') + lift('include/Calibrate.h', 'void ChannelCentres()') + lift('include/Calibrate.h', 'FLASHMEM void InitMaxMin()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + r'''
 int main()
 {
     // the sticks and knobs: each input its own ends and centre (none at the ADC's own ends, none at its middle)
