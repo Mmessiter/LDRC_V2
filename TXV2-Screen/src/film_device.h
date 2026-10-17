@@ -10,8 +10,8 @@
 // allowed: Easy tuning itself needs the helicopter on, and its help is where its film is wanted. The film
 // plays on our layer over the whole screen, its pictures decoded straight into the layer: only the pixels that changed
 // are marked for the panel, so a still moment costs nothing and a moving finger a few rectangles. A tap pauses it (1.11.88:
-// Back, Play, Next, Films; 1.11.89: a slider above them, to any moment); the safety going off or the motor on, the page
-// going, and the film's end stop it. The format and its sums: film_core.h (host-tested,
+// Back, Play, Next, Films; 1.11.89: a slider above them, to any moment; 1.11.90: Play, Films, Exit - the slider does what
+// Back and Next did); the safety going off or the motor on, the page going, and the film's end stop it. The format and its sums: film_core.h (host-tested,
 // hmi/test_film); the films are made by TXV1B dev/video (LDRC_TARGET=screen).
 #pragma once
 #include <JPEGDEC.h>
@@ -35,7 +35,10 @@ static uint8_t filmOneSection[4] = {0, 0, 0, 0};                 // (a film with
 // (1.11.88) Pause, Back, Play, Next: a tap pauses the film and shows these along its foot; what lay under them is kept
 // (1.11.89) and above them a slider (Malcolm: "a bar with a slider so we could slide backwards or forwards a particular
 // distance as we might with a video"): the time there, the track with a gap where each part starts, the film's length
-static const int FILM_CTL_BACK = 0, FILM_CTL_PLAY = 1, FILM_CTL_NEXT = 2, FILM_CTL_FILMS = 3, FILM_BAR_Y = 368, FILM_BAR_H = 480 - 368, FILM_CTL_Y = 421;
+// (1.11.90) Malcolm: "Now that we have this wonderful bar, I think we no longer need back, or next ... We do need play and
+// we do need films, and I think we need exit too": Play, Films, Exit, in the system pages' last three slots - Exit, which
+// leaves, bottom right as OK is on every page
+static const int FILM_CTL_PLAY = 0, FILM_CTL_FILMS = 1, FILM_CTL_EXIT = 2, FILM_CTL_N = 3, FILM_BAR_Y = 368, FILM_BAR_H = 480 - 368, FILM_CTL_Y = 421;
 static const int FILM_SEEK_X0 = 112, FILM_SEEK_W = 576, FILM_SEEK_MID = 394, FILM_SEEK_R = 13;   // the track (x0 to x0 + w) and its knob
 static bool filmPaused = false, filmTapDeaf = false, filmCtlHeld = false, filmCtlOnBar = false; static int filmCtlDown = -1; static uint32_t filmTapSeen = 0, filmPosMs = 0;
 static int32_t filmSeekWant = -1; static bool filmSeekHeld = false;   // the frame the slider asks for (-1: none) - the picture follows it - and a finger on it
@@ -213,10 +216,10 @@ static bool filmStart() {
     return true;
 }
 static const uint8_t *filmSecs() { return filmSections ? filmSections : filmOneSection; }
-static void filmCtlRect(int i, int &x, int &y, int &w, int &h) { x = 20 + i * 195; y = FILM_CTL_Y; w = 180; h = 52; }
-static int filmCtlAt(int px, int py) { for (int i = 0; i < 4; ++i) { int x, y, w, h; filmCtlRect(i, x, y, w, h); if (px >= x && px < x + w && py >= y && py < y + h) return i; } return -1; }
+static void filmCtlRect(int i, int &x, int &y, int &w, int &h) { x = 211 + i * 197; y = FILM_CTL_Y; w = 180; h = 52; }   // (slots x 211, 408, 605)
+static int filmCtlAt(int px, int py) { for (int i = 0; i < FILM_CTL_N; ++i) { int x, y, w, h; filmCtlRect(i, x, y, w, h); if (px >= x && px < x + w && py >= y && py < y + h) return i; } return -1; }
 static void filmDrawCtl(int i, bool down) {
-    static const char *const label[4] = {"Back", "Play", "Next", "Films"};
+    static const char *const label[FILM_CTL_N] = {"Play", "Films", "Exit"};
     int x, y, w, h; filmCtlRect(i, x, y, w, h);
     { TopDraw td; filmBevel(x, y, w, h, down, label[i]); }
     dirty(x, y, w, h); touchPainted = true;
@@ -254,7 +257,7 @@ static void filmPause() {                                          // the film h
     filmSeekWant = -1; filmSeekHeld = false;
     { TopDraw td; gfx->fillRect(0, FILM_BAR_Y, W, FILM_BAR_H, 2214); gfx->fillRect(0, FILM_BAR_Y, W, 2, 0x8410); }   // (a line along its top: the bar apart from the film)
     filmDrawSeek();
-    for (int i = 0; i < 4; ++i) filmDrawCtl(i, false);
+    for (int i = 0; i < FILM_CTL_N; ++i) filmDrawCtl(i, false);
     dirty(0, FILM_BAR_Y, W, FILM_BAR_H); touchPainted = true;
     filmPaused = true;
 }
@@ -288,16 +291,6 @@ static void filmResume() {
     filmBarDown();
     filmPlayFrom(filmPosMs);
 }
-static void filmJump(int32_t target) {                             // the screen as at frame target - its key picture, then every picture after it - and on from there
-    if (target < 0) target = 0;
-    if (target >= (int32_t) filmHead.frames) target = (int32_t) filmHead.frames - 1;
-    filmSeekWant = -1;
-    const int32_t k0 = ldrcfilm::keyAtOrBefore(target, filmTable, filmHead.version);
-    if (k0 < 0 || !filmDecode(k0)) { filmStop(true); return; }
-    for (int32_t i = k0 + 1; i <= target; ++i) if (ldrcfilm::sizeOf(filmTable, i) && !filmDecode(i)) { filmStop(true); return; }
-    filmLast = target; filmBarDown();                              // (the pictures went in under the bar too: what it kept is this frame's)
-    filmPlayFrom(filmFrameMs(target));
-}
 static bool filmInSeekZone(int x, int y) { return y >= FILM_BAR_Y - 12 && y < FILM_CTL_Y - 2 && x >= FILM_SEEK_X0 - 30 && x <= FILM_SEEK_X0 + FILM_SEEK_W + 30; }
 static void filmTouch(bool pressed, int x, int y, uint32_t now) {
     if (filmTapDeaf) { if (pressed) filmTapSeen = now; else if (now - filmTapSeen >= 80) filmTapDeaf = false; return; }   // (the finger that paused it)
@@ -317,10 +310,8 @@ static void filmTouch(bool pressed, int x, int y, uint32_t now) {
     filmCtlHeld = false;
     const int c = filmCtlDown; filmCtlDown = -1;
     if (c >= 0) filmDrawCtl(c, false);
-    const int32_t frame = filmShownFrame();
-    if (c == FILM_CTL_BACK) filmJump(ldrcfilm::backTarget(frame, filmHead.fps, filmSecs(), filmSectionCount));
-    else if (c == FILM_CTL_NEXT) { const int32_t n = ldrcfilm::nextTarget(frame, filmSecs(), filmSectionCount); if (n < 0) filmStop(true); else filmJump(n); }
-    else if (c == FILM_CTL_FILMS) { filmStop(true); filmMenuDeaf = false; }
+    if (c == FILM_CTL_FILMS) { filmStop(true); filmMenuDeaf = false; }   // the films menu
+    else if (c == FILM_CTL_EXIT) filmStop(false);                  // (1.11.90) out of the films: the help page, as it was
     else if (c == FILM_CTL_PLAY || !filmCtlOnBar) filmResume();   // Play, or a tap on the picture: on from where it is
 }   // (a tap on the bar between its buttons: nothing)
 static void filmTouchCancel() { if (filmMenuDown >= 0 && filmMenuUp()) filmMenuDrawButton(filmMenuDown, false); filmMenuDown = -1; filmMenuHeld = false; }

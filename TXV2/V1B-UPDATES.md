@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Films: Play, Films and Exit on the bar (screen 1.11.90, Teensy B123 unchanged, 17 Oct 2026)
+
+Malcolm, of 1.11.89: "That is absolutely perfect. Well done!!! Now that we have this wonderful bar, I think we no longer
+need back, or next on the bottom buttons. We do need play and we do need films, and I think we need exit too." The paused
+bar's buttons are now Play, Films and Exit, in the system pages' last three slots (x 211, 408, 605): Exit, which leaves, at
+the bottom right where OK is on every page. Play carries on; Films goes back to the films menu; Exit leaves the films
+altogether, back to the help page they were opened from (its Films button returns). The slider does what Back and Next did,
+and its gaps still show where each part starts. FRONT.TXT says so. Flow test: 46 checks (the pausing tap lands where Play
+is drawn and starts nothing; the buttons' slots; a tap in the empty slot or between buttons does nothing; Exit leaves).
+
 ## Films: a slider to any moment, and a pause sign (screen 1.11.89, Teensy B123 unchanged, 17 Oct 2026)
 
 Malcolm, after the finger fix ("The pointer is now accurate, thank you!"): "It would be also nice if, with the same time,

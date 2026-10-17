@@ -107,36 +107,19 @@ int main() {
         CHECK(due > 3 && decoded == due);
         printf("10 s late: %d pictures due, %d decoded in turn (none skipped)\n", due, decoded);
     }
-    // 6. a tap pauses: the sound stops, the bar along the foot; that same tap presses nothing (it lands where Back is drawn)
-    { const uint32_t awakeBefore = awakes(); int bx, by, bw, bh; filmCtlRect(FILM_CTL_BACK, bx, by, bw, bh);
-      tap(bx + bw / 2, by + bh / 2); run(50);
+    // 6. a tap pauses: the sound stops, the bar along the foot; that same tap presses nothing (it lands where Play is drawn)
+    { const uint32_t awakeBefore = awakes(); int px, py, pw, ph; filmCtlRect(FILM_CTL_PLAY, px, py, pw, ph);
+      tap(px + pw / 2, py + ph / 2); run(50);
       CHECK(filmPlaying && filmPaused && audioId == -1 && filmStripKept);
       const uint32_t posAtPause = filmPosMs; const int32_t lastAtPause = filmLast;
       run(20000); CHECK(filmPaused && filmLast == lastAtPause && awakes() > (int) awakeBefore);   // (held still; the main board still told)
       // 7. Play: on from where it was, the sound from there too, what lay under the bar put back
-      int px, py, pw, ph; filmCtlRect(FILM_CTL_PLAY, px, py, pw, ph);
       tap(px + pw / 2, py + ph / 2); run(50);
       CHECK(!filmPaused && audioId == FILM_AUDIO_ID && audioFrom == posAtPause && !filmStripKept);
     }
-    // 8. Back: to the start of this section (its key picture, every picture after it), the sound from there
-    run(4000);
-    { tap(400, 200); run(50); CHECK(filmPaused);
-      const int32_t frame = ldrcfilm::frameAt(filmPosMs, filmHead);
-      const int32_t want = ldrcfilm::backTarget(frame, filmHead.fps, filmSecs(), filmSectionCount);
-      int bx, by, bw, bh; filmCtlRect(FILM_CTL_BACK, bx, by, bw, bh);
-      tap(bx + bw / 2, by + bh / 2); run(50);
-      CHECK(!filmPaused && filmLast >= want && filmLast <= want + 1 && audioFrom == (uint32_t) ((uint64_t) want * 1000 / filmHead.fps));
-      bool isStart = false; for (uint32_t s = 0; s < filmSectionCount; ++s) if ((int32_t) ldrcfilm::rd32(filmSecs() + 4 * s) == want) isStart = true;
-      CHECK(isStart);
-    }
-    // 9. Next: the start of the next section
-    { tap(400, 200); run(50); CHECK(filmPaused);
-      const int32_t frame = ldrcfilm::frameAt(filmPosMs, filmHead);
-      const int32_t want = ldrcfilm::nextTarget(frame, filmSecs(), filmSectionCount);
-      int nx, ny, nw, nh; filmCtlRect(FILM_CTL_NEXT, nx, ny, nw, nh);
-      tap(nx + nw / 2, ny + nh / 2); run(50);
-      CHECK(want > frame && !filmPaused && audioFrom == (uint32_t) ((uint64_t) want * 1000 / filmHead.fps));
-    }
+    // 8. (1.11.90) the bar's buttons: Play, Films, Exit in the system pages' last three slots, Exit bottom right
+    { int x0, y0, w0, h0, x2, y2, w2, h2; filmCtlRect(FILM_CTL_PLAY, x0, y0, w0, h0); filmCtlRect(FILM_CTL_EXIT, x2, y2, w2, h2);
+      CHECK(FILM_CTL_N == 3 && x0 == 211 && x2 == 605 && x2 + w2 == 785 && y2 + h2 <= H); }
     // 9b. (1.11.89) the slider. A finger on the track asks for the frame there: the knob and the time at once, the picture
     // follows while paused, the bar stays drawn over it; dragged back (the finger wandering off the track), the picture
     // follows back; let go, still paused there; a tap between the bar's buttons does nothing. Then Play: the sound from
@@ -157,7 +140,8 @@ int main() {
       CHECK(filmSeekWant == fb2 && filmLast == fb2 && fb2 < fa);
       for (int i = 0; i < 12; ++i) { finger(false, 0, 0); nowMs += 10; filmPoll(); }
       CHECK(!filmSeekHeld && filmPaused && filmLast == fb2);
-      int bx, by, bw, bh; filmCtlRect(FILM_CTL_BACK, bx, by, bw, bh); tap(bx + bw + 7, by + bh / 2); run(50); CHECK(filmPaused);
+      int bx, by, bw, bh; filmCtlRect(FILM_CTL_PLAY, bx, by, bw, bh); tap(bx + bw + 8, by + bh / 2); run(50); CHECK(filmPaused);
+      tap(100, by + bh / 2); run(50); CHECK(filmPaused);                // (the empty slot at the left: nothing either)
       std::vector<uint16_t> seen(topFb, topFb + W * H); memcpy(seen.data() + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2);
       int px, py, pw, ph; filmCtlRect(FILM_CTL_PLAY, px, py, pw, ph); tap(px + pw / 2, py + ph / 2);
       CHECK(!filmPaused && !filmStripKept && audioFrom == (uint32_t) ((uint64_t) fb2 * 1000 / filmHead.fps));
@@ -167,12 +151,12 @@ int main() {
       CHECK(memcmp(topFb, seen.data(), (size_t) W * H * 2) == 0);
       printf("slider: to frame %d and back to %d; the picture there the same as a straight play to it\n", (int) fa, (int) fb2);
     }
-    // 10. Next from the last section: the menu
-    { for (int guard = 0; guard < 30 && filmPlaying; ++guard) {
-          tap(400, 200); run(50); if (!filmPaused) break;
-          int nx, ny, nw, nh; filmCtlRect(FILM_CTL_NEXT, nx, ny, nw, nh); tap(nx + nw / 2, ny + nh / 2); run(50);
-      }
-      CHECK(!filmPlaying && filmMenuUp());
+    // 10. (1.11.90) Exit: out of the films - no film, no menu - the help page as it was, its Films button back
+    { tap(400, 200); run(50); CHECK(filmPaused);
+      int ex, ey, ew, eh; filmCtlRect(FILM_CTL_EXIT, ex, ey, ew, eh); tap(ex + ew / 2, ey + eh / 2);
+      CHECK(!filmPlaying && !filmUp() && !filmMenuUp() && audioId == -1);
+      run(100); CHECK(filmButtonUp());
+      tap(80, 30); run(50); CHECK(filmMenuUp());                      // (the menu again, for what follows)
     }
     // 11. a film to its end: back to the menu
     filmMenuRect(2, x, y, w, h); tap(x + w / 2, y + h / 2); run(50); CHECK(filmPlaying && filmName == "EASY");

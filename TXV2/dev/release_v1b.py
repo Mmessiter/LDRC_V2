@@ -100,6 +100,14 @@ def screen_firmware(build):
     if os.path.exists(elf):
         keep = os.path.join(HERE, 'out', 'elf'); os.makedirs(keep, exist_ok=True)
         shutil.copy2(elf, os.path.join(keep, f'screen-{version}.elf'))
+        # (17 Oct 2026: 74 of them, 32 MB each, helped fill the Mac's disk) the newest eight stay here; older ones go to the
+        # archive on the 2TB SSD when it is plugged in (still there for an old core dump), else they wait here
+        archive = '/Volumes/2TB SSD/LDRC archive/TXV1B screen ELFs'
+        if os.path.isdir(archive):
+            elves = sorted((e for e in os.listdir(keep) if e.endswith('.elf')), key=lambda e: os.path.getmtime(os.path.join(keep, e)), reverse=True)
+            for e in elves[8:]:
+                try: shutil.move(os.path.join(keep, e), os.path.join(archive, e))
+                except OSError as err: print(f'  (could not move {e} to the archive: {err})')
     return b, version
 
 def teensy_files():

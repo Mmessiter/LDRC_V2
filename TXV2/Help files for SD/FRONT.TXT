@@ -5,8 +5,8 @@ FILMS: every help page has 'Films' at its top left: short|
 films of how to do things, with sound. Safety on (or the|
 motor off, if no safety switch is set up).|
 Tap a film to pause it. Slide the bar to any moment.|
-'Back' plays that part again, 'Next' skips to the next part,|
-'Play' carries on and 'Films' goes back to the list.||
+'Play' carries on, 'Films' goes back to the list and 'Exit'|
+leaves the films.||
 'Transmitter' and 'Model' (bottom corners) open the setups.||
 'Defined screens' (bottom middle) shows your own front screen|
 instead, with your choice of numbers, big and clear.|
