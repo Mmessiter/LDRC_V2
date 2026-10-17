@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Ten Rotorflight animations (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
+
+The Rotorflight menu (RFLIGHT: a tour of every button; its help no longer borrows Easy tuning's animation, and films.txt's
+RFLIGHT=EASY is gone), PIDs (PID: Roll P changed from 50 to 55 on the screen's own keypad - its value, Delete, a digit, OK -
+then Save), PID + (PID_A), Rates (RATES1), Rates dynamics (RATES_A), Governor (RFGOVP), Governor global (RFGOVG), Rescue,
+Rescue hold height (RESCUE2) and Servos: forty in all, four pages of the list. films/common.py: rf_route() (front page,
+Model, Rotorflight, the page's button) and keypad_shots()/KEY (keybdB over a page, its keys' places from its own page).
+
 ## Ten more animations: switches, sounds, batteries, buddy, pictures, logs (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
 
 Switches (SWITCHES), a switch's job (ONESWICH), Sounds and brightness (AUDIO), Batteries (LIPO), Wireless buddy (BUDDY:

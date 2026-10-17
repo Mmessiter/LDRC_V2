@@ -94,7 +94,7 @@ int main() {
     page.name = "FrontView"; run(5000); page.name = "LogView"; run(200); CHECK(!filmButtonUp());
     // 3. the Rotorflight menu's help (films.txt: RFLIGHT=EASY): its button plays Easy tuning's at once - no list - and the main
     // board is told at once that someone is watching (its screen timeout waits), then every 15 s
-    page.name = "RFView"; run(100); helpTap("RFLIGHT"); run(100); CHECK(filmButtonUp() && filmOwn == "EASY");
+    page.name = "EasyView"; run(100); helpTap("EASY"); run(100); CHECK(filmButtonUp() && filmOwn == "EASY");   // (Easy tuning's help; RFLIGHT has its own animation since 17 Oct)
     sentToTeensy.clear();
     tap(80, 30); run(50); CHECK(filmUp() && filmPlaying && filmName == "EASY" && !filmMenuUp() && !filmFromList);
     CHECK(awakes() == 1);

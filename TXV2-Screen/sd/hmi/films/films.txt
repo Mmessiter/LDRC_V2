@@ -31,6 +31,14 @@ MACROS: Macros
 FAILSAFE: Failsafe
 BANKNAME: Bank names
 LOGFILES: Log files
+RFLIGHT: Rotorflight
 EASY: Rotorflight: Easy tuning
-# The Rotorflight menu's help, which opens without a model, plays Easy tuning's (its page needs the model connected)
-RFLIGHT=EASY
+PID: Rotorflight: PIDs
+PID_A: Rotorflight: PID + (advanced)
+RATES1: Rotorflight: Rates
+RATES_A: Rotorflight: Rates dynamics
+RFGOVP: Rotorflight: Governor
+RFGOVG: Rotorflight: Governor (global)
+RESCUE: Rotorflight: Rescue
+RESCUE2: Rotorflight: Rescue hold height
+SERVOS: Rotorflight: Servos

@@ -26,3 +26,17 @@ def tx_route(f, button, spoken=None, front_shot=None):
 def tx_route_play(f, button, page_key):
     f.show('r_front'); f.say('front', 'Press Transmitter.', after=0.3); f.tap(*at('FrontView', 'b0'), 'r_setup')
     f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('TXSetupView', txt=button), page_key)
+def rf_route(f, button):
+    """the way in, declared: the front page, Model, Rotorflight, then this page's button on the Rotorflight menu"""
+    model_route(f, 'Rotorflight')
+    f.shot('r_rf', prefix('8.txt', '8_open'))
+    f.line('rf', 'This is the Rotorflight menu. Press %s.' % button.rstrip(' .'))
+def rf_route_play(f, button, page_key):
+    model_route_play(f, 'Rotorflight', 'r_rf')
+    f.say('rf', 'Press %s.' % button.rstrip(' .'), after=0.3); f.tap(*at('RFView', txt=button), page_key)
+def keypad_shots(f, base, page_id, box, box_id, shows, key='kp'):
+    """the number pad over a page (keybdB, page 57, no background of its own): the box touched, then each value shown"""
+    pad = base + 'click %s,0\nkeybdB.loadpageid.val=%d\nkeybdB.loadcmpid.val=%d\npage keybdB\n' % (box, page_id, box_id)
+    for i, s in enumerate(shows): f.shot('%s%d' % (key, i), pad + 'show.txt="%s"\n' % s)
+KEY = {'Delete': (558, 143), 'OK': (479, 433), 'Cancel': (242, 433)}   # (keybdB's keys, from its page: b200, b210, b251)
+KEY.update({str(d): (242 + ((d - 1) % 3) * 158, 201 + ((d - 1) // 3) * 58) for d in range(1, 10)}); KEY['0'] = (242, 375)
