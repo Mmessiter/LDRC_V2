@@ -29,8 +29,11 @@ TX_EXCLUDE = ['.pio', '.git', '.DS_Store', '__pycache__', 'TransmitterCode/.vsco
 #  repository; ReceiverCode, Tx_sd_read, Quadcopter = Version 1 leftovers; reviews = working notes; LICENSE etc. = the
 #  public repository has its own; README.md = replaced by TXV2/README.md, kept in the public repository itself)
 SCREEN_INCLUDE = ['src', 'lib', 'include', 'hmi', 'sd', 'dev', 'platformio.ini']
-SCREEN_EXCLUDE = ['.pio', '.DS_Store', '__pycache__', 'include/secrets.h', 'hmi/render_host/gen', 'hmi/test_*/test_*', '!hmi/test_*/test_*.cpp', 'hmi/fonts/*_aa.bin', 'hmi/fonts/*.bin', 'sd/.DS_Store']
-# (the screen's card folder sd/ goes whole, its font tables included: a builder copies it to a card and is done)
+SCREEN_EXCLUDE = ['.pio', '.DS_Store', '__pycache__', 'include/secrets.h', 'hmi/render_host/gen', 'hmi/test_*/test_*', '!hmi/test_*/test_*.cpp', 'hmi/fonts/*_aa.bin', 'hmi/fonts/*.bin', 'sd/.DS_Store',
+                  'sd/hmi/films/*.ldf', 'sd/hmi/films/*.wav']
+# (the screen's card folder sd/ goes whole, its font tables included: a builder copies it to a card and is done - all but the
+#  animations (17 Oct 2026): about 8 MB each, one for every help page, made by TXV1B dev/video and rebuilt now and then, they
+#  would grow the public history by hundreds of MB. A transmitter fetches them from messiter.com with Check for update.)
 KEEP_IN_PUBLIC = ['README.md', 'LICENSE']   # files of the public folders that are the public repository's own, never overwritten by the copy
 
 def run(cmd, cwd=None): subprocess.run(cmd, cwd=cwd, check=True)
