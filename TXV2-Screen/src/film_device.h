@@ -1,7 +1,8 @@
 // Films on the help pages (screen 1.11.85). Malcolm, 17 Oct 2026, of the instructional film made for him (Easy tuning,
 // from the transmitter): "I think the timing is now perfect! Can we run this animation on the screen of our transmitter?"
 // A help page whose subject has a film on the card - /hmi/films/<NAME>.ldf and its sound /hmi/films/<NAME>.wav, NAME as in the
-// page's Help button ("HelpView:EASY.TXT" -> EASY) - shows a "Film" button at its top left, mirroring Help at the top
+// page's Help button ("HelpView:EASY.TXT" -> EASY), or as /hmi/films/films.txt names it for that page (1.11.86: the
+// Rotorflight menu's help offers Easy tuning's film, since Easy tuning cannot open without the model) - shows a "Film" button at its top left, mirroring Help at the top
 // right; never while the motor could run - the safety off, or the motor enabled where no safety switch is defined (the
 // main board's own rule for the screen's radios, TxState flying() 1 and 2). A model merely connected, safety on, is
 // allowed: Easy tuning itself needs the helicopter on, and its help is where its film is wanted. The film
@@ -38,7 +39,8 @@ static void filmNoteHelp(const std::string &script) {
     if (n.empty()) return;
     filmTopic = n; filmTopicAt = millis(); filmLatched = false;
 }
-static std::string filmPath(const char *ext) { return "/hmi/films/" + filmTopic + ext; }   // (under /hmi: the folders every screen's updater takes - a /films of its own would have made an older screen refuse the release)
+static std::string filmName;                                     // the film the help page offers (films.txt, or the page's own name)
+static std::string filmPath(const char *ext) { return "/hmi/films/" + filmName + ext; }   // (under /hmi: the folders every screen's updater takes - a /films of its own would have made an older screen refuse the release)
 
 static void filmDrawButton(bool down) {
     if (!topReady()) return;
@@ -98,7 +100,7 @@ static void filmStop() {
 }
 static bool filmStart() {
     filmStop();
-    if (!sdOk || !filmAllowed() || filmTopic.empty() || !topReady()) return false;
+    if (!sdOk || !filmAllowed() || filmName.empty() || !topReady()) return false;
     filmFile = SD.open(filmPath(".ldf").c_str());
     if (!filmFile) return false;
     uint8_t head[ldrcfilm::HEADER_BYTES];
@@ -156,7 +158,12 @@ static void filmPoll() {
     if (!helpPage) { filmLatched = false; if (filmButtonUp()) filmButtonHide(); if (!filmTopic.empty() && now - filmTopicAt > FILM_HELP_WINDOW_MS) filmTopic.clear(); return; }
     if (!filmLatched) {
         if (filmTopic.empty() || now - filmTopicAt > FILM_HELP_WINDOW_MS) return;
-        filmLatched = true; filmHas = sdOk && SD.exists(filmPath(".ldf").c_str());
+        filmLatched = true;
+        std::string list;                                          // (1.11.86) which film this help page offers
+        if (sdOk) { File l = SD.open("/hmi/films/films.txt"); if (l) { while (l.available() && list.size() < 4096) list += (char) l.read(); l.close(); } }
+        char name[16]; ldrcfilm::filmFor(list.c_str(), filmTopic.c_str(), name, sizeof name);
+        filmName = name;
+        filmHas = sdOk && !filmName.empty() && SD.exists(filmPath(".ldf").c_str());
     }
     const bool want = filmHas && filmAllowed() && (!topOn || topWho == FILM_BTN_WHO);
     if (want && !filmButtonUp()) filmButtonShow();

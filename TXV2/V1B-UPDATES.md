@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Rotorflight menu's help offers Easy tuning's film (screen 1.11.86, Teensy B122 unchanged, 17 Oct 2026)
+
+Malcolm, after 1.11.85: "I updated, but I cannot find this film button". Easy tuning will not open without the model
+connected, so its help page - where the Film button was - could not be reached with the helicopter off. Now a list on
+the screen's card (/hmi/films/films.txt) says which help pages offer which film, and the Rotorflight menu's help, which
+opens without a model, offers Easy tuning's film. RFLIGHT.TXT says so.
+
 ## Films on the help pages: Easy tuning, on the transmitter (screen 1.11.85, Teensy B122 unchanged, 17 Oct 2026)
 
 Malcolm, of the instructional film made for him (dev/video): "I think the timing is now perfect! Can we run this animation

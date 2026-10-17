@@ -1,5 +1,7 @@
 View and change the setup of a flight controller that runs|
 Rotorflight (2.2 or later), at the field, with no laptop.||
+A SHORT FILM of Easy tuning: press 'Film', top left of this|
+help page (with the safety on). Tap anywhere to stop it.||
 A NEW HELICOPTER:|
 Set it up with the phone app: 'Rotorflight', 'Wizards',|
 'New helicopter' takes you through every step.|

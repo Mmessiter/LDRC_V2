@@ -1,0 +1,5 @@
+# Which help pages offer which film (screen 1.11.86): <help name>=<film name>.
+# The film is /hmi/films/<film name>.ldf with its sound <film name>.wav. A help page whose
+# own name is a film's (EASY) needs no line here.
+# The Rotorflight menu's help opens without the model; Easy tuning's needs it.
+RFLIGHT=EASY

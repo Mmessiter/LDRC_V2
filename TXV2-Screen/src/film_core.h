@@ -43,6 +43,40 @@ inline int32_t pictureFor(int32_t want, int32_t last, const uint8_t *t) {
     while (k > last && k > 0 && rd32(t + 8 * k + 4) == 0) --k;
     return k > last ? k : -1;
 }
+// Which film a help page offers (1.11.86). /hmi/films/films.txt holds lines "<help name>=<film name>" (a # starts a
+// note); a help page named in it offers that film, any other offers the film of its own name, if there is one. Malcolm
+// could not reach Easy tuning's help without the helicopter on (the page needs the model), so the Rotorflight menu's help
+// (RFLIGHT), which opens without one, offers Easy tuning's film too. Names are compared without regard to case; the
+// answer is upper case, at most 12 characters, letters, digits, '_' and '-' only (it becomes a path).
+inline void filmFor(const char *list, const char *topic, char *out, int outSize) {
+    auto up = [](char c) { return (char) (c >= 'a' && c <= 'z' ? c - 32 : c); };
+    auto ok = [](char c) { return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-'; };
+    int n = 0;
+    for (const char *s = topic; *s && n < outSize - 1 && n < 12; ++s) { const char c = up(*s); if (!ok(c)) break; out[n++] = c; }
+    out[n] = 0;
+    if (!list || !n) return;
+    const char *line = list;
+    while (*line) {
+        const char *end = line; while (*end && *end != '\n') ++end;
+        const char *p = line; while (p < end && (*p == ' ' || *p == '\t')) ++p;
+        if (p < end && *p != '#') {
+            const char *eq = p; while (eq < end && *eq != '=') ++eq;
+            if (eq < end) {
+                const char *a = p, *ae = eq; while (ae > a && (ae[-1] == ' ' || ae[-1] == '\t' || ae[-1] == '\r')) --ae;
+                bool same = (int) (ae - a) == n;
+                for (int i = 0; same && i < n; ++i) if (up(a[i]) != out[i]) same = false;
+                if (same) {
+                    const char *b = eq + 1; while (b < end && (*b == ' ' || *b == '\t')) ++b;
+                    char name[16]; int m = 0;
+                    while (b < end && m < 12 && m < outSize - 1) { const char c = up(*b); if (!ok(c)) break; name[m++] = c; ++b; }
+                    if (m > 0) { memcpy(out, name, (size_t) m); out[m] = 0; }
+                    return;
+                }
+            }
+        }
+        line = *end ? end + 1 : end;
+    }
+}
 // Where two rows of pixels differ: first .. last (last < first when they are the same)
 inline void rowDiff(const uint16_t *a, const uint16_t *b, int n, int &first, int &last) {
     first = 0; last = -1;
