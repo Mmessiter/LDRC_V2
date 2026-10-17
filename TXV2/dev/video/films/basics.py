@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Film BASICS: first-time basics, the first page, a tour. The words are BASICS.TXT's. Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from filmkit import Film, prefix, at
+from common import model_route, model_route_play, tx_route, tx_route_play, rf_route, rf_route_play, rfs, SAVE_SHOWN, FRONT_NO_MODEL
+f = Film('BASICS', 'First-time basics', 'What kind of helicopter, and its ESC')
+rf_route(f, 'Settings ...')
+f.shot('s', rfs('61.txt', '61_open')); f.shot('p', rfs('77.txt', '77_ready')); f.shot('e', rfs('77.txt', '77_ready', SAVE_SHOWN))
+f.line('title', 'First time basics. What kind of helicopter the flight controller is flying, and how it talks to the E S C.')
+f.line('s', 'This is the Rotorflight settings page. Press First time basics.')
+f.line('page', 'Set these once, when a model is new. Tap a choice to step to the next one. Tap a number to type.')
+f.line('swash', 'Swash type, which way the rotor turns, and the tail type.')
+f.line('esc', 'E S C signal and E S C brand.')
+f.line('poles', 'Motor pole count.')
+f.line('next', 'Next goes on to Gear ratio, then Ports, then Throttle calibration, with your changes kept.')
+f.line('save', 'Save writes all the first time basics pages, then restarts the flight controller. It asks first.')
+f.line('ok', 'OK leaves. With a change not saved it asks first.')
+f.line('end', "That's the first of the first time basics pages.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+rf_route_play(f, 'Settings ...', 's')
+f.say('s', 'Press First-time basics.', after=0.3); f.tap(*at('RFSetupView', 'b5'), 'p')
+f.say('page', 'First-time basics.')
+f.point(*at('BasicsView', 'ltn0'), 'swash', 'Swash, rotor, tail.')
+f.point(*at('BasicsView', 'ltn3'), 'esc', 'ESC signal and brand.')
+f.point(*at('BasicsView', 'ltn5'), 'poles', 'Motor poles.')
+f.point(*at('BasicsView', 'b2'), 'next', 'Next >.')
+f.under('e'); f.hold(0.6); f.point(*at('BasicsView', 'b3'), 'save', 'Save: then a restart.')
+f.point(*at('BasicsView', 'b1'), 'ok', 'OK.')
+f.end('end'); f.finish()

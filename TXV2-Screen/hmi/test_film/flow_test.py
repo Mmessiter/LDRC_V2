@@ -88,7 +88,7 @@ int main() {
     CHECK(filmIndex("CALIB") >= 0 && filmIndex("CURVES") > filmIndex("CALIB") && filmIndex("EASY") > filmIndex("CURVES"));   // (films.txt's order)
     { bool lab = false; for (auto &s : texts) if (s == "Animation") lab = true; CHECK(lab); }
     // 1b. a help page with none of its own: no button
-    page.name = "FrontView"; run(5000); helpTap("PONG"); run(100); CHECK(!filmButtonUp() && filmOwn == "PONG" && !filmHas);   // (a help page with no animation of its own)
+    page.name = "FrontView"; run(5000); helpTap("NOSUCH"); run(100); CHECK(!filmButtonUp() && filmOwn == "NOSUCH" && !filmHas);   // (a help page with no animation of its own: since 17 Oct every real one has one)
     page.name = "FrontView"; run(5000); helpTap("FRONT"); run(100); CHECK(filmButtonUp() && filmOwn == "FRONT");
     // 2. the log viewer (the same page, no Help tap): no button
     page.name = "FrontView"; run(5000); page.name = "LogView"; run(200); CHECK(!filmButtonUp());

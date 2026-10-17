@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Every help page has its own animation: sixty-two (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
+
+The last twelve: Black box, Calibrate the level (RFCALIB: the question is RF_FcSetup.h's), the four First-time basics pages
+(BASICS, BASICS2 gear ratio, BASICS3 ports, BASICS4 throttle calibration: Full throttle, RF_EscCal.h's question, held,
+Minimum), Backup & restore, Telemetry (DATA), Reconnection times (GAPS), GPS, Pong and the log (LOG). Every one of the 62
+help topics the pages' Help buttons name now has its own animation; the list holds them all, seven pages of ten, in the
+order of the setups. Each animation was checked as it was made (every touch on its point, every picture against the
+screen's own decoder), then looked at, every touch, on contact sheets rebuilt from the files themselves.
+
 ## Ten more Rotorflight animations (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
 
 Rotorflight settings (RFSETUP), the four Travel extents pages (TRAVEL, TRAVEL2 swash, TRAVEL3 tail, TRAVEL4 the bench

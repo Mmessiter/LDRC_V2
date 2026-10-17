@@ -1,8 +1,8 @@
 The front screen: keep it, or your own front screen, in view|
 while you fly. It shows the bank, rate, time, trims,|
 motor timer and batteries.||
-ANIMATIONS: a help page with an animation has 'Animation' at|
-its top left: how to do it, with sound. Safety on (or the|
+ANIMATIONS: every help page has 'Animation' at its top left:|
+how to do it, with sound. Safety on (or the|
 motor off, if no safety switch is set up).|
 Tap it to pause. Slide the bar to any moment. 'Play' carries|
 on, 'Animations' lists them all and 'Exit' leaves.||

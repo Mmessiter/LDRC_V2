@@ -11,6 +11,7 @@ ONESWICH: A switch's job
 AUDIO: Sounds and brightness
 LIPO: Batteries
 BUDDY: Wireless buddy
+PONG: Pong
 RXSETUP: Model setup
 MODELS: Choosing a model
 IDS: Model IDs
@@ -30,7 +31,11 @@ MIXES: Mixes
 MACROS: Macros
 FAILSAFE: Failsafe
 BANKNAME: Bank names
+LOG: The log
 LOGFILES: Log files
+DATA: Telemetry
+GAPS: Reconnection times
+GPS: GPS
 RFLIGHT: Rotorflight
 EASY: Rotorflight: Easy tuning
 PID: Rotorflight: PIDs
@@ -52,3 +57,10 @@ FILTERS2: Rotorflight: Filters, expert mode
 ADJUST: Rotorflight: Adjustments
 COPYBANK: Rotorflight: Copy a bank
 BATTERY: Rotorflight: Battery
+BLACKBOX: Rotorflight: Black box
+RFCALIB: Rotorflight: Calibrate the level
+BASICS: Rotorflight: First-time basics
+BASICS2: Rotorflight: Gear ratio
+BASICS3: Rotorflight: Ports
+BASICS4: Rotorflight: Throttle calibration
+BACKUP: Rotorflight: Backup & restore
