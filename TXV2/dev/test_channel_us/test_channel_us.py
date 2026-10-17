@@ -361,7 +361,7 @@ check(sp.count('ShowChannelMicros') == 1, 'one call')
 check(sp.index('ShowChannelMicros') > sp.rindex('SendValue(Ch_Lables[i]'), 'the numbers after the bars')
 check('FLASHMEM void ShowChannelMicros()' in main, 'ShowChannelMicros is FLASHMEM (ITCM is nearly full)')
 # B110: the curve page
-check('const int InputUs = StickMicros(InputDevice, InputAmount);' in sp and 'InputAmount = (InputUs - 1500) / 5;' in sp, 'the stick line placed from the same input as the number')
+check('const int InputUs = StickMicros(InputDevice, InputAmount);' in sp and 'map(InputUs, 1000, 2000, GRAPH_MARKER_FIRST, GRAPH_MARKER_LAST + 1)' in sp, 'the stick line placed from the same input as the number (B117: by the microsecond)')
 check('ShowGraphMicros(InputUs, SendBuffer[ChanneltoSet - 1]);' in sp, 'Output is what the channel sends')
 check('map(SendBuffer' not in sp and 'SendValue(ChannelInput' not in sp and 'SendValue(ChannelOutput' not in sp, 'no percentages left on the curve page')
 dc = lift('src/main.cpp', 'FASTRUN void DisplayCurve()')

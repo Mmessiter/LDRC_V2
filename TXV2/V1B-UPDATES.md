@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The curve page's stick marker moves smoothly (Teensy B117, screen 1.11.81 unchanged, 17 Oct 2026)
+
+Malcolm (photo of the Havok's aileron curve, Bank 4): "the refresh rate is low so as I move the stick the line moves in
+occasional jumps. It's not critical but it would be nice if it were smoother." Every move of the marker was a full
+redraw - the box filled black, the border, the reference lines, the curve's 26 to 30 segments, the dots and the rings:
+about 1.3 kB of commands and a flash of black - and only when the stick had moved 4 pixels, in steps of 3.6 (the
+position went through 2 % steps). Now GraphMarkerMove paints the column the marker covered black, puts back what lay in
+it (the reference lines' pixels, the curve's segments through that column - the very line commands DisplayCurve sends,
+so the pixels are the same - and any dot or ring those segments pass through) and draws the marker at its new place:
+at most 13 short commands, 325 bytes, in one write, for every 2 pixels of movement, with the marker's column worked out
+by the microsecond. The curve's segments are worked out in one place (CurveSegments) for the full draw and the mover
+alike. Host test dev/test_curve_marker: the new DisplayCurve sends byte for byte what the old one sent (440 curves,
+the old function compiled beside it from git), and 9,960 marker moves over every kind of curve leave a software screen
+pixel for pixel as a fresh full draw with the marker there would (the edges, the reference lines, through the dots,
+single pixels and jumps); a missing reference pixel, missing dots or a skipped segment each fail it.
+
 ## models.dat filled to its full size: every model slot reachable (Teensy B116, screen 1.11.81 unchanged, 17 Oct 2026)
 
 Malcolm ("Yes to both please"): the finding of the 17th made good, and it turned out bigger than Reset transmitter. The

@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B116 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B117 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -119,6 +119,13 @@
 #define BOXHEIGHT 395
 #define BOXBOTTOM BOXTOP + BOXHEIGHT
 #define BOXRIGHT BOXLEFT + BOXWIDTH
+// B117: the stick's marker on the curve page - its column's range and height; NO_MARKER = none on the glass
+#define GRAPH_MARKER_FIRST (BOXLEFT + 2)
+#define GRAPH_MARKER_LAST ((BOXRIGHT - BOXLEFT) - 1)
+#define GRAPH_MARKER_TOP (BOXTOP + 3)
+#define GRAPH_MARKER_BOTTOM ((BOXBOTTOM - 3) - BOXTOP)
+#define NO_MARKER 52735
+#define CURVE_SEGMENTS_MAX 64 // (a smoothed curve is 30 segments, an exponential one 26)
 
 // **************************************************************************
 //      GOVERNOR (RF)                    *
@@ -842,6 +849,8 @@ void RestoreBrightness();
 void ButtonWasPressed();
 void CalibrateEdgeSwitches();
 void DisplayCurve();
+uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y2); // B117
+void GraphMarkerMove(uint16_t From, uint16_t To);                           // B117
 void DrawLine(int x1, int y1, int x2, int y2, int c);
 void DrawBox(int x1, int y1, int x2, int y2, int c);
 void FillBox(int x1, int y1, int w, int h, int c);

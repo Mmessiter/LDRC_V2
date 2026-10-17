@@ -485,25 +485,19 @@ FASTRUN void ShowServoPos()
     {
         if (ChanneltoSet < 1 || ChanneltoSet > 16)
             return; // ClaudeFix-2-7-2026 ChanneltoSet can still be 0 when the graph page appears by an unusual route -- InPutStick[-1] was read
-        MinimumDistance = 4;
+        MinimumDistance = 2; // B117: a couple of pixels (it was 4, and the marker went in steps of 3.6)
         InputDevice = (InPutStick[ChanneltoSet - 1]);
         if (InputDevice < 8 && !InputIsSwitch(InputDevice)) // (B33)
             InputAmount = InputUnused(InputDevice) ? ChannelCentre[InputDevice] : AnalogueReed(InputDevice); // (B38)
         else
             InputAmount = ReadThreePositionSwitch(InputDevice);                                                   // not analogue
-        const int InputUs = StickMicros(InputDevice, InputAmount);                                                // B110: the stick, 1000 .. 2000
-        InputAmount = (InputUs - 1500) / 5;                                                                       // its place, -100 .. 100 (B110: each half by its own calibration; it was the high half's for both)
-        ShowGraphMicros(InputUs, SendBuffer[ChanneltoSet - 1]);                                                   // B110: Input and Output in microseconds (they were -100 .. 100; Output: SendBuffer[ChanneltoSet - 1], ClaudeFix-2-7-2026 - not SendBuffer[InputDevice])
-        StickPosition = map(constrain((InputAmount + 100) / 2, 0, 100), 0, 100, BOXLEFT + 2, BOXRIGHT - BOXLEFT); // map to box size
-        StickPosition = constrain(StickPosition, BOXLEFT + 2, (BOXRIGHT - BOXLEFT) - 1);                          // not outside box!
+        const int InputUs = StickMicros(InputDevice, InputAmount);                                                // B110: the stick, 1000 .. 2000 (each half by its own calibration)
+        ShowGraphMicros(InputUs, SendBuffer[ChanneltoSet - 1]);                                                   // B110: Input and Output in microseconds (Output: SendBuffer[ChanneltoSet - 1], ClaudeFix-2-7-2026 - not SendBuffer[InputDevice])
+        StickPosition = constrain(map(InputUs, 1000, 2000, GRAPH_MARKER_FIRST, GRAPH_MARKER_LAST + 1), GRAPH_MARKER_FIRST, GRAPH_MARKER_LAST); // B117: the marker's column by the microsecond (it went in 2 % steps of 3.6 pixels)
 
-        // Only redraw if the position has changed enough
-        if ((abs(StickPosition - SavedLineX) > MinimumDistance))
+        if (abs((int)StickPosition - (int)SavedLineX) >= MinimumDistance)
         {
-            // Simply do a full redraw - this is easiest and most reliable
-            DisplayCurve();
-            // Then draw vertical line for stick position on top
-            DrawLine(StickPosition, BOXTOP + 3, StickPosition, (BOXBOTTOM - 3) - BOXTOP, HighlightColour);
+            GraphMarkerMove(SavedLineX, StickPosition); // B117: only the marker moves; the curve stays (it was a full redraw each time: 1.5 kB and a flash of black)
             SavedLineX = StickPosition;
         }
     }
@@ -1953,6 +1947,123 @@ FASTRUN void updateInterpolationTypes()
 
 /*********************************************************************************************************************************/
 
+// B117 (Malcolm, 17 Oct 2026: "as I move the stick the line moves in occasional jumps"). The curve is a run of line
+// commands; here they are worked out once, in the order and with the arithmetic DisplayCurve has always used, so that the
+// stick's marker can be moved by redrawing only the segments through the column it covered (GraphMarkerMove) instead of
+// the whole curve. Each segment is the command "line x1,y1,x2,y2": for the smoothed and exponential curves (x1,y1) is
+// the newer point and (x2,y2) the one before it, as it was always drawn. Returns how many there are.
+FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y2)
+{
+    uint8_t n = 0;
+    int xDot1, yDot1, xDot2 = 0, yDot2 = 0;
+    double xPoint, yPoint;
+    if (InterpolationTypes[Bank][ChanneltoSet - 1] == STRAIGHTLINES)
+    { // four straight lines, point to point
+        for (int i = 0; i < 4; ++i)
+        {
+            x1[n] = (int)xPoints[i];
+            y1[n] = (int)yPoints[i];
+            x2[n] = (int)xPoints[i + 1];
+            y2[n] = (int)yPoints[i + 1];
+            ++n;
+        }
+        return n;
+    }
+    if (InterpolationTypes[Bank][ChanneltoSet - 1] == SMOOTHEDCURVES)
+    { // CatmullSpline, a point every 12 pixels
+        int adaptiveStep = 12;
+        for (xPoint = xPoints[0]; xPoint <= xPoints[4]; xPoint += adaptiveStep)
+        {
+            if (adaptiveStep > xPoints[4] - xPoint)
+                adaptiveStep = xPoints[4] - xPoint;
+            if (adaptiveStep < 1)
+                adaptiveStep = 1;
+            yPoint = Interpolation::CatmullSpline(xPoints, yPoints, PointsCount, xPoint);
+            xDot1 = xPoint;
+            yDot1 = yPoint;
+            if (yDot2 == 0)
+            { // the first point: nothing to draw yet
+                xDot2 = xDot1;
+                yDot2 = yDot1;
+                continue;
+            }
+            if (n < CURVE_SEGMENTS_MAX)
+            {
+                x1[n] = xDot1;
+                y1[n] = yDot1;
+                x2[n] = xDot2;
+                y2[n] = yDot2;
+                ++n;
+            }
+            xDot2 = xDot1;
+            yDot2 = yDot1;
+        }
+        return n;
+    }
+    // EXPONENTIALCURVES: the lower half from the left end to the centre, then the upper half from the right end back to the centre
+    const float HalfXRange = xPoints[4] - xPoints[2];
+    const float TopHalfYRange = yPoints[4] - yPoints[2];
+    const float BottomHalfYRange = yPoints[2] - yPoints[0];
+    int adaptiveStep = 14;
+    for (xPoint = 0; xPoint <= HalfXRange; xPoint += adaptiveStep)
+    {
+        yPoint = MapWithExponential(HalfXRange - xPoint, HalfXRange, 0, 0, BottomHalfYRange, Exponential[Bank][ChanneltoSet - 1]);
+        if (adaptiveStep > HalfXRange - xPoint)
+            adaptiveStep = HalfXRange - xPoint;
+        if (adaptiveStep < 1)
+            adaptiveStep = 1;
+        yDot1 = yPoint + yPoints[0];
+        xDot1 = xPoint + xPoints[0];
+        if (yDot2 == 0)
+        {
+            xDot2 = xDot1;
+            yDot2 = yDot1;
+            continue;
+        }
+        if (n < CURVE_SEGMENTS_MAX)
+        {
+            x1[n] = xDot1;
+            y1[n] = yDot1;
+            x2[n] = xDot2;
+            y2[n] = yDot2;
+            ++n;
+        }
+        xDot2 = xDot1;
+        yDot2 = yDot1;
+    }
+    adaptiveStep = 14;
+    yDot2 = 0;
+    for (xPoint = HalfXRange; xPoint >= 0; xPoint -= adaptiveStep)
+    {
+        yPoint = MapWithExponential(xPoint, 0, HalfXRange, 0, TopHalfYRange, Exponential[Bank][ChanneltoSet - 1]);
+        if (adaptiveStep > xPoint)
+            adaptiveStep = xPoint;
+        if (adaptiveStep < 1)
+            adaptiveStep = 1;
+        yDot1 = yPoint + yPoints[2];
+        xDot1 = xPoint + xPoints[2];
+        if (yDot2 == 0)
+        {
+            xDot2 = xDot1;
+            yDot2 = yDot1;
+            continue;
+        }
+        if (n < CURVE_SEGMENTS_MAX)
+        {
+            x1[n] = xDot1;
+            y1[n] = yDot1;
+            x2[n] = xDot2;
+            y2[n] = yDot2;
+            ++n;
+        }
+        xDot2 = xDot1;
+        yDot2 = yDot1;
+    }
+    return n;
+}
+
+/*********************************************************************************************************************************/
+
 FASTRUN void DisplayCurve()
 {
 
@@ -1961,16 +2072,12 @@ FASTRUN void DisplayCurve()
     char tempCmd[80];                  // Temporary buffer for individual commands
     char endMarker[] = "\xFF\xFF\xFF"; // Nextion end marker
 
-    float HalfXRange;
-    float TopHalfYRange;
-    float BottomHalfYRange;
     int xDot1;
     int yDot1;
     int xDot2 = 0;
     int yDot2 = 0;
     int DotSize = 4;
     int DotColour = 65535; // White
-    double xPoint, yPoint;
 
     // Constrain degrees values
     p = constrain(MinDegrees[Bank][ChanneltoSet - 1], 0, 180);
@@ -2083,164 +2190,22 @@ FASTRUN void DisplayCurve()
     NEXTION.print(cmdBuffer);
     cmdBuffer[0] = '\0'; // Reset buffer
 
-    // 4. Draw the curve based on interpolation type
-
-    if (InterpolationTypes[Bank][ChanneltoSet - 1] == STRAIGHTLINES)
-    { // Linear
-        // Draw just 4 straight lines - already efficient, just batch them
-        sprintf(tempCmd, "line %d,%d,%d,%d,%d",
-                (int)xPoints[0], (int)yPoints[0], (int)xPoints[1], (int)yPoints[1], ForeGroundColour);
-        strcat(cmdBuffer, tempCmd);
-        strcat(cmdBuffer, endMarker);
-
-        sprintf(tempCmd, "line %d,%d,%d,%d,%d",
-                (int)xPoints[1], (int)yPoints[1], (int)xPoints[2], (int)yPoints[2], ForeGroundColour);
-        strcat(cmdBuffer, tempCmd);
-        strcat(cmdBuffer, endMarker);
-
-        sprintf(tempCmd, "line %d,%d,%d,%d,%d",
-                (int)xPoints[2], (int)yPoints[2], (int)xPoints[3], (int)yPoints[3], ForeGroundColour);
-        strcat(cmdBuffer, tempCmd);
-        strcat(cmdBuffer, endMarker);
-
-        sprintf(tempCmd, "line %d,%d,%d,%d,%d",
-                (int)xPoints[3], (int)yPoints[3], (int)xPoints[4], (int)yPoints[4], ForeGroundColour);
-        strcat(cmdBuffer, tempCmd);
-        strcat(cmdBuffer, endMarker);
-    }
-    else if (InterpolationTypes[Bank][ChanneltoSet - 1] == SMOOTHEDCURVES)
-    { // CatmullSpline
-        // Use adaptive step size for smooth curves
-        yDot2 = 0;
-        // Increase step size to reduce total points
-        int adaptiveStep = 12; // Larger than original 8 to reduce points
-
-        for (xPoint = xPoints[0]; xPoint <= xPoints[4]; xPoint += adaptiveStep)
-        {
-            if (adaptiveStep > xPoints[4] - xPoint)
-            {
-                adaptiveStep = xPoints[4] - xPoint;
-            }
-            if (adaptiveStep < 1)
-                adaptiveStep = 1;
-
-            yPoint = Interpolation::CatmullSpline(xPoints, yPoints, PointsCount, xPoint);
-            xDot1 = xPoint;
-            yDot1 = yPoint;
-
-            if (yDot2 == 0)
-            {
-                xDot2 = xDot1;
-                yDot2 = yDot1;
-                continue; // Skip first point, nothing to draw yet
-            }
-
-            sprintf(tempCmd, "line %d,%d,%d,%d,%d", xDot1, yDot1, xDot2, yDot2, ForeGroundColour);
-            strcat(cmdBuffer, tempCmd);
-            strcat(cmdBuffer, endMarker);
-
-            // Send if buffer getting full
-            if (strlen(cmdBuffer) > 400)
-            {
-                NEXTION.print(cmdBuffer);
-                cmdBuffer[0] = '\0'; // Reset buffer
-            }
-
-            xDot2 = xDot1;
-            yDot2 = yDot1;
-        }
-    }
-    else if (InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES)
-    { // EXPO
-        // For exponential curves
+    // 4. Draw the curve: its segments (B117: CurveSegments - the same lines as always, worked out in one place)
+    if (InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES)
         CheckInvisiblePoint();
-
-        HalfXRange = xPoints[4] - xPoints[2];
-        TopHalfYRange = yPoints[4] - yPoints[2];
-        BottomHalfYRange = yPoints[2] - yPoints[0];
-        yDot2 = 0;
-
-        // Use adaptive step size but with fewer points
-        int adaptiveStep = 14; // Increased from APPROXIMATION = 7
-
-        // Left half of exponential curve
-        for (xPoint = 0; xPoint <= HalfXRange; xPoint += adaptiveStep)
+    {
+        int16_t sx1[CURVE_SEGMENTS_MAX], sy1[CURVE_SEGMENTS_MAX], sx2[CURVE_SEGMENTS_MAX], sy2[CURVE_SEGMENTS_MAX];
+        const uint8_t Segments = CurveSegments(sx1, sy1, sx2, sy2);
+        for (uint8_t i = 0; i < Segments; ++i)
         {
-            yPoint = MapWithExponential(HalfXRange - xPoint, HalfXRange, 0, 0, BottomHalfYRange,
-                                        Exponential[Bank][ChanneltoSet - 1]);
-
-            if (adaptiveStep > HalfXRange - xPoint)
-            {
-                adaptiveStep = HalfXRange - xPoint;
-            }
-            if (adaptiveStep < 1)
-                adaptiveStep = 1;
-
-            yDot1 = yPoint + yPoints[0];
-            xDot1 = xPoint + xPoints[0];
-
-            if (yDot2 == 0)
-            {
-                xDot2 = xDot1;
-                yDot2 = yDot1;
-                continue; // Skip first point, nothing to draw yet
-            }
-
-            sprintf(tempCmd, "line %d,%d,%d,%d,%d", xDot1, yDot1, xDot2, yDot2, ForeGroundColour);
+            sprintf(tempCmd, "line %d,%d,%d,%d,%d", sx1[i], sy1[i], sx2[i], sy2[i], ForeGroundColour);
             strcat(cmdBuffer, tempCmd);
             strcat(cmdBuffer, endMarker);
-
-            // Send if buffer getting full
             if (strlen(cmdBuffer) > 400)
-            {
+            { // Send if buffer getting full
                 NEXTION.print(cmdBuffer);
-                cmdBuffer[0] = '\0'; // Reset buffer
+                cmdBuffer[0] = '\0';
             }
-
-            xDot2 = xDot1;
-            yDot2 = yDot1;
-        }
-
-        // Reset for right half of exponential curve
-        adaptiveStep = 14;
-        yDot2 = 0;
-
-        // Right half of exponential curve
-        for (xPoint = HalfXRange; xPoint >= 0; xPoint -= adaptiveStep)
-        {
-            yPoint = MapWithExponential(xPoint, 0, HalfXRange, 0, TopHalfYRange,
-                                        Exponential[Bank][ChanneltoSet - 1]);
-
-            if (adaptiveStep > xPoint)
-            {
-                adaptiveStep = xPoint;
-            }
-            if (adaptiveStep < 1)
-                adaptiveStep = 1;
-
-            yDot1 = yPoint + yPoints[2];
-            xDot1 = xPoint + xPoints[2];
-
-            if (yDot2 == 0)
-            {
-                xDot2 = xDot1;
-                yDot2 = yDot1;
-                continue; // Skip first point, nothing to draw yet
-            }
-
-            sprintf(tempCmd, "line %d,%d,%d,%d,%d", xDot1, yDot1, xDot2, yDot2, ForeGroundColour);
-            strcat(cmdBuffer, tempCmd);
-            strcat(cmdBuffer, endMarker);
-
-            // Send if buffer getting full
-            if (strlen(cmdBuffer) > 400)
-            {
-                NEXTION.print(cmdBuffer);
-                cmdBuffer[0] = '\0'; // Reset buffer
-            }
-
-            xDot2 = xDot1;
-            yDot2 = yDot1;
         }
     }
 
@@ -2309,8 +2274,92 @@ FASTRUN void DisplayCurve()
             selected_x, selected_y, DotSize + 3, Black);
     SendCommand(fill_cmd);
 
+    SavedLineX = NO_MARKER; // B117: a full redraw has no marker on it; ShowServoPos draws it afresh (and then only moves it)
+
     // Update interpolation types UI
     updateInterpolationTypes();
+}
+
+/*********************************************************************************************************************************/
+// B117. The stick's marker on the curve page (the vertical line) moves without redrawing the curve: the column it covered
+// is painted black, what lay there is put back - the reference lines' pixels, the curve's segments through that column
+// (the very line commands DisplayCurve sends, so the pixels are the same), any dot those segments pass through - and the
+// marker is drawn at its new place. A dozen short commands in one write, where a full redraw was 1.5 kB and a flash of
+// black, so the marker follows the stick smoothly (ShowServoPos, 25 times a second, a pixel at a time).
+FLASHMEM static void GraphCmd(char *Buffer, const char *Cmd)
+{ // appends a command and its end marker, sending the buffer first when the command would not fit
+    if (strlen(Buffer) + strlen(Cmd) + 3 >= 500)
+    {
+        NEXTION.print(Buffer);
+        Buffer[0] = 0;
+    }
+    strcat(Buffer, Cmd);
+    strcat(Buffer, "\xFF\xFF\xFF");
+}
+FLASHMEM void GraphMarkerMove(uint16_t From, uint16_t To)
+{
+    char Buffer[512] = "";
+    char Cmd[80];
+    if (From >= GRAPH_MARKER_FIRST && From <= GRAPH_MARKER_LAST)
+    { // the old marker's column, then what it covered, in the order DisplayCurve draws
+        snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", From, GRAPH_MARKER_TOP, From, GRAPH_MARKER_BOTTOM, Black);
+        GraphCmd(Buffer, Cmd);
+        const int RefY = (BOXHEIGHT / 2) + 20; // the horizontal reference line's pixel
+        snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", From, RefY, From, RefY, SpecialColour);
+        GraphCmd(Buffer, Cmd);
+        if (From == (int)xPoints[2])
+        { // the vertical reference line
+            snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", (int)xPoints[2], BOXTOP, (int)xPoints[2], BOXHEIGHT, SpecialColour);
+            GraphCmd(Buffer, Cmd);
+        }
+        int16_t sx1[CURVE_SEGMENTS_MAX], sy1[CURVE_SEGMENTS_MAX], sx2[CURVE_SEGMENTS_MAX], sy2[CURVE_SEGMENTS_MAX];
+        const uint8_t Segments = CurveSegments(sx1, sy1, sx2, sy2);
+        int Left = From, Right = From; // how far the redrawn segments reach
+        for (uint8_t i = 0; i < Segments; ++i)
+        {
+            const int lo = sx1[i] < sx2[i] ? sx1[i] : sx2[i], hi = sx1[i] < sx2[i] ? sx2[i] : sx1[i];
+            if (lo <= From && From <= hi)
+            {
+                snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", sx1[i], sy1[i], sx2[i], sy2[i], ForeGroundColour);
+                GraphCmd(Buffer, Cmd);
+                if (lo < Left)
+                    Left = lo;
+                if (hi > Right)
+                    Right = hi;
+            }
+        }
+        const bool Expo = InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES;
+        for (int i = 0; i < 5; ++i)
+        { // the dots those lines pass through, as DisplayCurve draws them (three for an exponential curve)
+            if (Expo && (i == 1 || i == 3))
+                continue;
+            const int dx = (int)xPoints[i];
+            if (dx + 4 >= Left && dx - 4 <= Right)
+            {
+                snprintf(Cmd, sizeof(Cmd), "cirs %d,%d,%d,%d", dx, (int)yPoints[i], 4, White);
+                GraphCmd(Buffer, Cmd);
+            }
+        }
+        const int SelX = (int)xPoints[CurrentPoint - 1], SelY = (int)yPoints[CurrentPoint - 1];
+        if (SelX + 10 >= Left && SelX - 10 <= Right)
+        { // the chosen dot's rings
+            snprintf(Cmd, sizeof(Cmd), "cirs %d,%d,%d,%d", SelX, SelY, 10, White);
+            GraphCmd(Buffer, Cmd);
+            snprintf(Cmd, sizeof(Cmd), "cirs %d,%d,%d,%d", SelX, SelY, 8, HighlightColour);
+            GraphCmd(Buffer, Cmd);
+            snprintf(Cmd, sizeof(Cmd), "cirs %d,%d,%d,%d", SelX, SelY, 6, HighlightColour);
+            GraphCmd(Buffer, Cmd);
+            snprintf(Cmd, sizeof(Cmd), "cirs %d,%d,%d,%d", SelX, SelY, 7, Black);
+            GraphCmd(Buffer, Cmd);
+        }
+    }
+    if (To >= GRAPH_MARKER_FIRST && To <= GRAPH_MARKER_LAST)
+    {
+        snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", To, GRAPH_MARKER_TOP, To, GRAPH_MARKER_BOTTOM, HighlightColour);
+        GraphCmd(Buffer, Cmd);
+    }
+    if (Buffer[0])
+        NEXTION.print(Buffer);
 }
 
 /*********************************************************************************************************************************/
@@ -2748,13 +2797,13 @@ FASTRUN void DisplayCurveAndServoPos()
 {
     ClearBox();
     DelayWithDog(5);
-    SavedLineX = 52735; // just to be massvely different
+    DisplayCurve(); // B117: the curve (ShowServoPos used to redraw it all for the marker; now it only moves the marker)
     for (int i = 0; i < 2; ++i)
     {
         GraphShown[i] = 0; // B110: Input and Output shown afresh
         GraphMovedAt[i] = 0;
     }
-    ShowServoPos();     // this calls displaycurve!!!
+    ShowServoPos(); // the stick's marker, when its moment comes
     ClearText();
 }
 
