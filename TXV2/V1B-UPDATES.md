@@ -186,6 +186,25 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Animations: each help page plays its own; the list of them all (screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
+
+Malcolm: "I suggest we change the word 'films' to 'videos' or 'animations' if there is room for the longer word. At the
+top of every help screen ... a video button top left. But this should bring up only the video which pertains to that
+particular help menu. So there will be a different one for each help screen. ... when we pause, I think this should
+change to videos (or animations) in the plural, and that button should offer all of the available help videos."
+
+- **The word.** "Animation" and "Animations" (126 px in the buttons' font: they fit, so the longer word).
+- **A help page's own.** A help page whose animation is on the card shows "Animation" at its top left, and it plays that
+  one at once: the help file's name is the animation's (help EASY.TXT plays EASY.ldf), or films.txt gives another with a
+  line "<HELP>=<NAME>" (RFLIGHT=EASY: the Rotorflight menu's help, which opens without a model, plays Easy tuning's). A help
+  page with none of its own shows no button.
+- **The list.** The paused bar's middle button is "Animations": the list of them all, ten to a page (< Previous, Next >,
+  "Page 1 of 3", OK bottom right; the pages go round), opened at the page holding the one paused. Up to 96.
+- **Back where it started.** An animation started from a help page goes back to that help page at its end; one chosen
+  from the list goes back to the list. Exit always leaves for the help page.
+- FRONT.TXT, EASY.TXT and RFLIGHT.TXT say "Animation(s)". Flow test 63 checks (a page with none: no button; RFLIGHT's
+  plays EASY at once; the list's title, hint and paging on a made-up card of 25; back where it started).
+
 ## Films: Play, Films and Exit on the bar (screen 1.11.90, Teensy B123 unchanged, 17 Oct 2026)
 
 Malcolm, of 1.11.89: "That is absolutely perfect. Well done!!! Now that we have this wonderful bar, I think we no longer

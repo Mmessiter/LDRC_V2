@@ -19,6 +19,7 @@
 //   @banner TEXT     the two-second banner along the top, saying TEXT
 //   @pipe [late]     "Connecting Bluetooth" over the Rotorflight menu (late: after six seconds of trying)
 //   @film menu | NAME SECONDS [drag TO]   the films menu; a film paused at SECONDS, its bar and slider (film.h)
+//   @measure TEXT    prints TEXT's width in fonts 0, 2 and 6 (will a label fit its button?)
 // Each is drawn over whatever is on the glass, as the screen lays its layer over the Teensy's page.
 #pragma once
 #include <dirent.h>
@@ -340,6 +341,7 @@ static bool ownCommand(const std::string &s) {
     if (s.rfind("@link ", 0) == 0) { linkShot(arg(6)); return true; }
     if (s.rfind("@banner ", 0) == 0) { banner(arg(8).c_str()); return true; }
     if (s.rfind("@film ", 0) == 0) { filmShot(arg(6)); return true; }
+    if (s.rfind("@measure ", 0) == 0) { const std::string w = arg(9); printf("measure \"%s\": font0 %d, font2 %d, font6 %d px\n", w.c_str(), textWidth(0, w), textWidth(2, w), textWidth(6, w)); return true; }   // (a label's width in the screen's own fonts)
     if (s == "@pipe" || s == "@pipe late") { pipeNoticeLate = s == "@pipe late"; pipeNoticeDraw(); return true; }
     return false;
 }

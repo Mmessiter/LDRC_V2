@@ -2,6 +2,7 @@
 // its bar and slider - drawn by the screen's own code and fonts over the film's own picture, decoded by JPEGDEC as on the
 // screen. Included by own.h.
 //   @film menu                    the films menu
+//   @film button TOPIC            a help page's own "Animation" button (Help tapped for TOPIC.TXT), over the page shown
 //   @film NAME SECONDS            film NAME (sd/hmi/films/NAME.ldf) played to SECONDS, then a tap: paused - the bar, the slider
 //   @film NAME SECONDS drag TO    ... and a finger on the slider at TO seconds: the picture there
 #pragma once
@@ -15,6 +16,11 @@ static uint16_t *topFb = nullptr;                                  // (the layer
 static void filmShot(const std::string &args) {
     topFb = fbNow; page.name = "LogView";                          // (a film plays over a help page)
     if (args == "menu") { filmReadList(); filmMenuOpen(); return; }
+    if (args.rfind("button ", 0) == 0) {                            // (1.11.91) a help page's own "Animation" button: Help tapped for TOPIC
+        filmNoteHelp("print \"HelpView:" + args.substr(7) + ".TXT\""); filmPoll();
+        if (!filmButtonUp()) fprintf(stderr, "render: @film %s: that help page has no animation of its own\n", args.c_str());
+        return;
+    }
     char name[24] = {0}, word[8] = {0}; double secs = 0, to = -1;
     const int n = sscanf(args.c_str(), "%23s %lf %7s %lf", name, &secs, word, &to);
     if (n < 2) { fprintf(stderr, "render: @film %s: NAME SECONDS [drag TO]\n", args.c_str()); return; }

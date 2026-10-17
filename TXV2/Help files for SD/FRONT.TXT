@@ -1,12 +1,11 @@
 The front screen: keep it, or your own front screen, in view|
 while you fly. It shows the bank, rate, time, trims,|
 motor timer and batteries.||
-FILMS: every help page has 'Films' at its top left: short|
-films of how to do things, with sound. Safety on (or the|
+ANIMATIONS: a help page with an animation has 'Animation' at|
+its top left: how to do it, with sound. Safety on (or the|
 motor off, if no safety switch is set up).|
-Tap a film to pause it. Slide the bar to any moment.|
-'Play' carries on, 'Films' goes back to the list and 'Exit'|
-leaves the films.||
+Tap it to pause. Slide the bar to any moment. 'Play' carries|
+on, 'Animations' lists them all and 'Exit' leaves.||
 'Transmitter' and 'Model' (bottom corners) open the setups.||
 'Defined screens' (bottom middle) shows your own front screen|
 instead, with your choice of numbers, big and clear.|

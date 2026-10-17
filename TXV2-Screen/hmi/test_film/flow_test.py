@@ -75,24 +75,34 @@ static void finger(bool pressed, int x, int y) {
 static void tap(int x, int y) { for (int i = 0; i < 8; ++i) { finger(true, x, y); nowMs += 10; filmPoll(); } for (int i = 0; i < 12; ++i) { finger(false, 0, 0); nowMs += 10; filmPoll(); } }
 static void helpTap(const char *topic) { std::string s = std::string("print \"HelpView:") + topic + ".TXT\"\nLogView.t0.txt=\"x\""; filmNoteHelp(s); nowMs += 50; page.name = "LogView"; }
 int main() {
-    // 1. Help on a page: the Films button appears on the help page, with the films of films.txt that are on the card
+    // 1. (1.11.91) Help on a page with an animation of its own: "Animation" at its top left; the list (films.txt's, those on the card) read
     page.name = "EasyView"; run(100); CHECK(!filmButtonUp());
-    helpTap("EASY"); run(100);
-    CHECK(filmButtonUp() && filmCount >= 3);
+    texts.clear(); helpTap("EASY"); run(100);
+    CHECK(filmButtonUp() && filmOwn == "EASY" && filmCount == 3);
     CHECK(!strcmp(filmList[0].name, "CALIB") && !strcmp(filmList[1].name, "CURVES") && !strcmp(filmList[2].name, "EASY"));
+    { bool lab = false; for (auto &s : texts) if (s == "Animation") lab = true; CHECK(lab); }
+    // 1b. a help page with none of its own: no button
+    page.name = "FrontView"; run(5000); helpTap("FRONT"); run(100); CHECK(!filmButtonUp() && filmOwn == "FRONT" && !filmHas);
     // 2. the log viewer (the same page, no Help tap): no button
     page.name = "FrontView"; run(5000); page.name = "LogView"; run(200); CHECK(!filmButtonUp());
-    // 3. Help again, then the button: the menu - and the main board told at once that someone is here (its screen timeout waits)
-    page.name = "RFView"; run(100); helpTap("RFLIGHT"); run(100); CHECK(filmButtonUp());
+    // 3. the Rotorflight menu's help (films.txt: RFLIGHT=EASY): its button plays Easy tuning's at once - no list - and the main
+    // board is told at once that someone is watching (its screen timeout waits), then every 15 s
+    page.name = "RFView"; run(100); helpTap("RFLIGHT"); run(100); CHECK(filmButtonUp() && filmOwn == "EASY");
     sentToTeensy.clear();
-    tap(80, 30); run(50); CHECK(filmMenuUp() && !filmUp());
+    tap(80, 30); run(50); CHECK(filmUp() && filmPlaying && filmName == "EASY" && !filmMenuUp() && !filmFromList);
     CHECK(awakes() == 1);
-    run(31000); CHECK(awakes() == 3);                     // (every 15 s while the menu is up)
-    // 4. a tap on nothing: nothing; on the second film: it plays, with its sound from the start
+    run(31000); CHECK(awakes() == 3);
+    // 3b. paused: the bar's "Animations" opens the list of them all, at this one's page, with its title and hint
+    texts.clear(); tap(400, 200); run(50); CHECK(filmPaused);
+    { bool lab = false; for (auto &s : texts) if (s == "Animations") lab = true; CHECK(lab); }
+    { int fx, fy, fw, fh; filmCtlRect(FILM_CTL_FILMS, fx, fy, fw, fh); texts.clear(); tap(fx + fw / 2, fy + fh / 2); run(50); }
+    CHECK(filmMenuUp() && !filmPlaying && filmMenuPage == 0 && filmMenuPages() == 1);
+    { bool title = false, hint = false; for (auto &s : texts) { if (s == "Animations") title = true; if (s.rfind("While an animation plays", 0) == 0) hint = true; } CHECK(title && hint); }
+    // 4. a tap on nothing: nothing; on the second: it plays, with its sound from the start
     tap(300, 30); run(50); CHECK(filmMenuUp());
     int x, y, w, h; filmMenuRect(1, x, y, w, h);
     tap(x + w / 2, y + h / 2); run(50);
-    CHECK(filmUp() && filmPlaying && !filmPaused && filmName == "CURVES" && audioId == FILM_AUDIO_ID && audioPath == "/hmi/films/CURVES.wav" && audioFrom == 0 && filmPictures >= 1);
+    CHECK(filmUp() && filmPlaying && filmFromList && !filmPaused && filmName == "CURVES" && audioId == FILM_AUDIO_ID && audioPath == "/hmi/films/CURVES.wav" && audioFrom == 0 && filmPictures >= 1);
     CHECK(filmHead.version == 3 && filmSectionCount >= 10);
     run(3000); CHECK(filmPlaying && filmPictures == 1);   // (the title card: still, nothing new to decode)
     run(9000); CHECK(filmPlaying && filmPictures > 1 && filmLast > 0);
@@ -156,34 +166,57 @@ int main() {
       int ex, ey, ew, eh; filmCtlRect(FILM_CTL_EXIT, ex, ey, ew, eh); tap(ex + ew / 2, ey + eh / 2);
       CHECK(!filmPlaying && !filmUp() && !filmMenuUp() && audioId == -1);
       run(100); CHECK(filmButtonUp());
-      tap(80, 30); run(50); CHECK(filmMenuUp());                      // (the menu again, for what follows)
+      tap(80, 30); run(300); tap(400, 200); run(50);                  // (the list again, for what follows: the page's own, paused, "Animations")
+      { int fx, fy, fw, fh; filmCtlRect(FILM_CTL_FILMS, fx, fy, fw, fh); tap(fx + fw / 2, fy + fh / 2); run(50); }
+      CHECK(filmMenuUp());
     }
     // 11. a film to its end: back to the menu
     filmMenuRect(2, x, y, w, h); tap(x + w / 2, y + h / 2); run(50); CHECK(filmPlaying && filmName == "EASY");
     const uint32_t len = ldrcfilm::lengthMs(filmHead); run(len + 1500);
     CHECK(!filmPlaying && filmMenuUp());
     printf("EASY played to its end: %u pictures shown, %u late\n", (unsigned) filmPictures, (unsigned) filmSkipped);
-    // 12. Films on the bar: the menu
-    filmMenuRect(0, x, y, w, h); tap(x + w / 2, y + h / 2); run(2000); tap(400, 200); run(50); CHECK(filmPaused);
+    // 12. "Animations" on the bar (one from the list): the list, at its page
+    filmMenuRect(0, x, y, w, h); tap(x + w / 2, y + h / 2); run(2000); tap(400, 200); run(50); CHECK(filmPaused && filmName == "CALIB");
     { int fx, fy, fw, fh; filmCtlRect(FILM_CTL_FILMS, fx, fy, fw, fh); tap(fx + fw / 2, fy + fh / 2); run(50); CHECK(!filmPlaying && filmMenuUp()); }
     // 13. OK: the help page again, its button back
     filmMenuRect(FILM_OK, x, y, w, h); tap(x + w / 2, y + h / 2); run(100);
     CHECK(!filmMenuUp() && filmButtonUp());
+    // 13b. (1.11.91) started from the help page's button, the end comes back to the help page - its button - not the list
+    tap(80, 30); run(50); CHECK(filmPlaying && !filmFromList && filmName == "EASY");
+    run(ldrcfilm::lengthMs(filmHead) + 1500); CHECK(!filmPlaying && !filmMenuUp() && filmButtonUp());
     // 14. the safety off while a film plays (or is paused): it stops, no menu, no button; on again: the button
-    tap(80, 30); run(50); filmMenuRect(0, x, y, w, h); tap(x + w / 2, y + h / 2); run(500); CHECK(filmPlaying && filmName == "CALIB");
+    tap(80, 30); run(500); CHECK(filmPlaying && filmName == "EASY");
     tap(400, 200); run(50); CHECK(filmPaused);
     flying = 2; run(50); CHECK(!filmPlaying && !filmPaused && !filmMenuUp() && !filmButtonUp() && audioId == -1);
     flying = 3; run(50); CHECK(filmButtonUp());           // (a model connected, safety on: allowed)
-    // 15. the menu open and the motor on: the menu goes
-    tap(80, 30); run(50); CHECK(filmMenuUp()); flying = 1; run(50); CHECK(!filmMenuUp() && !filmButtonUp()); flying = 0; run(50);
+    // 15. the list open and the motor on: the list goes
+    tap(80, 30); run(300); tap(400, 200); run(50);
+    { int fx, fy, fw, fh; filmCtlRect(FILM_CTL_FILMS, fx, fy, fw, fh); tap(fx + fw / 2, fy + fh / 2); run(50); }
+    CHECK(filmMenuUp()); flying = 1; run(50); CHECK(!filmMenuUp() && !filmButtonUp()); flying = 0; run(50);
     // 16. the help page left while a film plays: it stops and everything of ours goes
-    tap(80, 30); run(50); filmMenuRect(1, x, y, w, h); tap(x + w / 2, y + h / 2); run(300); CHECK(filmPlaying);
+    tap(80, 30); run(300); CHECK(filmPlaying);
     page.name = "RFView"; run(50); CHECK(!filmPlaying && !filmUp() && !filmMenuUp() && !filmButtonUp() && !topOn);
+    // 17. (1.11.91) the list, ten to a page: a card made up with 25 animations - three pages, the page shown, Next and
+    // Previous going round, an empty place on the last page is nothing, a made-up animation that will not play leaves the list up
+    SDROOT = "@SD2@"; page.name = "FrontView"; run(5000);
+    helpTap("T01"); run(100); CHECK(filmButtonUp() && filmOwn == "T01" && filmCount == 25 && filmMenuPages() == 3);
+    filmButtonHide(); filmMenuOpen(); run(50); CHECK(filmMenuUp() && filmMenuPage == 0);
+    texts.clear(); filmMenuRect(FILM_NEXT, x, y, w, h); tap(x + w / 2, y + h / 2); run(50); CHECK(filmMenuPage == 1);
+    { bool pg = false; for (auto &s : texts) if (s == "Page 2 of 3") pg = true; CHECK(pg); }
+    filmMenuRect(FILM_PREV, x, y, w, h); tap(x + w / 2, y + h / 2); run(50); tap(x + w / 2, y + h / 2); run(50); CHECK(filmMenuPage == 2);
+    filmMenuRect(25, x, y, w, h); CHECK(filmMenuAt(x + 5, y + 5) == -1);
+    filmMenuRect(24, x, y, w, h); CHECK(filmMenuAt(x + 5, y + 5) == 24);
+    tap(x + w / 2, y + h / 2); run(50); CHECK(filmMenuUp() && !filmPlaying);
+    filmMenuRect(FILM_NEXT, x, y, w, h); tap(x + w / 2, y + h / 2); run(50); CHECK(filmMenuPage == 0);
     printf("flow: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
 '''.replace('@SD@', os.path.join(ROOT, 'sd')).replace('@DEV@', os.path.join(ROOT, 'src', 'film_device.h'))
 with tempfile.TemporaryDirectory() as d:
+    sd2 = os.path.join(d, 'sd2'); os.makedirs(os.path.join(sd2, 'hmi', 'films'))   # (step 17's made-up card: 25 animations)
+    open(os.path.join(sd2, 'hmi', 'films', 'films.txt'), 'w').write(''.join('T%02d: Made-up animation %d\n' % (i, i) for i in range(1, 26)))
+    for i in range(1, 26): open(os.path.join(sd2, 'hmi', 'films', 'T%02d.ldf' % i), 'w').write('not a film')
+    PROG = PROG.replace('@SD2@', sd2)
     cpp = os.path.join(d, 'flow.cpp'); exe = os.path.join(d, 'flow')
     open(cpp, 'w').write(PROG)
     r = subprocess.run(['clang++', '-std=c++17', '-O1', '-w', '-I', LIB, '-I', os.path.join(ROOT, 'src'), '-o', exe, cpp, os.path.join(LIB, 'JPEGDEC.cpp')], capture_output=True, text=True)
