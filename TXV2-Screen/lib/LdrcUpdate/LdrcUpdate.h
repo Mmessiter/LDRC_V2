@@ -120,6 +120,36 @@ bool parseList(const std::string &text, bool forTeensy, std::vector<UpdEntry> &o
 bool parseRecent(const std::string &text, std::vector<UpdRecent> &out, std::string &why);
 std::string hex8(uint32_t v);
 
+// How long the fetching has left (1.11.92; Malcolm, 17 Oct, on the first 460 MB of animations: "Perhaps we could get the
+// code to estimate how much longer and show the user?"). Every file fetched is a sample of time against size, and the
+// files still to come are priced at so much a file and so much a byte:
+// - the cost of a file, from the small files (a file of 64 kB counts a quarter, one of 1 MB hardly at all): each one's
+//   time, less its size at the speed known when it came. They come in long runs (the help files first, the pages
+//   last), and a change of speed between the runs does not muddle it;
+// - the speed, from the recent files: a file counts half once another 16 MB have come (by data, not by time: as
+//   steady on slow WiFi as on fast). When the last few MB (half once another 3 MB have come) are 1.6 times faster or
+//   slower than the speed known before the newest file, the WiFi has changed: the recent speed starts again from that
+//   file. From all the files when the recent ones say nothing of it.
+// A first guess stands in where the samples say nothing yet. sure() says when two guesses far apart (300 kB/s and 0.1 s
+// a file; 30 kB/s and 1 s) lead to nearly the same answer: the samples, not the guess, decide it. (Tried first on the
+// real list of 459 files at 40, 128 and 400 kB/s, every file's time 20 % astray at random: some 6 % out on average; a
+// change seen where there was none in one download of five; within 15 % again three or four minutes after the speed
+// halved or doubled.)
+struct FetchClock {
+    double v, vr;                                 // the cost of a file: the small files' weights, and their times less their sizes at the speed of the moment
+    double s, ss, st;                             // the speed: every sample's size, size squared, size times time ...
+    double ws, wss, wst;                          // ... the recent ones' ...
+    double xs, xss, xst;                          // ... and the last few MB's, to see a change
+    uint32_t count;
+    FetchClock() { clear(); }
+    void clear() { v = vr = s = ss = st = ws = wss = wst = xs = xss = xst = 0; count = 0; }
+    void add(uint32_t bytes, uint32_t ms);
+    void fit(double guessMsPerFile, double guessMsPerByte, double &msPerFile, double &msPerByte) const;
+    double msFor(double files, double bytes, double guessMsPerFile = 300, double guessMsPerByte = 0.01) const;
+    bool sure(double files, double bytes) const;
+};
+std::string timeLeftText(uint32_t minutes);       // "About 40 minutes left", "Less than a minute left" (0), "About 1 hour 25 minutes left"
+
 class Updater {
 public:
     Updater(UpdateHost &host, LinkMaster &link, const std::string &latestUrl);
@@ -135,6 +165,7 @@ public:
     bool idle() const { return phase_ == P_IDLE; }
     bool ownsLink() const { return linkOurs_; }   // the link job running is ours: the panel is ours too
     bool working() const { return changing_; }    // something is being changed: do not switch off
+    int32_t secondsLeft() const { return leftSecs_; }   // the fetching's time left, as last worked out (-1: not known)
     const UpdView &view() const { return view_; }
     const std::vector<std::string> &log() const { return log_; }
 
@@ -239,6 +270,8 @@ private:
     int listStep_;
     std::vector<Item> items_; size_t at_; int sub_, tries_;
     uint32_t fetchTotal_, fetchDone_; size_t fetchCount_, fetchIndex_;
+    FetchClock clock_; uint32_t fetchBegan_, leftAt_; int32_t leftSecs_, leftShown_;   // leftShown_: the minutes on the panel (-1: none)
+    void timeLeft(uint32_t now);                  // the panel's second line while fetching
     size_t placed_; uint32_t trialSeen_;
     std::string keepDir_; size_t keptFiles_;
     // after a restart

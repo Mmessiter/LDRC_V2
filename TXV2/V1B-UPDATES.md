@@ -24,7 +24,7 @@ Nothing is ever offered or done by itself. The pilot presses **Check for update*
 | **Up to date** | Both versions are shown. **OK**, or **Earlier versions**. |
 | **Update available** | What would change (now / new) and the release's note. **Install now**, **Later**, or **Earlier versions**. |
 | **Choose a version** | The latest release and the three before it, the one installed marked. Touch one: what would change is shown, then **Install now** or **Back**. |
-| **Fetching the update** | Everything is fetched to the screen's card first, each file checked. **Cancel** is still possible: nothing has been changed. |
+| **Fetching the update** | Everything is fetched to the screen's card first, each file checked. **Cancel** is still possible: nothing has been changed. Once the files fetched can say it, the time left: *About 40 minutes left* (1.11.92). |
 | **Updating ... Do not switch off** | The Teensy (about 80 s, with its trial), then the screen's files, then the screen's firmware and a restart. |
 | **Update complete** (green) | Both versions. OK. |
 | **Update failed** (red) | Where it stopped, why, and what state things are in. |
@@ -185,6 +185,34 @@ could not resume.
 
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
+
+## The time left while an update is fetched (screen 1.11.92, Teensy B123 unchanged, 17 Oct 2026)
+
+Malcolm, waiting for the first 460 MB of animations: "Perhaps we could get the code to estimate how much longer and show
+the user?" Under *Fetching 12 of 391* the panel now says *About 40 minutes left* (*Less than a minute left* at the end;
+*About 1 hour 25 minutes left* over the hour, in fives). It shows from the NEXT update on: this one is fetched by the
+screen that is installed now.
+
+**How it is worked out** (`FetchClock`, lib/LdrcUpdate): every file fetched is a sample of time against size, and what
+is still to come is priced at so much a file and so much a byte. The cost of a file comes from the small files (each
+one's time less its size at the speed of that moment), the speed from the recent files (one counts half once 16 MB more
+have come: by data, not time, so it is as steady at 40 kB/s as at 400). When the last 3 MB or so come 1.6 times faster
+or slower than the speed known before, the WiFi has changed, and the speed starts again from that file. Nothing is
+shown until the files fetched decide it, not the first guess (two guesses far apart must agree), and never in the first
+20 s: a small update shows no time at all. The minutes follow the reckoning without its wobbles: down once 4 % below
+it, up only once 15 % (and a minute and a half) above.
+
+**Tried before it was written**, on the real list of this release's 459 files (the Teensy's firmware and help files
+first, then the screen's firmware, the sounds, the animations, the pages and pictures), every file's time 20 % astray at
+random: some 6 % out on average at 40, 128 and 400 kB/s; within 15 % again three or four minutes after the speed halved
+or doubled. Two simpler ways were dropped on the way: one line through all the files (the cost of a file fell to
+nothing once the speed changed, and the 160 small files at the end came out short), and windows by time (at 40 kB/s
+they held one animation each, and the minutes jumped about). Host tests (hmi/test_update): the reckoning against
+known costs; on the panel, a fetch at a steady 100 kB/s within 10 % all the way (0.7 % in fact), counting only down,
+ending at *Less than a minute left*; the WiFi slowed to 40 %: *About 4 minutes left* became *About 9 minutes left*
+with the first slow file, and was within 15 % three minutes later; a small update shows no time; the line goes when
+the fetching ends. The update's log on the card ends the fetching with a line such as *fetched 312 files, 460.3 MB, in 52 min 10 s (147
+kB/s; at the end 0.4 s a file and 151 kB/s)*, and `/update/status` (door open) gives `left_s`.
 
 ## Every help page has its own animation: sixty-two (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
 

@@ -612,7 +612,7 @@ static void updWeb() {
         out += "],\"lines\":[";
         for (size_t i = 0; i < v.lines.size(); ++i) out += std::string(i ? "," : "") + "\"" + esc(v.lines[i]) + "\"";
         out += "],\"warning\":\"" + esc(v.warning) + "\",\"buttons\":[\"" + esc(v.button1) + "\",\"" + esc(v.button2) + "\",\"" + esc(v.button3) + "\"]";
-        char n[200]; snprintf(n, sizeof n, ",\"bar\":[%lu,%lu],\"working\":%s,\"trial\":%s,\"busy\":%s,\"free_kb\":%lu,\"stack_free\":%lu,\"log\":[", (unsigned long) v.barDone, (unsigned long) v.barTotal,
+        char n[220]; snprintf(n, sizeof n, ",\"bar\":[%lu,%lu],\"left_s\":%ld,\"working\":%s,\"trial\":%s,\"busy\":%s,\"free_kb\":%lu,\"stack_free\":%lu,\"log\":[", (unsigned long) v.barDone, (unsigned long) v.barTotal, (long) updater.secondsLeft(),
                               updater.working() ? "true" : "false", updHost.onTrial() ? "true" : "false", updBusy ? "true" : "false", web.arg("free") == "1" ? (unsigned long) updHost.freeKb() : 0ul,
                               updTaskHandle ? (unsigned long) uxTaskGetStackHighWaterMark(updTaskHandle) : 0ul);      // the least the download task's stack has ever had to spare
         out += n;

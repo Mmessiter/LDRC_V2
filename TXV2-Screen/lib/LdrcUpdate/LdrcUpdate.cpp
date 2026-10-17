@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 namespace ldrc {
 
@@ -52,6 +53,48 @@ static std::string sizeText(uint32_t bytes) {
     else snprintf(b, sizeof b, "%lu.%lu MB", (unsigned long) (bytes / (1024u * 1024u)), (unsigned long) ((bytes % (1024u * 1024u)) * 10 / (1024u * 1024u)));
     return b;
 }
+// ------------------------------------------------------------------ the time left
+static const double CLOCK_PULL = 65536.0 * 65536.0;                 // a guess pulls as much as one file of 64 kB
+void FetchClock::add(uint32_t bytes, uint32_t ms) {
+    const double b = bytes, m = ms;
+    if (count) {                                                     // (half after 16 MB; half after 3 MB)
+        const double w = exp(-b / (16.0 * 1048576 / 0.6931472)), x = exp(-b / (3.0 * 1048576 / 0.6931472));
+        ws *= w; wss *= w; wst *= w; xs *= x; xss *= x; xst *= x;
+    }
+    double perFile, perByte; fit(300, 0.01, perFile, perByte);      // the speed known before this file
+    const double q = 1 / ((1 + b / 65536) * (1 + b / 65536));
+    v += q; vr += q * (m - perByte * b);
+    count++;
+    s += b; ss += b * b; st += b * m; ws += b; wss += b * b; wst += b * m; xs += b; xss += b * b; xst += b * m;
+    if (b >= 262144 && xss >= 1048576.0 * 1048576.0 && perByte > 0) {        // a big file, and the last few MB have a megabyte's say
+        const double kx = (xst - perFile * xs + CLOCK_PULL * perByte) / (xss + CLOCK_PULL);
+        if (kx > perByte * 1.6 || kx * 1.6 < perByte) { ws = b; wss = b * b; wst = b * m; }   // the WiFi has changed: the recent speed starts again from this file
+    }
+}
+// Each part pulled towards the guess as much as one more sample would pull it (one small file; one file of 64 kB).
+// Neither cost is ever below nothing.
+void FetchClock::fit(double g0, double g1, double &perFile, double &perByte) const {
+    double c = (vr + g0) / (v + 1); if (c < 0) c = 0;
+    double all = (st - c * s + CLOCK_PULL * g1) / (ss + CLOCK_PULL); if (all < 0) all = 0;
+    double k = (wst - c * ws + CLOCK_PULL * all) / (wss + CLOCK_PULL); if (k < 0) k = 0;
+    perFile = c; perByte = k;
+}
+double FetchClock::msFor(double files, double bytes, double g0, double g1) const {
+    double perFile, perByte; fit(g0, g1, perFile, perByte);
+    return files * perFile + bytes * perByte;
+}
+bool FetchClock::sure(double files, double bytes) const {
+    if (count < 2) return false;
+    const double fast = msFor(files, bytes, 100, 1.0 / 300), slow = msFor(files, bytes, 1000, 1.0 / 30);   // 300 kB/s and 0.1 s a file; 30 kB/s and 1 s
+    return slow <= fast * 1.25 + 30000;
+}
+std::string timeLeftText(uint32_t minutes) {
+    if (minutes == 0) return "Less than a minute left";
+    if (minutes < 60) return "About " + num(minutes) + (minutes == 1 ? " minute left" : " minutes left");
+    const uint32_t h = minutes / 60, m = minutes % 60;
+    return "About " + num(h) + (h == 1 ? " hour" : " hours") + (m ? " " + num(m) + (m == 1 ? " minute" : " minutes") : std::string()) + " left";
+}
+
 static std::string leaf(const std::string &path) { const size_t s = path.rfind('/'); return s == std::string::npos ? path : path.substr(s + 1); }
 static std::string capital(std::string s) { if (!s.empty() && s[0] >= 'a' && s[0] <= 'z') s[0] = (char) (s[0] - 32); return s; }
 static std::string sentence(std::string s) { s = capital(trim(s)); if (!s.empty() && s[s.size() - 1] != '.' && s[s.size() - 1] != '?' && s[s.size() - 1] != '!') s += "."; return s; }
@@ -179,7 +222,7 @@ Updater::Updater(UpdateHost &host, LinkMaster &link, const std::string &latestUr
       linkOurs_(false), linkWanted_(false), linkStarted_(false), changing_(false), silent_(false), waiting_(false), noteWifi_(false),
       shownFlying_(false), mustSee_(false), textTries_(0), textMax_(8192),
       teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
-      listStep_(0), at_(0), sub_(0), tries_(0), fetchTotal_(0), fetchDone_(0), fetchCount_(0), fetchIndex_(0),
+      listStep_(0), at_(0), sub_(0), tries_(0), fetchTotal_(0), fetchDone_(0), fetchCount_(0), fetchIndex_(0), fetchBegan_(0), leftAt_(0), leftSecs_(-1), leftShown_(-1),
       placed_(0), trialSeen_(0), keptFiles_(0), stTeensyThere_(false), stTeensyChanged_(false), stScreenFw_(false), stFiles_(0), stKept_(0), trialStep_(0), resultGood_(false),
       rxFlow_(false), rxHave_(0), rxLatest_(0), rxPhaseSeen_(0), rxNewsAt_(0), rxQuietTotal_(0), again_(false) {}
 
@@ -240,7 +283,7 @@ void Updater::noWifi(const std::string &title, const std::string &l1, const std:
 void Updater::close() {
     const uint32_t s = view_.serial + 1;
     view_ = UpdView(); view_.serial = s;
-    phase_ = P_IDLE; changing_ = false; waiting_ = false; rxFlow_ = false; again_ = false; freshKind_.clear(); freshUrl_.clear(); freshChoosing_ = false; haveText_.clear();
+    phase_ = P_IDLE; changing_ = false; waiting_ = false; rxFlow_ = false; again_ = false; leftSecs_ = -1; freshKind_.clear(); freshUrl_.clear(); freshChoosing_ = false; haveText_.clear();
     items_.clear(); teensyList_.clear(); screenList_.clear();
     host_.wifiWanted(false);
 }
@@ -632,6 +675,7 @@ void Updater::startFetch() {
     note(num((uint32_t) items_.size()) + " files in the update, " + num((uint32_t) fetchCount_) + " to fetch (" + sizeText(fetchTotal_) + ")");
     if (fetchCount_ && host_.freeKb() < fetchTotal_ / 1024 + 4096) { fail("checking the card's free space", "the screen's card is full: " + sizeText(fetchTotal_) + " are needed"); return; }
     fetchDone_ = 0; fetchIndex_ = 0; at_ = 0; tries_ = 0; waiting_ = false;
+    clock_.clear(); fetchBegan_ = host_.ms(); leftAt_ = fetchBegan_; leftSecs_ = -1; leftShown_ = -1;
     bar(0, fetchTotal_ ? fetchTotal_ : 1);
     phase_ = P_FETCH; fetchNext();
 }
@@ -646,6 +690,7 @@ void Updater::fetched() {
     const Work &w = host_.done(); Item &it = items_[at_];
     if (w.ok) {
         it.fetched = true; if (it.kind != 3) it.have = true;
+        clock_.add(it.size, host_.ms() - since_);             // (this try alone: a lost connection and the wait for the WiFi are not the file's)
         fetchDone_ += it.size; fetchIndex_++; at_++; tries_ = 0;
         fetchNext(); return;
     }
@@ -656,8 +701,37 @@ void Updater::fetched() {
     setLine(0, "Fetching " + num((uint32_t) fetchIndex_ + 1) + " of " + num((uint32_t) fetchCount_) + " (again)");
     waiting_ = true; since_ = host_.ms();                     // a breath (and the WiFi back, if that is what went), then the same file again
 }
+// The panel's second line while fetching: the time left, once the files fetched so far can say it. It follows the
+// reckoning, but not every wobble of it: down once it is 4 % below (and half a minute), up once 15 % above (and a
+// minute and a half). Whole minutes under the hour, five minutes over it.
+void Updater::timeLeft(uint32_t now) {
+    if (now - leftAt_ < 2000) return;
+    leftAt_ = now;
+    const uint32_t got = host_.progress();
+    const double bytes = (double) fetchTotal_ - fetchDone_ - got, files = (double) (fetchCount_ - fetchIndex_) - (got ? 1 : 0);   // (the file under way has had its start)
+    if (now - fetchBegan_ < 20000 || !clock_.sure(files > 0 ? files : 0, bytes > 0 ? bytes : 0)) return;
+    const double ms = clock_.msFor(files > 0 ? files : 0, bytes > 0 ? bytes : 0);
+    leftSecs_ = (int32_t) (ms / 1000 + 0.5);
+    const double est = ms / 60000, shown = leftShown_;
+    if (leftShown_ >= 0) {
+        const double fall = shown < 60 ? (0.04 * shown > 0.6 ? 0.04 * shown : 0.6) : (0.04 * shown > 3.75 ? 0.04 * shown : 3.75);
+        const double rise = shown < 60 ? (0.15 * shown > 1.5 ? 0.15 * shown : 1.5) : (0.15 * shown > 3.75 ? 0.15 * shown : 3.75);
+        if (est >= shown - fall && est <= shown + rise) return;
+    }
+    int32_t minutes = (int32_t) (est + 0.5);
+    if (minutes >= 60) minutes = (minutes + 2) / 5 * 5;
+    leftShown_ = minutes; setLine(1, timeLeftText((uint32_t) minutes));
+}
 void Updater::afterFetch() {
     buttons("", "");                                          // from here on there is no going back by Cancel
+    if (fetchCount_) {                                        // how fast it went, for the record: on the whole, and at the end
+        const uint32_t ms = host_.ms() - fetchBegan_; double perFile, perByte; clock_.fit(300, 0.01, perFile, perByte);
+        char b[160]; snprintf(b, sizeof b, "fetched %lu files, %s, in %lu min %lu s (%.0f kB/s; at the end %.1f s a file and %.0f kB/s)", (unsigned long) fetchCount_, sizeText(fetchTotal_).c_str(),
+                              (unsigned long) (ms / 60000), (unsigned long) (ms / 1000 % 60), ms ? (double) fetchTotal_ / ms : 0.0, perFile / 1000, perByte > 0 ? 1.0 / perByte : 0.0);
+        note(b);
+    }
+    leftSecs_ = -1;
+    if (view_.lines.size() > 1) { view_.lines.resize(1); changed(); }
     note("everything the update needs is on the screen's card");
     if (needTeensyFw_ || needTeensyFiles_) startTeensy(); else startPlace();
 }
@@ -1061,6 +1135,7 @@ void Updater::poll() {
         }
         if (host_.busy()) {
             bar(fetchDone_ + host_.progress(), fetchTotal_ ? fetchTotal_ : 1);
+            timeLeft(now);
             if (now - since_ > 600000) fail("fetching " + leaf(items_[at_].path), "it took more than ten minutes");
             return;
         }

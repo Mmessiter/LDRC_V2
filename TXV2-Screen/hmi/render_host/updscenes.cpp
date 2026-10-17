@@ -54,7 +54,12 @@ bool updScene(const std::string &name, UpdView &out, std::string &why) {
     else if (name == "checking_teensy") { b.run(3000); b.upd->begin(); ok = untilLine(b, "transmitter", 20000) || untilLine(b, "Asking", 20000); }
     else if (name == "uptodate") { publish(b.site, relOld()); b.run(3000); b.upd->begin(); ok = b.untilVerdict(30000) && b.has("Up to date"); }
     else if (name == "offer") { offer(b); ok = b.upd->view().kind == UpdView::OFFER; }
-    else if (name == "fetching") { b.site.bytesPerSecond = 60000; offer(b); b.upd->press(1); ok = untilLine(b, "Fetching 1 of", 120000) && untilTitle(b, "Fetching the update", 120000, 300); }
+    else if (name == "fetching") {                      // a release with animations in it: most of the fetching shows the time left (1.11.92)
+        Release big = relNew();
+        for (int i = 0; i < 10; ++i) big.screenFiles["/hmi/films/F" + numText(10 + (uint32_t) i) + ".ldf"] = blob(2000000 + 250000 * (size_t) (i % 5), 400 + (uint32_t) i);
+        publish(b.site, big); b.site.bytesPerSecond = 100000; offer(b); b.upd->press(1);
+        ok = untilLine(b, " left", 200000) && untilTitle(b, "Fetching the update", 200000, 300);
+    }
     else if (name == "copying") { offer(b); b.upd->press(1); ok = untilTitle(b, "Updating the transmitter", 400000) && untilLine(b, "Fetching /", 60000); }
     else if (name == "teensy") { offer(b); b.upd->press(1); ok = untilTitle(b, "Updating the transmitter", 400000) && untilLine(b, "Sending", 400000); for (int i = 0; i < 1500; ++i) b.step(); }
     else if (name == "trial") { offer(b); b.upd->press(1); ok = untilLine(b, "New firmware on trial", 400000); for (int i = 0; i < 2000; ++i) b.step(); }
