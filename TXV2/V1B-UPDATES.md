@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The curve page's upright reference line at the centre (Teensy B119, screen 1.11.83 unchanged, 17 Oct 2026)
+
+Malcolm, of B118 ("Looks good!!!"): "the vertical red centre line should of course be in the centre, and it is where there
+are five points, but ... it always goes to the third point!" DisplayCurve drew it at xPoints[2] - the centre of five - and
+the marker's repair looked for it there too. Both now use the box's centre (BOXLEFT + 180), whatever the count. The
+marker test checks the line stands at the centre, once, for every count and shape (and fails with the old line).
+
 ## A curve of 3, 5, 7 or 9 points (Teensy B118, screen 1.11.83, 17 Oct 2026)
 
 Malcolm: "If I select straight instead of exponential, I get five definable points because that's what I wrote in 2020. I

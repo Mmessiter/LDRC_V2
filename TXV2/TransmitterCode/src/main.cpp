@@ -2200,8 +2200,8 @@ FASTRUN void DisplayCurve()
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    // Vertical reference line
-    xDot1 = xPoints[2];
+    // Vertical reference line (B119: the box's centre, whatever the count - it was the third point, the centre of five only)
+    xDot1 = BOXLEFT + 180;
     yDot1 = BOXTOP;
     xDot2 = xDot1;
     yDot2 = BOXHEIGHT;
@@ -2312,9 +2312,9 @@ FLASHMEM void GraphMarkerMove(uint16_t From, uint16_t To)
         const int RefY = (BOXHEIGHT / 2) + 20; // the horizontal reference line's pixel
         snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", From, RefY, From, RefY, SpecialColour);
         GraphCmd(Buffer, Cmd);
-        if (From == (int)xPoints[2])
-        { // the vertical reference line
-            snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", (int)xPoints[2], BOXTOP, (int)xPoints[2], BOXHEIGHT, SpecialColour);
+        if (From == BOXLEFT + 180)
+        { // the vertical reference line (B119: the box's centre, as DisplayCurve draws it)
+            snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", BOXLEFT + 180, BOXTOP, BOXLEFT + 180, BOXHEIGHT, SpecialColour);
             GraphCmd(Buffer, Cmd);
         }
         int16_t sx1[CURVE_SEGMENTS_MAX], sy1[CURVE_SEGMENTS_MAX], sx2[CURVE_SEGMENTS_MAX], sy2[CURVE_SEGMENTS_MAX];

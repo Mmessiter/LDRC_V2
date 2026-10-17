@@ -227,6 +227,15 @@ int main()
     CHECK(badPixels == 0 && moves > 1000);
     CHECK(moveBytes < 520 && moveCmds <= 16);
     CHECK(moveBytes * 3 < fullBytes);   // a move is a fraction of a full redraw
+    // 2b. (B119) the vertical reference line stands at the box's centre whatever the count (it stood at the third point)
+    for (int ci = 0; ci < 4; ++ci) for (int type = 0; type < 3; ++type) {
+        if (COUNTS[ci] == 5) setCurve(type, SETS[1], 30, 1); else setCurveN(type, COUNTS[ci], SETS[1], 30, 1);
+        stream.clear(); DisplayCurve();
+        char want[48]; snprintf(want, sizeof(want), "line 215,35,215,395,%u", (unsigned) SpecialColour);
+        CHECK(stream.find(std::string(want) + "\xFF\xFF\xFF") != std::string::npos);
+        int refLines = 0; size_t at = 0; while ((at = stream.find("line ", at)) != std::string::npos) { int x1, y1, x2, y2; unsigned c; if (sscanf(stream.c_str() + at, "line %d,%d,%d,%d,%u", &x1, &y1, &x2, &y2, &c) == 5 && c == SpecialColour && x1 == x2) ++refLines; at += 5; }
+        CHECK(refLines == 1);   // (one upright reference line, and only at the centre)
+    }
     // 3. no marker to put back, nowhere to draw one: nothing sent
     stream.clear(); GraphMarkerMove(NO_MARKER, NO_MARKER); CHECK(stream.empty());
     stream.clear(); GraphMarkerMove(12345, 12345); CHECK(stream.empty());
