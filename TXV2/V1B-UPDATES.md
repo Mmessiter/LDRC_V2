@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The films menu, and three films (screen 1.11.87, Teensy B122 unchanged, 17 Oct 2026)
+
+Malcolm: "Presumably we could store several of these files and select between them with a small menu? If that is the
+case, then I suggest let's do it now!" Every help page now has "Films" at its top left (while the safety is on, or the
+motor off where no safety switch is set up). It opens the films menu: a button for each film, OK back to the help page.
+A film plays with its sound; a tap stops it and returns to the menu, as does its end. Three films so far: Calibrating
+the sticks, Curves of 3 to 9 points, and Rotorflight: Easy tuning. And, from Malcolm: "do the video animations and the
+audio non-simultaneously" - every film now speaks only over a still picture, and the finger moves and the page changes
+only in silence. The films are smaller and smoother too: each picture holds only the rectangle that changed, so a film
+is about 4 MB plus its sound, and a moving finger is a small picture the screen decodes quickly. The films are made by
+dev/video/filmkit.py from short scripts (dev/video/films/*.py); their list and titles are /hmi/films/films.txt on the
+screen's card. FRONT.TXT, EASY.TXT and RFLIGHT.TXT say where the films are.
+
 ## The Rotorflight menu's help offers Easy tuning's film (screen 1.11.86, Teensy B122 unchanged, 17 Oct 2026)
 
 Malcolm, after 1.11.85: "I updated, but I cannot find this film button". Easy tuning will not open without the model

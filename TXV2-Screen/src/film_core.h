@@ -1,7 +1,9 @@
 // The LDRC film's sums (screen 1.11.85), apart from the card, the decoder and the panel so the Mac can test them
 // (hmi/test_film). The film: "LDRCFILM", then version 1, width, height, frames a second (u16 each, little-endian) and the
 // number of frames (u32); then each frame's offset in the file and size (u32 each) - size 0: the same picture as the
-// frame before, nothing to decode; then the pictures, baseline JPEG. Written by TXV1B dev/video (LDRC_TARGET=screen),
+// frame before, nothing to decode; then the pictures, baseline JPEG. Version 2 (1.11.87): each picture is only the
+// rectangle that changed since the frame before - x, y, width, height (u16 each), then its JPEG, drawn there - so a
+// moving finger is a small picture, quick to decode, and a still page costs nothing. Written by TXV1B dev/video (LDRC_TARGET=screen),
 // played by src/film_device.h from /hmi/films, its sound beside it (<name>.wav, 22.05 kHz). Why a film at all: film_device.h.
 #pragma once
 #include <stdint.h>
@@ -16,7 +18,7 @@ inline uint32_t rd32(const uint8_t *p) { return (uint32_t) p[0] | ((uint32_t) p[
 inline bool parseHeader(const uint8_t *b, uint32_t n, Header &h, uint16_t screenW, uint16_t screenH) {
     if (n < HEADER_BYTES || memcmp(b, "LDRCFILM", 8) != 0) return false;
     h.version = rd16(b + 8); h.w = rd16(b + 10); h.h = rd16(b + 12); h.fps = rd16(b + 14); h.frames = rd32(b + 16);
-    return h.version == 1 && h.w == screenW && h.h == screenH && h.fps >= 1 && h.fps <= 30 && h.frames >= 1 && h.frames <= MAX_FRAMES;
+    return (h.version == 1 || h.version == 2) && h.w == screenW && h.h == screenH && h.fps >= 1 && h.fps <= 30 && h.frames >= 1 && h.frames <= MAX_FRAMES;
 }
 // The table sound: the first frame a picture, every picture inside the file and after the table, none too big. maxSize: the largest.
 inline bool tableSound(const uint8_t *t, const Header &h, uint32_t fileSize, uint32_t &maxSize) {
@@ -26,10 +28,18 @@ inline bool tableSound(const uint8_t *t, const Header &h, uint32_t fileSize, uin
     for (uint32_t i = 0; i < h.frames; ++i) {
         const uint32_t off = rd32(t + 8 * i), size = rd32(t + 8 * i + 4);
         if (size == 0) { if (i == 0) return false; continue; }
-        if (off < dataStart || off > fileSize || size > fileSize - off || size > MAX_PICTURE) return false;
+        if (off < dataStart || off > fileSize || size > fileSize - off || size > MAX_PICTURE || (h.version >= 2 && size <= 8)) return false;
         if (size > maxSize) maxSize = size;
     }
     return true;
+}
+// Where a picture goes, and where its JPEG starts in it: version 1 the whole screen; version 2 its rectangle (inside the
+// screen, at least 8 x 8). False: not a picture this player can place.
+inline bool pictureAt(const uint8_t *blob, uint32_t size, const Header &h, uint16_t &x, uint16_t &y, uint16_t &w, uint16_t &hh, uint32_t &jpegOff) {
+    if (h.version < 2) { x = 0; y = 0; w = h.w; hh = h.h; jpegOff = 0; return size > 0; }
+    if (size <= 8) return false;
+    x = rd16(blob); y = rd16(blob + 2); w = rd16(blob + 4); hh = rd16(blob + 6); jpegOff = 8;
+    return w >= 8 && hh >= 8 && x + w <= h.w && y + hh <= h.h;
 }
 // The frame due ms after the start; -1 once the film is over
 inline int32_t frameAt(uint32_t ms, const Header &h) { const uint64_t f = (uint64_t) ms * h.fps / 1000; return f < h.frames ? (int32_t) f : -1; }
@@ -76,6 +86,37 @@ inline void filmFor(const char *list, const char *topic, char *out, int outSize)
         }
         line = *end ? end + 1 : end;
     }
+}
+// The films menu (1.11.87). films.txt also holds lines "<film name>: <title>", the menu's entries in their order (a film
+// whose .ldf is not on the card is left out by the caller). Names as filmFor's; a title is up to 40 printable characters.
+struct Entry { char name[13]; char title[41]; };
+inline int parseFilms(const char *list, Entry *out, int max) {
+    auto up = [](char c) { return (char) (c >= 'a' && c <= 'z' ? c - 32 : c); };
+    auto ok = [](char c) { return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-'; };
+    int n = 0;
+    if (!list) return 0;
+    const char *line = list;
+    while (*line && n < max) {
+        const char *end = line; while (*end && *end != '\n') ++end;
+        const char *p = line; while (p < end && (*p == ' ' || *p == '\t')) ++p;
+        if (p < end && *p != '#') {
+            Entry e; int m = 0;
+            while (p < end && m < 12 && ok(up(*p))) e.name[m++] = up(*p++);
+            e.name[m] = 0;
+            while (p < end && (*p == ' ' || *p == '\t')) ++p;
+            if (m > 0 && p < end && *p == ':') {
+                ++p; while (p < end && (*p == ' ' || *p == '\t')) ++p;
+                const char *te = end; while (te > p && (te[-1] == ' ' || te[-1] == '\t' || te[-1] == '\r')) --te;
+                int k = 0; bool good = te > p;
+                for (const char *q = p; q < te && good; ++q) { if (*q < 32 || *q > 126 || *q == '"') good = false; else if (k < 40) e.title[k++] = *q; }
+                e.title[k] = 0;
+                bool dup = false; for (int i = 0; i < n; ++i) if (!strcmp(out[i].name, e.name)) dup = true;
+                if (good && k > 0 && !dup) out[n++] = e;
+            }
+        }
+        line = *end ? end + 1 : end;
+    }
+    return n;
 }
 // Where two rows of pixels differ: first .. last (last < first when they are the same)
 inline void rowDiff(const uint16_t *a, const uint16_t *b, int n, int &first, int &last) {

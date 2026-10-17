@@ -1,5 +1,6 @@
-# Which help pages offer which film (screen 1.11.86): <help name>=<film name>.
-# The film is /hmi/films/<film name>.ldf with its sound <film name>.wav. A help page whose
-# own name is a film's (EASY) needs no line here.
-# The Rotorflight menu's help opens without the model; Easy tuning's needs it.
-RFLIGHT=EASY
+# The films menu (screen 1.11.87): "<film name>: <title>", in the menu's order. The film is /hmi/films/<film name>.ldf
+# with its sound <film name>.wav, both made by TXV1B dev/video/films/<name>.py with LDRC_TARGET=screen. Every help page
+# shows a Films button while at least one of these is on the card. (Up to 8; a title up to 40 characters.)
+CALIB: Calibrating the sticks
+CURVES: Curves of 3 to 9 points
+EASY: Rotorflight: Easy tuning

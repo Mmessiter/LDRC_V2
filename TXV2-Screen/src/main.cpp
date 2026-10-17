@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.86"
+#define SCREEN_VERSION "1.11.87"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -501,6 +501,8 @@ static int cliJobWanted = -1;                          // (1.11.41) "ldrc cli" 0
 static bool cliPageUp = false;                         // (1.11.51) the command line page is showing: the pipe is its own (src/ble_device.h bleHttpCommand)
 static bool cliUp();                                   // the command line page has the screen
 static bool filmUp();                                  // (1.11.85, src/film_device.h) a film has the screen
+static bool filmMenuUp();                              // (1.11.87) the films menu has the screen
+static void filmMenuTouch(bool pressed, int x, int y, uint32_t now);
 static void filmTouch(bool pressed, int x, int y, uint32_t now);
 static void filmTouchCancel();
 static bool filmButtonTouch(bool pressed, int x, int y, uint32_t now);   // the help page's Film button
@@ -1929,17 +1931,17 @@ static void pollTouch() {
         if (down && held >= 0 && held < (int) page.comps.size()) { Comp &c = page.comps[held]; c.pressed = false; if (c.type == "button" || c.type == "dual-state button") redraw(c); }
         // B59 (10 Oct 2026): a page of our own forgets the finger too - before, its press stayed (the lift never reached it), so
         // the button under the corner was still "down" and the next tap anywhere was swallowed (or pressed it, lifted on it)
-        if (wifiPageUp()) wifiTouchCancel(); else if (cliUp()) cliTouchCancel(); else if (filmUp()) filmTouchCancel(); else if (picPanelUp()) picTouchCancel(); else if (flightUp()) flightTouchCancel();
+        if (wifiPageUp()) wifiTouchCancel(); else if (cliUp()) cliTouchCancel(); else if (filmUp() || filmMenuUp()) filmTouchCancel(); else if (picPanelUp()) picTouchCancel(); else if (flightUp()) flightTouchCancel();
         else if (coloursUp()) coloursTouchCancel(); else if (appearanceUp()) appearanceTouchCancel(); else if (updPanelUp()) updTouchCancel();
         filmButtonCancel();
         down = false; held = -1; touchLockout = true; touchPainted = true;
         return;
     }
     static bool oursWasUp = false; static uint32_t oursWentAt = 0;
-    if (!(updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp() || filmUp()) && oursWasUp) {   // our page has just gone: the finger that closed it, and the second tap of a double tap, are not for the page underneath
+    if (!(updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp() || filmUp() || filmMenuUp()) && oursWasUp) {   // our page has just gone: the finger that closed it, and the second tap of a double tap, are not for the page underneath
         oursWasUp = false; oursWentAt = now; touchLockout = true; lastSeen = now;
     }
-    if (updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp() || filmUp()) {   // a page of our own has the screen
+    if (updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp() || filmUp() || filmMenuUp()) {   // a page of our own has the screen
         oursWasUp = true;
         if (down && held >= 0 && held < (int) page.comps.size()) { page.comps[held].pressed = false; }
         down = false; held = -1;
@@ -1950,6 +1952,7 @@ static void pollTouch() {
         else if (appearanceUp()) appearanceTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else if (cliUp()) cliTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else if (filmUp()) filmTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
+        else if (filmMenuUp()) filmMenuTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else updTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         return;
     }
