@@ -8,9 +8,19 @@ CALIB: Calibrating the sticks
 OPTIONS: System, and binding
 RXSETUP: Model setup
 MODELS: Choosing a model
+IDS: Model IDs
+RXSETUP1: Model options
 CHANNELS: Channels
 CURVES: Curves of 3 to 9 points
 TRIMS: Trims
+SUBTRIM: Subtrim
+REVERSE: Reverse
+DRATES: Rates
+SLOWSERV: Servo speed
+INPUTS: Inputs
+MIXES: Mixes
+FAILSAFE: Failsafe
+BANKNAME: Bank names
 EASY: Rotorflight: Easy tuning
 # The Rotorflight menu's help, which opens without a model, plays Easy tuning's (its page needs the model connected)
 RFLIGHT=EASY

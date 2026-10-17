@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""Film FAILSAFE: setting the failsafe. The words are FAILSAFE.TXT's; Save's progress is scenario 36_saving (FailSAVE,
+main.cpp). Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+from filmkit import Film, prefix, at
+from common import model_route, model_route_play
+f = Film('FAILSAFE', 'Failsafe', 'Where the controls go if the signal is lost')
+model_route(f, 'Failsafe')
+opn = prefix('36.txt', '36_open')
+f.shot('p', opn); f.shot('p5', opn + 'fs5.val=1\n')
+f.shot('psave', prefix('36.txt', '36_saving') + 'fs5.val=1\n')
+f.shot('pdone', opn + 'fs5.val=1\nvis Progress,0\n')
+f.line('title', 'Failsafe. Where the controls go if the receiver loses the signal.')
+f.line('page', 'This is the Failsafe page. First switch the model on, and connect.')
+f.line('tick', 'Tick the channels that should go to a set position.')
+f.line('hold', 'Put the sticks and switches where the model should go, with the motor switched off. Hold them there, and press Save.')
+f.line('where', 'The positions are saved in the receiver, so Save works only while the model is connected.')
+f.line('what', 'If the receiver hears nothing for about one and a half seconds, it moves the controls to the saved positions. When the signal comes back, full control returns.')
+f.line('all', 'All ticks every channel. None clears them all.')
+f.line('rf', "With Rotorflight, the flight controller's own failsafe takes over. Set it there.")
+f.line('ok', 'OK keeps the ticks, and goes back to Model setup.')
+f.line('end', "That's how to set the failsafe.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+model_route_play(f, 'Failsafe', 'p')
+f.say('page', 'Failsafe. Model connected.')
+f.say('tick', 'Tick the channels.', after=0.3); f.tap(*at('FailSafeView', 'fs5')); f.under('p5'); f.hold(0.8)
+f.say('hold', 'Sticks where the model should go; Save.', after=0.3); f.tap(*at('FailSafeView', 'b0')); f.under('psave'); f.hold(1.2); f.under('pdone'); f.hold(0.6)
+f.say('where', 'Saved in the receiver.')
+f.cap = None; f.say('what', 'After about 1.5 s without signal.')
+f.point(*at('FailSafeView', 'b1'), 'all', 'All, or None.')
+f.cap = None; f.say('rf', "Rotorflight: the flight controller's failsafe.")
+f.point(*at('FailSafeView', 'b10'), 'ok', 'OK keeps the ticks.')
+f.end('end'); f.finish()

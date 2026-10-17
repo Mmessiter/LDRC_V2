@@ -7,3 +7,14 @@ FRONT_CONNECTED = prefix('13.txt', '13_conn', [
 FRONT_NO_MODEL = prefix('13.txt', '13_nomodel') + ('ModelName.txt="RAW 420 MCM (3)"\nexp0.path="sd0/images/Bthundr1.jpg"\nvis exp0,1\nOwner.txt="Malcolm Messiter"\n'
                                                    'ams.txt="AMS is on"\nt4.txt="Bank 1"\nvis rate,1\nrate.txt="Rate 1"\nDateTime.txt="10 October 2026 17:14:07"\n')
 MODEL_PICTURE = 'sd0/images/Bthundr1.jpg'                             # (RAW 420 MCM's picture on the front page: Malcolm's own)
+
+from filmkit import at
+def model_route(f, button, spoken=None, front_shot=None, setup_shot=None):
+    """the way in, declared: the front page, then Model, then this page's button on Model setup (shots r_front, r_setup)"""
+    f.shot('r_front', front_shot or FRONT_CONNECTED); f.shot('r_setup', setup_shot or prefix('4.txt', '4_open'))
+    f.line('front', "This is the transmitter's front page. Press Model.")
+    f.line('setup', 'This is the Model setup page. Press %s.' % (spoken or button))
+def model_route_play(f, button, page_key):
+    """... and played: each page shown, named, the finger to its button"""
+    f.show('r_front'); f.say('front', 'Press Model.', after=0.3); f.tap(*at('FrontView', 'b1'), 'r_setup')
+    f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('RXSetupView', txt=button), page_key)

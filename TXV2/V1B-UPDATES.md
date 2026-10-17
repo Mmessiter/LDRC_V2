@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Ten more animations: the Model setup pages (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
+
+Model options (RXSETUP1), Failsafe (ticking a channel, Save while connected), Model IDs (storing the ID: the question and
+the message are Model_IDs.h's), Bank names (the Heli set), Rates (DRATES), Subtrim, Reverse, Servo speed (SLOWSERV), Inputs
+(the question with the model connected) and Mixes: twenty in all, two pages of the list, grouped as the setups are.
+films/common.py's model_route() declares and plays the way in (front page, Model, the page's button).
+
 ## Seven new animations, and a picture the screen drew wrongly (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
 
 Malcolm: "I guess you will have to make a lot of animations, and it could take a little while!" The first batch, each on

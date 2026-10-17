@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+"""Film RXSETUP1: Model options, a tour. The words are RXSETUP1.TXT's. Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+from filmkit import Film, prefix, at
+from common import model_route, model_route_play
+f = Film('RXSETUP1', 'Model options', "This model's trims, motor switch, timer and warnings")
+model_route(f, 'Options')
+f.shot('p', prefix('9.txt', '9_open'))
+f.line('title', "Model options. This model's trims, motor switch, timer and warnings.")
+f.line('page', 'This is the Model options page. Touch a box to type a new value. Touch a switch to turn it on or off.')
+f.line('trim', 'Trim multiplier: how far each trim step moves. Five is a very good default. Use zero on a flybarless helicopter.')
+f.line('copy', 'Copy trims to all banks: on, a trim change goes to every bank. Off, each bank keeps its own trims.')
+f.line('throttle', 'Throttle channel: the channel the motor is on. Usually three.')
+f.line('motoroff', 'Motor off value: what the throttle channel is sent while the motor is off, or the safety is on. Minus sixty seven is nearly always right.')
+f.line('kill', 'Use motor kill switch: on, the transmitter checks the motor switch before it connects, and waits until the motor is switched off.')
+f.line('countdown', 'Timer counts down: on, the timer counts down from the minutes set below it, and says the last ten seconds.')
+f.line('volts', "Stop flying volts, per cell: below this, the transmitter says stop flying. Find the best value by trying: every model differs.")
+f.line('ok', 'OK keeps the changes, and goes to the front page.')
+f.line('end', "That's the Model options page.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+model_route_play(f, 'Options', 'p')
+f.say('page', 'Model options.')
+f.point(*at('RXOptionsView', 'n3'), 'trim', 'Trim multiplier.')
+f.point(*at('RXOptionsView', 'c1'), 'copy', 'Copy trims to all banks.')
+f.point(*at('RXOptionsView', 'n1'), 'throttle', 'Throttle channel.')
+f.point(*at('RXOptionsView', 'n0'), 'motoroff', 'Motor off value.')
+f.point(*at('RXOptionsView', 'c0'), 'kill', 'Motor kill switch.')
+f.point(*at('RXOptionsView', 'c2'), 'countdown', 'Timer counts down.')
+f.point(*at('RXOptionsView', 't10'), 'volts', 'Stop flying volts.')
+f.point(*at('RXOptionsView', 'b2'), 'ok', 'OK keeps the changes.')
+f.end('end'); f.finish()
