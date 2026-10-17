@@ -13,6 +13,7 @@ dev = open(os.path.join(ROOT, 'src', 'film_device.h')).read()
 m = re.search(r'\nstatic int filmDraw\(JPEGDRAW \*p\) \{.*?\n\}\n', dev, re.S)
 assert m, 'filmDraw not found in film_device.h'
 DRAW = m.group(0)
+BARY = re.search(r'FILM_BAR_Y = (\d+)', dev).group(1)
 PROG = r'''
 #include <cstdio>
 #include <cstdlib>
@@ -23,6 +24,7 @@ PROG = r'''
 #include "@CORE@"
 static const int W = 800, H = 480;
 static uint16_t *topFb = nullptr;
+static bool filmStripKept = false; static uint16_t *filmStrip = nullptr; static const int FILM_BAR_Y = @BARY@;   // (1.11.89: the paused bar's keeping; not used here)
 static long dirtyPx = 0; static int dirtyCalls = 0;
 static void dirty(int, int, int w, int h) { dirtyPx += (long) w * h; ++dirtyCalls; }
 @DRAW@
@@ -77,7 +79,7 @@ int main(int argc, char **argv) {
            h.version, pictures, still, failed, unwritten, pictures ? totalArea / pictures : 0, pictures ? totalDirty / pictures : 0, (unsigned) nsec, jumps, badJumps);
     return (failed || unwritten || !pictures || badJumps || (h.version >= 3 && jumps != (int) nsec)) ? 1 : 0;
 }
-'''.replace('@DRAW@', DRAW).replace('@CORE@', os.path.join(os.path.abspath(ROOT), 'src', 'film_core.h'))
+'''.replace('@BARY@', BARY).replace('@DRAW@', DRAW).replace('@CORE@', os.path.join(os.path.abspath(ROOT), 'src', 'film_core.h'))
 with tempfile.TemporaryDirectory() as d:
     cpp = os.path.join(d, 'decode.cpp'); exe = os.path.join(d, 'decode')
     open(cpp, 'w').write(PROG)

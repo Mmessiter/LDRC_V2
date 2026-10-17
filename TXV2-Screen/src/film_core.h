@@ -95,6 +95,34 @@ inline int32_t backTarget(int32_t frame, uint16_t fps, const uint8_t *c, uint32_
 }
 // Next: the start of the next section; -1 when this is the last
 inline int32_t nextTarget(int32_t frame, const uint8_t *c, uint32_t n) { const int k = sectionOf(frame, c, n); return k + 1 < (int) n ? (int32_t) rd32(c + 4 * (k + 1)) : -1; }
+// (1.11.89) The slider along the paused film (Malcolm: "a bar with a slider so we could slide backwards or forwards a
+// particular distance as we might with a video"). A place on the track (x0 to x0 + w) is a frame, the first at x0 and the
+// last at its end; and back.
+inline int32_t seekFrame(int x, int x0, int w, uint32_t frames) {
+    if (frames < 2 || w <= 0 || x <= x0) return 0;
+    if (x >= x0 + w) return (int32_t) frames - 1;
+    return (int32_t) (((int64_t) (x - x0) * (frames - 1) + w / 2) / w);
+}
+inline int seekX(int32_t frame, int x0, int w, uint32_t frames) {
+    if (frames < 2 || frame <= 0) return x0;
+    if (frame >= (int32_t) frames - 1) return x0 + w;
+    return x0 + (int) (((int64_t) frame * w + (frames - 1) / 2) / (frames - 1));
+}
+// The next picture to decode on the way from the frame shown (last) to frame target: the latest key at or before target
+// when target is behind, or when that key is past last (a key is the whole screen: nothing before it matters); otherwise
+// the next picture after last, up to target. -1: the screen already shows target.
+inline int32_t seekStep(int32_t target, int32_t last, const uint8_t *t, uint16_t version) {
+    if (target < 0) return -1;
+    const int32_t k = keyAtOrBefore(target, t, version);
+    if (target < last || k > last) return k;
+    return nextPicture(target, last, t);
+}
+// A time as the slider shows it: minutes and seconds, "1:25" (whole seconds, rounded down)
+inline void clockText(uint32_t ms, char *out) {
+    const uint32_t s = ms / 1000; const uint32_t m = s / 60 > 99 ? 99 : s / 60, r = s % 60;
+    int i = 0; if (m >= 10) out[i++] = (char) ('0' + m / 10); out[i++] = (char) ('0' + m % 10);
+    out[i++] = ':'; out[i++] = (char) ('0' + r / 10); out[i++] = (char) ('0' + r % 10); out[i] = 0;
+}
 // Which film a help page offers (1.11.86). /hmi/films/films.txt holds lines "<help name>=<film name>" (a # starts a
 // note); a help page named in it offers that film, any other offers the film of its own name, if there is one. Malcolm
 // could not reach Easy tuning's help without the helicopter on (the page needs the model), so the Rotorflight menu's help

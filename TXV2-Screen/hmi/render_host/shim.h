@@ -13,8 +13,9 @@
 #include <algorithm>
 using std::min; using std::max;
 template <class T, class L, class H> static inline T constrain(T v, L lo, H hi) { return v < (T) lo ? (T) lo : v > (T) hi ? (T) hi : v; }
-static inline uint32_t millis() { return 0; }
-static inline uint32_t micros() { return 0; }
+static uint32_t hostClockMs = 0;                           // (1.11.89) the clock: still, but for @film, which plays a film to a moment
+static inline uint32_t millis() { return hostClockMs; }
+static inline uint32_t micros() { return hostClockMs * 1000; }
 static inline void *ps_malloc(size_t n) { return malloc(n); }
 #define Cache_WriteBack_Addr(a, b) ((void) 0)                     // (the panel's cache: nothing to do on the Mac)
 #define PROGMEM
@@ -25,6 +26,7 @@ struct File {
     size_t size() const { return n; }
     size_t read(uint8_t *b, size_t k) { return f ? fread(b, 1, k, f) : 0; }
     int read() { return f ? fgetc(f) : -1; }                                  // (ArduinoJson reads a File as a custom reader)
+    int available() { if (!f) return 0; const long p = ftell(f); return p < (long) n ? (int) (n - p) : 0; }   // (the films' list)
     size_t readBytes(char *b, size_t k) { return f ? fread(b, 1, k, f) : 0; }
     bool seek(uint32_t pos) { return f && fseek(f, (long) pos, SEEK_SET) == 0; }
     void close() { if (f) fclose(f); f = nullptr; }

@@ -9,8 +9,9 @@
 // main board's own rule for the screen's radios, TxState flying() 1 and 2). A model merely connected, safety on, is
 // allowed: Easy tuning itself needs the helicopter on, and its help is where its film is wanted. The film
 // plays on our layer over the whole screen, its pictures decoded straight into the layer: only the pixels that changed
-// are marked for the panel, so a still moment costs nothing and a moving finger a few rectangles. A tap anywhere stops
-// it; so do the safety going off or the motor on, the page going, and the film's end. The format and its sums: film_core.h (host-tested,
+// are marked for the panel, so a still moment costs nothing and a moving finger a few rectangles. A tap pauses it (1.11.88:
+// Back, Play, Next, Films; 1.11.89: a slider above them, to any moment); the safety going off or the motor on, the page
+// going, and the film's end stop it. The format and its sums: film_core.h (host-tested,
 // hmi/test_film); the films are made by TXV1B dev/video (LDRC_TARGET=screen).
 #pragma once
 #include <JPEGDEC.h>
@@ -32,8 +33,12 @@ static uint8_t *filmTable = nullptr, *filmBuf = nullptr; static uint32_t filmBuf
 static uint8_t *filmSections = nullptr; static uint32_t filmSectionCount = 0;   // (version 3) each section's first frame
 static uint8_t filmOneSection[4] = {0, 0, 0, 0};                 // (a film without sections: one, from the start)
 // (1.11.88) Pause, Back, Play, Next: a tap pauses the film and shows these along its foot; what lay under them is kept
-static const int FILM_CTL_BACK = 0, FILM_CTL_PLAY = 1, FILM_CTL_NEXT = 2, FILM_CTL_FILMS = 3, FILM_BAR_Y = 414, FILM_BAR_H = 66;
-static bool filmPaused = false, filmTapDeaf = false, filmCtlHeld = false; static int filmCtlDown = -1; static uint32_t filmTapSeen = 0, filmPosMs = 0;
+// (1.11.89) and above them a slider (Malcolm: "a bar with a slider so we could slide backwards or forwards a particular
+// distance as we might with a video"): the time there, the track with a gap where each part starts, the film's length
+static const int FILM_CTL_BACK = 0, FILM_CTL_PLAY = 1, FILM_CTL_NEXT = 2, FILM_CTL_FILMS = 3, FILM_BAR_Y = 368, FILM_BAR_H = 480 - 368, FILM_CTL_Y = 421;
+static const int FILM_SEEK_X0 = 112, FILM_SEEK_W = 576, FILM_SEEK_MID = 394, FILM_SEEK_R = 13;   // the track (x0 to x0 + w) and its knob
+static bool filmPaused = false, filmTapDeaf = false, filmCtlHeld = false, filmCtlOnBar = false; static int filmCtlDown = -1; static uint32_t filmTapSeen = 0, filmPosMs = 0;
+static int32_t filmSeekWant = -1; static bool filmSeekHeld = false;   // the frame the slider asks for (-1: none) - the picture follows it - and a finger on it
 static uint16_t *filmStrip = nullptr; static bool filmStripKept = false;
 static uint32_t filmAwakeAt = 0;                                   // when the main board was last told someone is watching
 static uint32_t filmStartMs = 0; static int32_t filmLast = -1;
@@ -117,7 +122,7 @@ static void filmMenuDraw() {
         gfx->fillRect(0, 58, W, H - 58, 4426);                    // its navy card
         const std::string title = "Films";
         drawGlyphs((W - textWidth(0, title)) / 2, (58 - fontHeight(0)) / 2, 0, 0xFFFF, title);
-        const std::string hint = "Tap a film to play it. Tap anywhere to stop.";
+        const std::string hint = "While a film plays, tap it to pause.";   // (1.11.89: Malcolm, "how to inform the user that a press on the video will bring this option")
         drawGlyphs(40, 404 + (56 - fontHeight(2)) / 2, 2, 0xFFFF, topCut(hint, 2, 540));
         for (int i = 0; i < filmCount; ++i) { int x, y, w, h; filmMenuRect(i, x, y, w, h); filmBevel(x, y, w, h, false, filmList[i].title); }
         int x, y, w, h; filmMenuRect(FILM_OK, x, y, w, h); filmBevel(x, y, w, h, false, "OK");
@@ -141,13 +146,16 @@ static int filmDraw(JPEGDRAW *p) {
     const int x = p->x, y = p->y, w = p->iWidth;
     if (x < 0 || x >= W) return 1;
     const int n = std::min(p->iWidthUsed > 0 ? p->iWidthUsed : w, W - x);   // (a picture's right edge: only its own pixels)
+    const int barTop = filmStripKept && filmStrip ? FILM_BAR_Y : H;        // (1.11.89: paused, the slider moving the picture - under the bar it goes to what the bar keeps)
     int x0 = W, x1 = -1;
     for (int r = 0; r < p->iHeight && y + r < H; ++r) {
-        uint16_t *dst = topFb + (y + r) * W + x; const uint16_t *src = p->pPixels + r * w;
+        const uint16_t *src = p->pPixels + r * w;
+        if (y + r >= barTop) { memcpy(filmStrip + (y + r - FILM_BAR_Y) * W + x, src, (size_t) n * 2); continue; }
+        uint16_t *dst = topFb + (y + r) * W + x;
         int f, l; ldrcfilm::rowDiff(dst, src, n, f, l);
         if (l >= f) { memcpy(dst + f, src + f, (size_t) (l - f + 1) * 2); if (f < x0) x0 = f; if (l > x1) x1 = l; }
     }
-    if (x1 >= x0) dirty(x + x0, y, x1 - x0 + 1, std::min(p->iHeight, H - y));
+    if (x1 >= x0) dirty(x + x0, y, x1 - x0 + 1, std::min(p->iHeight, barTop - y));
     return 1;
 }
 static bool filmDecode(int32_t k) {
@@ -164,7 +172,7 @@ static bool filmDecode(int32_t k) {
 
 static void filmStop(bool toMenu = false) {
     if (filmPlaying && audioId == FILM_AUDIO_ID) audioStop();
-    filmPlaying = false; filmPaused = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false;
+    filmPlaying = false; filmPaused = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
     if (filmFile) filmFile.close();
     if (filmUp()) {
         if (toMenu && filmCount) { topWho = FILM_MENU_WHO; filmMenuDown = -1; filmMenuHeld = false; filmMenuDraw(); }   // the films menu again
@@ -197,7 +205,7 @@ static bool filmStart() {
     filmBtnHeld = false;
     topX = 0; topY = 0; topW = W; topH = H; topWho = FILM_WHO; topOn = true;
     filmLast = -1; filmPictures = filmSkipped = 0; filmDecodeMax = 0; filmPlaying = true;
-    filmPaused = false; filmTapDeaf = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false;
+    filmPaused = false; filmTapDeaf = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
     if (!filmDecode(0)) { filmStop(); return false; }          // the first picture before the sound, so they start together
     filmLast = 0;
     audioStartFile(filmPath(".wav").c_str());
@@ -205,7 +213,7 @@ static bool filmStart() {
     return true;
 }
 static const uint8_t *filmSecs() { return filmSections ? filmSections : filmOneSection; }
-static void filmCtlRect(int i, int &x, int &y, int &w, int &h) { x = 20 + i * 195; y = FILM_BAR_Y + 7; w = 180; h = 52; }
+static void filmCtlRect(int i, int &x, int &y, int &w, int &h) { x = 20 + i * 195; y = FILM_CTL_Y; w = 180; h = 52; }
 static int filmCtlAt(int px, int py) { for (int i = 0; i < 4; ++i) { int x, y, w, h; filmCtlRect(i, x, y, w, h); if (px >= x && px < x + w && py >= y && py < y + h) return i; } return -1; }
 static void filmDrawCtl(int i, bool down) {
     static const char *const label[4] = {"Back", "Play", "Next", "Films"};
@@ -213,52 +221,108 @@ static void filmDrawCtl(int i, bool down) {
     { TopDraw td; filmBevel(x, y, w, h, down, label[i]); }
     dirty(x, y, w, h); touchPainted = true;
 }
+static uint32_t filmFrameMs(int32_t f) { return (uint32_t) ((uint64_t) (f < 0 ? 0 : f) * 1000 / (filmHead.fps ? filmHead.fps : 1)); }
+static int32_t filmShownFrame() {                                  // the paused film's frame: the slider's, or where it was paused
+    if (filmSeekWant >= 0) return filmSeekWant;
+    const int32_t f = ldrcfilm::frameAt(filmPosMs, filmHead); return f < 0 ? (int32_t) filmHead.frames - 1 : f;
+}
+static void filmDrawSeek() {                                       // (1.11.89) the slider's row: the time there, the track and its parts, the knob, the length
+    const int32_t at = filmShownFrame();
+    const int kx = ldrcfilm::seekX(at, FILM_SEEK_X0, FILM_SEEK_W, filmHead.frames), top = FILM_BAR_Y + 2, h = FILM_CTL_Y - 3 - top;   // (below the bar's top line)
+    char here[8], len[8]; ldrcfilm::clockText(filmFrameMs(at), here); ldrcfilm::clockText(ldrcfilm::lengthMs(filmHead), len);
+    {
+        TopDraw td;
+        gfx->fillRect(0, top, W, h, 2214);
+        drawGlyphs(FILM_SEEK_X0 - 18 - textWidth(2, here), FILM_SEEK_MID - fontHeight(2) / 2, 2, 0xFFFF, here);
+        drawGlyphs(FILM_SEEK_X0 + FILM_SEEK_W + 18, FILM_SEEK_MID - fontHeight(2) / 2, 2, 0xFFFF, len);
+        gfx->fillRoundRect(FILM_SEEK_X0, FILM_SEEK_MID - 4, FILM_SEEK_W, 9, 4, 0x8410);                                   // the track
+        if (kx > FILM_SEEK_X0) gfx->fillRoundRect(FILM_SEEK_X0, FILM_SEEK_MID - 4, kx - FILM_SEEK_X0 + 4, 9, 4, 0x5D9F);   // and the part played
+        for (uint32_t s = 1; s < filmSectionCount; ++s) {          // a gap where each part starts: where Back and Next go
+            const int gx = ldrcfilm::seekX((int32_t) ldrcfilm::rd32(filmSecs() + 4 * s), FILM_SEEK_X0, FILM_SEEK_W, filmHead.frames);
+            gfx->fillRect(gx - 1, FILM_SEEK_MID - 5, 3, 11, 2214);
+        }
+        gfx->fillCircle(kx, FILM_SEEK_MID, FILM_SEEK_R, 0xFFFF);
+    }
+    dirty(0, top, W, h); touchPainted = true;
+}
 static void filmPause() {                                          // the film held where it is; the bar drawn over its foot (what lay there kept)
     const uint32_t len = ldrcfilm::lengthMs(filmHead);
     filmPosMs = std::min((uint32_t) (millis() - filmStartMs), len);
     if (audioId == FILM_AUDIO_ID) audioStop();
     if (!filmStrip) filmStrip = (uint16_t *) ps_malloc((size_t) W * FILM_BAR_H * 2);
     if (filmStrip) { memcpy(filmStrip, topFb + FILM_BAR_Y * W, (size_t) W * FILM_BAR_H * 2); filmStripKept = true; }
-    { TopDraw td; gfx->fillRect(0, FILM_BAR_Y, W, FILM_BAR_H, 2214); }
+    filmSeekWant = -1; filmSeekHeld = false;
+    { TopDraw td; gfx->fillRect(0, FILM_BAR_Y, W, FILM_BAR_H, 2214); gfx->fillRect(0, FILM_BAR_Y, W, 2, 0x8410); }   // (a line along its top: the bar apart from the film)
+    filmDrawSeek();
     for (int i = 0; i < 4; ++i) filmDrawCtl(i, false);
     dirty(0, FILM_BAR_Y, W, FILM_BAR_H); touchPainted = true;
     filmPaused = true;
+}
+static void filmBarDown() {                                        // the bar gone: what lay under it - kept, and kept up to date while paused - back
+    if (filmStripKept) { memcpy(topFb + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2); filmStripKept = false; dirty(0, FILM_BAR_Y, W, FILM_BAR_H); touchPainted = true; }
 }
 static void filmPlayFrom(uint32_t ms) {                            // the sound and the clock from ms
     filmPosMs = ms; audioStartFile(filmPath(".wav").c_str(), ms);
     filmStartMs = millis() - ms; filmPaused = false;
 }
+static bool filmSeekStep(uint32_t budgetMs) {                      // (1.11.89) the picture nearer the slider's frame, for at most budgetMs; false: the film could not be read (stopped)
+    const uint32_t t0 = millis();
+    while (filmSeekWant >= 0 && filmLast != filmSeekWant) {
+        const int32_t k = ldrcfilm::seekStep(filmSeekWant, filmLast, filmTable, filmHead.version);
+        if (k < 0) { filmLast = filmSeekWant; break; }
+        if (!filmDecode(k)) { filmStop(true); return false; }
+        filmLast = k;
+        if (millis() - t0 >= budgetMs) break;
+    }
+    return true;
+}
+static void filmSeekTo(int x) {                                    // the slider at x: the time and the knob at once; the picture as fast as it decodes (filmPoll)
+    const int32_t f = ldrcfilm::seekFrame(x, FILM_SEEK_X0, FILM_SEEK_W, filmHead.frames);
+    if (f == filmSeekWant) return;
+    filmSeekWant = f; filmPosMs = filmFrameMs(f);
+    filmDrawSeek();
+}
 static void filmResume() {
-    if (filmStripKept) { memcpy(topFb + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2); filmStripKept = false; dirty(0, FILM_BAR_Y, W, FILM_BAR_H); touchPainted = true; }
+    while (filmSeekWant >= 0 && filmLast != filmSeekWant) if (!filmSeekStep(1000)) return;   // (the slider's frame complete before the film goes on)
+    filmSeekWant = -1;
+    filmBarDown();
     filmPlayFrom(filmPosMs);
 }
 static void filmJump(int32_t target) {                             // the screen as at frame target - its key picture, then every picture after it - and on from there
     if (target < 0) target = 0;
     if (target >= (int32_t) filmHead.frames) target = (int32_t) filmHead.frames - 1;
+    filmSeekWant = -1;
     const int32_t k0 = ldrcfilm::keyAtOrBefore(target, filmTable, filmHead.version);
     if (k0 < 0 || !filmDecode(k0)) { filmStop(true); return; }
     for (int32_t i = k0 + 1; i <= target; ++i) if (ldrcfilm::sizeOf(filmTable, i) && !filmDecode(i)) { filmStop(true); return; }
-    filmLast = target; filmStripKept = false;                      // (the key picture is the whole screen: the bar is gone with it)
-    filmPlayFrom((uint32_t) ((uint64_t) target * 1000 / filmHead.fps));
+    filmLast = target; filmBarDown();                              // (the pictures went in under the bar too: what it kept is this frame's)
+    filmPlayFrom(filmFrameMs(target));
 }
+static bool filmInSeekZone(int x, int y) { return y >= FILM_BAR_Y - 12 && y < FILM_CTL_Y - 2 && x >= FILM_SEEK_X0 - 30 && x <= FILM_SEEK_X0 + FILM_SEEK_W + 30; }
 static void filmTouch(bool pressed, int x, int y, uint32_t now) {
     if (filmTapDeaf) { if (pressed) filmTapSeen = now; else if (now - filmTapSeen >= 80) filmTapDeaf = false; return; }   // (the finger that paused it)
     if (!filmPaused) { if (pressed) { filmPause(); filmTapDeaf = true; filmTapSeen = now; } return; }
-    if (pressed) {                                                 // paused: the bar's buttons
+    if (pressed) {                                                 // paused: the slider, the bar's buttons
         filmTapSeen = now;
-        if (!filmCtlHeld) { filmCtlHeld = true; filmCtlDown = filmCtlAt(x, y); if (filmCtlDown >= 0) filmDrawCtl(filmCtlDown, true); }
+        if (filmSeekHeld) { filmSeekTo(x); return; }               // (the knob follows the finger, wherever it wanders)
+        if (!filmCtlHeld) {
+            if (filmInSeekZone(x, y)) { filmSeekHeld = true; filmSeekTo(x); return; }
+            filmCtlHeld = true; filmCtlDown = filmCtlAt(x, y); filmCtlOnBar = y >= FILM_BAR_Y;
+            if (filmCtlDown >= 0) filmDrawCtl(filmCtlDown, true);
+        }
         return;
     }
+    if (filmSeekHeld) { if (now - filmTapSeen >= 80) filmSeekHeld = false; return; }   // (let go: still paused, at that moment)
     if (!filmCtlHeld || now - filmTapSeen < 80) return;
     filmCtlHeld = false;
     const int c = filmCtlDown; filmCtlDown = -1;
     if (c >= 0) filmDrawCtl(c, false);
-    const int32_t frame = ldrcfilm::frameAt(filmPosMs, filmHead) < 0 ? (int32_t) filmHead.frames - 1 : ldrcfilm::frameAt(filmPosMs, filmHead);
+    const int32_t frame = filmShownFrame();
     if (c == FILM_CTL_BACK) filmJump(ldrcfilm::backTarget(frame, filmHead.fps, filmSecs(), filmSectionCount));
     else if (c == FILM_CTL_NEXT) { const int32_t n = ldrcfilm::nextTarget(frame, filmSecs(), filmSectionCount); if (n < 0) filmStop(true); else filmJump(n); }
     else if (c == FILM_CTL_FILMS) { filmStop(true); filmMenuDeaf = false; }
-    else filmResume();                                             // Play, or a tap anywhere else: on from where it was
-}   // (1.11.88) a tap pauses; then Back, Play, Next or Films - or a tap elsewhere plays on
+    else if (c == FILM_CTL_PLAY || !filmCtlOnBar) filmResume();   // Play, or a tap on the picture: on from where it is
+}   // (a tap on the bar between its buttons: nothing)
 static void filmTouchCancel() { if (filmMenuDown >= 0 && filmMenuUp()) filmMenuDrawButton(filmMenuDown, false); filmMenuDown = -1; filmMenuHeld = false; }
 static bool filmStartName(const char *name) { filmName = name; return filmStart(); }
 // The menu's buttons: a press shows it pressed, the lift on the same button acts (a sample the touch chip dropped is no lift)
@@ -302,7 +366,7 @@ static void filmPoll() {
     }
     if (filmPlaying) {
         if (!filmUp() || !filmAllowed() || !helpPage) { filmStop(false); return; }   // (another page of ours took the layer; the safety off or the motor on; the page went)
-        if (filmPaused) return;
+        if (filmPaused) { if (filmSeekWant >= 0 && filmSeekWant != filmLast) filmSeekStep(25); return; }   // (1.11.89: the picture follows the slider)
         const uint32_t ms = now - filmStartMs;
         const int32_t want = ldrcfilm::frameAt(ms, filmHead) < 0 ? (int32_t) filmHead.frames - 1 : ldrcfilm::frameAt(ms, filmHead);
         // From version 2 every picture is decoded in its turn, however late (a changed rectangle skipped would leave the old

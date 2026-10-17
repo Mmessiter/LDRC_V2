@@ -191,10 +191,18 @@ class Film:
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 150), outline=(255, 214, 64, 255), width=5)
         d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=(230, 40, 40, 255))   # (1.11.88) the exact point it touches
         return f
+    def _sign(self, f):
+        """(screen 1.11.89) a pause sign in the corner, in every picture of a film for the transmitter - Malcolm: "how to inform
+        the user that a press on the video will bring this option" (a tap pauses it: the slider and Back, Play, Next, Films)"""
+        if self.target != 'screen': return f
+        d = ImageDraw.Draw(f); x0, y0 = self.W - 52, self.H - 40
+        d.rounded_rectangle([x0, y0, x0 + 38, y0 + 34], radius=8, fill=(44, 52, 68), outline=(150, 160, 178), width=2)
+        d.rectangle([x0 + 11, y0 + 9, x0 + 16, y0 + 25], fill=(235, 235, 235)); d.rectangle([x0 + 22, y0 + 9, x0 + 27, y0 + 25], fill=(235, 235, 235))
+        return f
     def _now(self, ripple=None):
         f = self._caption(self._frame(self.page), self.cap)
         if self.fx is not None: f = self._finger(f, self.fx, self.fy, self.fpress, ripple)
-        return f
+        return self._sign(f)
     def _n(self, secs): return max(1, int(round(secs * self.FPS)))
     def _ease(self, t): return t * t * (3 - 2 * t)
     def card(self, big, small):
@@ -303,12 +311,19 @@ class Film:
             secset = set(sections)
             blobs, keys, prev = [], [], None
             crops = []                                                # (index, rectangle, the picture cut out)
+            whole = self.W * self.H; since = 0                         # (the area decoded since the last whole picture)
             for i, f in enumerate(keep):
                 full = prev is None or i in secset
                 box = (0, 0, self.W, self.H) if full else ImageChops.difference(prev, f).getbbox()
                 if box is None: crops.append(None)
                 else:
                     l, t0, r, b = box; l, t0 = l // 8 * 8, t0 // 8 * 8; r, b = min(self.W, (r + 7) // 8 * 8), min(self.H, (b + 7) // 8 * 8)
+                    # (1.11.89, the slider: a jump decodes from the whole picture at or before it) a big change - a page fading
+                    # in - goes in whole, and so does any change once those since the last whole picture add up to a screen:
+                    # a jump never decodes more than about two screens' worth
+                    area = (r - l) * (b - t0)
+                    if area * 2 > whole or since + area > whole: l, t0, r, b = 0, 0, self.W, self.H
+                    since = 0 if (l, t0, r, b) == (0, 0, self.W, self.H) else since + area
                     crops.append(((l, t0, r, b), f.crop((l, t0, r, b)).convert('RGB')))
                 prev = f
             # Every picture tried with the screen's own decoder; one it refuses is saved again a little differently until it

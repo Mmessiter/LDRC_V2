@@ -13,9 +13,9 @@ TEENSY="${TEENSY_LINK:-$HOME/Documents/GitHub/TXV1B/TransmitterCode/lib/LdrcLink
 clang -O2 -w -c qrcodegen/qrcodegen.c -o gen/qrcodegen.o
 clang++ -std=c++17 -O2 -w -I"$LIB/LdrcLink" -I"$LIB/LdrcUpdate" -I"$TEENSY" -I../test_link -I../test_update -c updscenes.cpp -o gen/updscenes.o
 clang++ -std=c++17 -O2 -w -I. -I$LIB/NextionScript -I$LIB/NextionFonts -I$LIB/LdrcFlight -I$LIB/LdrcTheme -I$LIB/LdrcWifi -I$LIB/LdrcCli -I$LIB/LdrcPics -I$LIB/LdrcUpdate -I$LIB/LdrcLink -Iqrcodegen \
-    -I../../src -Igen -I"../../.pio/libdeps/ota/ArduinoJson/src" \
+    -I../../src -Igen -I"../../.pio/libdeps/ota/ArduinoJson/src" -I"../../.pio/libdeps/ota/JPEGDEC/src" \
     render.cpp $LIB/NextionScript/NextionScript.cpp $LIB/LdrcFlight/LdrcFlight.cpp $LIB/LdrcTheme/LdrcTheme.cpp \
     $LIB/LdrcWifi/LdrcWifi.cpp $LIB/LdrcCli/LdrcCli.cpp $LIB/LdrcPics/LdrcPics.cpp \
     $LIB/LdrcUpdate/LdrcUpdate.cpp $LIB/LdrcLink/LdrcLink.cpp $LIB/LdrcLink/LinkMaster.cpp "$TEENSY/LinkServer.cpp" \
-    gen/updscenes.o gen/qrcodegen.o -o gen/render
+    "../../.pio/libdeps/ota/JPEGDEC/src/JPEGDEC.cpp" gen/updscenes.o gen/qrcodegen.o -o gen/render
 echo "built hmi/render_host/gen/render"

@@ -42,7 +42,9 @@ static bool topOn = false; static int topWho = 0, topX = 0, topY = 0, topW = 0, 
 static uint16_t *topFb = nullptr;
 static bool topReady() { if (!topFb) topFb = (uint16_t *) calloc(W * H, 2); return true; }
 struct FakeGfx { void fillRect(int x, int y, int w, int h, uint16_t c) { for (int j = y; j < y + h && j < H; ++j) for (int i = x; i < x + w && i < W; ++i) topFb[j * W + i] = c; }
-                 void drawFastHLine(int x, int y, int w, uint16_t c) { fillRect(x, y, w, 1, c); } void drawFastVLine(int x, int y, int h, uint16_t c) { fillRect(x, y, 1, h, c); } } fakeGfx, *gfx = &fakeGfx;
+                 void drawFastHLine(int x, int y, int w, uint16_t c) { fillRect(x, y, w, 1, c); } void drawFastVLine(int x, int y, int h, uint16_t c) { fillRect(x, y, 1, h, c); }
+                 void fillRoundRect(int x, int y, int w, int h, int, uint16_t c) { fillRect(x, y, w, h, c); }
+                 void fillCircle(int cx, int cy, int r, uint16_t c) { for (int j = -r; j <= r; ++j) for (int i = -r; i <= r; ++i) if (i * i + j * j <= r * r) fillRect(cx + i, cy + j, 1, 1, c); } } fakeGfx, *gfx = &fakeGfx;
 struct TopDraw { TopDraw() {} };
 static std::vector<std::string> texts;
 static void drawGlyphs(int, int, int, uint16_t, const std::string &s) { texts.push_back(s); }
@@ -134,6 +136,36 @@ int main() {
       int nx, ny, nw, nh; filmCtlRect(FILM_CTL_NEXT, nx, ny, nw, nh);
       tap(nx + nw / 2, ny + nh / 2); run(50);
       CHECK(want > frame && !filmPaused && audioFrom == (uint32_t) ((uint64_t) want * 1000 / filmHead.fps));
+    }
+    // 9b. (1.11.89) the slider. A finger on the track asks for the frame there: the knob and the time at once, the picture
+    // follows while paused, the bar stays drawn over it; dragged back (the finger wandering off the track), the picture
+    // follows back; let go, still paused there; a tap between the bar's buttons does nothing. Then Play: the sound from
+    // that moment - and the picture is the very one a straight play to that moment draws.
+    { run(1500); tap(400, 200); run(50); CHECK(filmPaused && filmStripKept && topFb[(FILM_BAR_Y + 2) * W + 3] == 2214);
+      const int xa = FILM_SEEK_X0 + FILM_SEEK_W * 3 / 4, xb = FILM_SEEK_X0 + FILM_SEEK_W / 5;
+      const int32_t fa = ldrcfilm::seekFrame(xa, FILM_SEEK_X0, FILM_SEEK_W, filmHead.frames), fb2 = ldrcfilm::seekFrame(xb, FILM_SEEK_X0, FILM_SEEK_W, filmHead.frames);
+      texts.clear(); finger(true, xa, FILM_SEEK_MID); nowMs += 10; filmPoll();
+      CHECK(filmSeekHeld && filmSeekWant == fa && filmPaused);
+      char clk[8]; ldrcfilm::clockText((uint32_t) ((uint64_t) fa * 1000 / filmHead.fps), clk);
+      char len[8]; ldrcfilm::clockText(ldrcfilm::lengthMs(filmHead), len);
+      bool timeShown = false, lenShown = false; for (auto &s : texts) { if (s == clk) timeShown = true; if (s == len) lenShown = true; }
+      CHECK(timeShown && lenShown);
+      for (int i = 0; i < 30; ++i) { finger(true, xa, FILM_SEEK_MID); nowMs += 10; filmPoll(); }
+      CHECK(filmLast == fa && topFb[(FILM_BAR_Y + 2) * W + 3] == 2214);
+      for (int x = xa; x >= xb; x -= 7) { finger(true, x, FILM_SEEK_MID + 40); nowMs += 10; filmPoll(); }
+      for (int i = 0; i < 30; ++i) { finger(true, xb, FILM_SEEK_MID + 40); nowMs += 10; filmPoll(); }
+      CHECK(filmSeekWant == fb2 && filmLast == fb2 && fb2 < fa);
+      for (int i = 0; i < 12; ++i) { finger(false, 0, 0); nowMs += 10; filmPoll(); }
+      CHECK(!filmSeekHeld && filmPaused && filmLast == fb2);
+      int bx, by, bw, bh; filmCtlRect(FILM_CTL_BACK, bx, by, bw, bh); tap(bx + bw + 7, by + bh / 2); run(50); CHECK(filmPaused);
+      std::vector<uint16_t> seen(topFb, topFb + W * H); memcpy(seen.data() + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2);
+      int px, py, pw, ph; filmCtlRect(FILM_CTL_PLAY, px, py, pw, ph); tap(px + pw / 2, py + ph / 2);
+      CHECK(!filmPaused && !filmStripKept && audioFrom == (uint32_t) ((uint64_t) fb2 * 1000 / filmHead.fps));
+      const std::string name = filmName; CHECK(filmStartName(name.c_str()));
+      while (ldrcfilm::frameAt(nowMs - filmStartMs, filmHead) < fb2) { nowMs += 10; filmPoll(); }
+      for (int i = 0; i < 50; ++i) filmPoll();
+      CHECK(memcmp(topFb, seen.data(), (size_t) W * H * 2) == 0);
+      printf("slider: to frame %d and back to %d; the picture there the same as a straight play to it\n", (int) fa, (int) fb2);
     }
     // 10. Next from the last section: the menu
     { for (int guard = 0; guard < 30 && filmPlaying; ++guard) {

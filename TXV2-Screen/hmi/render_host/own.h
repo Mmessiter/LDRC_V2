@@ -18,6 +18,7 @@
 //   @link STATE      working done failed
 //   @banner TEXT     the two-second banner along the top, saying TEXT
 //   @pipe [late]     "Connecting Bluetooth" over the Rotorflight menu (late: after six seconds of trying)
+//   @film menu | NAME SECONDS [drag TO]   the films menu; a film paused at SECONDS, its bar and slider (film.h)
 // Each is drawn over whatever is on the glass, as the screen lays its layer over the Teensy's page.
 #pragma once
 #include <dirent.h>
@@ -325,6 +326,7 @@ static void linkShot(const std::string &state) {
     else if (state == "failed") { teensyLink.bad = true; teensyLink.resultNow = "FAILED at sending /FW/TXFW.BIN: the transmitter stopped answering"; linkPanel(true); }
     else fprintf(stderr, "render: no link state %s\n", state.c_str());
 }
+#include "film.h"                                            // (1.11.89) the films: the menu, a film paused with its slider
 static bool ownCommand(const std::string &s) {
     auto arg = [&](size_t n) { return s.size() > n ? s.substr(n) : std::string(); };
     // a page of our own replaces the one before it on the layer: the Teensy's page shows again first (banners are drawn ON the page)
@@ -337,6 +339,7 @@ static bool ownCommand(const std::string &s) {
     if (s.rfind("@cli ", 0) == 0) { cliShot(arg(5)); return true; }
     if (s.rfind("@link ", 0) == 0) { linkShot(arg(6)); return true; }
     if (s.rfind("@banner ", 0) == 0) { banner(arg(8).c_str()); return true; }
+    if (s.rfind("@film ", 0) == 0) { filmShot(arg(6)); return true; }
     if (s == "@pipe" || s == "@pipe late") { pipeNoticeLate = s == "@pipe late"; pipeNoticeDraw(); return true; }
     return false;
 }

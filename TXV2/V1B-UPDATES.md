@@ -186,6 +186,32 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Films: a slider to any moment, and a pause sign (screen 1.11.89, Teensy B123 unchanged, 17 Oct 2026)
+
+Malcolm, after the finger fix ("The pointer is now accurate, thank you!"): "It would be also nice if, with the same time,
+we had a bar with a slider so we could slide backwards or forwards a particular distance as we might with a video" and "I
+am wondering how to inform the user that a press on the video will bring this option to the bottom of the screen."
+
+**The slider.** The paused film's bar is taller. Above Back, Play, Next and Films: the time where the film stands, a
+slider along the whole film with a small gap where each part starts (where Back and Next go), and the film's length. A
+finger on the slider moves the knob and the time at once; the picture follows as fast as the screen decodes it, a little
+each pass so the finger is never kept waiting, and the film stays paused there when the finger lifts. Play goes on from
+that moment, the voice too. A tap on the bar between its buttons now does nothing (it used to carry on). While paused,
+any picture that falls under the bar goes into what the bar keeps, so the bar stays whole and the picture is right when it goes.
+
+**Telling the viewer.** Every film for the transmitter shows a small pause sign in its bottom right corner, and the films
+menu says "While a film plays, tap it to pause." (it said "Tap anywhere to stop", out of date since 1.11.88).
+
+**Quicker jumps.** The films hold a whole-screen picture at every page change, and wherever the changes since the last
+one add up to a screen, so a jump (the slider, Back, Next) decodes at most about two screens' worth (191 kB at worst, was
+597 kB). Each film grew by about 0.1 to 0.25 MB.
+
+Tests: film_core.h's seekStep, seekFrame, seekX and clockText (test_film, 84 checks); the flow test (46 checks: the slider
+forward and back with the finger wandering off the track, the bar kept, a tap between buttons, and the picture after a
+slide identical to a straight play to that moment); decode_test on all three films. The Mac renderer now draws films
+(hmi/render_host/film.h: @film menu, @film NAME SECONDS [drag TO]) with the screen's own code and fonts, so the bar was
+looked at as the screen will draw it. FRONT.TXT and EASY.TXT mention the slider.
+
 ## Films redrawn: the finger exactly on the button (the films only; Teensy B123 and screen 1.11.88 unchanged, 17 Oct 2026)
 
 Malcolm, with four photos of the films on his transmitter: "The pointer is still not accurate. It's usually rather too
