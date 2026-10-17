@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.898-sbus-standard-scale",
+      "url": "https://messiter.com/rxv2/release/v0.9.898/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.898/littlefs.bin",
+      "fs_md5": "b158805af954164c0c691f50425acaf0",
+      "notes": "SBUS output now uses the standard scale (992 = 1500 us), so a flight controller on SBUS reads the same microseconds as on CRSF: centre 1500, not 1519, and full travel. Anyone flying SBUS from an RXV2 should check centre and travel on the receiver tab once."
+    },
+    {
       "name": "RXV2-0.9.897-exact-rates-curves",
       "url": "https://messiter.com/rxv2/release/v0.9.897/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.897/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.887/littlefs.bin",
       "fs_md5": "8f37f74f076019a2d0c0297eb34fa38c",
       "notes": "The gear-ratio page accepts 1 : 1 as direct drive (head speed = motor RPM) with an amber note that it is also the factory setting; it called 1 : 1 'Not set' and asked to save anyway. Found on the SAB Havoc."
-    },
-    {
-      "name": "RXV2-0.9.886-arm-live",
-      "url": "https://messiter.com/rxv2/release/v0.9.886/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.886/littlefs.bin",
-      "fs_md5": "35226fead119b3b4a425619ba9b71452",
-      "notes": "The phone's Switches page keeps its live line while the model is armed: the receiver answers that one read (MSP_RC) from its own output without a word to the flight controller, the ARMED banner is a strip on that page, and an arm switch written from a page moves the arming channel the receiver watches at once (it was learned once at boot and never again)."
     }
   ],
   "rotorflight": {

@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.897-exact-rates-curves";
+constexpr const char* FW_VERSION = "RXV2-0.9.898-sbus-standard-scale";
 
 //*********************************************************************
 //  Auto-update manifest URLs

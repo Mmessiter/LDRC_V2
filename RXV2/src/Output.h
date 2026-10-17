@@ -50,6 +50,20 @@ inline const char* protocolDesc(Protocol p) {
 //*********************************************************************
 // 25 bytes: start byte 0x0F, 16 channels × 11 bits packed, flags, end byte.
 
+// SBUS-CRSF-SCALE-BEGIN (dev/sbus_scale_test.sh cuts from here to the END marker)
+// The 11-bit channel value SBUS, CRSF and FBUS share. A flight controller turns it into microseconds the same way for
+// all three - us = value * 5/8 + 880 (Betaflight / Rotorflight sbus.c; crsf.c within a microsecond) - so 172 = 988 us,
+// 992 = 1500 us, 1811 = 2012 us, the convention every radio follows. (0.9.898) SBUS and FBUS used to spread the
+// transmitter's whole 500..2500 over 0..2047, copied from the V1 receiver, so a flight controller on SBUS read centre as
+// 1519 us and 1000..2000 as about 1200..1840: squashed and 19 us high, while CRSF was right. One formula now, clamped
+// to 172..1811 (never an invalid pulse): the same microseconds on every protocol (Malcolm, 17 Oct 2026).
+inline uint16_t rc11bit(uint16_t us) {
+    long v = ((long)us - 1500) * 819L / 500L + 992L;   // 819/500 ≈ 1.638: 1000 -> 173, 1500 -> 992, 2000 -> 1811
+    if (v < 172)  v = 172;
+    if (v > 1811) v = 1811;
+    return (uint16_t)v;
+}
+
 inline void buildSbusFrame(bool frameLost, bool failsafe) {
     memset(sbusFrame, 0, sizeof(sbusFrame));
     sbusFrame[0] = 0x0F;
@@ -58,11 +72,7 @@ inline void buildSbusFrame(bool frameLost, bool failsafe) {
     uint8_t  bitCount = 0;
     uint8_t  idx      = 1;
     for (uint8_t c = 0; c < 16; ++c) {
-        // Mirror v1 MapToSBUS: map(value, 500, 2500, 0, 2047)
-        long v = (long)channelMicros[c] - 500;
-        long s = (v * 2047L) / 2000L;
-        if (s < 0)    s = 0;
-        if (s > 2047) s = 2047;
+        const uint16_t s = rc11bit(channelMicros[c]);   // (0.9.898) the standard scale; was the whole 500..2500 over 0..2047
         bits |= ((uint32_t)s & 0x07FFu) << bitCount;
         bitCount += 11;
         while (bitCount >= 8) {
@@ -105,10 +115,7 @@ inline void buildCrsfFrame() {
     uint8_t  bitCount = 0;
     uint8_t  idx      = 3;
     for (uint8_t c = 0; c < 16; ++c) {
-        long v       = (long)channelMicros[c] - 1500;    // centre at zero
-        long crsfval = (v * 819L) / 500L + 992L;         // 819/500 ≈ 1.638
-        if (crsfval < 172)  crsfval = 172;
-        if (crsfval > 1811) crsfval = 1811;
+        const uint16_t crsfval = rc11bit(channelMicros[c]);
         bits |= ((uint32_t)crsfval & 0x07FFu) << bitCount;
         bitCount += 11;
         while (bitCount >= 8) {
@@ -140,10 +147,7 @@ inline void buildFbusFrame(bool frameLost, bool failsafe) {
     uint8_t  bitCount = 0;
     uint8_t  idx      = 2;
     for (uint8_t c = 0; c < 16; ++c) {
-        long v = (long)channelMicros[c] - 500;
-        long s = (v * 2047L) / 2000L;
-        if (s < 0)    s = 0;
-        if (s > 2047) s = 2047;
+        const uint16_t s = rc11bit(channelMicros[c]);   // (0.9.898) as SBUS
         bits |= ((uint32_t)s & 0x07FFu) << bitCount;
         bitCount += 11;
         while (bitCount >= 8) {
@@ -155,6 +159,8 @@ inline void buildFbusFrame(bool frameLost, bool failsafe) {
     fbusFrame[24] = (frameLost ? 0x04 : 0) | (failsafe ? 0x08 : 0);
     fbusFrame[25] = crsfCrc8(&fbusFrame[1], 24);
 }
+
+// SBUS-CRSF-SCALE-END
 
 //*********************************************************************
 //  IBUS frame (FlySky)
