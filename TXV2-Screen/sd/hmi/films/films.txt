@@ -6,10 +6,18 @@ FRONT: The front page
 TXSETUP: Transmitter setup
 CALIB: Calibrating the sticks
 OPTIONS: System, and binding
+SWITCHES: Switches
+ONESWICH: A switch's job
+AUDIO: Sounds and brightness
+LIPO: Batteries
+BUDDY: Wireless buddy
 RXSETUP: Model setup
 MODELS: Choosing a model
 IDS: Model IDs
+IDCHECK: Checking the model IDs
 RXSETUP1: Model options
+SERVOTYP: Servo types
+IMAGE: Model picture
 CHANNELS: Channels
 CURVES: Curves of 3 to 9 points
 TRIMS: Trims
@@ -19,8 +27,10 @@ DRATES: Rates
 SLOWSERV: Servo speed
 INPUTS: Inputs
 MIXES: Mixes
+MACROS: Macros
 FAILSAFE: Failsafe
 BANKNAME: Bank names
+LOGFILES: Log files
 EASY: Rotorflight: Easy tuning
 # The Rotorflight menu's help, which opens without a model, plays Easy tuning's (its page needs the model connected)
 RFLIGHT=EASY

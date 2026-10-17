@@ -10,7 +10,7 @@
 //                    donotfly fellback noserver nowifi nowifiyet motor safety model modeljustnow room versions installed
 //                    older picking again
 //   @rxupdate STATE  checking offer working waiting done uptodate nomodel noversion armed nowifi failed noanswer safety
-//   @pics STATE      choose first mine page2 pressed ask_delete deleted receive receive_nowifi receive_flying receiving
+//   @pics STATE      choose first mine page2 pressed ask_delete deleted receive receive_nowifi receive_flying receiving (pick NAME: that picture touched)
 //                    received upload_failed saving opening
 //   @cli STATE       opening console scrolled longreply keys keys_empty keys_symbols leave nopipe armed refused refused_linked
 //                    ... exec_pick exec_pick_next exec_pick_ask (1.11.74: the list of the model's diffs)
@@ -197,6 +197,7 @@ static void picsShot(const std::string &state) {
     pictures.pageGone();
     pictures.open("RAW 420 MCM", state == "first" ? "sd0/images/Noimage.jpg" : "sd0/images/Raw420.jpg");
     if (state == "mine" || state == "ask_delete" || state == "deleted") picTapName("RAW420MC");
+    if (state.rfind("pick ", 0) == 0) picTapName(state.substr(5));   // (17 Oct: the animations) a picture of the card touched by its name
     if (state == "ask_delete" || state == "deleted") picTapButton(1);
     if (state == "deleted") picTapButton(2);
     if (state == "page2") { const ldrc::PicRect a = ldrc::picArrow(1); picTap(a.x + a.w / 2, a.y + a.h / 2); }

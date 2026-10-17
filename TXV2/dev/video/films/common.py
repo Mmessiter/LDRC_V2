@@ -18,3 +18,11 @@ def model_route_play(f, button, page_key):
     """... and played: each page shown, named, the finger to its button"""
     f.show('r_front'); f.say('front', 'Press Model.', after=0.3); f.tap(*at('FrontView', 'b1'), 'r_setup')
     f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('RXSetupView', txt=button), page_key)
+def tx_route(f, button, spoken=None, front_shot=None):
+    """the way in, declared: the front page, then Transmitter, then this page's button on Transmitter setup"""
+    f.shot('r_front', front_shot or FRONT_CONNECTED); f.shot('r_setup', prefix('33.txt', '33_open'))
+    f.line('front', "This is the transmitter's front page. Press Transmitter.")
+    f.line('setup', 'This is the Transmitter setup page. Press %s.' % (spoken or button))
+def tx_route_play(f, button, page_key):
+    f.show('r_front'); f.say('front', 'Press Transmitter.', after=0.3); f.tap(*at('FrontView', 'b0'), 'r_setup')
+    f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('TXSetupView', txt=button), page_key)

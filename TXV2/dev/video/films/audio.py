@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Film AUDIO: Sounds and brightness, a tour. The words are AUDIO.TXT's. Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from filmkit import Film, prefix, at
+from common import model_route, model_route_play, tx_route, tx_route_play, FRONT_NO_MODEL
+f = Film('AUDIO', 'Sounds and brightness', 'What the transmitter says, and how loud')
+tx_route(f, 'Sounds etc.', spoken='Sounds, et cetera')
+f.shot('p', prefix('55.txt', '55_open'))
+f.line('title', 'Sounds and brightness. What the transmitter says, how loud it is, and how bright the screen is.')
+f.line('page', 'This is the Sounds page. Touch a switch to turn a sound on or off. The sliders work at once.')
+f.line('timer', 'Timer voice says each minute of the motor timer, up to ten.')
+f.line('bank', 'Bank voice says the bank or rate when you change it, and motor on or off, and safety on or off.')
+f.line('connected', 'Connected voice says when the model connects and disconnects.')
+f.line('clicks', 'Trim change clicks: a click for each trim step.')
+f.line('vario', 'Vario tones tell you whether the model is climbing or sinking. The vario needs a pressure sensor in the model.')
+f.line('bright', 'Screen brightness, and volume.')
+f.line('ok', 'OK keeps all your choices.')
+f.line('end', "That's the Sounds page.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+tx_route_play(f, 'Sounds etc.', 'p')
+f.say('page', 'Sounds and brightness.')
+f.point(*at('AudioView', 'c3'), 'timer', 'Timer voice.')
+f.point(*at('AudioView', 'c4'), 'bank', 'Bank voice.')
+f.point(*at('AudioView', 'c5'), 'connected', 'Connected voice.')
+f.point(*at('AudioView', 'c1'), 'clicks', 'Trim change clicks.')
+f.point(*at('AudioView', 'c2'), 'vario', 'Vario tones.')
+f.point(*at('AudioView', 'h0'), 'bright', 'Brightness and volume.')
+f.point(*at('AudioView', 'b10'), 'ok', 'OK keeps your choices.')
+f.end('end'); f.finish()

@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Ten more animations: switches, sounds, batteries, buddy, pictures, logs (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
+
+Switches (SWITCHES), a switch's job (ONESWICH), Sounds and brightness (AUDIO), Batteries (LIPO), Wireless buddy (BUDDY:
+Instructor turned on, which shows the switch positions and Buddy channels), Model picture (IMAGE: the screen's own chooser,
+its places from lib/LdrcPics' geometry; the renderer's new "@pics pick NAME" touches a picture by name), Log files
+(LOGFILES, with the model off: the list is refused while one is connected), Macros, Servo types (SERVOTYP) and checking the
+model IDs (IDCHECK). Thirty in all, three pages of the list. films/common.py's tx_route() is the Transmitter setup way in.
+The public copy (dev/publish_public.py) now leaves the animations out: transmitters fetch them from messiter.com.
+
 ## Ten more animations: the Model setup pages (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
 
 Model options (RXSETUP1), Failsafe (ticking a channel, Save while connected), Model IDs (storing the ID: the question and
