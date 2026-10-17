@@ -103,6 +103,11 @@ def _refused(exe, outdir, jpegs):
     r = subprocess.run([exe, path], capture_output=True, text=True, check=True)
     return set(int(x) for x in r.stdout.split())
 
+class _Frames(list):
+    """the film's pictures, and where the finger was drawn in each one (so a check can look for the dot in any of them)"""
+    def __init__(self, film): super().__init__(); self.film = film; self.pos = []
+    def append(self, f): super().append(f); self.pos.append((self.film.fx, self.film.fy))
+
 class Film:
     def __init__(self, name, title, subtitle):
         self.name, self.title, self.subtitle = name, title, subtitle
@@ -110,8 +115,9 @@ class Film:
         self.out = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'out', 'video', name)
         for d in ('scripts', 'shots', 'voice'): os.makedirs(os.path.join(self.out, d), exist_ok=True)
         self.scripts, self.lines, self.img, self.dur = {}, [], {}, {}
-        self.frames, self.segments = [], []
+        self.frames, self.segments = _Frames(self), []
         self.page = None; self.cap = None; self.fx = self.fy = None; self.fpress = 0.0
+        self.touches = []                                     # (the frame, x, y, the page) at every press and slider stop: finish() checks each
         self._layout()
 
     # ------------------------------------------------------------ the screens and the voice
@@ -162,7 +168,10 @@ class Film:
         for y in range(self.H): d.line([(0, y), (self.W, y)], fill=(22 + y // 40, 28 + y // 40, 38 + y // 30))
         self._framed = {}
     def _frame(self, page):
-        if isinstance(page, Image.Image) and page.size == (self.W, self.H): return page.copy()   # (a card)
+        if getattr(page, 'ldrc_card', False): return page.copy()   # (a card: made at the film's own size by card())
+        # (until 17 Oct a picture of the film's own size counted as a card - and on the transmitter (800 x 480) every page is
+        # that size: the pages went in whole while the finger was placed for the page at 90 %, a tenth too high and towards
+        # the middle. Malcolm's photos showed it: "The pointer is still not accurate. It's usually rather too high.")
         key = id(page)
         if key not in self._framed:
             f = self.BG.copy(); s = page.resize((int(800 * self.SCALE), int(480 * self.SCALE)), Image.LANCZOS)
@@ -191,7 +200,8 @@ class Film:
     def card(self, big, small):
         f = self.BG.copy(); d = ImageDraw.Draw(f)
         tw = d.textlength(big, font=self.F_TITLE); d.text(((self.W - tw) / 2, self.H * 0.375), big, font=self.F_TITLE, fill=(255, 255, 255))
-        sw = d.textlength(small, font=self.F_SUB); d.text(((self.W - sw) / 2, self.H * 0.5), small, font=self.F_SUB, fill=(255, 214, 64)); return f
+        sw = d.textlength(small, font=self.F_SUB); d.text(((self.W - sw) / 2, self.H * 0.5), small, font=self.F_SUB, fill=(255, 214, 64))
+        f.ldrc_card = True; return f
 
     # ------------------------------------------------------------ the timeline: the voice over stillness, movement in silence
     def hold(self, secs):
@@ -216,7 +226,7 @@ class Film:
     def press(self, secs=PRESS):
         n = self._n(secs)
         for i in range(n): self.fpress = (i + 1) / n; self.frames.append(self._now(ripple=(i + 1) / n))
-        self.fpress = 1.0
+        self.fpress = 1.0; self.touches.append((len(self.frames) - 1, self.fx, self.fy, self.page))
     def lift(self, secs=0.3):
         n = self._n(secs)
         for i in range(n): self.fpress = 1.0 - (i + 1) / n; self.frames.append(self._now())
@@ -225,10 +235,15 @@ class Film:
         """the page under the finger changes at once (a slider's next step, a box appearing)"""
         self.page = self.img[page]
     def slide(self, steps, y, secs_each=0.5):
-        """the finger, pressed, moves through slider positions: steps = [(page key, x), ...]"""
+        """the finger, pressed, moves through slider positions: steps = [(page key, x), ...]. The knob follows the finger: the
+        next position's page from the moment the finger is past half way (17 Oct: it jumped ahead as the finger set off)"""
         for key, x in steps:
-            x0 = self.fx; n = self._n(secs_each); self.page = self.img[key]
-            for i in range(n): self.fx = x0 + (x - x0) * self._ease((i + 1) / n); self.fy = y; self.frames.append(self._now())
+            x0 = self.fx; n = self._n(secs_each)
+            for i in range(n):
+                e = self._ease((i + 1) / n); self.fx = x0 + (x - x0) * e; self.fy = y
+                if e >= 0.5: self.page = self.img[key]
+                self.frames.append(self._now())
+            self.touches.append((len(self.frames) - 1, self.fx, self.fy, self.page))
     def tap(self, x, y, nxt=None):
         """in silence: the finger glides to (x, y), rests, presses, lifts; the next page (if any) fades in"""
         self.glide(x, y); self.hold(REST); self.press(); self.hold(0.3); self.lift()
@@ -240,8 +255,36 @@ class Film:
         self.show(self.card("That's all.", 'LockDownRadioControl V2'), look=0.4)
         self.say(key, cap=None, after=2.0)
 
+    # ------------------------------------------------------------ the check (17 Oct, after Malcolm's photos of the transmitter)
+    def check_touches(self, frame_of, what, page_tol, dot_tol):
+        """Every touch, in the pictures themselves: the page around the finger must be the page as drawn at the film's scale and
+        place (so the finger's point is the page's point), and the red dot must sit where the finger's sums put it. frame_of(n)
+        gives (the picture standing for frame n, the frame it really is), or None: not checked. Stops the build on any fault."""
+        import numpy as np
+        pw, ph = int(800 * self.SCALE), int(480 * self.SCALE); ring = 40 * max(self.FS, 0.8)
+        yy, xx = np.mgrid[0:ph, 0:pw]; worst_page = worst_dot = 0.0; n_checked = 0
+        for n, x, y, page in self.touches:
+            got_n = frame_of(n)
+            if got_n is None: continue
+            f, k = got_n; x, y = self.frames.pos[k]                # (where the finger was drawn in that very frame)
+            cx, cy = self.SX + x * self.SCALE, self.SY + y * self.SCALE
+            exp = np.asarray(page.resize((pw, ph), Image.LANCZOS), dtype=np.int16)
+            got = np.asarray(f.convert('RGB').crop((self.SX, self.SY, self.SX + pw, self.SY + ph)), dtype=np.int16)
+            away = (xx + self.SX - cx) ** 2 + (yy + self.SY - cy) ** 2 > ring ** 2
+            diff = float(np.abs(exp - got).mean(axis=2)[away].mean())
+            r = 10; win = np.asarray(f.convert('RGB').crop((int(cx) - r, int(cy) - r, int(cx) + r + 1, int(cy) + r + 1)), dtype=np.int16)
+            wy, wx = np.mgrid[0:2 * r + 1, 0:2 * r + 1]; inside = (wx - r) ** 2 + (wy - r) ** 2 <= r * r
+            red = inside & (win[:, :, 0] > 170) & (win[:, :, 1] < 110) & (win[:, :, 2] < 110)
+            if red.sum() < 25: sys.exit('%s %s: touch at frame %d (%d, %d): no red dot where the finger should be' % (self.name, what, n, x, y))
+            ys, xs = np.nonzero(red); dx = xs.mean() + int(cx) - r - cx; dy = ys.mean() + int(cy) - r - cy
+            if diff > page_tol: sys.exit('%s %s: touch at frame %d (%d, %d): the page around the finger is not the page at the finger\'s scale (differs by %.1f)' % (self.name, what, n, x, y, diff))
+            if abs(dx) > dot_tol or abs(dy) > dot_tol: sys.exit('%s %s: touch at frame %d (%d, %d): the dot is %.1f, %.1f pixels away' % (self.name, what, n, x, y, dx, dy))
+            worst_page, worst_dot = max(worst_page, diff), max(worst_dot, abs(dx), abs(dy)); n_checked += 1
+        print('%s %s: %d touches checked - each dot on its point (worst %.2f px), the page under it right (worst %.1f)' % (self.name, what, n_checked, worst_dot, worst_page))
+
     # ------------------------------------------------------------ out
     def finish(self):
+        self.check_touches(lambda n: (self.frames[n], n), 'as drawn', 0.5, 1.0)   # (a dot of 9 pixels round a point between pixels: within one)
         FPS = self.FPS; total = len(self.frames) / FPS; rate = 44100
         track = bytearray(int(total * rate) * 2)
         for start, k in self.segments:
@@ -294,6 +337,12 @@ class Film:
             for bl, k in zip(blobs, keys): table += struct.pack('<II', off if bl else 0, len(bl) | (0x80000000 if k else 0)); data += bl; off += len(bl)
             table += secbytes
             ldf = os.path.join(DEST, self.name + '.ldf'); open(ldf, 'wb').write(head + table + data)
+            want = {n // STEP: n for n, _, _, _ in self.touches}; got = {}; fb = Image.new('RGB', (self.W, self.H))
+            for j, bl in enumerate(blobs):                        # (the file read back as the screen reads it: each picture where it says)
+                if bl:
+                    l, t0, w_, h_ = struct.unpack('<HHHH', bl[:8]); fb.paste(Image.open(io.BytesIO(bl[8:])).convert('RGB').crop((0, 0, w_, h_)), (l, t0))
+                if j in want: got[want[j]] = (fb.copy(), j * STEP)   # (kept frame j is frame j * STEP)
+            self.check_touches(lambda n: got.get(n), 'in ' + os.path.basename(ldf), 4.0, 1.0)
             wav = os.path.join(DEST, self.name + '.wav')
             subprocess.run([FF, '-y', '-loglevel', 'error', '-i', tw, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '22050', '-ac', '1', '-c:a', 'pcm_s16le', wav], check=True)
             real = sum(1 for bl in blobs if bl)

@@ -186,6 +186,20 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Films redrawn: the finger exactly on the button (the films only; Teensy B123 and screen 1.11.88 unchanged, 17 Oct 2026)
+
+Malcolm, with four photos of the films on his transmitter: "The pointer is still not accurate. It's usually rather too
+high." The fault was in the film kit (dev/video/filmkit.py), not the screen. A picture of the film's own size counted as a
+ready-made title card, and on the transmitter (800 x 480) every page is that size: the pages went in whole, while the finger
+was placed for the page at 90 %, as the kit lays a page out with the words below it. So the finger was a tenth too high and
+a tenth towards the middle, up to 48 pixels at the foot of the screen. The MP4 versions were right (their pages are scaled
+up), which is why the earlier check on the page drawings passed. Now only what card() makes is a card; the transmitter's
+films show each page at 90 %, with the words in their own band below it, so the words never cover a button. And every film
+checks itself as it is made: at every press and slider stop the page around the finger must be the page at the finger's
+scale, and the red dot within a pixel of its point, in the pictures as drawn and again in the .ldf read back as the screen
+reads it. The old fault fails that check at its first touch. Also, while sliding, the knob now follows the finger (the
+next value from half way), as the real slider does, instead of jumping ahead as the finger set off.
+
 ## Films: pause, Back and Next; the finger exact; no screen timeout (Teensy B123, screen 1.11.88, 17 Oct 2026)
 
 Malcolm, of 1.11.87: "I wonder if it might be possible to include a pause button, the ability to go back a bit and replay
