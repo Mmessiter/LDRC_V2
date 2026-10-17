@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.81"
+#define SCREEN_VERSION "1.11.82"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -88,7 +88,7 @@ static void hookFrameEnd() {
     esp_rgb_panel_t *p = panel->*panelMember(RgbPanelTag());
     if (!p) return;
     const uint32_t vt = LCD_CAM.lcd_ctrl.lcd_vt_height, pic = (LCD_CAM.lcd_ctrl1.lcd_vb_front + 1) + (LCD_CAM.lcd_ctrl.lcd_va_height + 1);
-    if (vt >= 400 && vt < 900 && pic < vt) { vtNormal = vt; picLines = pic; }   // (anything odd: no quiet frames, the copies are made at once)
+    if (vt >= 400 && vt < 900 && pic < vt) { vtNormal = vt; picLines = pic; picTop = LCD_CAM.lcd_ctrl1.lcd_vb_front + 1; }   // (anything odd: no quiet frames, the copies are made at once)
     p->user_ctx = nullptr;
     p->on_frame_trans_done = onFrameEnd;
 }
@@ -150,6 +150,8 @@ static void dirtyLine(int x1, int y1, int x2, int y2) {   // a long slanted line
 }
 static bool quietSwitch = false;                       // the front screen's switch is waiting to be shown in the panel's quiet time
 static QuietJob quietCopy;
+static uint32_t copyUsPerKpx = 120;                    // (1.11.82) what a copy to the panel costs, measured as it goes: microseconds a thousand pixels
+static bool beamHeld = false;                          // (1.11.82) a rectangle was held back for the beam last pass: look again at once
 static void presentDirty(bool force = false) {
     if (!dirtyN) return;
     const uint32_t now = millis();
@@ -160,12 +162,27 @@ static void presentDirty(bool force = false) {
         quietSwitch = false; if (quiet) force = true;
     }
     if (!force) {
-        if (now - lastPresentMs < 25) return;                                  // 40 frames a second at most
+        if (!beamHeld && now - lastPresentMs < 25) return;                     // 40 frames a second at most
         if (Serial.available() > 0 && now - firstDirtyMs < 80) return;        // a burst is still arriving: show it whole
     }
+    // (1.11.82) Not while the panel's scan would catch a copy part-way: a frame with the rows above the beam new and the rows
+    // below old (the curve page's marker "breaks into two with one part ahead of the other" - Malcolm, 17 Oct 2026). Each
+    // rectangle goes when the beam has passed it, or will not reach it before its copy is done (beamClear, quiet_time.h):
+    // a frame's wait at most, and after 60 ms it goes anyway. A finger's feedback (force) goes at once, as before.
     const uint32_t t0 = micros();
-    for (int i = 0; i < dirtyN; ++i) { present(dirtyList[i].x, dirtyList[i].y, dirtyList[i].w, dirtyList[i].h); perfPresentPx += (uint32_t) dirtyList[i].w * dirtyList[i].h; }
-    dirtyN = 0; lastPresentMs = millis(); perfPresentUs += micros() - t0; perfPresentN++;
+    int kept = 0; uint32_t px = 0;
+    for (int i = 0; i < dirtyN; ++i) {
+        const Rect16 r = dirtyList[i];
+        const uint32_t copyUs = (uint32_t) ((uint64_t) r.w * r.h * copyUsPerKpx / 1000) + 30;
+        if (!force && now - firstDirtyMs < 60 && !beamClear(r.y, r.h, micros(), copyUs)) { dirtyList[kept++] = r; continue; }
+        present(r.x, r.y, r.w, r.h); px += (uint32_t) r.w * r.h;
+    }
+    beamHeld = kept > 0; dirtyN = kept;
+    if (px) {
+        const uint32_t us = micros() - t0;
+        if (px >= 4000) copyUsPerKpx = constrain((copyUsPerKpx * 7 + (uint32_t) ((uint64_t) us * 1000 / px)) / 8, 20u, 2000u);
+        lastPresentMs = millis(); perfPresentUs += us; perfPresentPx += px; perfPresentN++;
+    }
     if (quiet) quietDone(quietCopy, micros() - t0, false);
 }
 // The Teensy redraws a curve by clearing its whole box (130,000 pixels) and drawing ~60 short lines, up to 25

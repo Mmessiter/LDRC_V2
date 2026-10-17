@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The marker in one piece: a copy to the panel waits for the scan (screen 1.11.82, Teensy B117 unchanged, 17 Oct 2026)
+
+Malcolm, of B117: "That's a HUGE amount better!!!! ... while moving the line breaks into two with one part ahead of the
+other. I guess it's possible that a vertical retrace might be the cause." It was. The screen draws everything on a canvas
+and copies each changed rectangle to the panel's framebuffer, and that copy ran at any moment - while the panel's scan
+(43 ms a frame, 85 us a line) was reading the same rows. One frame then showed the rows above the beam with the marker at
+its new place and the rows below at its old one. Now presentDirty holds each rectangle until the beam is clear of it: it
+has passed the rows (a copy made top-down then stays ahead of the next frame's scan), or will not reach them before the
+copy is done - a frame's wait at most (13 ms on average for the marker), and after 60 ms it goes anyway. Where the beam is
+comes from the panel's frame-end interrupt (the quiet-time hook of 1.11.67) and the frame's measured length; the copy's
+cost is measured as it goes. Rows with no window worth waiting for (the whole screen, a tall list to the bottom edge) and a
+finger's own feedback are copied at once, as before. Host test hmi/test_quiet (ESP32-board2): the beam's row within a line
+of a simulated panel; 6,000 copies allowed by the rule never seen part-way, copies made at any moment seen part-way most
+of the time (the fault); the marker's wait 33 ms at worst.
+
 ## The curve page's stick marker moves smoothly (Teensy B117, screen 1.11.81 unchanged, 17 Oct 2026)
 
 Malcolm (photo of the Havok's aileron curve, Bank 4): "the refresh rate is low so as I move the stick the line moves in

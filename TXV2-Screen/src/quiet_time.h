@@ -27,6 +27,35 @@ static void QT_ISR quietFrameEnd() {
 }
 // The quiet time now open, in microseconds left (0: none open): from the quiet frame's last line of picture to its end.
 static uint32_t quietLinesUs(uint32_t lines) { return (uint32_t) ((uint64_t) frameUs * lines / (vtNormal + 1)); }   // (whole microseconds would be 0.5 us short a line)
+// (1.11.82) The panel's scan - the beam - as the row of the picture it is on now, by the time since the frame began: below 0
+// it is in the lines before the picture (VSYNC and the back porch, picTop of them), 480 and more past it. INT32_MIN: nothing
+// is known (no hook, or the interrupt has stopped coming).
+static uint32_t picTop = 16;                            // the lines before the picture (set from the registers by hookFrameEnd)
+static int32_t beamRow(uint32_t nowUs) {
+    if (!vtNormal || !frameEnds) return INT32_MIN;
+    const uint32_t in = nowUs - frameAtUs;
+    if (in > 2 * frameUs) return INT32_MIN;
+    return (int32_t) ((uint64_t) in * (vtNormal + 1) / frameUs) - (int32_t) picTop;
+}
+// (1.11.82) May rows y .. y+h-1 be copied to the panel now, the copy taking copyUs, without the scan catching it part-way - a
+// frame showing the rows above the beam new and those below old (the curve page's marker "breaks into two with one part
+// ahead of the other": Malcolm, 17 Oct 2026)? Yes when the beam has passed them (a copy made top-down then stays ahead of
+// the next frame's scan), or when it will not reach them before the copy is done. A margin of lines covers the estimate's
+// error - more before the beam, where an interrupt held back (a flash write) would put it further on than we think. Rows
+// with no window worth waiting for (the whole screen; a tall list to the bottom edge) go at once, as every copy did before:
+// a window is worth it from 20 lines (1.7 ms, a few passes of the loop), and the window after the beam only when the copy
+// is quicker than the scan, row for row (with a fifth to spare), so that it stays ahead of the next frame's scan.
+static bool beamClear(int32_t y, int32_t h, uint32_t nowUs, uint32_t copyUs, int32_t marginBefore = 12, int32_t marginAfter = 4) {
+    const int32_t beam = beamRow(nowUs);
+    if (beam == INT32_MIN) return true;
+    const int32_t copyLines = (int32_t) (((uint64_t) copyUs * (vtNormal + 1) + frameUs - 1) / frameUs);
+    const int32_t top = -(int32_t) picTop, bottom = (int32_t) (vtNormal + 1) - (int32_t) picTop;   // the beam's first line, and one past its last
+    const int32_t windowBefore = y - marginBefore - copyLines - top, windowAfter = bottom - (y + h) - marginAfter;
+    const bool canBefore = windowBefore >= 20, canAfter = windowAfter >= 20 && copyLines * 5 < h * 4;
+    if (!canBefore && !canAfter) return true;
+    if (canAfter && beam - marginAfter >= y + h) return true;
+    return canBefore && beam + marginBefore + copyLines < y;
+}
 static int32_t quietLeftUs() {
     if (!vtNormal || !quietFrame || frameEnds != quietFrame) return 0;
     const uint32_t in = QT_MICROS() - frameAtUs, end = quietLinesUs(VT_QUIET + 1);
