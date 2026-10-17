@@ -24,7 +24,7 @@
 **Flying**
 - 16 channels. Any stick, switch or knob can drive any channel.
 - 4 banks (flight modes), each with its own curves, trims and mixes.
-- 5-point curves, 3 rates, 32 mixes, 8 timed macros, servo speed, subtrim, reverse, failsafe.
+- Curves of 3, 5, 7 or 9 points for every channel in every bank (every point keeps its height when you change the count), 3 rates, 32 mixes, 8 timed macros, servo speed, subtrim, reverse, failsafe.
 - **Eight switches, any job:** banks, motor, safety, rates, buddy, or the input of any channel 5–16.
 - **Wireless buddy box** with no extra hardware, and a "nudge" mode for the instructor.
 
@@ -63,6 +63,8 @@
 <sub>Rotorflight set-up on the transmitter. Sample values.</sub>
 
 ---
+
+**What gets used.** Compare feature lists and every radio has something the others lack. What matters is which features a pilot reaches for. The ones above that most systems do not have - a model that loads itself, a model or the controls handed over the air with nothing extra to buy, the whole radio updated from a button, Rotorflight set up from the transmitter - are wanted at the field all the time. The few things other radios have that this one does not are rarely used by anyone, and since every line is open they can be added the day a pilot asks: the 3-, 7- and 9-point curves were asked for one October morning and were in the transmitter by lunch.
 
 ## What is in this folder
 
