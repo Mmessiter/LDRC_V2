@@ -217,6 +217,35 @@ bool CheckFileExists(char *fl)
 }
 /*********************************************************************************************************************************/
 
+// B116 (17 Oct 2026). The card library refuses a seek beyond a file's end (SdFat FatFile::seekSet: the position does not
+// move), and the bytes are then written where the position was - the end of the file. So a model saved into a slot beyond
+// the end of models.dat was written at the end, one record after another, never in its slot, and read back as empty:
+// the example card's models.dat is 186,407 bytes (room for 60 models), and Reset transmitter on a card with none filled
+// its last few slots that way. So models.dat is filled with zeros to the end of its last slot, once, when it is opened
+// short. A zero slot is an empty model (ModelDefined 0, as a slot never written). Not a .MOD file, nor after the link
+// changed the pilot's files (LinkChangedUserData: nothing of theirs is written then).
+#define MODELS_FILE_SIZE ((uint32_t)TXSIZE + (uint32_t)MAXMODELNUMBER * (uint32_t)MODELSIZE)
+extern bool LinkChangedUserData; // (LinkMode.h, included later)
+FLASHMEM bool FillModelsFile()
+{
+    uint32_t Size = (uint32_t)ModelsFileNumber.size();
+    if (Size >= MODELS_FILE_SIZE)
+        return true;
+    if (LinkChangedUserData || !ModelsFileNumber.seek(Size))
+        return false;
+    uint8_t Zeros[512] = {0};
+    while (Size < MODELS_FILE_SIZE)
+    {
+        const uint32_t n = (MODELS_FILE_SIZE - Size) < sizeof(Zeros) ? (MODELS_FILE_SIZE - Size) : (uint32_t)sizeof(Zeros);
+        if (ModelsFileNumber.write(Zeros, n) != n)
+            break;
+        Size += n;
+        KickTheDog();
+    }
+    ModelsFileNumber.flush();
+    return Size >= MODELS_FILE_SIZE;
+}
+
 void OpenModelsFile()
 {
 
@@ -242,6 +271,8 @@ void OpenModelsFile()
         else
         {
             ModelsFileOpen = true;
+            if (!SingleModelFlag)
+                FillModelsFile(); // B116: every slot reachable
         }
     }
 }

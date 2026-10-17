@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## models.dat filled to its full size: every model slot reachable (Teensy B116, screen 1.11.81 unchanged, 17 Oct 2026)
+
+Malcolm ("Yes to both please"): the finding of the 17th made good, and it turned out bigger than Reset transmitter. The
+card library refuses a seek beyond a file's end and leaves the position where it was - the end, after a FILE_WRITE
+open - so a model saved into a slot beyond the end of models.dat was appended there, record after record, never in its
+slot, and read back as empty. The example card's models.dat is 186,407 bytes: 60 slots fit, so on every card made from
+it a model saved in slot 62 or above was lost on re-reading; and Reset transmitter on a card with no models.dat left
+slots 89 to 91 the same way (its four passes grow the file enough for the rest). Now OpenModelsFile fills models.dat
+with zeros to the end of its last slot (280,064 bytes) the first time it finds it short - once, a fraction of a second
+- and every slot is reachable. A zero slot is an empty model (ModelDefined 0). Not for a .MOD, nor once the link has
+changed the pilot's files. Host test dev/test_models_file over a fake card that behaves as SdFat does: the two faults
+reproduced (3 slots lost from 89; slot 70 lost on the example card), then every slot right after the fill, the old bytes
+kept, a full-size file untouched, the link's guard. Companion fix the same morning: receiver 0.9.898 sends SBUS on the
+standard scale (992 = 1500 us; the same microseconds as CRSF) - it had spread 500..2500 over 0..2047 since V1.
+
 ## The curve page's switches: Smooth or Exponential after Straight (Teensy B115, screen 1.11.81, 17 Oct 2026)
 
 Malcolm: "after selecting Straight, I cannot afterwards select Smooth or Exponential. If I do it just reverts to Straight."
