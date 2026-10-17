@@ -2065,33 +2065,29 @@ FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y
         return n;
     }
     if (InterpolationTypes[Bank][ChanneltoSet - 1] == SMOOTHEDCURVES)
-    { // CatmullSpline, a point every 12 pixels
-        int adaptiveStep = 12;
-        for (xPoint = xPoints[0]; xPoint <= xPoints[last]; xPoint += adaptiveStep)
+    { // CatmullSpline: through every point exactly, with a vertex every 12 pixels or fewer between them. (B122: it was a vertex every
+      // 12 pixels from the left end, so most points fell between two and the chord cut just inside them - a curve seen "going close
+      // to the point but missing it by a small amount", Malcolm, 17 Oct 2026, with nine points and the kinks remembered heights can make.)
+        int px = (int)xPoints[0], py = (int)yPoints[0];
+        for (int i = 0; i < last; ++i)
         {
-            if (adaptiveStep > xPoints[last] - xPoint)
-                adaptiveStep = xPoints[last] - xPoint;
-            if (adaptiveStep < 1)
-                adaptiveStep = 1;
-            yPoint = Interpolation::CatmullSpline(xPoints, yPoints, pts, xPoint);
-            xDot1 = xPoint;
-            yDot1 = yPoint;
-            if (yDot2 == 0)
-            { // the first point: nothing to draw yet
-                xDot2 = xDot1;
-                yDot2 = yDot1;
-                continue;
-            }
-            if (n < CURVE_SEGMENTS_MAX)
+            const int xa = (int)xPoints[i], xb = (int)xPoints[i + 1];
+            const int steps = xb > xa ? (xb - xa + 11) / 12 : 1;
+            for (int s = 1; s <= steps; ++s)
             {
-                x1[n] = xDot1;
-                y1[n] = yDot1;
-                x2[n] = xDot2;
-                y2[n] = yDot2;
-                ++n;
+                const int x = xa + (xb - xa) * s / steps;
+                const int y = s == steps ? (int)yPoints[i + 1] : (int)lround(Interpolation::CatmullSpline(xPoints, yPoints, pts, (double)x));
+                if (n < CURVE_SEGMENTS_MAX)
+                {
+                    x1[n] = x;
+                    y1[n] = y;
+                    x2[n] = px;
+                    y2[n] = py;
+                    ++n;
+                }
+                px = x;
+                py = y;
             }
-            xDot2 = xDot1;
-            yDot2 = yDot1;
         }
         return n;
     }

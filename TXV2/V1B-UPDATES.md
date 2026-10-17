@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A smooth curve drawn through every one of its points (Teensy B122, screen 1.11.84 unchanged, 17 Oct 2026)
+
+Malcolm, of B121: "the curve between the points seems to be drawn more approximately, sometimes going close to the point
+but missing it by a small amount." The drawing, not the maths: a Smooth curve was drawn as chords with a vertex every 12
+pixels from the left edge, so most points fell between two vertices and the chord cut just inside them - the sharper the
+kink (and remembered heights beside edited ones can make kinks), the more it showed. Now each span between two points is
+sampled on its own, with a vertex every 12 pixels or fewer and the points themselves as vertices, so the drawn curve
+passes through every point exactly. Straight and Exponential drew through their points already. The marker test checks
+every point is a vertex for 3, 5, 7 and 9 points over eight curve shapes (the old sampling fails it), and that nothing
+else in the drawing changed.
+
 ## Every curve point keeps its height (Teensy B121, screen 1.11.84 unchanged, 17 Oct 2026)
 
 Malcolm: "if you set a curve with several points, then you change to another number of points, and then you change back

@@ -169,6 +169,29 @@ static std::string drawing(const std::string &s)
     }
     return out;
 }
+static std::string withoutCurveLines(const std::string &s)
+{ // the drawing less the curve's own lines (ForeGroundColour)
+    std::string out; size_t at = 0; char want[24]; snprintf(want, sizeof(want), ",%u", (unsigned) ForeGroundColour);
+    while (at < s.size()) {
+        size_t end = s.find("\xFF\xFF\xFF", at); if (end == std::string::npos) end = s.size();
+        const std::string cmd = s.substr(at, end - at); at = end + 3;
+        if (cmd.rfind("line ", 0) == 0 && cmd.size() > strlen(want) && cmd.compare(cmd.size() - strlen(want), strlen(want), want) == 0) continue;
+        out += cmd + "\xFF\xFF\xFF";
+    }
+    return out;
+}
+static bool throughEveryPoint(const std::string &s, int npts)
+{ // (B122) every point of the curve is an end of one of its lines, and no line spans more than 12 pixels across
+    GetDotPositions();
+    bool ok = true;
+    for (int k = 0; k < npts; ++k) {
+        char a[40], b[40]; snprintf(a, sizeof(a), "line %d,%d,", (int) xPoints[k], (int) yPoints[k]); snprintf(b, sizeof(b), ",%d,%d,%u\xFF", (int) xPoints[k], (int) yPoints[k], (unsigned) ForeGroundColour);
+        if (s.find(a) == std::string::npos && s.find(b) == std::string::npos) ok = false;
+    }
+    size_t at = 0;
+    while ((at = s.find("line ", at)) != std::string::npos) { int x1, y1, x2, y2; unsigned c; if (sscanf(s.c_str() + at, "line %d,%d,%d,%d,%u", &x1, &y1, &x2, &y2, &c) == 5 && c == ForeGroundColour && abs(x2 - x1) > 12) ok = false; at += 5; }
+    return ok;
+}
 static uint16_t fresh[H][W];
 static void fullWithMarker(int x)
 { // a fresh full draw with the marker at x, into fresh[][]
@@ -183,8 +206,11 @@ int main()
     for (int type = 0; type < 3; ++type) for (int s = 0; s < 8; ++s) for (int e = 0; e < 7; ++e) for (int point = 1; point <= 5; ++point) {
         if (type != EXPONENTIALCURVES && e > 1) continue;   // the expo only shapes an exponential curve
         setCurve(type, SETS[s], EXPOS[e], point); const uint8_t cp = CurrentPoint;
-        stream.clear(); DisplayCurveOld(); const std::string before = drawing(stream); const uint8_t cpOld = CurrentPoint;
-        CurrentPoint = cp; stream.clear(); DisplayCurve(); const std::string now = drawing(stream);
+        stream.clear(); DisplayCurveOld(); std::string before = drawing(stream); const uint8_t cpOld = CurrentPoint;
+        CurrentPoint = cp; stream.clear(); DisplayCurve(); std::string now = drawing(stream);
+        if (type == SMOOTHEDCURVES) {   // (B122) the smooth curve's own lines are sampled differently now - through every point; the rest must still match
+            CHECK(throughEveryPoint(now, 5)); before = withoutCurveLines(before); now = withoutCurveLines(now);
+        }
         if (before == now && cpOld == CurrentPoint) ++same; else { ++differ; if (differ < 3) fprintf(stderr, "differs: type %d set %d expo %d point %d\n", type, s, EXPOS[e], point); }
         if (now.size() > fullBytes) fullBytes = now.size();
     }
@@ -228,6 +254,11 @@ int main()
     CHECK(badPixels == 0 && moves > 1000);
     CHECK(moveBytes < 520 && moveCmds <= 16);
     CHECK(moveBytes * 3 < fullBytes);   // a move is a fraction of a full redraw
+    // 2a. (B122) a smooth curve of any count runs through every one of its points
+    for (int ci = 0; ci < 4; ++ci) for (int s = 0; s < 8; ++s) {
+        if (COUNTS[ci] == 5) setCurve(SMOOTHEDCURVES, SETS[s], 30, 1); else setCurveN(SMOOTHEDCURVES, COUNTS[ci], SETS[s], 30, 1);
+        stream.clear(); DisplayCurve(); CHECK(throughEveryPoint(drawing(stream), COUNTS[ci]));
+    }
     // 2b. (B119) the vertical reference line stands at the box's centre whatever the count (it stood at the third point)
     for (int ci = 0; ci < 4; ++ci) for (int type = 0; type < 3; ++type) {
         if (COUNTS[ci] == 5) setCurve(type, SETS[1], 30, 1); else setCurveN(type, COUNTS[ci], SETS[1], 30, 1);
