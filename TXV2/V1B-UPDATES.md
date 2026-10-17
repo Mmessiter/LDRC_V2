@@ -186,6 +186,28 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A curve of 3, 5, 7 or 9 points (Teensy B118, screen 1.11.83, 17 Oct 2026)
+
+Malcolm: "If I select straight instead of exponential, I get five definable points because that's what I wrote in 2020. I
+always knew there should have been seven or even nine ... Might it be possible for us now to allow the user to choose 3
+points, 5 points, 7 points, or 9 points?" Yes. A channel's curve now has CurvePointCount points - 3, 5, 7 or 9, the same
+in every bank, five as ever - at equal stick positions between the calibrated ends and centre (CurveX: with 9 the old
+quarter points stay where they were, so a 5-point curve made 9 keeps its five). Straight joins them, Smooth runs the
+spline through them; Exponential uses the ends and the centre whatever the count. The curve page has a "Points: 3 5 7 9"
+row of radios where the Expo controls sit (each shows for its shapes). Choosing a count puts the new points ON the curve
+as it is, bank by bank, so nothing moves - the ends and the centre copied, never re-rounded - and saves the model. The
+numbers along the top: n1-n5 for 3 and 5 points, four more boxes (k2 k3 k5 k6) for 7, nine smaller ones (m1-m9) for 9; a
+touch on the graph moves the nearest point shown. Mixes, macros, trims and the adjustments page carry over (they use the
+curve's ends and the microsecond maths). The file keeps the five of old - the ends, the quarters and the centre, as a
+sampling of the curve, so a firmware before B118 reads a sensible curve - and, after the record's checksum behind the max
+range's bytes, the count of every channel and every bank's points with a checksum (595 bytes; written only when a channel
+has other than five points, or once it is there; taken only whole and sound). The fingerprint folds in the five of old as
+ever and the other counts only when in use, so an update is compared as before. Host tests: dev/test_curve_points (the
+flying maths with five points byte for byte the old code's - 546,400 outputs over random curves, rates, both ranges and
+every stick reading; 3, 7 and 9 points through their points; the count change; the file; the page's boxes and radios),
+dev/test_curve_marker (the drawing with five points byte for byte as before; 19,588 marker moves pixel-exact over 3, 5, 7
+and 9 points). Help CURVES.TXT.
+
 ## The marker in one piece: a copy to the panel waits for the scan (screen 1.11.82, Teensy B117 unchanged, 17 Oct 2026)
 
 Malcolm, of B117: "That's a HUGE amount better!!!! ... while moving the line breaks into two with one part ahead of the

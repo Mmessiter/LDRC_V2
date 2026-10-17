@@ -6,6 +6,7 @@ TO CHANGE THE CURVE:|
 - For small steps, press 'Next point' until the ring is on the|
 point you want, then press '-' or '+'.|
 - Choose the shape: 'Straight', 'Smooth' or 'Exponential'.|
+- Choose how many points: 'Points: 3 5 7 9' (see below).|
 - Turn on 'Copy to all banks' to copy this curve to all four|
 banks when you press 'OK'.|
 - Press 'OK' to save.|
@@ -20,12 +21,21 @@ The upright line is where the stick is now.|
 mixes (as on the Channels page).|
 For Rotorflight on CRSF, ends at 1000 and 2000 use the whole|
 stick: it reads nothing beyond them.||
+HOW MANY POINTS:|
+'Points: 3 5 7 9' sets how many points this channel's curve has,|
+in every bank (it shows for Straight and Smooth). The ends and|
+the centre are always points; the rest are spaced evenly between|
+them. When you change the count, the new points are placed on|
+the curve as it is, so nothing moves. (With 7 or 3, a corner that|
+sat on an old quarter point is redrawn through the new points.)|
+More points give finer control. The choice is saved at once.|
+Exponential always uses three.||
 THE SHAPES:|
-1. Straight: four straight lines join the five points.|
-2. Smooth: a smooth curve through the five points.|
+1. Straight: straight lines join the points.|
+2. Smooth: a smooth curve through the points.|
 3. Exponential: three points (the ends and the centre) joined|
 by two expo curves. Only those three points can be moved, and|
-'Next point' skips the other two.|
+'Next point' skips the others.|
 Set 'Expo' (-50 to +150) with the slider, or with the '-' and '+'|
 beside it for single steps. Expo 0 gives straight lines.|
 The slider is hard to stop at exactly 0, so 'Zero expo' sets 0|

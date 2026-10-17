@@ -44,8 +44,8 @@ if HAVE_OLD:
 else:
     print('NOTE: commit %s is not in this repository: the byte-for-byte comparison with the old DisplayCurve is skipped' % OLD_COMMIT)
     old_dc = 'static void DisplayCurveOld() { DisplayCurve(); }\n#define NO_OLD_DISPLAYCURVE 1\n'
-DEFS = '\n'.join(l for l in defs.split('\n') if re.match(r'#define (BOXLEFT|BOXTOP|BOXWIDTH|BOXHEIGHT|BOXBOTTOM|BOXRIGHT|GRAPH_MARKER_FIRST|GRAPH_MARKER_LAST|GRAPH_MARKER_TOP|GRAPH_MARKER_BOTTOM|NO_MARKER|CURVE_SEGMENTS_MAX|STRAIGHTLINES|SMOOTHEDCURVES|EXPONENTIALCURVES|White|Black)\b', l)) + '\n'
-assert DEFS.count('#define') == 17, DEFS
+DEFS = '\n'.join(l for l in defs.split('\n') if re.match(r'#define (BOXLEFT|BOXTOP|BOXWIDTH|BOXHEIGHT|BOXBOTTOM|BOXRIGHT|GRAPH_MARKER_FIRST|GRAPH_MARKER_LAST|GRAPH_MARKER_TOP|GRAPH_MARKER_BOTTOM|NO_MARKER|CURVE_SEGMENTS_MAX|CURVE_POINTS_MAX|STRAIGHTLINES|SMOOTHEDCURVES|EXPONENTIALCURVES|White|Black)\b', l)) + '\n'
+assert DEFS.count('#define') == 18, DEFS
 TEENSY_MAP = r'''
 #include <type_traits>
 template <class T, class A, class B, class C, class D>
@@ -91,11 +91,18 @@ static void DelayWithDog(int) {}
 static void ClearText() {}
 static void updateInterpolationTypes() {}
 uint8_t InterpolationTypes[5][17], Exponential[5][17];
-uint8_t MinDegrees[5][17], MidLowDegrees[5][17], CentreDegrees[5][17], MidHiDegrees[5][17], MaxDegrees[5][17];
+uint8_t MinDegrees[5][17], MidLowDegrees[5][17], CentreDegrees[5][17], MidHiDegrees[5][17], MaxDegrees[5][17];   // (the five of old, for the old DisplayCurve)
+uint8_t CurvePointCount[17], CurvePoint[5][17][CURVE_POINTS_MAX];                                                   // (B118)
+uint8_t CurveDotsN = 5;
 int Bank = 1, ChanneltoSet = 1;
 uint8_t CurrentPoint = 1;
 double PointsCount = 5;
-double xPoints[5], yPoints[5];
+double xPoints[CURVE_POINTS_MAX], yPoints[CURVE_POINTS_MAX];
+bool CurveDotShown(uint8_t k);
+void CurveLayoutShow();
+@CURVEN@
+uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }
+@DOTSHOWN@
 uint16_t ForeGroundColour = 65535, HighlightColour = 65504, SpecialColour = 63488;
 uint16_t SavedLineX = 12345;
 static uint16_t CurveMicros(uint8_t deg) { return map(deg, 0, 180, 500, 2500); }
@@ -109,6 +116,7 @@ FASTRUN void DisplayCurve();
 @NEWDC@
 @GRAPHCMD@
 @MOVER@
+@LAYOUT@
 // a software screen that paints the commands as the glass does (deterministic, inclusive ends)
 static const int W = 480, H = 480;
 static uint16_t fb[H][W];
@@ -135,9 +143,31 @@ static void paint(const std::string &s)
 }
 static int commandsIn(const std::string &s) { int n = 0; size_t at = 0; while ((at = s.find("\xFF\xFF\xFF", at)) != std::string::npos) { ++n; at += 3; } return n; }
 static void setCurve(int type, const int *deg, int expo, int point)
-{
+{ // five points, in both the old arrays (for the old DisplayCurve) and the new (B118)
     InterpolationTypes[1][0] = (uint8_t) type; Exponential[1][0] = (uint8_t) expo; CurrentPoint = (uint8_t) point;
     MinDegrees[1][0] = deg[0]; MidLowDegrees[1][0] = deg[1]; CentreDegrees[1][0] = deg[2]; MidHiDegrees[1][0] = deg[3]; MaxDegrees[1][0] = deg[4];
+    CurvePointCount[0] = 5; for (int k = 0; k < 5; ++k) CurvePoint[1][0][k] = (uint8_t) deg[k];
+}
+static void setCurveN(int type, int n, const int *deg5, int expo, int point)
+{ // n points (3, 5, 7 or 9) along the five-point set's shape, with a wiggle on the in-between ones
+    InterpolationTypes[1][0] = (uint8_t) type; Exponential[1][0] = (uint8_t) expo; CurrentPoint = (uint8_t) point;
+    CurvePointCount[0] = (uint8_t) n;
+    for (int k = 0; k < n; ++k) {
+        const double f = (double) k / (n - 1) * 4; const int i = (int) f; const double r = f - i;
+        int d = i >= 4 ? deg5[4] : (int) (deg5[i] + (deg5[i + 1] - deg5[i]) * r + 0.5);
+        if (k != 0 && k != n - 1 && k != (n - 1) / 2) d += (k % 2 ? 7 : -9);
+        CurvePoint[1][0][k] = (uint8_t) (d < 0 ? 0 : d > 180 ? 180 : d);
+    }
+}
+static std::string drawing(const std::string &s)
+{ // only what paints: fill, draw, line, cirs (the numbers and the boxes' vis differ since B118, by design)
+    std::string out; size_t at = 0;
+    while (at < s.size()) {
+        size_t end = s.find("\xFF\xFF\xFF", at); if (end == std::string::npos) end = s.size();
+        const std::string cmd = s.substr(at, end - at); at = end + 3;
+        if (cmd.rfind("fill ", 0) == 0 || cmd.rfind("draw ", 0) == 0 || cmd.rfind("line ", 0) == 0 || cmd.rfind("cirs ", 0) == 0) out += cmd + "\xFF\xFF\xFF";
+    }
+    return out;
 }
 static uint16_t fresh[H][W];
 static void fullWithMarker(int x)
@@ -153,8 +183,8 @@ int main()
     for (int type = 0; type < 3; ++type) for (int s = 0; s < 8; ++s) for (int e = 0; e < 7; ++e) for (int point = 1; point <= 5; ++point) {
         if (type != EXPONENTIALCURVES && e > 1) continue;   // the expo only shapes an exponential curve
         setCurve(type, SETS[s], EXPOS[e], point); const uint8_t cp = CurrentPoint;
-        stream.clear(); DisplayCurveOld(); const std::string before = stream; const uint8_t cpOld = CurrentPoint;
-        CurrentPoint = cp; stream.clear(); DisplayCurve(); const std::string now = stream;
+        stream.clear(); DisplayCurveOld(); const std::string before = drawing(stream); const uint8_t cpOld = CurrentPoint;
+        CurrentPoint = cp; stream.clear(); DisplayCurve(); const std::string now = drawing(stream);
         if (before == now && cpOld == CurrentPoint) ++same; else { ++differ; if (differ < 3) fprintf(stderr, "differs: type %d set %d expo %d point %d\n", type, s, EXPOS[e], point); }
         if (now.size() > fullBytes) fullBytes = now.size();
     }
@@ -169,9 +199,13 @@ int main()
     const int pathLen = sizeof(PATH) / sizeof(PATH[0]);
     long badPixels = 0, moves = 0; size_t moveBytes = 0; int moveCmds = 0;
     unsigned seed = 12345;
-    for (int type = 0; type < 3; ++type) for (int s = 0; s < 8; ++s) for (int e = 0; e < 7; e += 3) for (int point = 1; point <= 5; point += 2) {
+    static const int COUNTS[4] = {5, 3, 7, 9};
+    for (int ci = 0; ci < 4; ++ci) for (int type = 0; type < 3; ++type) for (int s = 0; s < 8; ++s) for (int e = 0; e < 7; e += 3) for (int point = 1; point <= COUNTS[ci]; point += 2) {
         if (type != EXPONENTIALCURVES && e > 0) continue;
-        setCurve(type, SETS[s], EXPOS[e], point);
+        if (ci > 0 && (s % 2 || e > 0)) continue;   // (the other counts on half the sets: enough, and quick)
+        const int npts = COUNTS[ci];
+        if (npts == 5) setCurve(type, SETS[s], EXPOS[e], point); else setCurveN(type, npts, SETS[s], EXPOS[e], point);
+        if (type == EXPONENTIALCURVES && !(point == 1 || point == npts || point == (npts + 1) / 2)) continue;
         memset(fb, 0x55, sizeof(fb)); stream.clear(); DisplayCurve(); paint(stream);   // the page as drawn, no marker yet
         CHECK(SavedLineX == NO_MARKER);
         uint16_t at = NO_MARKER;
@@ -183,13 +217,13 @@ int main()
             if (at == NO_MARKER) CHECK(commandsIn(stream) == 1);   // the first marker: one line, nothing to put back
             at = (uint16_t) x;
             uint16_t keep[H][W]; memcpy(keep, fb, sizeof(fb));
-            setCurve(type, SETS[s], EXPOS[e], point); fullWithMarker(x);   // (CurrentPoint as the move left it)
+            CurrentPoint = (uint8_t) point; fullWithMarker(x);   // (the same curve: a fresh full draw with the marker there)
             memcpy(fb, keep, sizeof(fb));
             for (int y = 0; y < H; ++y) for (int xx = 0; xx < W; ++xx) if (fb[y][xx] != fresh[y][xx]) ++badPixels;
             if (badPixels && moves < 3) { fprintf(stderr, "pixels differ after a move to %d (type %d set %d expo %d point %d)\n", x, type, s, EXPOS[e], point); }
         }
     }
-    printf("marker moves: %ld, pixels wrong: %ld; the biggest move %zu bytes in %d commands\n", moves, badPixels, moveBytes, moveCmds);
+    printf("marker moves: %ld, pixels wrong: %ld; the biggest move %zu bytes in %d commands (3, 5, 7 and 9 points)\n", moves, badPixels, moveBytes, moveCmds);
     CHECK(badPixels == 0 && moves > 1000);
     CHECK(moveBytes < 520 && moveCmds <= 16);
     CHECK(moveBytes * 3 < fullBytes);   // a move is a fraction of a full redraw
@@ -203,6 +237,9 @@ int main()
 '''
 prog = (PROGRAM.replace('@DEFS@', DEFS).replace('@MAP@', TEENSY_MAP)
         .replace('@MAPWITHEXPO@', lift('include/Utilities.h', 'FASTRUN float MapWithExponential('))
+        .replace('@CURVEN@', lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)'))
+        .replace('@DOTSHOWN@', lift('src/main.cpp', 'bool CurveDotShown(uint8_t k)'))
+        .replace('@LAYOUT@', lift('src/main.cpp', 'FLASHMEM void CurveLayoutShow()'))
         .replace('@CHECKINVISIBLE@', lift('src/main.cpp', 'void CheckInvisiblePoint()'))
         .replace('@GETDOTS@', lift('src/main.cpp', 'FASTRUN void GetDotPositions()'))
         .replace('@OLD@', old_dc)

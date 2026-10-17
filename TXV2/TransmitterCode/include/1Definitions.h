@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B117 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B118 17/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1253,6 +1253,18 @@ void MaxRangeNarrowTapped(); // B113: ... 945 to 2055
 void MaxRangeShow();
 void ReadModelExtension();   // B113: SDcard.h
 void SaveModelExtension();
+uint8_t CurveN(uint8_t ch);                                               // B118: a channel's curve points (Utilities.h)
+uint8_t CurveMid(uint8_t n);
+uint16_t CurveX(uint8_t in, uint8_t k, uint8_t n);
+void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five);
+void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi);
+void CurvePointsChosen(uint8_t n);                                        // B118: main.cpp
+void CurvePoints3Tapped();
+void CurvePoints5Tapped();
+void CurvePoints7Tapped();
+void CurvePoints9Tapped();
+void CurveLayoutShow();
+bool CurveDotShown(uint8_t k);
 void RatesCurvePoll();
 void DisplayRatesValues(uint8_t startIndex, uint8_t stopIndex);
 void ReadRatesBytesFromAckPayload(uint8_t n, uint8_t m);
@@ -1413,11 +1425,14 @@ uint16_t RawDataBuffer[SENDBUFFERSIZE + 1];           //    Data as actually sen
 uint16_t InputsBuffer[CHANNELSUSED + 1];              //    Data from pots
 uint16_t LastBuffer[CHANNELSUSED + 1];                //    Used to spot any change
 uint16_t PreMixBuffer[CHANNELSUSED + 1];              //    Data collected from sticks
-uint8_t MaxDegrees[5][CHANNELSUSED + 1];              //    Max degrees (180)
-uint8_t MidHiDegrees[5][CHANNELSUSED + 1];            //    MidHi degrees (135)
-uint8_t CentreDegrees[5][CHANNELSUSED + 1];           //    Middle degrees (90)
-uint8_t MidLowDegrees[5][CHANNELSUSED + 1];           //    MidLow Degrees (45)
-uint8_t MinDegrees[5][CHANNELSUSED + 1];              //    Min Degrees (0)
+// B118 (Malcolm, 17 Oct 2026: "allow the user to choose 3 points, 5 points, 7 points, or 9 points"). A channel's curve has
+// CurvePointCount[ch] points (3, 5, 7 or 9; 5 as ever, the same in every bank): CurvePoint[bank][ch][k] is the k-th point's
+// height in degrees (0 .. 180 = the bottom .. the top of the model's max range) at stick position k/(count-1). The file
+// keeps the five of old - the ends, the quarters and the centre, as a sampling of the curve for a firmware before B118 -
+// and, after the record's checksum, the count and every point (SDcard.h ReadModelExtension / SaveModelExtension).
+#define CURVE_POINTS_MAX 9
+uint8_t CurvePointCount[CHANNELSUSED + 1];            //    3, 5, 7 or 9 points (B118)
+uint8_t CurvePoint[5][CHANNELSUSED + 1][CURVE_POINTS_MAX]; // the points, in degrees (B118; banks 1 .. 4)
 uint8_t SubTrims[CHANNELSUSED + 1];                   //    Subtrims
 uint8_t SubTrimToEdit = 1;
 uint32_t LastPacketSentTime = 0;
@@ -1511,9 +1526,8 @@ File LogWriteFile;
 bool LogWriteOpen = false;
 uint16_t BuddyControlled = 0; // Flags
 bool BuddyHasAllSwitches = true;
-double PointsCount = 5; // This for displaying curves only
-double xPoints[5];
-double yPoints[5];
+double xPoints[CURVE_POINTS_MAX]; // (B118: up to nine)
+double yPoints[CURVE_POINTS_MAX];
 double xPoint = 0;
 double yPoint = 0;
 uint16_t ClickX;
@@ -1627,6 +1641,7 @@ bool SwitchReversed[8] = {false, false, false, false, false, false, false, false
 #define TX_EXT_ADDR 500                   // B32-B35: near the end of the TX block (TXSIZE 512, the sequence ends near 276): 500-501 two marker bytes, 502 switches 5-8 reversed (bits 0-3), 503-510 the switches of inputs 5-8 and 13-16
 #define TX_EXT_MAGIC 0x5A
 #define TX_EXT_MAGIC2 0xC3
+#define TX_EXT_MAGIC3 0xC5 // B118: the curves' count and points follow the max range's bytes
 uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings, taken once a frame (only when a job uses one, or their page shows)
 // B38 (Malcolm: a front switch's default marking should be its channel, "If anyone actually does select not used ... they
 // should do nothing at all"): bits 0-3 = switches 5-8 marked Not used: the input of that channel sits at its centre. With
@@ -1835,7 +1850,8 @@ uint8_t Drate3 = 50;
 uint8_t DualRateChannels[8] = {1, 2, 4, 0, 0, 0, 0, 0};
 uint8_t DualRateRate[5];
 uint8_t DualRateValue = 100;
-uint16_t CurveDots[5];
+uint16_t CurveDots[CURVE_POINTS_MAX]; // the points of the channel being worked out, with its rate (GetCurveDots)
+uint8_t CurveDotsN = 5;               // B118: how many of them
 char Confirmed[2];
 char NewFileBuffer[MAXFILELEN];
 uint16_t NewFileBufferPointer = 0;

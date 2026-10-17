@@ -1,0 +1,294 @@
+# 21 GraphView with 3, 7 and 9 points (Teensy B118, screen 1.11.83): what the Teensy sends - DisplayCurve (the box, the
+# reference lines, the curve as line segments, the dots, the chosen point's rings), CurveLayoutShow (which number boxes
+# show, their values, the Points radios), updateInterpolationTypes (the shape switches, the Expo controls or the Points row),
+# UpdateModelsNameEveryWhere, ShowServoPos (Input/Output, the stick's marker). The smooth curve is drawn here as segments.
+Screen_Background=8
+@model 1
+page GraphView
+fill 36,36,360,360,0
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+line 80,345,35,375,65535
+line 125,305,80,345,65535
+line 170,255,125,305,65535
+line 215,215,170,255,65535
+line 260,175,215,215,65535
+line 305,125,260,175,65535
+line 350,85,305,125,65535
+line 395,55,350,85,65535
+cirs 35,375,4,65535
+cirs 80,345,4,65535
+cirs 125,305,4,65535
+cirs 170,255,4,65535
+cirs 215,215,4,65535
+cirs 260,175,4,65535
+cirs 305,125,4,65535
+cirs 350,85,4,65535
+cirs 395,55,4,65535
+cirs 215,215,10,65535
+cirs 215,215,8,65504
+cirs 215,215,6,65504
+cirs 215,215,7,0
+vis n1,0
+vis n2,0
+vis n3,0
+vis n4,0
+vis n5,0
+vis k2,0
+vis k3,0
+vis k5,0
+vis k6,0
+vis m1,1
+vis m2,1
+vis m3,1
+vis m4,1
+vis m5,1
+vis m6,1
+vis m7,1
+vis m8,1
+vis m9,1
+pt3.val=0
+pt5.val=0
+pt7.val=0
+pt9.val=1
+m1.val=611
+m2.val=778
+m3.val=1000
+m4.val=1278
+m5.val=1500
+m6.val=1722
+m7.val=2000
+m8.val=2222
+m9.val=2389
+Lines.val=0
+Smooth.val=1
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+vis lpt,1
+vis pt3,1
+vis lpt3,1
+vis pt5,1
+vis lpt5,1
+vis pt7,1
+vis lpt7,1
+vis pt9,1
+vis lpt9,1
+ModelName.txt="Havok (73)"
+Channel.txt="Aileron"
+fmode.txt="Bank 4"
+callfm.val=0
+Input.val=1500
+Output.val=1500
+line 215,38,215,392,65504
+@shot 21_nine_smooth
+page GraphView
+fill 36,36,360,360,0
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+line 95,315,35,365,65535
+line 155,255,95,315,65535
+line 215,215,155,255,65535
+line 275,175,215,215,65535
+line 335,115,275,175,65535
+line 395,65,335,115,65535
+cirs 35,365,4,65535
+cirs 95,315,4,65535
+cirs 155,255,4,65535
+cirs 215,215,4,65535
+cirs 275,175,4,65535
+cirs 335,115,4,65535
+cirs 395,65,4,65535
+cirs 155,255,10,65535
+cirs 155,255,8,65504
+cirs 155,255,6,65504
+cirs 155,255,7,0
+vis n1,1
+vis n2,0
+vis n3,1
+vis n4,0
+vis n5,1
+vis k2,1
+vis k3,1
+vis k5,1
+vis k6,1
+vis m1,0
+vis m2,0
+vis m3,0
+vis m4,0
+vis m5,0
+vis m6,0
+vis m7,0
+vis m8,0
+vis m9,0
+pt3.val=0
+pt5.val=0
+pt7.val=1
+pt9.val=0
+n1.val=667
+k2.val=944
+k3.val=1278
+n3.val=1500
+k5.val=1722
+k6.val=2056
+n5.val=2333
+Lines.val=1
+Smooth.val=0
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+vis lpt,1
+vis pt3,1
+vis lpt3,1
+vis pt5,1
+vis lpt5,1
+vis pt7,1
+vis lpt7,1
+vis pt9,1
+vis lpt9,1
+ModelName.txt="Havok (73)"
+Channel.txt="Aileron"
+fmode.txt="Bank 4"
+callfm.val=0
+Input.val=1500
+Output.val=1500
+line 215,38,215,392,65504
+@shot 21_seven_straight
+page GraphView
+fill 36,36,360,360,0
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+line 215,215,35,355,65535
+line 395,75,215,215,65535
+cirs 35,355,4,65535
+cirs 215,215,4,65535
+cirs 395,75,4,65535
+cirs 215,215,10,65535
+cirs 215,215,8,65504
+cirs 215,215,6,65504
+cirs 215,215,7,0
+vis n1,1
+vis n2,0
+vis n3,1
+vis n4,0
+vis n5,1
+vis k2,0
+vis k3,0
+vis k5,0
+vis k6,0
+vis m1,0
+vis m2,0
+vis m3,0
+vis m4,0
+vis m5,0
+vis m6,0
+vis m7,0
+vis m8,0
+vis m9,0
+pt3.val=1
+pt5.val=0
+pt7.val=0
+pt9.val=0
+n1.val=722
+n3.val=1500
+n5.val=2278
+Lines.val=1
+Smooth.val=0
+Exp.val=0
+vis t3,0
+vis b13,0
+vis b12,0
+vis Expo,0
+vis Ex1,0
+vis lpt,1
+vis pt3,1
+vis lpt3,1
+vis pt5,1
+vis lpt5,1
+vis pt7,1
+vis lpt7,1
+vis pt9,1
+vis lpt9,1
+ModelName.txt="Havok (73)"
+Channel.txt="Aileron"
+fmode.txt="Bank 4"
+callfm.val=0
+Input.val=1500
+Output.val=1500
+line 215,38,215,392,65504
+@shot 21_three_straight
+page GraphView
+fill 36,36,360,360,0
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+line 35,375,215,215,65535
+line 215,215,395,55,65535
+cirs 35,375,4,65535
+cirs 215,215,4,65535
+cirs 395,55,4,65535
+cirs 215,215,10,65535
+cirs 215,215,8,65504
+cirs 215,215,6,65504
+cirs 215,215,7,0
+vis n1,1
+vis n2,0
+vis n3,1
+vis n4,0
+vis n5,1
+vis k2,0
+vis k3,0
+vis k5,0
+vis k6,0
+vis m1,0
+vis m2,0
+vis m3,0
+vis m4,0
+vis m5,0
+vis m6,0
+vis m7,0
+vis m8,0
+vis m9,0
+pt3.val=0
+pt5.val=0
+pt7.val=0
+pt9.val=1
+n1.val=611
+n3.val=1500
+n5.val=2389
+Lines.val=0
+Smooth.val=0
+Exp.val=1
+vis t3,1
+vis b13,1
+vis b12,1
+vis Expo,1
+vis Ex1,1
+vis lpt,0
+vis pt3,0
+vis lpt3,0
+vis pt5,0
+vis lpt5,0
+vis pt7,0
+vis lpt7,0
+vis pt9,0
+vis lpt9,0
+Expo.val=30
+Ex1.val=80
+ModelName.txt="Havok (73)"
+Channel.txt="Aileron"
+fmode.txt="Bank 4"
+callfm.val=0
+Input.val=1500
+Output.val=1500
+line 215,38,215,392,65504
+@shot 21_nine_expo

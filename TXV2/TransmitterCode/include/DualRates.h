@@ -304,45 +304,19 @@ void CheckDualRatesValues()
 /*********************************************************************************************************************************/
 
 float CalculateRate(short int Curve, short int OutputChannel, float rate)
-{
-
-    switch (Curve)
-    { // Curve is 1 - 5, low to hi.
-    case 0:
-        return (((MinDegrees[Bank][OutputChannel]) - 90) * (rate / 100)) + 90;
-    case 1:
-        return (((MidLowDegrees[Bank][OutputChannel]) - 90) * (rate / 100)) + 90;
-    case 2:
-        return (((CentreDegrees[Bank][OutputChannel]) - 90) * (rate / 100)) + 90;
-    case 3:
-        return (((MidHiDegrees[Bank][OutputChannel]) - 90) * (rate / 100)) + 90;
-    case 4:
-        return (((MaxDegrees[Bank][OutputChannel]) - 90) * (rate / 100)) + 90;
-    default:
+{ // point Curve (0 .. n-1, low to high) of the output channel's curve, scaled about the centre by the rate (B118: any of up to nine)
+    if (Curve < 0 || Curve >= CURVE_POINTS_MAX)
         return 0;
-    }
+    return (((CurvePoint[Bank][OutputChannel][Curve]) - 90) * (rate / 100)) + 90;
 }
 
 /*********************************************************************************************************************************/
 
 float UseFullRate(short int Curve, uint8_t OutputChannel)
-{
-
-    switch (Curve)
-    { // Curve is 1 - 5, low to hi.
-    case 0:
-        return MinDegrees[Bank][OutputChannel];
-    case 1:
-        return MidLowDegrees[Bank][OutputChannel];
-    case 2:
-        return CentreDegrees[Bank][OutputChannel];
-    case 3:
-        return MidHiDegrees[Bank][OutputChannel];
-    case 4:
-        return MaxDegrees[Bank][OutputChannel];
-    default:
+{ // point Curve of the output channel's curve, as it is
+    if (Curve < 0 || Curve >= CURVE_POINTS_MAX)
         return 0;
-    }
+    return CurvePoint[Bank][OutputChannel][Curve];
 }
 
 /*********************************************************************************************************************************/
@@ -350,6 +324,8 @@ float UseFullRate(short int Curve, uint8_t OutputChannel)
 void GetCurveDots(uint16_t OutputChannel, uint16_t TheRate) // This for the Dual Rates function
 {                                                           // This for the Dual Rates function
                                                             // Effectively, it just copies the Y dot's magnitude on the curve, but might reduce the extent if rate is not 100 and channel specified
+    const uint8_t n = CurveN(OutputChannel); // B118: this channel's points
+    CurveDotsN = n;
     if (TheRate != 100)
     { // Not 100% ?
         for (int j = 0; j < 8; ++j)
@@ -358,14 +334,14 @@ void GetCurveDots(uint16_t OutputChannel, uint16_t TheRate) // This for the Dual
             { // non zero?
                 if (OutputChannel + 1 == DualRateChannels[j])
                 {
-                    for (int i = 0; i < 5; ++i)
+                    for (int i = 0; i < n; ++i)
                         CurveDots[i] = CalculateRate(i, OutputChannel, TheRate);
                     return;
                 }
             }
         }
     }
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < n; ++i)
         CurveDots[i] = UseFullRate(i, OutputChannel); // ... channel not used so 100%
 }
 

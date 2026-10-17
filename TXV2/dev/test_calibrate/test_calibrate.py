@@ -21,8 +21,8 @@ def lift(rel, head):
                     return '\n'.join(lines[i:j + 1]) + '\n'
     raise SystemExit('cannot lift %s from %s' % (head, rel))
 main = src('src/main.cpp'); cal = src('include/Calibrate.h'); util = src('include/Utilities.h'); defs1 = src('include/1Definitions.h')
-DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|MAXRESOLUTION|PROPOCHANNELS|CHANNELSUSED|MINMICROS|MAXMICROS) ', l)) + '\n'
-assert DEFS.count('#define') == 7, DEFS
+DEFS = '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (RANGE_NARROW_LO|RANGE_NARROW_HI|MAXRESOLUTION|PROPOCHANNELS|CHANNELSUSED|MINMICROS|MAXMICROS|CURVE_POINTS_MAX) ', l)) + '\n'
+assert DEFS.count('#define') == 8, DEFS
 INLINES = '\n'.join(l for l in util.split('\n') if re.match(r'inline uint16_t (RangeLo|RangeHi|CurveMicros)\(', l)) + '\n'
 assert INLINES.count('inline') == 3, INLINES
 PROG = r'''
@@ -52,7 +52,7 @@ long map(T _x, A _in_min, B _in_max, C _out_min, D _out_max, typename std::enabl
 }
 ''' + DEFS + r'''
 static uint16_t ChannelMin[CHANNELSUSED + 1], ChannelMidLow[CHANNELSUSED + 1], ChannelCentre[CHANNELSUSED + 1], ChannelMidHi[CHANNELSUSED + 1], ChannelMax[CHANNELSUSED + 1];
-static uint8_t MinDegrees[5][CHANNELSUSED + 1], MidLowDegrees[5][CHANNELSUSED + 1], CentreDegrees[5][CHANNELSUSED + 1], MidHiDegrees[5][CHANNELSUSED + 1], MaxDegrees[5][CHANNELSUSED + 1];
+static uint8_t CurvePointCount[CHANNELSUSED + 1], CurvePoint[5][CHANNELSUSED + 1][CURVE_POINTS_MAX];   // (B118: the curve points, 3 5 7 or 9 a channel)
 static uint8_t Bank = 1, MaxRangeNarrow = 0; static int DualRateValue = 0; static bool NewCompressNeeded = true;
 static int reading[PROPOCHANNELS];                      // the fake ADC: what each input reads now
 struct FakeAdc { int analogRead(int pin) { return reading[pin]; } };
@@ -65,7 +65,7 @@ static void CalculateAllOutputs() { ++outputsDone; }
 static void ShowServoPos() { ++barsShown; }
 static void GetNewChannelValues() { ++pipelines; }
 static void CalibrateEdgeSwitches() { ++edgeSwitches; }
-''' + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Calibrate.h', 'void ReduceLimits()') + lift('include/Calibrate.h', 'void CalibrateSticks()') + lift('include/Calibrate.h', 'void ChannelCentres()') + lift('include/Calibrate.h', 'FLASHMEM void InitMaxMin()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + r'''
+''' + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/Calibrate.h', 'void ReduceLimits()') + lift('include/Calibrate.h', 'void CalibrateSticks()') + lift('include/Calibrate.h', 'void ChannelCentres()') + lift('include/Calibrate.h', 'FLASHMEM void InitMaxMin()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + r'''
 int main()
 {
     // the sticks and knobs: each input its own ends and centre (none at the ADC's own ends, none at its middle)
@@ -73,11 +73,12 @@ int main()
     for (int i = 0; i < PROPOCHANNELS; ++i) { lo[i] = 300 + 50 * i; hi[i] = 3900 - 40 * i; mid[i] = 2000 + 10 * i; }
     // 1. ReduceLimits: the limits pulled to the middle; the current bank's curves 0 / 90 / 180, the other banks' untouched
     Bank = 2;
-    for (int b = 0; b <= 4; ++b) for (int i = 0; i < CHANNELSUSED; ++i) { MinDegrees[b][i] = 30; MidLowDegrees[b][i] = 60; CentreDegrees[b][i] = 90; MidHiDegrees[b][i] = 120; MaxDegrees[b][i] = 150; }
+    for (int i = 0; i < CHANNELSUSED; ++i) CurvePointCount[i] = 5;
+    for (int b = 0; b <= 4; ++b) for (int i = 0; i < CHANNELSUSED; ++i) { const uint8_t d[5] = {30, 60, 90, 120, 150}; for (int k = 0; k < 5; ++k) CurvePoint[b][i][k] = d[k]; }
     ReduceLimits();
     for (int i = 0; i < CHANNELSUSED; ++i) CHECK(ChannelMax[i] == MAXRESOLUTION / 2 && ChannelMin[i] == MAXRESOLUTION / 2);
-    for (int i = 0; i < CHANNELSUSED; ++i) CHECK(MaxDegrees[2][i] == 180 && CentreDegrees[2][i] == 90 && MinDegrees[2][i] == 0);
-    for (int b = 1; b <= 4; ++b) if (b != 2) for (int i = 0; i < CHANNELSUSED; ++i) CHECK(MaxDegrees[b][i] == 150 && MinDegrees[b][i] == 30);
+    for (int i = 0; i < CHANNELSUSED; ++i) CHECK(CurvePoint[2][i][4] == 180 && CurvePoint[2][i][3] == 135 && CurvePoint[2][i][2] == 90 && CurvePoint[2][i][1] == 45 && CurvePoint[2][i][0] == 0);   // (B118: every point on the straight line)
+    for (int b = 1; b <= 4; ++b) if (b != 2) for (int i = 0; i < CHANNELSUSED; ++i) CHECK(CurvePoint[b][i][4] == 150 && CurvePoint[b][i][0] == 30);
     // 2. CalibrateSticks, pass after pass while the pilot sweeps: the ends are the furthest readings seen; each pass works the outputs out and shows the bars
     for (int step = 0; step <= 20; ++step)
     {

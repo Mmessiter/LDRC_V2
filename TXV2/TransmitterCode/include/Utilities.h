@@ -923,6 +923,68 @@ uint8_t IntoDegrees(uint16_t HiRes) // convert to lower resolution for screen di
 inline uint16_t RangeLo() { return MaxRangeNarrow ? RANGE_NARROW_LO : MINMICROS; }
 inline uint16_t RangeHi() { return MaxRangeNarrow ? RANGE_NARROW_HI : MAXMICROS; }
 inline uint16_t CurveMicros(uint8_t deg) { return map(deg, 0, 180, RangeLo(), RangeHi()); } // (500 to 2500: exactly IntoHigherRes)
+// B118: a channel's curve points (1Definitions.h CurvePoint). How many (3, 5, 7 or 9; anything else reads as 5), the middle
+// one's index, and the stick's calibrated reading at point k of n: the ends and the centre as calibrated, the quarters as
+// calibrated too (so a 5-point curve reads exactly as it always did, and a 9-point one keeps the five of old), the eighths
+// half way between, the thirds (7 points) shared out evenly.
+uint8_t CurveN(uint8_t ch)
+{
+    const uint8_t n = CurvePointCount[ch];
+    return (n == 3 || n == 7 || n == 9) ? n : 5;
+}
+uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }
+uint16_t CurveX(uint8_t in, uint8_t k, uint8_t n)
+{
+    const uint8_t half = CurveMid(n);
+    const int lo = ChannelMin[in], ql = ChannelMidLow[in], mid = ChannelCentre[in], qh = ChannelMidHi[in], hi = ChannelMax[in];
+    if (k == 0)
+        return lo;
+    if (k == half)
+        return mid;
+    if (k >= n - 1)
+        return hi;
+    if (n == 5)
+        return k == 1 ? ql : qh;
+    if (n == 9)
+    {
+        switch (k)
+        {
+        case 1: return lo + (ql - lo) / 2;
+        case 2: return ql;
+        case 3: return ql + (mid - ql) / 2;
+        case 5: return mid + (qh - mid) / 2;
+        case 6: return qh;
+        default: return qh + (hi - qh) / 2; // 7
+        }
+    }
+    if (k < half)
+        return lo + (mid - lo) * k / half;
+    return mid + (hi - mid) * (k - half) / half;
+}
+// The five of old (Min, MidLow, Centre, MidHi, Max), as a sampling of the curve: what the file keeps for a firmware before
+// B118, and what the fingerprint folds in first. For 5 and 9 points they ARE points; for 3 and 7 the quarters are half
+// way between the points either side.
+void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five)
+{
+    const uint8_t n = CurveN(ch);
+    const uint8_t *p = CurvePoint[b][ch];
+    five[0] = p[0];
+    five[2] = p[CurveMid(n)];
+    five[4] = p[n - 1];
+    switch (n)
+    {
+    case 3: five[1] = (p[0] + p[1] + 1) / 2; five[3] = (p[1] + p[2] + 1) / 2; break;
+    case 7: five[1] = (p[1] + p[2] + 1) / 2; five[3] = (p[4] + p[5] + 1) / 2; break;
+    case 9: five[1] = p[2]; five[3] = p[6]; break;
+    default: five[1] = p[1]; five[3] = p[3]; break;
+    }
+}
+void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi) // the points on the straight line lo .. hi
+{
+    const uint8_t n = CurveN(ch);
+    for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k)
+        CurvePoint[b][ch][k] = k < n ? lo + ((hi - lo) * k + (n - 1) / 2) / (n - 1) : 0;
+}
 uint8_t IntoLowerRes(uint16_t HiRes) // convert to lower resolution for screen display (B113: a bar spans this model's max range)
 {
     return (uint8_t)constrain(map(HiRes, RangeLo(), RangeHi(), 0, 100), 0, 100);

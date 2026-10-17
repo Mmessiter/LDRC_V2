@@ -109,11 +109,13 @@ uint32_t ControlFingerprint()
     for (i = 0; i < CHANNELSUSED; ++i)
         for (j = 1; j <= 4; ++j)
         {
-            Fp(MaxDegrees[j][i]);
-            Fp(MidHiDegrees[j][i]);
-            Fp(CentreDegrees[j][i]);
-            Fp(MidLowDegrees[j][i]);
-            Fp(MinDegrees[j][i]);
+            uint8_t five[5]; // (B118: the five of old, as the file keeps them - a 5-point curve folds in exactly as before)
+            CurveLegacyFive(j, i, five);
+            Fp(five[4]);
+            Fp(five[3]);
+            Fp(five[2]);
+            Fp(five[1]);
+            Fp(five[0]);
         }
     for (j = 0; j < MAXMIXES; ++j)
         for (i = 0; i < CHANNELSUSED + 1; ++i)
@@ -223,6 +225,16 @@ uint32_t ControlFingerprint()
             Fp(MaxRangeNarrow);
         }
     }
+    for (i = 0; i < CHANNELSUSED; ++i) // B118: a curve of other than five points - its count and every point, only when in use
+        if (CurveN(i) != 5)
+        {
+            Fp(0x5EC5);
+            Fp(i);
+            Fp(CurveN(i));
+            for (j = 1; j <= 4; ++j)
+                for (int k = 0; k < CurveN(i); ++k)
+                    Fp(CurvePoint[j][i][k]);
+        }
     return FingerprintSoFar;
 }
 

@@ -504,57 +504,40 @@ FASTRUN void ShowServoPos()
 }
 
 /*********************************************************************************************************************************/
+// B118: the three shapes over the channel's CurveDotsN points (GetCurveDots: 3, 5, 7 or 9, with the rate applied); the stick's
+// reading at each point from CurveX. With five points every one of these gives exactly what it gave before.
 uint16_t CatmullSplineInterpolation(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel)
 {
-    xPoints[0] = ChannelMin[InputChannel];
-    xPoints[1] = ChannelMidLow[InputChannel];
-    xPoints[2] = ChannelCentre[InputChannel];
-    xPoints[3] = ChannelMidHi[InputChannel];
-    xPoints[4] = ChannelMax[InputChannel];
-    yPoints[4] = CurveMicros(CurveDots[4]);
-    yPoints[3] = CurveMicros(CurveDots[3]);
-    yPoints[2] = CurveMicros(CurveDots[2]);
-    yPoints[1] = CurveMicros(CurveDots[1]);
-    yPoints[0] = CurveMicros(CurveDots[0]);
-    return Interpolation::CatmullSpline(xPoints, yPoints, PointsCount, InputValue);
+    const uint8_t n = CurveDotsN;
+    for (uint8_t k = 0; k < n; ++k)
+    {
+        xPoints[k] = CurveX(InputChannel, k, n);
+        yPoints[k] = CurveMicros(CurveDots[k]);
+    }
+    return Interpolation::CatmullSpline(xPoints, yPoints, n, InputValue);
 }
 /*********************************************************************************************************************************/
 uint16_t StraightLineInterpolation(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel)
-{
-    uint16_t k = 0;
-    if (InputValue >= ChannelMidHi[InputChannel])
-    {
-        k = map(InputValue, ChannelMidHi[InputChannel], ChannelMax[InputChannel], CurveMicros(CurveDots[3]), CurveMicros(CurveDots[4]));
-    }
-
-    if (InputValue >= ChannelCentre[InputChannel] && InputValue <= (ChannelMidHi[InputChannel]))
-    {
-        k = map(InputValue, ChannelCentre[InputChannel], ChannelMidHi[InputChannel], CurveMicros(CurveDots[2]), CurveMicros(CurveDots[3]));
-    }
-
-    if (InputValue >= ChannelMidLow[InputChannel] && InputValue <= ChannelCentre[InputChannel])
-    {
-        k = map(InputValue, ChannelMidLow[InputChannel], ChannelCentre[InputChannel], CurveMicros(CurveDots[1]), CurveMicros(CurveDots[2]));
-    }
-
-    if (InputValue <= ChannelMidLow[InputChannel])
-    {
-        k = map(InputValue, ChannelMin[InputChannel], ChannelMidLow[InputChannel], CurveMicros(CurveDots[0]), CurveMicros(CurveDots[1]));
-    }
-
-    return k;
+{ // the segment whose right-hand point is the first at or beyond the stick (the last one runs on past the end, as the first does below it)
+    const uint8_t n = CurveDotsN;
+    uint8_t k = 0;
+    while (k < n - 2 && InputValue > CurveX(InputChannel, k + 1, n))
+        ++k;
+    uint16_t v = map(InputValue, CurveX(InputChannel, k, n), CurveX(InputChannel, k + 1, n), CurveMicros(CurveDots[k]), CurveMicros(CurveDots[k + 1]));
+    return v;
 }
 /*********************************************************************************************************************************/
 uint16_t ExponentialInterpolation(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel)
-{
+{ // the ends and the centre, whatever the count
+    const uint8_t n = CurveDotsN, mid = CurveMid(n), last = n - 1;
     uint16_t k = 0;
     if (InputValue >= ChannelCentre[InputChannel])
     {
-        k = MapWithExponential(InputValue - ChannelCentre[InputChannel], 0, ChannelMax[InputChannel] - ChannelCentre[InputChannel], 0, CurveMicros(CurveDots[4]) - CurveMicros(CurveDots[2]), Exponential[Bank][OutputChannel]) + CurveMicros(CurveDots[2]);
+        k = MapWithExponential(InputValue - ChannelCentre[InputChannel], 0, ChannelMax[InputChannel] - ChannelCentre[InputChannel], 0, CurveMicros(CurveDots[last]) - CurveMicros(CurveDots[mid]), Exponential[Bank][OutputChannel]) + CurveMicros(CurveDots[mid]);
     }
     else
     {
-        k = MapWithExponential(ChannelCentre[InputChannel] - InputValue, 0, ChannelCentre[InputChannel] - ChannelMin[InputChannel], CurveMicros(CurveDots[2]) - CurveMicros(CurveDots[0]), 0, Exponential[Bank][OutputChannel]) + CurveMicros(CurveDots[0]);
+        k = MapWithExponential(ChannelCentre[InputChannel] - InputValue, 0, ChannelCentre[InputChannel] - ChannelMin[InputChannel], CurveMicros(CurveDots[mid]) - CurveMicros(CurveDots[0]), 0, Exponential[Bank][OutputChannel]) + CurveMicros(CurveDots[0]);
     }
     return k;
 }
@@ -836,11 +819,8 @@ FLASHMEM void InitCentreDegrees()
     {
         for (int i = 0; i < CHANNELSUSED; ++i)
         {
-            MaxDegrees[j][i] = 180; //  180 degrees
-            MidHiDegrees[j][i] = 135;
-            CentreDegrees[j][i] = 90; //  90 degrees
-            MidLowDegrees[j][i] = 45;
-            MinDegrees[j][i] = 0; //  0 degrees
+            CurvePointCount[i] = 5;          // (B118)
+            CurveSetStraight(j, i, 0, 180); // 0, 45, 90, 135, 180 degrees
         }
     }
 }
@@ -932,9 +912,8 @@ FLASHMEM void MaxRangeConvert(uint8_t narrow) // every curve point into the new 
     for (int b = 1; b <= 4; ++b)
         for (int ch = 0; ch < CHANNELSUSED; ++ch)
         {
-            uint8_t *pt[5] = {&MinDegrees[b][ch], &MidLowDegrees[b][ch], &CentreDegrees[b][ch], &MidHiDegrees[b][ch], &MaxDegrees[b][ch]};
-            for (int k = 0; k < 5; ++k)
-                *pt[k] = RangeDegrees(CurveMicros(*pt[k]), lo, hi);
+            for (int k = 0; k < CurveN(ch); ++k) // (B118: every point of the curve)
+                CurvePoint[b][ch][k] = RangeDegrees(CurveMicros(CurvePoint[b][ch][k]), lo, hi);
         }
     for (int m = 0; m < MAXMACROS; ++m) // (a macro's place is a point of the range too: macros.h RunMacro)
         MacrosBuffer[m][MACROMOVETOPOSITION] = RangeDegrees(CurveMicros(MacrosBuffer[m][MACROMOVETOPOSITION]), lo, hi);
@@ -1717,14 +1696,9 @@ void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when
 
     for (i = 0; i < CHANNELSUSED; ++i)
     {
+        CurvePointCount[i] = 5; // (B118: five points, as ever)
         for (j = 1; j <= 4; ++j)
-        {
-            MaxDegrees[j][i] = 150;
-            MidHiDegrees[j][i] = 120;
-            CentreDegrees[j][i] = 90;
-            MidLowDegrees[j][i] = 60;
-            MinDegrees[j][i] = 30;
-        }
+            CurveSetStraight(j, i, 30, 150); // 30, 60, 90, 120, 150
     }
     MaxRangeNarrow = 0; // B113: 500 to 2500, as ever
 
@@ -1867,27 +1841,28 @@ void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when
 
 /** @brief Uses servo degrees to position dots */
 FASTRUN void GetDotPositions()
-{
-    int p = 0;
-    xPoints[0] = BOXLEFT;
-    xPoints[4] = BOXRIGHT - BOXLEFT;
-    p = map(MinDegrees[Bank][ChanneltoSet - 1], 0, 180, BOXWIDTH, BOXLEFT);
-    yPoints[0] = constrain(p, 39, 391);
-    p = map(MidLowDegrees[Bank][ChanneltoSet - 1], 0, 180, BOXWIDTH, BOXLEFT);
-    yPoints[1] = constrain(p, 39, 391);
-    xPoints[1] = BOXLEFT + 90;
-    xPoints[2] = BOXLEFT + 180;
-    p = map(CentreDegrees[Bank][ChanneltoSet - 1], 0, 180, BOXWIDTH, BOXLEFT);
-    yPoints[2] = constrain(p, 39, 391);
-    xPoints[3] = BOXLEFT + 270;
-    p = map(MidHiDegrees[Bank][ChanneltoSet - 1], 0, 180, BOXWIDTH, BOXLEFT);
-    yPoints[3] = constrain(p, 39, 391);
-    p = map(MaxDegrees[Bank][ChanneltoSet - 1], 0, 180, BOXWIDTH, BOXLEFT);
-    yPoints[4] = constrain(p, 39, 391);
+{ // where the points sit on the glass: across the box in equal steps (B118: 180, 90, 60 or 45 pixels for 3, 5, 7 or 9), up by degrees
+    const uint8_t ch = ChanneltoSet - 1, n = CurveN(ch);
+    for (uint8_t k = 0; k < n; ++k)
+    {
+        xPoints[k] = BOXLEFT + (360 * k) / (n - 1);
+        const int p = map(CurvePoint[Bank][ch][k], 0, 180, BOXWIDTH, BOXLEFT);
+        yPoints[k] = constrain(p, 39, 391);
+    }
 }
 
 /*********************************************************************************************************************************/
 
+FLASHMEM static void GraphCmd(char *Buffer, const char *Cmd)
+{ // appends a command and its end marker, sending the buffer first when the command would not fit
+    if (strlen(Buffer) + strlen(Cmd) + 3 >= 500)
+    {
+        NEXTION.print(Buffer);
+        Buffer[0] = 0;
+    }
+    strcat(Buffer, Cmd);
+    strcat(Buffer, "\xFF\xFF\xFF");
+}
 FASTRUN void updateInterpolationTypes()
 {
     char ExpR[] = "Exp";
@@ -1943,6 +1918,115 @@ FASTRUN void updateInterpolationTypes()
     default:
         break;
     }
+    { // B118: the Points row (3 5 7 9) shows with Straight and Smooth, where the Expo controls are otherwise
+        static const char *const PTS[9] = {"lpt", "pt3", "lpt3", "pt5", "lpt5", "pt7", "lpt7", "pt9", "lpt9"};
+        const bool pts = InterpolationTypes[Bank][ChanneltoSet - 1] != EXPONENTIALCURVES;
+        char Buffer[512] = "", Cmd[24];
+        for (uint8_t i = 0; i < 9; ++i)
+        {
+            snprintf(Cmd, sizeof(Cmd), "vis %s,%d", PTS[i], pts ? 1 : 0);
+            GraphCmd(Buffer, Cmd);
+        }
+        NEXTION.print(Buffer);
+    }
+}
+
+/*********************************************************************************************************************************/
+
+// B118 (Malcolm, 17 Oct 2026: "Might it be possible for us now to allow the user to choose 3 points, 5 points, 7 points, or 9
+// points?"). A channel's curve has CurveN(ch) points, the same in every bank; five as ever. Changing the count puts the new
+// points ON the curve as it is, bank by bank (the shape's own interpolation at the new stick positions), so nothing moves:
+// the ends and the centre are copied, never re-rounded; Exponential has only those three anyway.
+FLASHMEM static void CurveResample(uint8_t ch, uint8_t n)
+{
+    const uint8_t was = CurveN(ch), in = InPutStick[ch], SavedBank = Bank;
+    for (uint8_t b = 1; b <= 4; ++b)
+    {
+        uint8_t fresh[CURVE_POINTS_MAX];
+        Bank = b;
+        GetCurveDots(ch, 100); // this bank's points at full rate (CurveDots, CurveDotsN = was)
+        const uint8_t it = InterpolationTypes[b][ch] < 3 ? InterpolationTypes[b][ch] : 0;
+        for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k)
+        {
+            if (k >= n)
+                fresh[k] = 0;
+            else if (k == 0)
+                fresh[k] = CurvePoint[b][ch][0];
+            else if (k == CurveMid(n))
+                fresh[k] = CurvePoint[b][ch][CurveMid(was)];
+            else if (k == n - 1)
+                fresh[k] = CurvePoint[b][ch][was - 1];
+            else
+                fresh[k] = RangeDegrees(Interpolate[it](CurveX(in, k, n), in, ch), RangeLo(), RangeHi());
+        }
+        for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k)
+            CurvePoint[b][ch][k] = fresh[k];
+    }
+    Bank = SavedBank;
+    CurvePointCount[ch] = n;
+    GetCurveDots(ch, DualRateValue); // (the dots are a global: the bank in use back)
+}
+FLASHMEM void CurvePointsChosen(uint8_t n)
+{
+    if (ChanneltoSet < 1 || ChanneltoSet > 16)
+        return;
+    if (n != CurveN(ChanneltoSet - 1))
+    {
+        CurveResample(ChanneltoSet - 1, n);
+        if (CurrentPoint > n)
+            CurrentPoint = 1;
+        CheckInvisiblePoint();
+        SaveOneModel(ModelNumber);
+    }
+    DisplayCurve(); // (the radios as they are, either way)
+    ClearText();
+}
+FLASHMEM void CurvePoints3Tapped() { CurvePointsChosen(3); }
+FLASHMEM void CurvePoints5Tapped() { CurvePointsChosen(5); }
+FLASHMEM void CurvePoints7Tapped() { CurvePointsChosen(7); }
+FLASHMEM void CurvePoints9Tapped() { CurvePointsChosen(9); }
+// The numbers along the top of the curve page: which boxes show them (n1-n5 for 3 and 5 points - 3 uses n1, n3, n5, as an
+// exponential curve does; n1 k2 k3 n3 k5 k6 n5 for 7; m1-m9, smaller, for 9), their values in microseconds, and the Points
+// radios. One write.
+FLASHMEM void CurveLayoutShow()
+{
+    static const char *const ALL[18] = {"n1", "n2", "n3", "n4", "n5", "k2", "k3", "k5", "k6", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9"};
+    static const char *const N3[3] = {"n1", "n3", "n5"};
+    static const char *const N5[5] = {"n1", "n2", "n3", "n4", "n5"};
+    static const char *const N7[7] = {"n1", "k2", "k3", "n3", "k5", "k6", "n5"};
+    static const char *const N9[9] = {"m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9"};
+    if (ChanneltoSet < 1 || ChanneltoSet > 16)
+        return;
+    const uint8_t ch = ChanneltoSet - 1, n = CurveN(ch);
+    const bool expo = InterpolationTypes[Bank][ch] == EXPONENTIALCURVES;
+    const uint8_t shown = expo ? 3 : n;
+    const char *const *names = shown == 3 ? N3 : shown == 7 ? N7 : shown == 9 ? N9 : N5;
+    char Buffer[512] = "", Cmd[40];
+    for (uint8_t i = 0; i < 18; ++i)
+    {
+        bool on = false;
+        for (uint8_t k = 0; k < shown; ++k)
+            if (!strcmp(names[k], ALL[i]))
+                on = true;
+        snprintf(Cmd, sizeof(Cmd), "vis %s,%d", ALL[i], on ? 1 : 0);
+        GraphCmd(Buffer, Cmd);
+    }
+    for (uint8_t k = 0; k < shown; ++k)
+    {
+        const uint8_t idx = expo ? (k == 0 ? 0 : k == 1 ? CurveMid(n) : n - 1) : k;
+        snprintf(Cmd, sizeof(Cmd), "%s.val=%d", names[k], CurveMicros(CurvePoint[Bank][ch][idx]));
+        GraphCmd(Buffer, Cmd);
+    }
+    snprintf(Cmd, sizeof(Cmd), "pt3.val=%d", n == 3 ? 1 : 0);
+    GraphCmd(Buffer, Cmd);
+    snprintf(Cmd, sizeof(Cmd), "pt5.val=%d", n == 5 ? 1 : 0);
+    GraphCmd(Buffer, Cmd);
+    snprintf(Cmd, sizeof(Cmd), "pt7.val=%d", n == 7 ? 1 : 0);
+    GraphCmd(Buffer, Cmd);
+    snprintf(Cmd, sizeof(Cmd), "pt9.val=%d", n == 9 ? 1 : 0);
+    GraphCmd(Buffer, Cmd);
+    if (Buffer[0])
+        NEXTION.print(Buffer);
 }
 
 /*********************************************************************************************************************************/
@@ -1957,9 +2041,10 @@ FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y
     uint8_t n = 0;
     int xDot1, yDot1, xDot2 = 0, yDot2 = 0;
     double xPoint, yPoint;
+    const uint8_t pts = CurveN(ChanneltoSet - 1), mid = CurveMid(pts), last = pts - 1; // (B118: 3, 5, 7 or 9 points)
     if (InterpolationTypes[Bank][ChanneltoSet - 1] == STRAIGHTLINES)
-    { // four straight lines, point to point
-        for (int i = 0; i < 4; ++i)
+    { // straight lines, point to point
+        for (int i = 0; i < last; ++i)
         {
             x1[n] = (int)xPoints[i];
             y1[n] = (int)yPoints[i];
@@ -1972,13 +2057,13 @@ FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y
     if (InterpolationTypes[Bank][ChanneltoSet - 1] == SMOOTHEDCURVES)
     { // CatmullSpline, a point every 12 pixels
         int adaptiveStep = 12;
-        for (xPoint = xPoints[0]; xPoint <= xPoints[4]; xPoint += adaptiveStep)
+        for (xPoint = xPoints[0]; xPoint <= xPoints[last]; xPoint += adaptiveStep)
         {
-            if (adaptiveStep > xPoints[4] - xPoint)
-                adaptiveStep = xPoints[4] - xPoint;
+            if (adaptiveStep > xPoints[last] - xPoint)
+                adaptiveStep = xPoints[last] - xPoint;
             if (adaptiveStep < 1)
                 adaptiveStep = 1;
-            yPoint = Interpolation::CatmullSpline(xPoints, yPoints, PointsCount, xPoint);
+            yPoint = Interpolation::CatmullSpline(xPoints, yPoints, pts, xPoint);
             xDot1 = xPoint;
             yDot1 = yPoint;
             if (yDot2 == 0)
@@ -2001,9 +2086,9 @@ FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y
         return n;
     }
     // EXPONENTIALCURVES: the lower half from the left end to the centre, then the upper half from the right end back to the centre
-    const float HalfXRange = xPoints[4] - xPoints[2];
-    const float TopHalfYRange = yPoints[4] - yPoints[2];
-    const float BottomHalfYRange = yPoints[2] - yPoints[0];
+    const float HalfXRange = xPoints[last] - xPoints[mid];
+    const float TopHalfYRange = yPoints[last] - yPoints[mid];
+    const float BottomHalfYRange = yPoints[mid] - yPoints[0];
     int adaptiveStep = 14;
     for (xPoint = 0; xPoint <= HalfXRange; xPoint += adaptiveStep)
     {
@@ -2040,8 +2125,8 @@ FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y
             adaptiveStep = xPoint;
         if (adaptiveStep < 1)
             adaptiveStep = 1;
-        yDot1 = yPoint + yPoints[2];
-        xDot1 = xPoint + xPoints[2];
+        yDot1 = yPoint + yPoints[mid];
+        xDot1 = xPoint + xPoints[mid];
         if (yDot2 == 0)
         {
             xDot2 = xDot1;
@@ -2067,7 +2152,6 @@ FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y
 FASTRUN void DisplayCurve()
 {
 
-    int p = 0;
     char cmdBuffer[512] = "";          // Buffer for commands
     char tempCmd[80];                  // Temporary buffer for individual commands
     char endMarker[] = "\xFF\xFF\xFF"; // Nextion end marker
@@ -2079,17 +2163,9 @@ FASTRUN void DisplayCurve()
     int DotSize = 4;
     int DotColour = 65535; // White
 
-    // Constrain degrees values
-    p = constrain(MinDegrees[Bank][ChanneltoSet - 1], 0, 180);
-    MinDegrees[Bank][ChanneltoSet - 1] = p;
-    p = constrain(MidLowDegrees[Bank][ChanneltoSet - 1], 0, 180);
-    MidLowDegrees[Bank][ChanneltoSet - 1] = p;
-    p = constrain(CentreDegrees[Bank][ChanneltoSet - 1], 0, 180);
-    CentreDegrees[Bank][ChanneltoSet - 1] = p;
-    p = constrain(MidHiDegrees[Bank][ChanneltoSet - 1], 0, 180);
-    MidHiDegrees[Bank][ChanneltoSet - 1] = p;
-    p = constrain(MaxDegrees[Bank][ChanneltoSet - 1], 0, 180);
-    MaxDegrees[Bank][ChanneltoSet - 1] = p;
+    // Constrain degrees values (B118: every point of the curve)
+    for (uint8_t k = 0; k < CurveN(ChanneltoSet - 1); ++k)
+        CurvePoint[Bank][ChanneltoSet - 1][k] = constrain(CurvePoint[Bank][ChanneltoSet - 1][k], 0, 180);
 
     GetDotPositions();
 
@@ -2102,26 +2178,7 @@ FASTRUN void DisplayCurve()
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
 
-    // Top row values - sent in a single batch
-    sprintf(tempCmd, "n1.val=%d", CurveMicros(MinDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
-    strcat(cmdBuffer, tempCmd);
-    strcat(cmdBuffer, endMarker);
-
-    sprintf(tempCmd, "n2.val=%d", CurveMicros(MidLowDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
-    strcat(cmdBuffer, tempCmd);
-    strcat(cmdBuffer, endMarker);
-
-    sprintf(tempCmd, "n3.val=%d", CurveMicros(CentreDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
-    strcat(cmdBuffer, tempCmd);
-    strcat(cmdBuffer, endMarker);
-
-    sprintf(tempCmd, "n4.val=%d", CurveMicros(MidHiDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
-    strcat(cmdBuffer, tempCmd);
-    strcat(cmdBuffer, endMarker);
-
-    sprintf(tempCmd, "n5.val=%d", CurveMicros(MaxDegrees[Bank][ChanneltoSet - 1])); // B110: microseconds (was -100 .. 100); B113: in the max range
-    strcat(cmdBuffer, tempCmd);
-    strcat(cmdBuffer, endMarker);
+    // (B118: the numbers along the top, and which boxes show them, go at the end: CurveLayoutShow)
 
     // Send first batch of commands
     NEXTION.print(cmdBuffer);
@@ -2151,40 +2208,6 @@ FASTRUN void DisplayCurve()
     sprintf(tempCmd, "line %d,%d,%d,%d,%d", xDot1, yDot1, xDot2, yDot2, SpecialColour);
     strcat(cmdBuffer, tempCmd);
     strcat(cmdBuffer, endMarker);
-
-    // 3. Set visibility based on interpolation type
-    if (InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES)
-    {
-        // Hide controls for exponential mode
-        strcat(cmdBuffer, "vis b3,0");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis b4,0");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis b7,0");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis b8,0");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis n2,0");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis n4,0");
-        strcat(cmdBuffer, endMarker);
-    }
-    else
-    {
-        // Show controls for other modes
-        strcat(cmdBuffer, "vis b3,1");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis b4,1");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis b7,1");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis b8,1");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis n2,1");
-        strcat(cmdBuffer, endMarker);
-        strcat(cmdBuffer, "vis n4,1");
-        strcat(cmdBuffer, endMarker);
-    }
 
     // Send the second batch of commands
     NEXTION.print(cmdBuffer);
@@ -2218,29 +2241,20 @@ FASTRUN void DisplayCurve()
 
     // 5. Draw the control points (dots)
 
-    if (InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES)
-    {
-        // Just 3 dots for exponential mode
-        sprintf(tempCmd, "cirs %d,%d,%d,%d", (int)xPoints[0], (int)yPoints[0], DotSize, DotColour);
-        strcat(cmdBuffer, tempCmd);
-        strcat(cmdBuffer, endMarker);
-
-        sprintf(tempCmd, "cirs %d,%d,%d,%d", (int)xPoints[2], (int)yPoints[2], DotSize, DotColour);
-        strcat(cmdBuffer, tempCmd);
-        strcat(cmdBuffer, endMarker);
-
-        sprintf(tempCmd, "cirs %d,%d,%d,%d", (int)xPoints[4], (int)yPoints[4], DotSize, DotColour);
-        strcat(cmdBuffer, tempCmd);
-        strcat(cmdBuffer, endMarker);
-    }
-    else
-    {
-        // 5 dots for other modes
-        for (int i = 0; i < 5; i++)
+    { // every point (B118: 3, 5, 7 or 9); an exponential curve shows its three: the ends and the centre
+        const uint8_t pts = CurveN(ChanneltoSet - 1);
+        for (uint8_t i = 0; i < pts; i++)
         {
+            if (!CurveDotShown(i))
+                continue;
             sprintf(tempCmd, "cirs %d,%d,%d,%d", (int)xPoints[i], (int)yPoints[i], DotSize, DotColour);
             strcat(cmdBuffer, tempCmd);
             strcat(cmdBuffer, endMarker);
+            if (strlen(cmdBuffer) > 400)
+            {
+                NEXTION.print(cmdBuffer);
+                cmdBuffer[0] = '\0';
+            }
         }
     }
 
@@ -2274,6 +2288,7 @@ FASTRUN void DisplayCurve()
             selected_x, selected_y, DotSize + 3, Black);
     SendCommand(fill_cmd);
 
+    CurveLayoutShow();      // B118: the numbers along the top, in the boxes for this many points, and the Points radios
     SavedLineX = NO_MARKER; // B117: a full redraw has no marker on it; ShowServoPos draws it afresh (and then only moves it)
 
     // Update interpolation types UI
@@ -2286,16 +2301,6 @@ FASTRUN void DisplayCurve()
 // (the very line commands DisplayCurve sends, so the pixels are the same), any dot those segments pass through - and the
 // marker is drawn at its new place. A dozen short commands in one write, where a full redraw was 1.5 kB and a flash of
 // black, so the marker follows the stick smoothly (ShowServoPos, 25 times a second, a pixel at a time).
-FLASHMEM static void GraphCmd(char *Buffer, const char *Cmd)
-{ // appends a command and its end marker, sending the buffer first when the command would not fit
-    if (strlen(Buffer) + strlen(Cmd) + 3 >= 500)
-    {
-        NEXTION.print(Buffer);
-        Buffer[0] = 0;
-    }
-    strcat(Buffer, Cmd);
-    strcat(Buffer, "\xFF\xFF\xFF");
-}
 FLASHMEM void GraphMarkerMove(uint16_t From, uint16_t To)
 {
     char Buffer[512] = "";
@@ -2328,10 +2333,9 @@ FLASHMEM void GraphMarkerMove(uint16_t From, uint16_t To)
                     Right = hi;
             }
         }
-        const bool Expo = InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES;
-        for (int i = 0; i < 5; ++i)
-        { // the dots those lines pass through, as DisplayCurve draws them (three for an exponential curve)
-            if (Expo && (i == 1 || i == 3))
+        for (int i = 0; i < CurveN(ChanneltoSet - 1); ++i)
+        { // the dots those lines pass through, as DisplayCurve draws them (B118: 3, 5, 7 or 9; three for an exponential curve)
+            if (!CurveDotShown(i))
                 continue;
             const int dx = (int)xPoints[i];
             if (dx + 4 >= Left && dx - 4 <= Right)
@@ -2401,66 +2405,17 @@ int GetDifference(int YtouchPlace, int oldy)
 }
 /*********************************************************************************************************************************/
 void MoveCurrentPointUp()
-{
-
-    switch (CurrentPoint)
-    {
-    case 1:
-        ++MinDegrees[Bank][ChanneltoSet - 1];
-        break;
-
-    case 2:
-        ++MidLowDegrees[Bank][ChanneltoSet - 1];
-        break;
-
-    case 3:
-        ++CentreDegrees[Bank][ChanneltoSet - 1];
-        break;
-    case 4:
-        ++MidHiDegrees[Bank][ChanneltoSet - 1];
-        break;
-
-    case 5:
-        ++MaxDegrees[Bank][ChanneltoSet - 1];
-        break;
-    default:
-        break;
-    }
+{ // (B118: the current point of up to nine; DisplayCurve keeps it within 0 .. 180)
+    if (CurrentPoint >= 1 && CurrentPoint <= CurveN(ChanneltoSet - 1))
+        ++CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1];
     DisplayCurve();
 }
 
 /*********************************************************************************************************************************/
 void MoveCurrentPointDown()
 {
-    switch (CurrentPoint)
-    {
-    case 1:
-        if (MinDegrees[Bank][ChanneltoSet - 1])
-            --MinDegrees[Bank][ChanneltoSet - 1];
-        break;
-
-    case 2:
-        if (MidLowDegrees[Bank][ChanneltoSet - 1])
-            --MidLowDegrees[Bank][ChanneltoSet - 1];
-        break;
-
-    case 3:
-        if (CentreDegrees[Bank][ChanneltoSet - 1])
-            --CentreDegrees[Bank][ChanneltoSet - 1];
-        break;
-
-    case 4:
-        if (MidHiDegrees[Bank][ChanneltoSet - 1])
-            --MidHiDegrees[Bank][ChanneltoSet - 1];
-        break;
-
-    case 5:
-        if (MaxDegrees[Bank][ChanneltoSet - 1])
-            --MaxDegrees[Bank][ChanneltoSet - 1];
-        break;
-    default:
-        break;
-    }
+    if (CurrentPoint >= 1 && CurrentPoint <= CurveN(ChanneltoSet - 1) && CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1])
+        --CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1];
     DisplayCurve();
 }
 
@@ -2468,8 +2423,7 @@ void MoveCurrentPointDown()
 
 /** @brief moves point very close to where user hit screen */
 void MovePoint()
-{
-    int rjump = 0;
+{ // the point nearest the finger across the box (of those shown) becomes the current one and moves to the finger's height (B118: any count)
     GetDotPositions(); // current
     if (XtouchPlace > BOXWIDTH)
         return; // out of range
@@ -2479,91 +2433,33 @@ void MovePoint()
         return; // out of range
     if (YtouchPlace > BOXHEIGHT)
         return; // out of range
-
-    if (XtouchPlace < BOXLEFT + xPoints[0])
-    { // do leftmost point  ?
-        CurrentPoint = 1;
-
-        rjump = GetDifference(YtouchPlace, yPoints[0]);
-        if (YtouchPlace > yPoints[0])
-        {
-            if (MinDegrees[Bank][ChanneltoSet - 1] >= rjump)
-                MinDegrees[Bank][ChanneltoSet - 1] -= rjump;
-        }
-        else
-        {
-            if (MinDegrees[Bank][ChanneltoSet - 1] <= (180 - rjump))
-                MinDegrees[Bank][ChanneltoSet - 1] += rjump;
-        }
-    }
-
-    if (XtouchPlace > xPoints[1] - BOXLEFT && XtouchPlace < xPoints[1] + BOXLEFT)
-    { // do next point  ?
-        CurrentPoint = 2;
-        CheckInvisiblePoint();
-        if (InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES)
-            return; //  expo = ignore this area
-        rjump = GetDifference(YtouchPlace, yPoints[1]);
-        if (YtouchPlace > yPoints[1])
-        {
-            if (MidLowDegrees[Bank][ChanneltoSet - 1] >= rjump)
-                MidLowDegrees[Bank][ChanneltoSet - 1] -= rjump;
-        }
-        else
-        {
-            if (MidLowDegrees[Bank][ChanneltoSet - 1] <= 180 - rjump)
-                MidLowDegrees[Bank][ChanneltoSet - 1] += rjump;
-        }
-    }
-
-    if (XtouchPlace > xPoints[2] - BOXLEFT && XtouchPlace < xPoints[2] + BOXLEFT)
-    { // do next point  ?
-        CurrentPoint = 3;
-        rjump = GetDifference(YtouchPlace, yPoints[2]);
-        if (YtouchPlace > yPoints[2])
-        {
-            if (CentreDegrees[Bank][ChanneltoSet - 1] >= rjump)
-                CentreDegrees[Bank][ChanneltoSet - 1] -= rjump;
-        }
-        else
-        {
-            if (CentreDegrees[Bank][ChanneltoSet - 1] <= 180 - rjump)
-                CentreDegrees[Bank][ChanneltoSet - 1] += rjump;
-        }
-    }
-
-    if (XtouchPlace > xPoints[3] - BOXLEFT && XtouchPlace < xPoints[3] + BOXLEFT)
-    { // do next point  ?
-        CurrentPoint = 4;
-        CheckInvisiblePoint();
-        if (InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES)
-            return; //  expo = ignore this area
-        rjump = GetDifference(YtouchPlace, yPoints[3]);
-        if (YtouchPlace > yPoints[3])
-        {
-            if (MidHiDegrees[Bank][ChanneltoSet - 1] >= rjump)
-                MidHiDegrees[Bank][ChanneltoSet - 1] -= rjump;
-        }
-        else
-        {
-            if (MidHiDegrees[Bank][ChanneltoSet - 1] <= 180 - rjump)
-                MidHiDegrees[Bank][ChanneltoSet - 1] += rjump;
-        }
-    }
-    if (XtouchPlace > xPoints[3] + BOXLEFT) // do hi point  ?
+    const uint8_t ch = ChanneltoSet - 1, n = CurveN(ch);
+    int best = -1, bestDistance = 0;
+    for (uint8_t k = 0; k < n; ++k)
     {
-        CurrentPoint = 5;
-        rjump = GetDifference(YtouchPlace, yPoints[4]);
-        if (YtouchPlace > yPoints[4])
+        if (!CurveDotShown(k))
+            continue;
+        const int d = abs(XtouchPlace - (int)xPoints[k]);
+        if (best < 0 || d < bestDistance)
         {
-            if (MaxDegrees[Bank][ChanneltoSet - 1] > rjump)
-                MaxDegrees[Bank][ChanneltoSet - 1] -= rjump;
+            best = k;
+            bestDistance = d;
         }
-        else
-        {
-            if (MaxDegrees[Bank][ChanneltoSet - 1] <= 180 - rjump)
-                MaxDegrees[Bank][ChanneltoSet - 1] += rjump;
-        }
+    }
+    if (best < 0)
+        return;
+    CurrentPoint = best + 1;
+    const int rjump = GetDifference(YtouchPlace, yPoints[best]);
+    uint8_t &deg = CurvePoint[Bank][ch][best];
+    if (YtouchPlace > yPoints[best])
+    {
+        if (deg >= rjump)
+            deg -= rjump;
+    }
+    else
+    {
+        if (deg <= 180 - rjump)
+            deg += rjump;
     }
 }
 
@@ -2914,13 +2810,22 @@ void PointDown()
 
 /******************************************************************************************************************************/
 
-void CheckInvisiblePoint()
+bool CurveDotShown(uint8_t k) // B118: is point k of the current channel's curve on the glass? (an exponential curve shows its ends and centre)
 {
-    if (InterpolationTypes[Bank][ChanneltoSet - 1] == EXPONENTIALCURVES)
-    {
-        if ((CurrentPoint == 2) || (CurrentPoint == 4))
-            ++CurrentPoint;
-    }
+    const uint8_t n = CurveN(ChanneltoSet - 1);
+    if (k >= n)
+        return false;
+    if (InterpolationTypes[Bank][ChanneltoSet - 1] != EXPONENTIALCURVES)
+        return true;
+    return k == 0 || k == CurveMid(n) || k == n - 1;
+}
+void CheckInvisiblePoint()
+{ // the current point must be one that is shown: on to the next that is (B118: for any count)
+    const uint8_t n = CurveN(ChanneltoSet - 1);
+    if (CurrentPoint < 1 || CurrentPoint > n)
+        CurrentPoint = 1;
+    for (uint8_t tries = 0; tries < n && !CurveDotShown(CurrentPoint - 1); ++tries)
+        CurrentPoint = CurrentPoint >= n ? 1 : CurrentPoint + 1;
 }
 
 /******************************************************************************************************************************/
@@ -2928,7 +2833,7 @@ void CheckInvisiblePoint()
 void PointSelect()
 {
     ++CurrentPoint;
-    if (CurrentPoint > 5)
+    if (CurrentPoint > CurveN(ChanneltoSet - 1)) // (B118: round the points there are)
         CurrentPoint = 1;
     CheckInvisiblePoint();
     DisplayCurve();
@@ -3128,11 +3033,8 @@ void WriteNewCurve()
         {
             if (p != Bank)
             {
-                MinDegrees[p][ChanneltoSet - 1] = MinDegrees[Bank][ChanneltoSet - 1];
-                MidLowDegrees[p][ChanneltoSet - 1] = MidLowDegrees[Bank][ChanneltoSet - 1];
-                CentreDegrees[p][ChanneltoSet - 1] = CentreDegrees[Bank][ChanneltoSet - 1];
-                MidHiDegrees[p][ChanneltoSet - 1] = MidHiDegrees[Bank][ChanneltoSet - 1];
-                MaxDegrees[p][ChanneltoSet - 1] = MaxDegrees[Bank][ChanneltoSet - 1];
+                for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k) // (B118: every point; the count is the channel's, the same in every bank)
+                    CurvePoint[p][ChanneltoSet - 1][k] = CurvePoint[Bank][ChanneltoSet - 1][k];
                 InterpolationTypes[p][ChanneltoSet - 1] = InterpolationTypes[Bank][ChanneltoSet - 1];
                 Exponential[p][ChanneltoSet - 1] = Exponential[Bank][ChanneltoSet - 1];
             }
@@ -3262,7 +3164,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 221 // One more than final one
+#define LASTFUNCTION1 225 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3485,7 +3387,11 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     RatesCurvesTapped,       // 217 B107: the Rates page's "Curves ..." (page 83)
     RatesCurvesOk,           // 218 the curves page's OK: back to the Rates page
     MaxRangeWideTapped,      // 219 B113: the Channels page's "Max range:" 500 to 2500 (B111/B112: the stick ends)
-    MaxRangeNarrowTapped     // 220 B113: ... 945 to 2055
+    MaxRangeNarrowTapped, // 220
+    CurvePoints3Tapped,   // 221 (B118: the curve page's Points 3 5 7 9)
+    CurvePoints5Tapped,   // 222
+    CurvePoints7Tapped,   // 223
+    CurvePoints9Tapped    // 224 B113: ... 945 to 2055
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

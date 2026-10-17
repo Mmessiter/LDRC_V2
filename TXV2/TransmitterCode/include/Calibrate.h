@@ -18,11 +18,7 @@ void ReduceLimits()
         ChannelMin[i] = MAXRESOLUTION / 2;
     }
     for (uint8_t i = 0; i < CHANNELSUSED; ++i)
-    {
-        MaxDegrees[Bank][i] = 180;
-        CentreDegrees[Bank][i] = 90;
-        MinDegrees[Bank][i] = 0;
-    }
+        CurveSetStraight(Bank, i, 0, 180); // (B118: every point of the curve on the straight line; it was the ends and the centre)
 }
 /*********************************************************************************************************************************/
 void CalibrateSticks() // This discovers end of travel place for sticks etc.
