@@ -186,6 +186,12 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The curve page's numbers lined up with the words (screen 1.11.84, Teensy B120 unchanged, 17 Oct 2026)
+
+Malcolm: "the input and output numbers and the exponential number could be lined up with the words straight smooth
+exponential and copy to all banks because this would look tidier". Input, Output and the Expo number now begin where
+those words begin (x 520) and read left to right like them; the Points radios start at the same edge. Nothing else moved.
+
 ## A smooth curve no longer breaks up as the stick moves (Teensy B120, screen 1.11.83 unchanged, 17 Oct 2026)
 
 Malcolm: "if you move the stick side to side quite a few times, the line gets broken up because it's not repaired." Only
