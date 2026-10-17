@@ -2,8 +2,15 @@
 # /hmi/films/<NAME>.ldf with its sound <NAME>.wav, made by TXV1B dev/video/films/<name>.py with LDRC_TARGET=screen.
 # A help page plays the animation of its own name (help FRONT.TXT plays FRONT.ldf) from its "Animation" button, or the
 # one a "<HELP>=<NAME>" line gives it. (Up to 96; a title up to 40 characters.)
+FRONT: The front page
+TXSETUP: Transmitter setup
 CALIB: Calibrating the sticks
+OPTIONS: System, and binding
+RXSETUP: Model setup
+MODELS: Choosing a model
+CHANNELS: Channels
 CURVES: Curves of 3 to 9 points
+TRIMS: Trims
 EASY: Rotorflight: Easy tuning
 # The Rotorflight menu's help, which opens without a model, plays Easy tuning's (its page needs the model connected)
 RFLIGHT=EASY

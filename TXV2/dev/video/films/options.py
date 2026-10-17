@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""Film OPTIONS: the System pages' first page (General), and binding. The words are OPTIONS.TXT's (the System pages' help);
+Bind turns into "Stop binding" (scenario 25_bind: Enable_Binding, Utilities.h). Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+from filmkit import Film, prefix, at
+from common import FRONT_NO_MODEL
+
+f = Film('OPTIONS', 'System', 'General settings, and binding')
+f.shot('o_front', FRONT_NO_MODEL)
+f.shot('o_setup', prefix('33.txt', '33_open'))
+f.shot('o_sys', prefix('25.txt', '25_open'))
+f.shot('o_bind', prefix('25.txt', '25_bind'))
+f.line('title', "System. The transmitter's general settings, and binding.")
+f.line('front', 'This is the front page, with no model switched on. Press Transmitter.')
+f.line('setup', 'This is the Transmitter setup page. Press System.')
+f.line('page', 'This is the first of three System pages: General.')
+f.line('ams', 'Automatic model selection: when a model connects, the transmitter loads the model memory that holds its I D.')
+f.line('dark', 'Screen goes dark after: the screen turns off to save the battery. Touch it anywhere to switch it back on.')
+f.line('off', 'Switch off when unused: this switches off a transmitter left on by mistake, but never while a model is connected.')
+f.line('battery', 'Transmitter battery low at: a warning when the transmitter battery falls this low. Set it quite high.')
+f.line('mode', 'Stick mode, one or two. Set this first, then calibrate the sticks again.')
+f.line('owner', "Owner's name: shown at the top left of the front page.")
+f.line('bindhow', 'To bind a receiver, first get it ready to bind. Then, with no model connected, press Bind.')
+f.line('binding', 'It changes to Stop binding. The receiver binds and connects, and then binding stops by itself.')
+f.line('next', 'Next goes on to the clock, and then the advanced settings.')
+f.line('ok', 'OK saves this page, and goes back to Transmitter setup.')
+f.line('end', "That's the first System page.")
+f.prepare()
+
+f.begin(); f.say('title', after=1.6)
+f.show('o_front'); f.say('front', 'Press Transmitter.', after=0.3); f.tap(*at('FrontView', 'b0'), 'o_setup')
+f.say('setup', 'Press System.', after=0.3); f.tap(*at('TXSetupView', txt='System'), 'o_sys')
+f.say('page', 'System: General.')
+f.point(*at('OptionsView', 'c0'), 'ams', 'Automatic model selection.')
+f.point(*at('OptionsView', 'ST'), 'dark', 'Screen goes dark after.')
+f.point(*at('OptionsView', 't2'), 'off', 'Switch off when unused.')
+f.point(*at('OptionsView', 't10'), 'battery', 'Battery warning.')
+f.point(*at('OptionsView', 't4'), 'mode', 'Stick mode.')
+f.point(*at('OptionsView', 'TxName'), 'owner', "Owner's name.")
+f.cap = None; f.say('bindhow', 'Binding: press Bind.', after=0.3); f.tap(*at('OptionsView', 'b0')); f.under('o_bind'); f.hold(0.8)
+f.say('binding', 'Stop binding.')
+f.point(*at('OptionsView', 'b13'), 'next', 'Next: clock, advanced.')
+f.point(*at('OptionsView', 'b10'), 'ok', 'OK saves this page.')
+f.end('end')
+f.finish()

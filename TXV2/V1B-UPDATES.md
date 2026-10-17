@@ -186,6 +186,22 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Seven new animations, and a picture the screen drew wrongly (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
+
+Malcolm: "I guess you will have to make a lot of animations, and it could take a little while!" The first batch, each on
+its help page's "Animation" button and in the list: the front page (FRONT), Transmitter setup (TXSETUP), System and
+binding (OPTIONS), Model setup (RXSETUP), choosing a model (MODELS), Channels (CHANNELS) and Trims (TRIMS) - ten in all
+with Calibrating, Curves and Easy tuning. Most are tours: dev/video/filmkit.py's new point() moves the finger, in silence,
+to each part of the page (its centre from the page's own definition) and rests there while the voice says what it is, the
+words taken from that page's help. Shared pictures (the front page with and without a model) are in films/common.py.
+
+**A fault found on the way.** JPEGDEC 1.8.4, the screen's decoder, drew one whole-screen picture of the System animation
+82 % wrong (red bands, pink text) without reporting any error, and one of the Curves animation, already published, 45 %
+wrong. It depends on the exact bytes: the same picture saved again decodes perfectly. The film kit now decodes every
+picture with JPEGDEC on the Mac and compares it with Pillow's decode, saving again any that differ (the two faulty
+pictures were), and hmi/test_film/decode_test.py checks every picture alone the same way (it fails on the published
+CURVES.ldf, passes on all ten now).
+
 ## Animations: each help page plays its own; the list of them all (screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
 
 Malcolm: "I suggest we change the word 'films' to 'videos' or 'animations' if there is room for the longer word. At the

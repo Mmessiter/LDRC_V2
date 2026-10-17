@@ -93,7 +93,7 @@ with tempfile.TemporaryDirectory() as d:
     data = open(film, 'rb').read()
     ver, fw, fh, fps, frames = struct.unpack('<HHHHI', data[8:20])
     saved = sorted(int(l.split()[1]) for l in r.stdout.split('\n') if l.startswith('SAVED '))
-    ref = Image.new('RGB', (fw, fh), (255, 0, 255)); worst = 0; compared = 0; last = -1
+    ref = Image.new('RGB', (fw, fh), (255, 0, 255)); worst = 0; compared = 0; last = -1; total = 0; samples = 0; big = 0
     def size_of(i): o, s = struct.unpack('<II', data[20 + 8 * i: 28 + 8 * i]); return o, s & 0x7FFFFFFF
     for k in range(frames):
         off, size = size_of(k)
@@ -106,9 +106,56 @@ with tempfile.TemporaryDirectory() as d:
             raw = open(os.path.join(d, 'pic_%d.565' % k), 'rb').read(); px = struct.unpack('<%dH' % (len(raw) // 2), raw); rb = ref.tobytes()
             for i in range(0, len(px), 61):
                 v = px[i]; r5, g6, b5 = (v >> 11) & 31, (v >> 5) & 63, v & 31
-                worst = max(worst, abs((r5 << 3) - (rb[3 * i] & 0xF8)), abs((g6 << 2) - (rb[3 * i + 1] & 0xFC)), abs((b5 << 3) - (rb[3 * i + 2] & 0xF8)))
+                dd = max(abs((r5 << 3) - (rb[3 * i] & 0xF8)), abs((g6 << 2) - (rb[3 * i + 1] & 0xFC)), abs((b5 << 3) - (rb[3 * i + 2] & 0xF8)))
+                worst = max(worst, dd); total += dd; samples += 1; big += dd > 24
             compared += 1
-    print('the screen against Pillow, the whole film applied picture by picture: %d moments compared, the largest difference %d of 255 (a step of RGB565 is 4 or 8)' % (compared, worst))
-    ok = ok and worst <= 24 and compared >= 2
+    mean = total / max(1, samples)
+    print('the screen against Pillow, the whole film applied picture by picture: %d moments compared, on average %.2f of 255 apart, the largest %d (a step of RGB565 is 4 or 8), %d of %d points more than 24 apart' % (compared, mean, worst, big, samples))
+    # (17 Oct 2026: two decoders round a sharp edge of text differently - one point in ten thousand, 32 apart - so the test is
+    # the average and the share of points far apart; a picture misplaced or corrupt moves both a long way)
+    ok = ok and compared >= 2 and mean <= 4.0 and big * 1000 <= samples and worst <= 64
+    # (17 Oct 2026) every picture alone, as JPEGDEC draws it, against Pillow: JPEGDEC 1.8.4 can draw a picture wrongly without
+    # a word (the System film had one 82 % wrong) - a moment above may never see it if the next page covers it
+    one = os.path.join(d, 'one.cpp'); one_exe = os.path.join(d, 'one')
+    open(one, 'w').write(r'''
+#include <cstdio>
+#include <vector>
+#include "JPEGDEC.h"
+static std::vector<unsigned short> out; static int OW, OH;
+static int draw(JPEGDRAW *p) { for (int r = 0; r < p->iHeight; ++r) for (int c = 0; c < p->iWidth; ++c) { const int x = p->x + c, y = p->y + r; if (x < OW && y < OH) out[y * OW + x] = p->pPixels[r * p->iWidth + c]; } return 1; }
+static JPEGDEC j;
+int main(int argc, char **argv) {
+    FILE *f = fopen(argv[1], "rb"), *o = fopen(argv[2], "wb"); if (!f || !o) return 2;
+    unsigned h[3];
+    while (fread(h, 4, 3, f) == 3) {
+        std::vector<unsigned char> b(h[2]); if (fread(b.data(), 1, h[2], f) != h[2]) return 3;
+        OW = (int) h[0]; OH = (int) h[1]; out.assign((size_t) OW * OH, 0xF81F);
+        if (j.openRAM(b.data(), (int) h[2], draw)) { j.setPixelType(RGB565_LITTLE_ENDIAN); j.decode(0, 0, 0); j.close(); }
+        fwrite(out.data(), 2, out.size(), o);
+    }
+    fclose(o); return 0;
+}
+''')
+    subprocess.run(['clang++', '-std=c++17', '-O1', '-w', '-I', LIB, '-o', one_exe, one, os.path.join(LIB, 'JPEGDEC.cpp')], check=True)
+    pics = []
+    for k in range(frames):
+        off, size = size_of(k)
+        if not size: continue
+        blob = data[off:off + size]
+        if ver >= 2: x, y, w, h = struct.unpack('<HHHH', blob[:8]); pics.append((k, w, h, blob[8:]))
+        else: pics.append((k, fw, fh, blob))
+    with open(os.path.join(d, 'pics.bin'), 'wb') as f:
+        for k, w, h, jp in pics: f.write(struct.pack('<III', w, h, len(jp)) + jp)
+    subprocess.run([one_exe, os.path.join(d, 'pics.bin'), os.path.join(d, 'pics.565')], check=True)
+    raw = open(os.path.join(d, 'pics.565'), 'rb').read(); at = 0; wrong = []
+    for k, w, h, jp in pics:
+        px = struct.unpack_from('<%dH' % (w * h), raw, at); at += 2 * w * h
+        ref = Image.open(io.BytesIO(jp)).convert('RGB').tobytes(); far = tot = 0
+        for i in range(0, w * h, 7):
+            v = px[i]; dd = max(abs((((v >> 11) & 31) << 3) - (ref[3 * i] & 0xF8)), abs((((v >> 5) & 63) << 2) - (ref[3 * i + 1] & 0xFC)), abs(((v & 31) << 3) - (ref[3 * i + 2] & 0xF8)))
+            tot += 1; far += dd > 24
+        if far * 1000 > tot: wrong.append('frame %d (%.0f%% wrong)' % (k, far * 100.0 / tot))
+    print('every picture alone, JPEGDEC against Pillow: %d pictures, %d drawn wrongly%s' % (len(pics), len(wrong), (': ' + ', '.join(wrong[:5])) if wrong else ''))
+    ok = ok and not wrong
 print('decode test:', 'PASS' if ok else 'FAIL')
 sys.exit(0 if ok else 1)

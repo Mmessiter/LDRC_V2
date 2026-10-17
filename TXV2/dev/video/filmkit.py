@@ -72,36 +72,53 @@ _CHECKER = r'''
 #include <cstdio>
 #include <vector>
 #include "JPEGDEC.h"
-static int draw(JPEGDRAW *) { return 1; }
+static std::vector<unsigned short> out; static int OW, OH;
+static int draw(JPEGDRAW *p) { for (int r = 0; r < p->iHeight; ++r) for (int c = 0; c < p->iWidth; ++c) { const int x = p->x + c, y = p->y + r; if (x < OW && y < OH) out[y * OW + x] = p->pPixels[r * p->iWidth + c]; } return 1; }
 static JPEGDEC j;
-int main(int argc, char **argv) {   // a file of pictures, each a u32 length then the JPEG: prints the number of each one JPEGDEC will not decode
-    FILE *f = fopen(argv[1], "rb"); if (!f) return 2;
-    std::vector<unsigned char> b; unsigned char c[65536]; size_t n; while ((n = fread(c, 1, sizeof c, f)) > 0) b.insert(b.end(), c, c + n); fclose(f);
-    size_t at = 0; int i = 0;
-    while (at + 4 <= b.size()) {
-        const unsigned len = b[at] | (b[at + 1] << 8) | (b[at + 2] << 16) | ((unsigned) b[at + 3] << 24); at += 4;
-        const int ok = j.openRAM(&b[at], (int) len, draw) && (j.setPixelType(RGB565_LITTLE_ENDIAN), j.decode(0, 0, 0));
+int main(int argc, char **argv) {   // argv[1]: pictures (u32 w, u32 h, u32 length, the JPEG); argv[2]: each one as JPEGDEC draws it (w*h RGB565)
+    FILE *f = fopen(argv[1], "rb"), *o = fopen(argv[2], "wb"); if (!f || !o) return 2;
+    unsigned h[3]; int i = 0;
+    while (fread(h, 4, 3, f) == 3) {
+        std::vector<unsigned char> b(h[2]); if (fread(b.data(), 1, h[2], f) != h[2]) return 3;
+        OW = (int) h[0]; OH = (int) h[1]; out.assign((size_t) OW * OH, 0xF81F);
+        const int ok = j.openRAM(b.data(), (int) h[2], draw) && (j.setPixelType(RGB565_LITTLE_ENDIAN), j.decode(0, 0, 0));
         j.close(); if (!ok) printf("%d\n", i);
-        at += len; ++i;
+        fwrite(out.data(), 2, out.size(), o); ++i;
     }
-    return 0;
+    fclose(o); return 0;
 }
 '''
 def _checker(outdir):
-    """the screen's own JPEG decoder, built on the Mac (1.11.88): JPEGDEC 1.8.4 refuses some pictures ('decode error') that
-    other decoders read - a few in a film, depending on what is in them - so every picture is tried with it before it goes in"""
-    exe = os.path.join(outdir, 'jpegdec_check')
+    """the screen's own JPEG decoder, built on the Mac (1.11.88). JPEGDEC 1.8.4 refuses some pictures ('decode error') that
+    other decoders read, and (17 Oct, found by the System film's 82 % wrong picture) decodes a few others WRONGLY without
+    a word - both depending on the exact bytes - so every picture is decoded by it and compared with Pillow's decode"""
+    exe = os.path.join(outdir, 'jpegdec_check2')
     if not os.path.exists(exe):
         if not os.path.isdir(JPEGDEC_SRC): sys.exit('JPEGDEC not found in %s (build the screen once: pio run -e ota)' % JPEGDEC_SRC)
-        src = os.path.join(outdir, 'jpegdec_check.cpp'); open(src, 'w').write(_CHECKER)
+        src = os.path.join(outdir, 'jpegdec_check2.cpp'); open(src, 'w').write(_CHECKER)
         subprocess.run(['clang++', '-std=c++17', '-O1', '-w', '-I', JPEGDEC_SRC, '-o', exe, src, os.path.join(JPEGDEC_SRC, 'JPEGDEC.cpp')], check=True)
     return exe
-def _refused(exe, outdir, jpegs):
-    path = os.path.join(outdir, 'check.bin')
+def _refused(exe, outdir, jpegs, sizes):
+    """the pictures the screen's decoder refuses, or draws unlike Pillow (more than one point in a thousand over 24 apart)"""
+    path, got = os.path.join(outdir, 'check.bin'), os.path.join(outdir, 'check.565')
     with open(path, 'wb') as f:
-        for j in jpegs: f.write(struct.pack('<I', len(j)) + j)
-    r = subprocess.run([exe, path], capture_output=True, text=True, check=True)
-    return set(int(x) for x in r.stdout.split())
+        for j, (w, h) in zip(jpegs, sizes): f.write(struct.pack('<III', w, h, len(j)) + j)
+    r = subprocess.run([exe, path, got], capture_output=True, text=True, check=True)
+    bad = set(int(x) for x in r.stdout.split())
+    raw = open(got, 'rb').read(); at = 0
+    for i, (j, (w, h)) in enumerate(zip(jpegs, sizes)):
+        px = struct.unpack_from('<%dH' % (w * h), raw, at); at += 2 * w * h
+        if i in bad: continue
+        ref = Image.open(io.BytesIO(j)).convert('RGB').tobytes(); far = tot = 0
+        for k in range(0, w * h, 7):
+            v = px[k]
+            d = max(abs((((v >> 11) & 31) << 3) - (ref[3 * k] & 0xF8)), abs((((v >> 5) & 63) << 2) - (ref[3 * k + 1] & 0xFC)), abs(((v & 31) << 3) - (ref[3 * k + 2] & 0xF8)))
+            tot += 1; far += d > 24
+        if far * 1000 > tot: bad.add(i)
+    for pth in (path, got):
+        try: os.remove(pth)
+        except OSError: pass
+    return bad
 
 class _Frames(list):
     """the film's pictures, and where the finger was drawn in each one (so a check can look for the dot in any of them)"""
@@ -252,6 +269,12 @@ class Film:
                 if e >= 0.5: self.page = self.img[key]
                 self.frames.append(self._now())
             self.touches.append((len(self.frames) - 1, self.fx, self.fy, self.page))
+    def point(self, x, y, key, cap=None, after=AFTER):
+        """(a tour, 17 Oct) in silence the finger glides to a part of the page and rests on it, not pressing; then the voice
+        says what it is"""
+        self.cap = None                                       # (the last part's words go as the finger moves on: the next come with the voice)
+        self.glide(x, y); self.hold(REST); self.touches.append((len(self.frames) - 1, self.fx, self.fy, self.page))   # (checked as a press is)
+        self.say(key, cap, after)
     def tap(self, x, y, nxt=None):
         """in silence: the finger glides to (x, y), rests, presses, lifts; the next page (if any) fades in"""
         self.glide(x, y); self.hold(REST); self.press(); self.hold(0.3); self.lift()
@@ -334,7 +357,7 @@ class Film:
             exe = _checker(self.out); redone = 0
             while True:
                 idx = [i for i, c in enumerate(crops) if c]
-                bad = _refused(exe, self.out, [jp[i] for i in idx])
+                bad = _refused(exe, self.out, [jp[i] for i in idx], [crops[i][1].size for i in idx])
                 if not bad: break
                 for b in bad:
                     i = idx[b]; attempt[i] += 1
@@ -345,7 +368,7 @@ class Film:
                 else:
                     (l, t0, r, b), _ = c
                     blobs.append(struct.pack('<HHHH', l, t0, r - l, b - t0) + j); keys.append((l, t0, r, b) == (0, 0, self.W, self.H))
-            if redone: print('(%d pictures saved again for the screen\'s decoder)' % redone)
+            print('every picture checked with the screen\'s own decoder against Pillow: %d saved again' % redone)
             head = b'LDRCFILM' + struct.pack('<HHHHI', 3, self.W, self.H, SFPS, len(keep))
             secbytes = struct.pack('<I', len(sections)) + b''.join(struct.pack('<I', s) for s in sections)
             table, data, off = b'', b'', len(head) + 8 * len(keep) + len(secbytes)
@@ -358,6 +381,8 @@ class Film:
                     l, t0, w_, h_ = struct.unpack('<HHHH', bl[:8]); fb.paste(Image.open(io.BytesIO(bl[8:])).convert('RGB').crop((0, 0, w_, h_)), (l, t0))
                 if j in want: got[want[j]] = (fb.copy(), j * STEP)   # (kept frame j is frame j * STEP)
             self.check_touches(lambda n: got.get(n), 'in ' + os.path.basename(ldf), 4.0, 1.0)
+            import json as _json                                  # (for a review: each touch's kept frame, to look at - pointsheet.py)
+            open(os.path.join(self.out, 'touches.json'), 'w').write(_json.dumps([{'frame': n // STEP, 'x': round(x), 'y': round(y)} for n, x, y, _ in self.touches]))
             wav = os.path.join(DEST, self.name + '.wav')
             subprocess.run([FF, '-y', '-loglevel', 'error', '-i', tw, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '22050', '-ac', '1', '-c:a', 'pcm_s16le', wav], check=True)
             real = sum(1 for bl in blobs if bl)
