@@ -76,6 +76,8 @@
 
 ## Why fly LDRC
 
+**What gets used, and what does not.** Compare feature lists and every radio has something the others lack. What matters is which features a pilot reaches for. The ones LDRC has that most systems do not are wanted at the field all the time: a model that loads itself when you switch it on, a model or the controls handed to a friend over the air with nothing extra to buy, the whole radio updated from a button, Rotorflight set up from the transmitter. The few things other radios have that LDRC does not are rarely used by anyone, and since every line of LDRC is open they can be added the day a pilot asks: the 3-, 7- and 9-point curves were asked for one October morning and were in the transmitter by lunch.
+
 ### Things we know of no other system doing
 
 We checked the makers' own documents in October 2026. "We know of no other" means we did not find it, not that it cannot exist.
@@ -107,6 +109,7 @@ Other systems have most of these too.
 - **Updates that protect your models**: a firmware that would read your models differently is refused, and the old one comes back by itself.
 - **The link in detail**: packets a second, lost packets, longest gap, swaps between the receiver's radios, and a scan of the 2.4 GHz band for interference.
 - **Your own flight screens**: six designs of up to nine boxes, and twelve colour themes.
+- **Curves of 3, 5, 7 or 9 points** for every channel in every bank, straight, smoothed or exponential; every point keeps its height when you change the count. **Eight three-position switches**, any of them doing any job; the four on the front can be knobs.
 - **Help on every page**, on the transmitter itself.
 - **Spoken messages**, log files, model pictures sent from your phone, and Pong for rainy days.
 - **Safety first: nothing changes in flight.** No transmitter update, file transfer or restart starts while a model is connected. A receiver update runs only with the safety on, and the receiver refuses while armed. WiFi and Bluetooth switch off whenever the model could fly.
@@ -165,6 +168,8 @@ Prices are approximate retail prices in October 2026. LDRC prices are for parts 
 | Help on every page, on the radio | **Yes** | Not found: online manual | ? | ? | **Yes**: a (?) on every setting |
 | Scripts and add-on apps | No, by choice | **Yes**: Lua | **Yes**: Lua | **Yes**: apps on iX20 | **Yes**: app store |
 | Mixer depth | 16 channels, 4 flight modes, 32 mixes | Much deeper | Deep | Deep | Made for helicopters |
+| Curve points per channel | 3, 5, 7 or 9, every point remembered | Up to 17 | ? | ? | ? |
+| Any switch, any job | **Yes**: 8 three-position switches, the front four can be knobs | **Yes** | **Yes** | **Yes** | **Yes** |
 
 **Helicopters with Rotorflight**
 
