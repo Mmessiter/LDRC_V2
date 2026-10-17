@@ -186,6 +186,21 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Films on the help pages: Easy tuning, on the transmitter (screen 1.11.85, Teensy B122 unchanged, 17 Oct 2026)
+
+Malcolm, of the instructional film made for him (dev/video): "I think the timing is now perfect! Can we run this animation
+on the screen of our transmitter?" Yes. A help page whose subject has a film on the screen's card shows a "Film" button
+at its top left; it plays full screen with its sound, and a tap anywhere stops it. The first is Easy tuning's (its help,
+EASY.TXT, says so). Films play while the motor is safe - the safety on, or the motor off where no safety switch is
+defined - and stop the moment that changes; a model merely connected is allowed, since Easy tuning needs the helicopter
+on. The film (/hmi/films/EASY.ldf, 11 MB, and EASY.wav) is made by dev/video with LDRC_TARGET=screen: the screen's own
+pages at 800 x 480, 10 frames a second, only 145 distinct pictures in 74 seconds. The screen decodes them with JPEGDEC,
+copying only the pixels that changed; a still moment costs nothing. Kept under /hmi because the screen updater already
+in every transmitter refuses other folders (a /films of its own would have failed the update). Host tests on the Mac:
+the film format and timing (hmi/test_film), and the screen's own decoder and drawing over the whole film (every picture
+right, drawing only the changes always equal to a full decode, colours within one step of the screen's colour depth).
+The decode speed on the real screen shows on /status ("film") after a film has played.
+
 ## A smooth curve drawn through every one of its points (Teensy B122, screen 1.11.84 unchanged, 17 Oct 2026)
 
 Malcolm, of B121: "the curve between the points seems to be drawn more approximately, sometimes going close to the point

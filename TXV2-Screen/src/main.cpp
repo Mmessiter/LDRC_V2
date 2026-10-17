@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.84"
+#define SCREEN_VERSION "1.11.85"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -500,6 +500,13 @@ static bool wifiSecretShown();                         // a password can be read
 static int cliJobWanted = -1;                          // (1.11.41) "ldrc cli" 0 / "ldrc diff" 1 / "ldrc exec" 2: the command line page (src/cli_device.h) at the next pass of loop()
 static bool cliPageUp = false;                         // (1.11.51) the command line page is showing: the pipe is its own (src/ble_device.h bleHttpCommand)
 static bool cliUp();                                   // the command line page has the screen
+static bool filmUp();                                  // (1.11.85, src/film_device.h) a film has the screen
+static void filmTouch(bool pressed, int x, int y, uint32_t now);
+static void filmTouchCancel();
+static bool filmButtonTouch(bool pressed, int x, int y, uint32_t now);   // the help page's Film button
+static void filmNoteHelp(const std::string &script);
+static void filmButtonCancel();
+static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0;   // (src/film_device.h: how the last film went, for /status)
 static void cliTouch(bool pressed, int x, int y, uint32_t now);
 static void cliPoll(); static void cliWeb();
 // (B59) a corner held while one of our pages has the screen: that page forgets the finger (src/*_device.h)
@@ -1922,16 +1929,17 @@ static void pollTouch() {
         if (down && held >= 0 && held < (int) page.comps.size()) { Comp &c = page.comps[held]; c.pressed = false; if (c.type == "button" || c.type == "dual-state button") redraw(c); }
         // B59 (10 Oct 2026): a page of our own forgets the finger too - before, its press stayed (the lift never reached it), so
         // the button under the corner was still "down" and the next tap anywhere was swallowed (or pressed it, lifted on it)
-        if (wifiPageUp()) wifiTouchCancel(); else if (cliUp()) cliTouchCancel(); else if (picPanelUp()) picTouchCancel(); else if (flightUp()) flightTouchCancel();
+        if (wifiPageUp()) wifiTouchCancel(); else if (cliUp()) cliTouchCancel(); else if (filmUp()) filmTouchCancel(); else if (picPanelUp()) picTouchCancel(); else if (flightUp()) flightTouchCancel();
         else if (coloursUp()) coloursTouchCancel(); else if (appearanceUp()) appearanceTouchCancel(); else if (updPanelUp()) updTouchCancel();
+        filmButtonCancel();
         down = false; held = -1; touchLockout = true; touchPainted = true;
         return;
     }
     static bool oursWasUp = false; static uint32_t oursWentAt = 0;
-    if (!(updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp()) && oursWasUp) {   // our page has just gone: the finger that closed it, and the second tap of a double tap, are not for the page underneath
+    if (!(updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp() || filmUp()) && oursWasUp) {   // our page has just gone: the finger that closed it, and the second tap of a double tap, are not for the page underneath
         oursWasUp = false; oursWentAt = now; touchLockout = true; lastSeen = now;
     }
-    if (updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp()) {   // a page of our own has the screen
+    if (updPanelUp() || wifiPageUp() || picPanelUp() || flightUp() || coloursUp() || appearanceUp() || cliUp() || filmUp()) {   // a page of our own has the screen
         oursWasUp = true;
         if (down && held >= 0 && held < (int) page.comps.size()) { page.comps[held].pressed = false; }
         down = false; held = -1;
@@ -1941,6 +1949,7 @@ static void pollTouch() {
         else if (coloursUp()) coloursTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else if (appearanceUp()) appearanceTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else if (cliUp()) cliTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
+        else if (filmUp()) filmTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         else updTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now);
         return;
     }
@@ -1950,6 +1959,7 @@ static void pollTouch() {
     // 10-05: Cancel on the Models page's questions "invokes an unasked for function" - the button at the same place in
     // the new page's list - and so on round, "an endless loop of more and more cancels".)
     if (touchLockout && down) { down = false; held = -1; dragged = false; }
+    if (!down && !touchLockout && filmButtonTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now)) return;   // (1.11.85) the help page's Film button
     if (pressed) { lastSeen = now; lastX = x[0]; lastY = y[0]; host.sys["tch0"] = x[0]; host.sys["tch1"] = y[0]; touchPainted = true; }
     else if (down) touchPainted = true;
     // The touch chip drops the odd sample mid-press: a release is only real after 80 ms of nothing.
@@ -2029,6 +2039,7 @@ static void pollTouch() {
             const int key = c.key, cid = c.id, idx = held; const std::string pgName = page.name, evRel = c.evRelease, nm = c.name;
             const bool combo = c.type == "combobox";
             if (evRel.find("=44<<8") != std::string::npos) picSoon();   // the Teensy's StartChooseImage: the chooser's frame now, its page in a moment
+            if (evRel.find("HelpView:") != std::string::npos) filmNoteHelp(evRel);   // (1.11.85) a Help button: its subject, for the help page's Film
             runScript(evRel, nm);                             // (may load another page: c is not touched after this)
             if (page.name == pgName) {
                 if (key != 255) openKeyboard(key, cid);
@@ -2118,7 +2129,9 @@ static void webBegin() {
         { char q[340]; snprintf(q, sizeof(q), ",\"quiet\":{\"frames\":%lu,\"frame_us\":%lu,\"n\":%lu,\"late\":%lu,\"over\":%lu,\"wait_ms\":%lu,\"copy_us\":%lu,\"copy_max\":%lu,\"draw_us\":%lu,\"draw_max\":%lu,\"kept\":%lu,\"full\":%lu,\"warmed\":%lu,\"step_max\":%lu,\"stores\":%lu,\"store_max\":%lu}",
                                 (unsigned long) frameEnds, (unsigned long) frameUs, (unsigned long) quietN, (unsigned long) quietLateN, (unsigned long) quietOverN, (unsigned long) quietWaitMs,
                                 (unsigned long) quietCopyUs, (unsigned long) quietCopyMax, (unsigned long) quietDrawUs, (unsigned long) quietDrawMax,
-                                (unsigned long) quietKeptN, (unsigned long) quietFullN, (unsigned long) quietWarmN, (unsigned long) quietStepMax, (unsigned long) quietStoreN, (unsigned long) quietStoreMax); out += q; }   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
+                                (unsigned long) quietKeptN, (unsigned long) quietFullN, (unsigned long) quietWarmN, (unsigned long) quietStepMax, (unsigned long) quietStoreN, (unsigned long) quietStoreMax); out += q; }
+        { char q[160]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu}",
+                                (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
         { std::string l = sysLast(); for (size_t i = 0; i < l.size(); ++i) if (l[i] == '"' || l[i] == '\\') l[i] = '\''; out += ",\"sys\":\"" + l + "\"}"; }   // (1.11.5) the system's last error line
         web.send(200, "application/json", out.c_str());
     });
@@ -2453,8 +2466,12 @@ static void clipMakeRoom(size_t need) {
     }
 }
 static void clipAdd(int id, uint8_t *data, uint32_t len) { clips.push_back({ id, data, len, millis() }); clipBytes += len; }
+static bool wavOpenPath(const char *path, uint32_t &rate);
 static bool wavOpen(int id, uint32_t &rate) {           // leaves audioFile at the samples; sets audioDataStart/Size/Left
     char path[32]; snprintf(path, sizeof(path), "/hmi/audio/%d.wav", id);
+    return wavOpenPath(path, rate);
+}
+static bool wavOpenPath(const char *path, uint32_t &rate) {   // (1.11.85: a film's sound too)
     audioFile = SD.open(path); if (!audioFile) return false;
     uint8_t h[12]; if (audioFile.read(h, 12) != 12 || memcmp(h, "RIFF", 4) || memcmp(h + 8, "WAVE", 4)) { audioFile.close(); return false; }
     rate = 22050; bool haveData = false;
@@ -2549,6 +2566,18 @@ static void audioStart(int id, bool loopIt) {
             if (!wavOpen(id, rate)) { audioId = -1; return; }   // (the read fell short: streamed as before)
         }
     }
+    audioPlaying = true;
+    audioFill();
+}
+// (1.11.85) A film's sound, by its path: streamed off the card as it plays (it is minutes long: never kept in memory)
+static const int FILM_AUDIO_ID = -2;
+static void audioStartFile(const char *path) {
+    audioStop();
+    if (!audioRing) return;
+    audioLoop = false; audioId = FILM_AUDIO_ID;
+    uint32_t rate;
+    if (!sdOk || !wavOpenPath(path, rate)) { audioId = -1; return; }
+    if (rate != audioRate) { i2s_set_sample_rates(I2S_PORT, rate); audioRate = rate; }
     audioPlaying = true;
     audioFill();
 }
@@ -2670,6 +2699,7 @@ static void netPoll() {
 #include "pong_device.h"
 #include "ble_device.h"
 #include "cli_device.h"
+#include "film_device.h"   // (1.11.85) films on the help pages
 
 void setup() {
     Serial.setRxBufferSize(32768);                        // BEFORE begin(): set afterwards it stayed at 256 bytes and telemetry bursts overran it
@@ -2751,7 +2781,7 @@ void loop() {
     lastLoop = now;
     uint32_t t = micros(), u;
     #define PHASE(i) u = micros(); if (u - t > phaseMax[i]) phaseMax[i] = u - t; t = u;
-    pumpSerial(); linkPoll(); updPoll(); wifiPoll(); picPoll(); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); blPoll(); blePoll(); cliPoll(); PHASE(0)
+    pumpSerial(); linkPoll(); updPoll(); wifiPoll(); picPoll(); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); filmPoll(); blPoll(); blePoll(); cliPoll(); PHASE(0)
     audioFill(); if (!teensyLink.running()) audioWarm(); PHASE(1)
     if (!teensyLink.running()) prefsPoll(); PHASE(2)
     pollTouch(); PHASE(3)
