@@ -40,3 +40,7 @@ def keypad_shots(f, base, page_id, box, box_id, shows, key='kp'):
     for i, s in enumerate(shows): f.shot('%s%d' % (key, i), pad + 'show.txt="%s"\n' % s)
 KEY = {'Delete': (558, 143), 'OK': (479, 433), 'Cancel': (242, 433)}   # (keybdB's keys, from its page: b200, b210, b251)
 KEY.update({str(d): (242 + ((d - 1) % 3) * 158, 201 + ((d - 1) // 3) * 58) for d in range(1, 10)}); KEY['0'] = (242, 375)
+def rfs(scen, shot, extra=''):
+    """a Rotorflight page's scenario picture with this films' model (some scenarios name 'Black Thunder 2'), plus extra lines"""
+    return prefix(scen, shot).replace('Black Thunder 2', 'RAW 420 MCM') + extra
+SAVE_SHOWN = 'vis b3,1\n'                                          # (Save shows once something is changed)

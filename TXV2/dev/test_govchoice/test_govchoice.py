@@ -119,6 +119,7 @@ def main():
     body += lift('FLASHMEM void SendEditedGovConfigValues()')
     body += MAIN
     d = tempfile.mkdtemp(prefix='test_govchoice_')
+    import atexit, shutil as _sh; atexit.register(_sh.rmtree, d, True)   # (17 Oct 2026: 1,800 left behind filled the Mac's disk)
     cpp = os.path.join(d, 'test_govchoice.cpp'); open(cpp, 'w').write(body)
     r = subprocess.run(['clang++', '-std=c++14', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-Wno-format',
                         '-o', os.path.join(d, 'test_govchoice'), cpp], capture_output=True, text=True)

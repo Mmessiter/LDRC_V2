@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Ten more Rotorflight animations (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
+
+Rotorflight settings (RFSETUP), the four Travel extents pages (TRAVEL, TRAVEL2 swash, TRAVEL3 tail, TRAVEL4 the bench
+measure: Hold swash, the gauge, Suggested gain, Release), Filters and its expert mode (FILTERS, FILTERS2), Adjustments
+(ADJUST), Copy a bank (COPYBANK: the question is RF_CopyBank.h's, bank 2 to bank 1 as the page shows) and Battery: fifty in
+all. films/common.py: rfs() gives every Rotorflight page this films' model, SAVE_SHOWN shows Save as a change does. Five
+Teensy tests (test_govchoice, test_calibrate, test_filters, test_adjust, test_fcsetup) now remove their temporary
+folders: 1,800 of them (785 MB) had built up from releases.
+
 ## Ten Rotorflight animations (animations only; screen 1.11.91, Teensy B123 unchanged, 17 Oct 2026)
 
 The Rotorflight menu (RFLIGHT: a tour of every button; its help no longer borrows Easy tuning's animation, and films.txt's

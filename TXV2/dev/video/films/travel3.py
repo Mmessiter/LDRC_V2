@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Film TRAVEL3: Travel extents, the tail, a tour. The words are TRAVEL3.TXT's. Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from filmkit import Film, prefix, at
+from common import rf_route, rf_route_play, rfs, SAVE_SHOWN
+f = Film('TRAVEL3', 'Travel extents: tail', 'How the rudder stick reaches the tail')
+rf_route(f, 'Travel extents ...')
+f.shot('t', rfs('62.txt', '62_loaded')); f.shot('t2', rfs('63.txt', '63_loaded'))
+f.shot('p', rfs('66.txt', '66_vp')); f.shot('e', rfs('66.txt', '66_vp', SAVE_SHOWN))
+f.line('title', 'Travel extents tail. How the rudder stick reaches the tail.')
+f.line('t', 'This is the first Travel extents page. Press Next, twice.')
+f.line('page', 'This page sets how the rudder stick reaches the tail.')
+f.line('type', 'Tail rotor type shows what the flight controller has. To change it, use Settings, then First time basics. The rows below change with it.')
+f.line('reversed', 'Rudder reversed: green is reversed. Check on the bench which way the tail moves.')
+f.line('gain', 'Tail gain: how much of a full stick reaches the tail.')
+f.line('save', 'Save writes all four Travel extents pages, after a question.')
+f.line('next', 'Next goes on to the bench measure, a pitch gauge check.')
+f.line('end', "That's the tail page.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+rf_route_play(f, 'Travel extents ...', 't')
+f.say('t', 'Press Next, twice.', after=0.3); f.tap(*at('TravelView', 'b2'), 't2'); f.tap(*at('Travel2View', 'b2'), 'p')
+f.say('page', 'Travel extents: tail.')
+f.point(*at('Travel3View', 'i0'), 'type', 'Tail rotor type.')
+f.point(*at('Travel3View', 'tn0'), 'reversed', 'Rudder reversed.')
+f.point(*at('Travel3View', 'ltn2'), 'gain', 'Tail gain.')
+f.under('e'); f.hold(0.6); f.point(*at('Travel3View', 'b3'), 'save', 'Save: all four pages.')
+f.point(*at('Travel3View', 'b2'), 'next', 'Next >: the bench measure.')
+f.end('end'); f.finish()

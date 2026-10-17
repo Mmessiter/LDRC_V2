@@ -217,6 +217,7 @@ int main() {
 }
 '''
 d = tempfile.mkdtemp(); cpp = os.path.join(d, 't.cpp'); open(cpp, 'w').write(prog)
+import atexit, shutil as _sh; atexit.register(_sh.rmtree, d, True)   # (17 Oct 2026: 1,800 left behind filled the Mac's disk)
 r = subprocess.run(['clang++', '-std=c++14', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-o', os.path.join(d, 't'), cpp], capture_output=True, text=True)
 if r.returncode: print(r.stderr[:4000]); sys.exit(1)
 sys.exit(subprocess.run([os.path.join(d, 't')]).returncode)

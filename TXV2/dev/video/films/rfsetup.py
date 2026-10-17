@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Film RFSETUP: Rotorflight settings, a tour. The words are RFSETUP.TXT's. Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from filmkit import Film, prefix, at
+from common import rf_route, rf_route_play, rfs, SAVE_SHOWN
+f = Film('RFSETUP', 'Rotorflight settings', 'What the transmitter needs to know')
+rf_route(f, 'Settings ...')
+f.shot('p', rfs('61.txt', '61_open'))
+f.line('title', "Rotorflight settings. What the transmitter needs to know about this model's flight controller.")
+f.line('page', 'This is the Rotorflight settings page. Touch a white box to type a new value.')
+f.line('link', 'Link rates and banks: on, the bank switch sets the rates too. The switch is saved as soon as you touch it.')
+f.line('version', 'Rotorflight version: the version the receiver reports from the flight controller, two point two or two point three. It cannot be typed.')
+f.line('arming', 'Arming channel: the channel the safety switch drives, usually six. Safety off arms the flight controller.')
+f.line('ratio', 'Gear ratio is for a Version one receiver only. With a Version two receiver, set Rotorflight\'s own gear ratio in the first time basics.')
+f.line('basics', "First time basics: four pages for a new model's set-up. The swash, the rotor direction, the tail, the E S C, the gear ratios, the ports, and the throttle calibration.")
+f.line('calibrate', 'Calibrate teaches the flight controller which way is level, for self levelling and rescue.')
+f.line('ok', 'OK saves them with the model, and goes back to the Rotorflight page.')
+f.line('end', "That's the Rotorflight settings page.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+rf_route_play(f, 'Settings ...', 'p')
+f.say('page', 'Rotorflight settings.')
+f.point(*at('RFSetupView', 'sw0'), 'link', 'Link rates and banks.')
+f.point(*at('RFSetupView', 't5'), 'version', 'Rotorflight version.')
+f.point(*at('RFSetupView', 'Arming'), 'arming', 'Arming channel.')
+f.point(*at('RFSetupView', 'Ratio'), 'ratio', 'Gear ratio: Version 1 receivers.')
+f.point(*at('RFSetupView', 'b5'), 'basics', 'First-time basics.')
+f.point(*at('RFSetupView', 'b6'), 'calibrate', 'Calibrate: the level.')
+f.point(*at('RFSetupView', 'b4'), 'ok', 'OK saves.')
+f.end('end'); f.finish()

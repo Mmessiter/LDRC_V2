@@ -42,3 +42,13 @@ RFGOVG: Rotorflight: Governor (global)
 RESCUE: Rotorflight: Rescue
 RESCUE2: Rotorflight: Rescue hold height
 SERVOS: Rotorflight: Servos
+RFSETUP: Rotorflight: Settings
+TRAVEL: Rotorflight: Travel extents
+TRAVEL2: Rotorflight: Travel extents, swash
+TRAVEL3: Rotorflight: Travel extents, tail
+TRAVEL4: Rotorflight: Bench measure
+FILTERS: Rotorflight: Filters
+FILTERS2: Rotorflight: Filters, expert mode
+ADJUST: Rotorflight: Adjustments
+COPYBANK: Rotorflight: Copy a bank
+BATTERY: Rotorflight: Battery

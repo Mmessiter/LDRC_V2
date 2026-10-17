@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Film FILTERS: Rotorflight's filters, a tour. The words are FILTERS.TXT's. Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from filmkit import Film, prefix, at
+from common import rf_route, rf_route_play, rfs, SAVE_SHOWN
+f = Film('FILTERS', 'Filters', 'Cleaning vibration out of the gyro signal')
+rf_route(f, 'Filters ...')
+f.shot('p', rfs('64.txt', '64_loaded')); f.shot('e', rfs('64.txt', '64_loaded', SAVE_SHOWN))
+f.line('title', 'Filters. How Rotorflight cleans vibration out of the gyro signal.')
+f.line('page', 'This is the Filters page, the same in every bank.')
+f.line('lowpass', 'The lowpass filter smooths everything above its cutoff. Lower is smoother, but adds delay. A hundred hertz is usual.')
+f.line('enable', 'Each section has an Enable: green is on. Off hides its rows.')
+f.line('rpm', 'The R P M filter is the main filter on a helicopter: it follows the head speed, and removes the rotor and motor vibrations. It needs a head speed signal.')
+f.line('dynamic', 'The dynamic filter: notches that find the strongest vibrations by themselves.')
+f.line('next', 'Next opens the expert mode: the rarely needed extras.')
+f.line('save', 'Save writes both filter pages. A change to the R P M or dynamic filter restarts the flight controller.')
+f.line('ok', 'OK leaves. With a change not saved it asks first.')
+f.line('end', "That's the Filters page.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+rf_route_play(f, 'Filters ...', 'p')
+f.say('page', 'Filters.')
+f.point(*at('FilterView', 'h0'), 'lowpass', 'Lowpass filter.')
+f.point(*at('FilterView', 'tn0'), 'enable', 'Enable: green is on.')
+f.point(*at('FilterView', 'h1'), 'rpm', 'RPM filter.')
+f.point(*at('FilterView', 'h2'), 'dynamic', 'Dynamic filter.')
+f.point(*at('FilterView', 'b2'), 'next', 'Next >: expert mode.')
+f.under('e'); f.hold(0.6); f.point(*at('FilterView', 'b3'), 'save', 'Save.')
+f.point(*at('FilterView', 'b1'), 'ok', 'OK.')
+f.end('end'); f.finish()

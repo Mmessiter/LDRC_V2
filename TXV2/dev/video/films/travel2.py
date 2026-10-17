@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Film TRAVEL2: Travel extents, the swash, a tour. The words are TRAVEL2.TXT's. Made with dev/video/filmkit.py."""
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from filmkit import Film, prefix, at
+from common import rf_route, rf_route_play, rfs, SAVE_SHOWN
+f = Film('TRAVEL2', 'Travel extents: swash', 'How far the swash may move, and its gains')
+rf_route(f, 'Travel extents ...')
+f.shot('t', rfs('62.txt', '62_loaded')); f.shot('p', rfs('63.txt', '63_loaded')); f.shot('e', rfs('63.txt', '63_loaded', SAVE_SHOWN))
+f.line('title', 'Travel extents swash. How far the swash may move, and its gains.')
+f.line('t', 'This is the first Travel extents page. Press Next.')
+f.line('page', 'This page sets how far the swash may move, and its gains.')
+f.line('gains', 'Cyclic gain and Collective gain: how much of a full stick reaches the swash.')
+f.line('balance', 'Up down balance evens out the collective, so up and down give the same pitch.')
+f.line('limits', 'Cyclic pitch limit and Collective pitch limit: the most blade pitch each may give, either way.')
+f.line('phase', 'Swash phase angle turns the cyclic a little round the mast.')
+f.line('save', 'Save writes all four Travel extents pages, after a question.')
+f.line('ok', 'Previous and Next move between the pages, with your changes kept.')
+f.line('end', "That's the swash page.")
+f.prepare()
+f.begin(); f.say('title', after=1.6)
+rf_route_play(f, 'Travel extents ...', 't')
+f.say('t', 'Press Next.', after=0.3); f.tap(*at('TravelView', 'b2'), 'p')
+f.say('page', 'Travel extents: swash.')
+f.point(*at('Travel2View', 'ltn0'), 'gains', 'Cyclic and collective gain.')
+f.point(*at('Travel2View', 'ltn2'), 'balance', 'Up/down balance.')
+f.point(*at('Travel2View', 'ltn3'), 'limits', 'Pitch limits.')
+f.point(*at('Travel2View', 'ltn6'), 'phase', 'Swash phase angle.')
+f.under('e'); f.hold(0.6); f.point(*at('Travel2View', 'b3'), 'save', 'Save: all four pages.')
+f.point(*at('Travel2View', 'b4'), 'ok', '< Previous, Next >.')
+f.end('end'); f.finish()
