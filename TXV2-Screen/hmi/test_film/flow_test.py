@@ -53,8 +53,11 @@ static uint16_t shade(uint16_t c, int) { return c; }
 static long dirtied = 0; static void dirty(int, int, int w, int h) { dirtied += (long) w * h; }
 struct Page { std::string name = "FrontView"; } page;
 static int flying = 0; static int flyingNow() { return flying; }
-static const int FILM_AUDIO_ID = -2; static int audioId = -1; static std::string audioPath;
-static void audioStartFile(const char *p) { audioId = FILM_AUDIO_ID; audioPath = p; }
+static const int FILM_AUDIO_ID = -2; static int audioId = -1; static std::string audioPath; static uint32_t audioFrom = 0;
+static void audioStartFile(const char *p, uint32_t fromMs = 0) { audioId = FILM_AUDIO_ID; audioPath = p; audioFrom = fromMs; }
+static std::string sentToTeensy; static void flushOut() {}
+struct FakeSerial { size_t write(const uint8_t *b, size_t n) { sentToTeensy.append((const char *) b, n); return n; } } Serial;
+static int awakes() { int n = 0; size_t at = 0; while ((at = sentToTeensy.find("LDRCAWAKE", at)) != std::string::npos) { ++n; at += 9; } return n; }
 static void audioStop() { audioId = -1; audioPath.clear(); }
 static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0;
 #include "@DEV@"
@@ -77,36 +80,87 @@ int main() {
     CHECK(!strcmp(filmList[0].name, "CALIB") && !strcmp(filmList[1].name, "CURVES") && !strcmp(filmList[2].name, "EASY"));
     // 2. the log viewer (the same page, no Help tap): no button
     page.name = "FrontView"; run(5000); page.name = "LogView"; run(200); CHECK(!filmButtonUp());
-    // 3. Help again, then the button: the menu
+    // 3. Help again, then the button: the menu - and the main board told at once that someone is here (its screen timeout waits)
     page.name = "RFView"; run(100); helpTap("RFLIGHT"); run(100); CHECK(filmButtonUp());
+    sentToTeensy.clear();
     tap(80, 30); run(50); CHECK(filmMenuUp() && !filmUp());
-    // 4. a tap on nothing: nothing; on the second film: it plays, with its sound
+    CHECK(awakes() == 1);
+    run(31000); CHECK(awakes() == 3);                     // (every 15 s while the menu is up)
+    // 4. a tap on nothing: nothing; on the second film: it plays, with its sound from the start
     tap(300, 30); run(50); CHECK(filmMenuUp());
     int x, y, w, h; filmMenuRect(1, x, y, w, h);
     tap(x + w / 2, y + h / 2); run(50);
-    CHECK(filmUp() && filmPlaying && filmName == "CURVES" && audioId == FILM_AUDIO_ID && audioPath == "/hmi/films/CURVES.wav" && filmPictures >= 1);
+    CHECK(filmUp() && filmPlaying && !filmPaused && filmName == "CURVES" && audioId == FILM_AUDIO_ID && audioPath == "/hmi/films/CURVES.wav" && audioFrom == 0 && filmPictures >= 1);
+    CHECK(filmHead.version == 3 && filmSectionCount >= 10);
     run(3000); CHECK(filmPlaying && filmPictures == 1);   // (the title card: still, nothing new to decode)
-    run(7000); CHECK(filmPlaying && filmPictures > 1 && filmLast > 0);   // (past the title: the pages)
-    // 5. a tap stops it: back to the menu - and that tap starts nothing, though it lands on a film's button
-    filmMenuRect(0, x, y, w, h);
-    tap(x + w / 2, y + h / 2); run(50);
-    CHECK(!filmPlaying && filmMenuUp() && audioId == -1);
-    run(500); CHECK(!filmPlaying && filmMenuUp());
-    // 6. a film to its end: back to the menu
+    run(9000); CHECK(filmPlaying && filmPictures > 1 && filmLast > 0);
+    // 5. never a picture skipped, however late: the clock jumps 10 s at once, and every picture in between is decoded in turn
+    {
+        const uint32_t before = filmPictures; const int32_t from = filmLast;
+        nowMs += 10000; filmStartMs -= 0;                  // (the screen held up for 10 s)
+        const int32_t want = ldrcfilm::frameAt(nowMs - filmStartMs, filmHead);
+        int due = 0; for (int32_t i = from + 1; i <= want; ++i) if (ldrcfilm::sizeOf(filmTable, i)) ++due;
+        for (int i = 0; i < 400 && filmLast < want; ++i) filmPoll();   // (no time passing: one picture a pass)
+        int decoded = (int) (filmPictures - before);
+        CHECK(due > 3 && decoded == due);
+        printf("10 s late: %d pictures due, %d decoded in turn (none skipped)\n", due, decoded);
+    }
+    // 6. a tap pauses: the sound stops, the bar along the foot; that same tap presses nothing (it lands where Back is drawn)
+    { const uint32_t awakeBefore = awakes(); int bx, by, bw, bh; filmCtlRect(FILM_CTL_BACK, bx, by, bw, bh);
+      tap(bx + bw / 2, by + bh / 2); run(50);
+      CHECK(filmPlaying && filmPaused && audioId == -1 && filmStripKept);
+      const uint32_t posAtPause = filmPosMs; const int32_t lastAtPause = filmLast;
+      run(20000); CHECK(filmPaused && filmLast == lastAtPause && awakes() > (int) awakeBefore);   // (held still; the main board still told)
+      // 7. Play: on from where it was, the sound from there too, what lay under the bar put back
+      int px, py, pw, ph; filmCtlRect(FILM_CTL_PLAY, px, py, pw, ph);
+      tap(px + pw / 2, py + ph / 2); run(50);
+      CHECK(!filmPaused && audioId == FILM_AUDIO_ID && audioFrom == posAtPause && !filmStripKept);
+    }
+    // 8. Back: to the start of this section (its key picture, every picture after it), the sound from there
+    run(4000);
+    { tap(400, 200); run(50); CHECK(filmPaused);
+      const int32_t frame = ldrcfilm::frameAt(filmPosMs, filmHead);
+      const int32_t want = ldrcfilm::backTarget(frame, filmHead.fps, filmSecs(), filmSectionCount);
+      int bx, by, bw, bh; filmCtlRect(FILM_CTL_BACK, bx, by, bw, bh);
+      tap(bx + bw / 2, by + bh / 2); run(50);
+      CHECK(!filmPaused && filmLast >= want && filmLast <= want + 1 && audioFrom == (uint32_t) ((uint64_t) want * 1000 / filmHead.fps));
+      bool isStart = false; for (uint32_t s = 0; s < filmSectionCount; ++s) if ((int32_t) ldrcfilm::rd32(filmSecs() + 4 * s) == want) isStart = true;
+      CHECK(isStart);
+    }
+    // 9. Next: the start of the next section
+    { tap(400, 200); run(50); CHECK(filmPaused);
+      const int32_t frame = ldrcfilm::frameAt(filmPosMs, filmHead);
+      const int32_t want = ldrcfilm::nextTarget(frame, filmSecs(), filmSectionCount);
+      int nx, ny, nw, nh; filmCtlRect(FILM_CTL_NEXT, nx, ny, nw, nh);
+      tap(nx + nw / 2, ny + nh / 2); run(50);
+      CHECK(want > frame && !filmPaused && audioFrom == (uint32_t) ((uint64_t) want * 1000 / filmHead.fps));
+    }
+    // 10. Next from the last section: the menu
+    { for (int guard = 0; guard < 30 && filmPlaying; ++guard) {
+          tap(400, 200); run(50); if (!filmPaused) break;
+          int nx, ny, nw, nh; filmCtlRect(FILM_CTL_NEXT, nx, ny, nw, nh); tap(nx + nw / 2, ny + nh / 2); run(50);
+      }
+      CHECK(!filmPlaying && filmMenuUp());
+    }
+    // 11. a film to its end: back to the menu
     filmMenuRect(2, x, y, w, h); tap(x + w / 2, y + h / 2); run(50); CHECK(filmPlaying && filmName == "EASY");
-    const uint32_t len = ldrcfilm::lengthMs(filmHead); run(len + 1000);
+    const uint32_t len = ldrcfilm::lengthMs(filmHead); run(len + 1500);
     CHECK(!filmPlaying && filmMenuUp());
-    printf("EASY played to its end: %u pictures shown, %u missed (a host this fast misses none)\n", (unsigned) filmPictures, (unsigned) filmSkipped);
-    // 7. OK: the help page again, its button back
+    printf("EASY played to its end: %u pictures shown, %u late\n", (unsigned) filmPictures, (unsigned) filmSkipped);
+    // 12. Films on the bar: the menu
+    filmMenuRect(0, x, y, w, h); tap(x + w / 2, y + h / 2); run(2000); tap(400, 200); run(50); CHECK(filmPaused);
+    { int fx, fy, fw, fh; filmCtlRect(FILM_CTL_FILMS, fx, fy, fw, fh); tap(fx + fw / 2, fy + fh / 2); run(50); CHECK(!filmPlaying && filmMenuUp()); }
+    // 13. OK: the help page again, its button back
     filmMenuRect(FILM_OK, x, y, w, h); tap(x + w / 2, y + h / 2); run(100);
     CHECK(!filmMenuUp() && filmButtonUp());
-    // 8. the safety off while a film plays: it stops, no menu, no button; on again: the button
+    // 14. the safety off while a film plays (or is paused): it stops, no menu, no button; on again: the button
     tap(80, 30); run(50); filmMenuRect(0, x, y, w, h); tap(x + w / 2, y + h / 2); run(500); CHECK(filmPlaying && filmName == "CALIB");
-    flying = 2; run(50); CHECK(!filmPlaying && !filmMenuUp() && !filmButtonUp() && audioId == -1);
+    tap(400, 200); run(50); CHECK(filmPaused);
+    flying = 2; run(50); CHECK(!filmPlaying && !filmPaused && !filmMenuUp() && !filmButtonUp() && audioId == -1);
     flying = 3; run(50); CHECK(filmButtonUp());           // (a model connected, safety on: allowed)
-    // 9. the menu open and the motor on: the menu goes
+    // 15. the menu open and the motor on: the menu goes
     tap(80, 30); run(50); CHECK(filmMenuUp()); flying = 1; run(50); CHECK(!filmMenuUp() && !filmButtonUp()); flying = 0; run(50);
-    // 10. the help page left while a film plays: it stops and everything of ours goes
+    // 16. the help page left while a film plays: it stops and everything of ours goes
     tap(80, 30); run(50); filmMenuRect(1, x, y, w, h); tap(x + w / 2, y + h / 2); run(300); CHECK(filmPlaying);
     page.name = "RFView"; run(50); CHECK(!filmPlaying && !filmUp() && !filmMenuUp() && !filmButtonUp() && !topOn);
     printf("flow: %d checks, %d failed\n", checks, fails);

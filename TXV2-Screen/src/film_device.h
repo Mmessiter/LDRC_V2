@@ -29,6 +29,13 @@ static int filmMenuDown = -1; static uint32_t filmMenuSeen = 0; static bool film
 static bool filmMenuDeaf = false;                               // the finger that stopped a film: the menu ignores it until it lifts
 static File filmFile; static ldrcfilm::Header filmHead;
 static uint8_t *filmTable = nullptr, *filmBuf = nullptr; static uint32_t filmBufSize = 0;
+static uint8_t *filmSections = nullptr; static uint32_t filmSectionCount = 0;   // (version 3) each section's first frame
+static uint8_t filmOneSection[4] = {0, 0, 0, 0};                 // (a film without sections: one, from the start)
+// (1.11.88) Pause, Back, Play, Next: a tap pauses the film and shows these along its foot; what lay under them is kept
+static const int FILM_CTL_BACK = 0, FILM_CTL_PLAY = 1, FILM_CTL_NEXT = 2, FILM_CTL_FILMS = 3, FILM_BAR_Y = 414, FILM_BAR_H = 66;
+static bool filmPaused = false, filmTapDeaf = false, filmCtlHeld = false; static int filmCtlDown = -1; static uint32_t filmTapSeen = 0, filmPosMs = 0;
+static uint16_t *filmStrip = nullptr; static bool filmStripKept = false;
+static uint32_t filmAwakeAt = 0;                                   // when the main board was last told someone is watching
 static uint32_t filmStartMs = 0; static int32_t filmLast = -1;
 static JPEGDEC filmJpeg;
 static bool filmUp() { return topOn && topWho == FILM_WHO; }
@@ -144,7 +151,7 @@ static int filmDraw(JPEGDRAW *p) {
     return 1;
 }
 static bool filmDecode(int32_t k) {
-    const uint32_t off = ldrcfilm::rd32(filmTable + 8 * k), size = ldrcfilm::rd32(filmTable + 8 * k + 4);
+    const uint32_t off = ldrcfilm::rd32(filmTable + 8 * k), size = ldrcfilm::sizeOf(filmTable, k);
     if (!size || size > filmBufSize || !filmFile.seek(off) || filmFile.read(filmBuf, size) != (int) size) return false;
     uint16_t rx, ry, rw, rh; uint32_t jo;                     // (version 2: only the rectangle that changed, drawn where it belongs)
     if (!ldrcfilm::pictureAt(filmBuf, size, filmHead, rx, ry, rw, rh, jo)) return false;
@@ -157,7 +164,7 @@ static bool filmDecode(int32_t k) {
 
 static void filmStop(bool toMenu = false) {
     if (filmPlaying && audioId == FILM_AUDIO_ID) audioStop();
-    filmPlaying = false;
+    filmPlaying = false; filmPaused = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false;
     if (filmFile) filmFile.close();
     if (filmUp()) {
         if (toMenu && filmCount) { topWho = FILM_MENU_WHO; filmMenuDown = -1; filmMenuHeld = false; filmMenuDraw(); }   // the films menu again
@@ -174,20 +181,84 @@ static bool filmStart() {
     const uint32_t fileSize = (uint32_t) filmFile.size();
     if (filmFile.read(head, sizeof head) != (int) sizeof head || !ldrcfilm::parseHeader(head, sizeof head, filmHead, W, H)) { filmFile.close(); return false; }
     free(filmTable); filmTable = (uint8_t *) ps_malloc(8 * filmHead.frames);
-    uint32_t biggest = 0;
-    if (!filmTable || filmFile.read(filmTable, 8 * filmHead.frames) != (int) (8 * filmHead.frames) || !ldrcfilm::tableSound(filmTable, filmHead, fileSize, biggest)) { filmFile.close(); return false; }
+    uint32_t biggest = 0, extra = 0;
+    if (!filmTable || filmFile.read(filmTable, 8 * filmHead.frames) != (int) (8 * filmHead.frames)) { filmFile.close(); return false; }
+    free(filmSections); filmSections = nullptr; filmSectionCount = 1;
+    if (filmHead.version >= 3) {                                  // (the sections, after the table)
+        uint8_t nb[4];
+        if (filmFile.read(nb, 4) != 4) { filmFile.close(); return false; }
+        const uint32_t n = ldrcfilm::rd32(nb);
+        if (n == 0 || n > ldrcfilm::MAX_SECTIONS || !(filmSections = (uint8_t *) ps_malloc(4 * n)) || filmFile.read(filmSections, 4 * n) != (int) (4 * n) || !ldrcfilm::sectionsSound(filmSections, n, filmHead)) { filmFile.close(); return false; }
+        filmSectionCount = n; extra = 4 + 4 * n;
+    }
+    if (!ldrcfilm::tableSound(filmTable, filmHead, fileSize, biggest, extra)) { filmFile.close(); return false; }
     if (biggest > filmBufSize) { free(filmBuf); filmBuf = (uint8_t *) ps_malloc(biggest); filmBufSize = filmBuf ? biggest : 0; }
     if (!filmBuf) { filmFile.close(); return false; }
     filmBtnHeld = false;
     topX = 0; topY = 0; topW = W; topH = H; topWho = FILM_WHO; topOn = true;
     filmLast = -1; filmPictures = filmSkipped = 0; filmDecodeMax = 0; filmPlaying = true;
+    filmPaused = false; filmTapDeaf = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false;
     if (!filmDecode(0)) { filmStop(); return false; }          // the first picture before the sound, so they start together
     filmLast = 0;
     audioStartFile(filmPath(".wav").c_str());
     filmStartMs = millis();
     return true;
 }
-static void filmTouch(bool pressed, int, int, uint32_t now) { if (pressed) { filmStop(true); filmMenuDeaf = true; filmMenuSeen = now; } }   // a tap anywhere: the film stops, back to the menu (the lift is the menu's no more: main.cpp's lockout)
+static const uint8_t *filmSecs() { return filmSections ? filmSections : filmOneSection; }
+static void filmCtlRect(int i, int &x, int &y, int &w, int &h) { x = 20 + i * 195; y = FILM_BAR_Y + 7; w = 180; h = 52; }
+static int filmCtlAt(int px, int py) { for (int i = 0; i < 4; ++i) { int x, y, w, h; filmCtlRect(i, x, y, w, h); if (px >= x && px < x + w && py >= y && py < y + h) return i; } return -1; }
+static void filmDrawCtl(int i, bool down) {
+    static const char *const label[4] = {"Back", "Play", "Next", "Films"};
+    int x, y, w, h; filmCtlRect(i, x, y, w, h);
+    { TopDraw td; filmBevel(x, y, w, h, down, label[i]); }
+    dirty(x, y, w, h); touchPainted = true;
+}
+static void filmPause() {                                          // the film held where it is; the bar drawn over its foot (what lay there kept)
+    const uint32_t len = ldrcfilm::lengthMs(filmHead);
+    filmPosMs = std::min((uint32_t) (millis() - filmStartMs), len);
+    if (audioId == FILM_AUDIO_ID) audioStop();
+    if (!filmStrip) filmStrip = (uint16_t *) ps_malloc((size_t) W * FILM_BAR_H * 2);
+    if (filmStrip) { memcpy(filmStrip, topFb + FILM_BAR_Y * W, (size_t) W * FILM_BAR_H * 2); filmStripKept = true; }
+    { TopDraw td; gfx->fillRect(0, FILM_BAR_Y, W, FILM_BAR_H, 2214); }
+    for (int i = 0; i < 4; ++i) filmDrawCtl(i, false);
+    dirty(0, FILM_BAR_Y, W, FILM_BAR_H); touchPainted = true;
+    filmPaused = true;
+}
+static void filmPlayFrom(uint32_t ms) {                            // the sound and the clock from ms
+    filmPosMs = ms; audioStartFile(filmPath(".wav").c_str(), ms);
+    filmStartMs = millis() - ms; filmPaused = false;
+}
+static void filmResume() {
+    if (filmStripKept) { memcpy(topFb + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2); filmStripKept = false; dirty(0, FILM_BAR_Y, W, FILM_BAR_H); touchPainted = true; }
+    filmPlayFrom(filmPosMs);
+}
+static void filmJump(int32_t target) {                             // the screen as at frame target - its key picture, then every picture after it - and on from there
+    if (target < 0) target = 0;
+    if (target >= (int32_t) filmHead.frames) target = (int32_t) filmHead.frames - 1;
+    const int32_t k0 = ldrcfilm::keyAtOrBefore(target, filmTable, filmHead.version);
+    if (k0 < 0 || !filmDecode(k0)) { filmStop(true); return; }
+    for (int32_t i = k0 + 1; i <= target; ++i) if (ldrcfilm::sizeOf(filmTable, i) && !filmDecode(i)) { filmStop(true); return; }
+    filmLast = target; filmStripKept = false;                      // (the key picture is the whole screen: the bar is gone with it)
+    filmPlayFrom((uint32_t) ((uint64_t) target * 1000 / filmHead.fps));
+}
+static void filmTouch(bool pressed, int x, int y, uint32_t now) {
+    if (filmTapDeaf) { if (pressed) filmTapSeen = now; else if (now - filmTapSeen >= 80) filmTapDeaf = false; return; }   // (the finger that paused it)
+    if (!filmPaused) { if (pressed) { filmPause(); filmTapDeaf = true; filmTapSeen = now; } return; }
+    if (pressed) {                                                 // paused: the bar's buttons
+        filmTapSeen = now;
+        if (!filmCtlHeld) { filmCtlHeld = true; filmCtlDown = filmCtlAt(x, y); if (filmCtlDown >= 0) filmDrawCtl(filmCtlDown, true); }
+        return;
+    }
+    if (!filmCtlHeld || now - filmTapSeen < 80) return;
+    filmCtlHeld = false;
+    const int c = filmCtlDown; filmCtlDown = -1;
+    if (c >= 0) filmDrawCtl(c, false);
+    const int32_t frame = ldrcfilm::frameAt(filmPosMs, filmHead) < 0 ? (int32_t) filmHead.frames - 1 : ldrcfilm::frameAt(filmPosMs, filmHead);
+    if (c == FILM_CTL_BACK) filmJump(ldrcfilm::backTarget(frame, filmHead.fps, filmSecs(), filmSectionCount));
+    else if (c == FILM_CTL_NEXT) { const int32_t n = ldrcfilm::nextTarget(frame, filmSecs(), filmSectionCount); if (n < 0) filmStop(true); else filmJump(n); }
+    else if (c == FILM_CTL_FILMS) { filmStop(true); filmMenuDeaf = false; }
+    else filmResume();                                             // Play, or a tap anywhere else: on from where it was
+}   // (1.11.88) a tap pauses; then Back, Play, Next or Films - or a tap elsewhere plays on
 static void filmTouchCancel() { if (filmMenuDown >= 0 && filmMenuUp()) filmMenuDrawButton(filmMenuDown, false); filmMenuDown = -1; filmMenuHeld = false; }
 static bool filmStartName(const char *name) { filmName = name; return filmStart(); }
 // The menu's buttons: a press shows it pressed, the lift on the same button acts (a sample the touch chip dropped is no lift)
@@ -214,7 +285,7 @@ static bool filmButtonTouch(bool pressed, int x, int y, uint32_t now) {
         if (pressed) { filmBtnSeen = now; return true; }
         if (now - filmBtnSeen < 80) return true;              // (a sample the touch chip dropped is not a lift)
         filmBtnHeld = false;
-        if (filmButtonUp()) { filmDrawButton(false); filmMenuOpen(); }   // (1.11.87) the films menu
+        if (filmButtonUp()) { filmDrawButton(false); filmMenuOpen(); filmAwakeAt = 0; }   // (1.11.87) the films menu (1.11.88: the main board told at once that someone is here)
         return true;
     }
     if (!pressed || !filmButtonUp()) return false;
@@ -226,16 +297,24 @@ static bool filmButtonTouch(bool pressed, int x, int y, uint32_t now) {
 static void filmPoll() {
     const uint32_t now = millis();
     const bool helpPage = page.name == "LogView";
+    if ((filmPlaying || filmMenuUp()) && (!filmAwakeAt || now - filmAwakeAt >= 15000)) {   // (1.11.88) the main board's screen timeout waits: someone is watching (Teensy B123)
+        filmAwakeAt = now ? now : 1; flushOut(); Serial.write((const uint8_t *) "LDRCAWAKE", 9);
+    }
     if (filmPlaying) {
         if (!filmUp() || !filmAllowed() || !helpPage) { filmStop(false); return; }   // (another page of ours took the layer; the safety off or the motor on; the page went)
+        if (filmPaused) return;
         const uint32_t ms = now - filmStartMs;
-        if (ms >= ldrcfilm::lengthMs(filmHead) + 700) { filmStop(true); return; }   // the end: the last picture held a moment, then the menu
-        const int32_t k = ldrcfilm::pictureFor(ldrcfilm::frameAt(ms, filmHead), filmLast, filmTable);
+        const int32_t want = ldrcfilm::frameAt(ms, filmHead) < 0 ? (int32_t) filmHead.frames - 1 : ldrcfilm::frameAt(ms, filmHead);
+        // From version 2 every picture is decoded in its turn, however late (a changed rectangle skipped would leave the old
+        // finger drawn where it was - Malcolm: "the indication of the pointer hitting a button was frequently rather
+        // inaccurate"); the sound runs on, and the pictures catch up while the voice speaks over a still page.
+        const int32_t k = filmHead.version >= 2 ? ldrcfilm::nextPicture(want, filmLast, filmTable) : ldrcfilm::pictureFor(want, filmLast, filmTable);
         if (k >= 0) {
-            for (int32_t i = filmLast + 1; i < k; ++i) if (ldrcfilm::rd32(filmTable + 8 * i + 4)) filmSkipped++;
+            if (filmHead.version < 2) { for (int32_t i = filmLast + 1; i < k; ++i) if (ldrcfilm::sizeOf(filmTable, i)) filmSkipped++; }
+            else if ((want - k) * 1000 > 300 * (int32_t) filmHead.fps) filmSkipped++;   // (version 2 on: a picture shown more than 0.3 s late)
             if (!filmDecode(k)) { filmStop(); return; }
             filmLast = k;
-        }
+        } else if (ms >= ldrcfilm::lengthMs(filmHead) + 700) { filmStop(true); return; }   // the end: every picture shown, the last held a moment, then the menu
         return;
     }
     if (filmMenuUp()) { if (!helpPage || !filmAllowed()) filmMenuClose(); return; }   // (the menu: the help page gone, or the motor could run)

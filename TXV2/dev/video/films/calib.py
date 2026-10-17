@@ -4,7 +4,7 @@ Calibrate (refused while a model is connected) > "Calibrate sticks etc." > move 
 everything, the four top edge switches AWAY from you > Finish > "Calibration saved." Made with dev/video/filmkit.py."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from filmkit import Film, prefix
+from filmkit import Film, prefix, at
 
 f = Film('CALIB', 'Calibrating the sticks', 'The first job on a new transmitter')
 f.shot('c_front', prefix('13.txt', '13_nomodel'))
@@ -30,14 +30,14 @@ f.line('end', "That's all there is to it.")
 f.prepare()
 
 f.begin(); f.say('title', after=1.6)
-f.show('c_front'); f.say('front', 'No model switched on.'); f.say('presstx', 'Press Transmitter.', after=0.3); f.tap(148, 425, 'c_setup')
-f.say('setup', 'Press Calibrate.', after=0.3); f.tap(130, 164, 'c_cal')
-f.say('cal', "Press 'Calibrate sticks etc.'", after=0.3); f.tap(228, 258, 'c_s1a')
+f.show('c_front'); f.say('front', 'No model switched on.'); f.say('presstx', 'Press Transmitter.', after=0.3); f.tap(*at('FrontView', 'b0'), 'c_setup')
+f.say('setup', 'Press Calibrate.', after=0.3); f.tap(*at('TXSetupView', txt='Calibrate'), 'c_cal')
+f.say('cal', "Press 'Calibrate sticks etc.'", after=0.3); f.tap(*at('CalibrateView', 'b0'), 'c_s1a')
 f.say('step1', 'Every stick and knob to its ends, several times.', after=0.3)
 for k in ('c_s1b', 'c_s1c', 'c_s1a', 'c_s1b', 'c_s1c', 'c_s1a'): f.under(k); f.hold(0.6)   # (the bars, in silence)
-f.say('next', 'Press Next.', after=0.3); f.tap(228, 258, 'c_s2')
+f.say('next', 'Press Next.', after=0.3); f.tap(*at('CalibrateView', 'b0'), 'c_s2')
 f.say('step2', 'Centre everything; top switches away from you.', after=0.3)
-f.say('finish', 'Press Finish.', after=0.3); f.tap(228, 258, 'c_done')
+f.say('finish', 'Press Finish.', after=0.3); f.tap(*at('CalibrateView', 'b0'), 'c_done')
 f.say('done', 'Calibration saved.', after=1.4)
 f.end('end')
 f.finish()

@@ -3,7 +3,7 @@ Slide, then press 'Save'. Each slider moves the real numbers|
 on its own page (Governor, Rates or PIDs). Nothing is written|
 until you press 'Save'.||
 FILMS: 'Films', top left of every help page, has a short film|
-of Easy tuning (with the safety on). Tap anywhere to stop it.||
+of Easy tuning (with the safety on). Tap it to pause it.||
 It needs the model connected, the safety on, and a Version 2|
 receiver with Bluetooth. It tunes the bank your bank switch is|
 on, and the rates your rates switch is on, as the other pages|

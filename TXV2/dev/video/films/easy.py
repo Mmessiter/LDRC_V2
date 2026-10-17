@@ -4,7 +4,7 @@ Rotorflight > Easy tuning (RF_Easy.h StartEasyView needs the model connected); a
 "Saved, and read back the same: Feel." (EzWords). Made with dev/video/filmkit.py."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from filmkit import Film, prefix
+from filmkit import Film, prefix, at, knob
 
 f = Film('EASY', 'Easy tuning', 'Rotorflight, from the LDRC transmitter')
 front = prefix('13.txt', '13_conn', [
@@ -35,15 +35,16 @@ f.line('end', "That's all there is to it.")
 f.prepare()
 
 f.begin(); f.say('title', after=1.6)
-f.show('a_front'); f.say('front1', 'Helicopter on, safety on.'); f.say('front2', 'Press Model.', after=0.3); f.tap(652, 425, 'a_model')
-f.say('model', 'Press Rotorflight.', after=0.3); f.tap(400, 354, 'a_rf')
-f.say('rf', 'Press Easy tuning.', after=0.3); f.tap(160, 113, 'e_open')
+f.show('a_front'); f.say('front1', 'Helicopter on, safety on.'); f.say('front2', 'Press Model.', after=0.3); f.tap(*at('FrontView', 'b1'), 'a_model')
+f.say('model', 'Press Rotorflight.', after=0.3); f.tap(*at('RXSetupView', 'b7'), 'a_rf')
+f.say('rf', 'Press Easy tuning.', after=0.3); f.tap(*at('RFView', 'Easy'), 'e_open')
 f.say('open', 'Softer to the left, sharper to the right.')
 f.say('drag', 'Slide Cyclic to the right.', after=0.3)
-f.glide(461, 300); f.hold(0.3); f.press(); f.under('e_touch'); f.hold(0.5); f.slide([('e_7', 487), ('e_8', 514)], 300); f.hold(0.8)
+k6, k7, k8 = knob('EasyView', 's3', 6), knob('EasyView', 's3', 7), knob('EasyView', 's3', 8)
+f.glide(*k6); f.hold(0.3); f.press(); f.under('e_touch'); f.hold(0.5); f.slide([('e_7', k7[0]), ('e_8', k8[0])], k6[1]); f.hold(0.8)
 f.say('numbers', 'The box shows each value, before and after.')
 f.say('save', 'Lift your finger, then press Save.', after=0.3)
-f.lift(); f.under('e_lift'); f.hold(0.6); f.tap(504, 423)
+f.lift(); f.under('e_lift'); f.hold(0.6); f.tap(*at('EasyView', 'b3'))
 f.show('e_busy', look=0.2); f.cap = 'Writing ...'; f.hold(1.4)
 f.show('e_saved', look=0.3); f.say('saved', 'Saved, and read back to check.', after=1.4)
 f.end('end')

@@ -3585,6 +3585,14 @@ FASTRUN void ButtonWasPressed()
         }
         // By here, TextIn[0] must be start of a character based command
 
+        if (InStrng((char *)"LDRCAWAKE", TextIn) > 0)
+        { // B123 (Malcolm, 17 Oct 2026: "the screen timeout should be disabled while we play these videos because it went black
+          // in the middle of one!"): the screen's films (screen 1.11.88) say this every 15 s while one plays or the films menu
+          // is up - its touches are the screen's own, so nothing else would tell this board that someone is watching
+            ScreenTimeTimer = millis();
+            ClearText();
+            return;
+        }
         if (InStrng((char *)LDRC_LINK_KNOCK, TextIn) > 0)
         { // V1B: the screen asks for the file link
             ClearText();

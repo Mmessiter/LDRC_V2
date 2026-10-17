@@ -6,7 +6,7 @@ Points 9 places the new points on the curve as it is; a touch above a point move
 degrees, 2 pixels a degree). Made with dev/video/filmkit.py."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from filmkit import Film, prefix
+from filmkit import Film, prefix, at
 
 ALL = ['n1', 'n2', 'n3', 'n4', 'n5', 'k2', 'k3', 'k5', 'k6', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9']
 BOXES = {3: ['n1', 'n3', 'n5'], 5: ['n1', 'n2', 'n3', 'n4', 'n5'], 7: ['n1', 'k2', 'k3', 'n3', 'k5', 'k6', 'n5'], 9: ['m%d' % k for k in range(1, 10)]}
@@ -55,20 +55,21 @@ f.line('end', "That's all there is to it.")
 f.prepare()
 
 f.begin(); f.say('title', after=1.6)
-f.show('v_front'); f.say('front', 'Press Model.', after=0.3); f.tap(652, 425, 'v_model')
-f.say('model', 'Press Channels.', after=0.3); f.tap(170, 165, 'v_chan')
-f.say('chan', 'Press Aileron.', after=0.3); f.tap(111, 84, 'v_c5')
+f.show('v_front'); f.say('front', 'Press Model.', after=0.3); f.tap(*at('FrontView', 'b1'), 'v_model')
+f.say('model', 'Press Channels.', after=0.3); f.tap(*at('RXSetupView', 'b1'), 'v_chan')
+f.say('chan', 'Press Aileron.', after=0.3); f.tap(*at('SticksView', 'Sch1'), 'v_c5')
 f.say('curve', 'Across: the stick. Up: the servo.')
-f.say('points', 'Press 9.', after=0.3); f.tap(738, 356); f.under('v_c9'); f.hold(0.6)
+f.say('points', 'Press 9.', after=0.3); f.tap(*at('GraphView', 'pt9')); f.under('v_c9'); f.hold(0.6)
 f.say('nine', 'Nine points, nothing moved.')
-f.say('touch', 'Touch just above a point.', after=0.3); f.tap(125, 215); f.under('v_c9up'); f.hold(0.8)
+px3 = 35 + (360 * 2) // 8; py90 = 395 - 2 * 90                       # (point 3 of 9 across; 90 degrees up: DisplayCurve's own sums)
+f.say('touch', 'Touch just above a point.', after=0.3); f.tap(px3, py90); f.under('v_c9up'); f.hold(0.8)
 f.say('small', "'-' or '+': small steps.", after=0.3)
-f.tap(343, 442); f.under('v_c9plus91'); f.hold(0.3)
+f.tap(*at('GraphView', 'b5')); f.under('v_c9plus91'); f.hold(0.3)
 for d in range(92, 96): f.press(0.3); f.lift(0.2); f.under('v_c9plus%d' % d); f.hold(0.3)
 f.hold(0.6)
 f.say('next', "'Next point': the next one.", after=0.3)
-f.tap(105, 442); f.under('v_c9next'); f.hold(0.8)
+f.tap(*at('GraphView', 'b1')); f.under('v_c9next'); f.hold(0.8)
 f.say('remember', 'Every point keeps its height.')
-f.say('ok', 'Press OK to save.', after=0.3); f.tap(695, 442)
+f.say('ok', 'Press OK to save.', after=0.3); f.tap(*at('GraphView', 'b0'))
 f.end('end')
 f.finish()

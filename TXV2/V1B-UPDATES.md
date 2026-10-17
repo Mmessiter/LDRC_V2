@@ -186,6 +186,35 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Films: pause, Back and Next; the finger exact; no screen timeout (Teensy B123, screen 1.11.88, 17 Oct 2026)
+
+Malcolm, of 1.11.87: "I wonder if it might be possible to include a pause button, the ability to go back a bit and replay
+a section ... make the pointer very accurate because if it presses in the wrong place, it's a bit misleading. Also, the
+screen timeout should be disabled while we play these videos because it went black in the middle of one!"
+
+**Pause.** A tap pauses a film: the sound stops and a bar along its foot offers Back, Play, Next and Films (the tap that
+pauses presses nothing). Back plays the part again - a part is one spoken step - or, within a part's first two seconds,
+goes to the part before. Next skips to the next part (from the last, the menu). Play, or a tap anywhere else, carries on
+from the same moment, the sound too (the WAV is opened at that point). Films returns to the menu.
+
+**The finger.** Every tap in the films now comes from the page's own description (sd/hmi/pages/N.json): the exact centre
+of the button, or of the slider's knob at its value. A red dot marks the very point touched. Much of the "inaccurate"
+pointer was the player: when late it skipped pictures, and a skipped picture of the finger left part of an old finger
+behind. Now every picture is decoded in turn; a late film catches up instead.
+
+**No timeout.** While a film plays, is paused, or the films menu is up, the screen sends LDRCAWAKE to the Teensy every 15
+seconds, and B123 restarts its screen timeout on it.
+
+**Film format 3.** Each picture's size carries a flag for a whole-screen (key) picture, and the starting frames of the
+parts follow the table. A jump decodes the key picture at or before its target, then every picture up to it. The films
+are made (dev/video/filmkit.py) with a key at the start of every part, and every picture is checked at build time by the
+screen's own decoder, JPEGDEC 1.8.4, which refuses a few pictures (content-dependent); those are encoded again until
+accepted. The screen and its films go together: 1.11.87 refuses the new films (it shows the menu again). Host tests on the
+Mac: hmi/test_film (80 checks: the format, the parts, the jumps), decode_test.py (every picture and every jump of the three
+films against Pillow) and flow_test.py (36 checks, film_device.h itself: pause, Back, Next, Play with the sound's place,
+Films, the 15-second message, no picture skipped when 10 seconds late, a film to its end). FRONT.TXT and EASY.TXT
+describe the controls.
+
 ## The films menu, and three films (screen 1.11.87, Teensy B122 unchanged, 17 Oct 2026)
 
 Malcolm: "Presumably we could store several of these files and select between them with a small menu? If that is the

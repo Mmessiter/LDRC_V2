@@ -3,7 +3,11 @@
 // number of frames (u32); then each frame's offset in the file and size (u32 each) - size 0: the same picture as the
 // frame before, nothing to decode; then the pictures, baseline JPEG. Version 2 (1.11.87): each picture is only the
 // rectangle that changed since the frame before - x, y, width, height (u16 each), then its JPEG, drawn there - so a
-// moving finger is a small picture, quick to decode, and a still page costs nothing. Written by TXV1B dev/video (LDRC_TARGET=screen),
+// moving finger is a small picture, quick to decode, and a still page costs nothing. A changed rectangle is only right
+// on top of the picture before it, so from version 2 on no picture is ever skipped (nextPicture), however late.
+// Version 3 (1.11.88, for Back / Play / Next): a size's top bit marks a key picture - the whole screen, where a jump can
+// start - and after the table come the sections: their number (u32), then each one's first frame (u32; the first 0,
+// rising). A section is one spoken line and what follows it. Written by TXV1B dev/video (LDRC_TARGET=screen),
 // played by src/film_device.h from /hmi/films, its sound beside it (<name>.wav, 22.05 kHz). Why a film at all: film_device.h.
 #pragma once
 #include <stdint.h>
@@ -18,15 +22,20 @@ inline uint32_t rd32(const uint8_t *p) { return (uint32_t) p[0] | ((uint32_t) p[
 inline bool parseHeader(const uint8_t *b, uint32_t n, Header &h, uint16_t screenW, uint16_t screenH) {
     if (n < HEADER_BYTES || memcmp(b, "LDRCFILM", 8) != 0) return false;
     h.version = rd16(b + 8); h.w = rd16(b + 10); h.h = rd16(b + 12); h.fps = rd16(b + 14); h.frames = rd32(b + 16);
-    return (h.version == 1 || h.version == 2) && h.w == screenW && h.h == screenH && h.fps >= 1 && h.fps <= 30 && h.frames >= 1 && h.frames <= MAX_FRAMES;
+    return h.version >= 1 && h.version <= 3 && h.w == screenW && h.h == screenH && h.fps >= 1 && h.fps <= 30 && h.frames >= 1 && h.frames <= MAX_FRAMES;
 }
-// The table sound: the first frame a picture, every picture inside the file and after the table, none too big. maxSize: the largest.
-inline bool tableSound(const uint8_t *t, const Header &h, uint32_t fileSize, uint32_t &maxSize) {
+static const uint32_t KEY_FLAG = 0x80000000u, SIZE_MASK = 0x7FFFFFFFu;
+inline uint32_t sizeOf(const uint8_t *t, int32_t i) { return rd32(t + 8 * i + 4) & SIZE_MASK; }
+inline bool isKey(const uint8_t *t, int32_t i) { return (rd32(t + 8 * i + 4) & KEY_FLAG) != 0; }
+// The table sound: the first frame a picture, every picture inside the file and after the table (and, version 3, after the
+// sections: extra = their bytes), none too big. maxSize: the largest.
+inline bool tableSound(const uint8_t *t, const Header &h, uint32_t fileSize, uint32_t &maxSize, uint32_t extra = 0) {
     maxSize = 0;
-    const uint32_t dataStart = HEADER_BYTES + 8 * h.frames;
+    const uint32_t dataStart = HEADER_BYTES + 8 * h.frames + extra;
     if (fileSize < dataStart) return false;
     for (uint32_t i = 0; i < h.frames; ++i) {
-        const uint32_t off = rd32(t + 8 * i), size = rd32(t + 8 * i + 4);
+        const uint32_t off = rd32(t + 8 * i), size = sizeOf(t, (int32_t) i);
+        if (h.version < 3 && isKey(t, (int32_t) i)) return false;
         if (size == 0) { if (i == 0) return false; continue; }
         if (off < dataStart || off > fileSize || size > fileSize - off || size > MAX_PICTURE || (h.version >= 2 && size <= 8)) return false;
         if (size > maxSize) maxSize = size;
@@ -50,9 +59,42 @@ inline uint32_t lengthMs(const Header &h) { return (uint32_t) (((uint64_t) h.fra
 inline int32_t pictureFor(int32_t want, int32_t last, const uint8_t *t) {
     if (want < 0) return -1;
     int32_t k = want;
-    while (k > last && k > 0 && rd32(t + 8 * k + 4) == 0) --k;
+    while (k > last && k > 0 && sizeOf(t, k) == 0) --k;
     return k > last ? k : -1;
 }
+// The next picture to decode, from version 2 on: the first after `last` - none skipped, however late (each is a changed
+// rectangle, right only over the one before it) - if its frame is due by `want`; else -1.
+inline int32_t nextPicture(int32_t want, int32_t last, const uint8_t *t) {
+    if (want < 0) return -1;
+    for (int32_t k = last + 1; k <= want; ++k) if (sizeOf(t, k)) return k;
+    return -1;
+}
+// A jump's start: the latest key picture at or before frame f (version 1: every picture is the whole screen; the first
+// frame always is). -1: none.
+inline int32_t keyAtOrBefore(int32_t f, const uint8_t *t, uint16_t version) {
+    for (int32_t i = f; i >= 0; --i) if (sizeOf(t, i) && (i == 0 || version < 2 || isKey(t, i))) return i;
+    return -1;
+}
+// The sections (version 3): n of them, at least one, the first at frame 0, rising, inside the film
+static const uint32_t MAX_SECTIONS = 200;
+inline bool sectionsSound(const uint8_t *c, uint32_t n, const Header &h) {
+    if (n == 0 || n > MAX_SECTIONS) return false;
+    for (uint32_t i = 0; i < n; ++i) {
+        const uint32_t f = rd32(c + 4 * i);
+        if (i == 0 ? f != 0 : f <= rd32(c + 4 * (i - 1))) return false;
+        if (f >= h.frames) return false;
+    }
+    return true;
+}
+inline int sectionOf(int32_t frame, const uint8_t *c, uint32_t n) { int k = 0; for (uint32_t i = 0; i < n; ++i) if ((int32_t) rd32(c + 4 * i) <= frame) k = (int) i; return k; }
+// Back: to the start of this section - or, in its first two seconds, of the one before (as a music player's "previous")
+inline int32_t backTarget(int32_t frame, uint16_t fps, const uint8_t *c, uint32_t n) {
+    const int k = sectionOf(frame, c, n); const int32_t s = (int32_t) rd32(c + 4 * k);
+    if (k > 0 && frame - s < 2 * (int32_t) fps) return (int32_t) rd32(c + 4 * (k - 1));
+    return s;
+}
+// Next: the start of the next section; -1 when this is the last
+inline int32_t nextTarget(int32_t frame, const uint8_t *c, uint32_t n) { const int k = sectionOf(frame, c, n); return k + 1 < (int) n ? (int32_t) rd32(c + 4 * (k + 1)) : -1; }
 // Which film a help page offers (1.11.86). /hmi/films/films.txt holds lines "<help name>=<film name>" (a # starts a
 // note); a help page named in it offers that film, any other offers the film of its own name, if there is one. Malcolm
 // could not reach Easy tuning's help without the helicopter on (the page needs the model), so the Rotorflight menu's help

@@ -38,6 +38,71 @@ def prefix(scenario, shot, edits=()):
         text = text.replace(old, new)
     return text
 
+import json
+_PAGES = {}
+def _page(page):
+    """a page's definition, by its number or its name (ESP32-board2 sd/hmi/pages/<id>.json)"""
+    if page not in _PAGES:
+        pid = page
+        if not isinstance(page, int):
+            idx = json.load(open(os.path.join(EMU, 'sd', 'hmi', 'index.json')))
+            pid = next(p['id'] for p in idx['pages'] if p['name'] == page)
+        _PAGES[page] = json.load(open(os.path.join(EMU, 'sd', 'hmi', 'pages', '%d.json' % pid)))
+    return _PAGES[page]
+def comp(page, name=None, txt=None):
+    """a component of a page, by its name or by the words on it: its rectangle (x, y, w, h)"""
+    for c in _page(page)['comps']:
+        if c.get('x') is None: continue
+        if (name is not None and c['n'] == name) or (txt is not None and (c.get('txt') or '').strip() == txt):
+            return c['x'], c['y'], c['w'], c['h']
+    raise SystemExit('no component %s on page %s' % (name or txt, page))
+def at(page, name=None, txt=None):
+    """(1.11.88: Malcolm, "the indication of the pointer hitting a button was frequently rather inaccurate") the exact centre
+    of a button, from the page's own definition - never a number typed by hand"""
+    x, y, w, h = comp(page, name, txt)
+    return x + w // 2, y + h // 2
+def knob(page, name, val):
+    """the centre of a slider's knob at a value (as the screen draws it: the track inset by the knob's radius)"""
+    c = next(c for c in _page(page)['comps'] if c['n'] == name)
+    a = c.get('a') or {}; lo, hi = a.get('minval', 0), a.get('maxval', 100); r = c['h'] // 2
+    return int(round(c['x'] + r + (c['w'] - 2 * r) * (val - lo) / float(hi - lo))), c['y'] + r
+
+JPEGDEC_SRC = os.path.join(EMU, '.pio', 'libdeps', 'ota', 'JPEGDEC', 'src')
+_CHECKER = r'''
+#include <cstdio>
+#include <vector>
+#include "JPEGDEC.h"
+static int draw(JPEGDRAW *) { return 1; }
+static JPEGDEC j;
+int main(int argc, char **argv) {   // a file of pictures, each a u32 length then the JPEG: prints the number of each one JPEGDEC will not decode
+    FILE *f = fopen(argv[1], "rb"); if (!f) return 2;
+    std::vector<unsigned char> b; unsigned char c[65536]; size_t n; while ((n = fread(c, 1, sizeof c, f)) > 0) b.insert(b.end(), c, c + n); fclose(f);
+    size_t at = 0; int i = 0;
+    while (at + 4 <= b.size()) {
+        const unsigned len = b[at] | (b[at + 1] << 8) | (b[at + 2] << 16) | ((unsigned) b[at + 3] << 24); at += 4;
+        const int ok = j.openRAM(&b[at], (int) len, draw) && (j.setPixelType(RGB565_LITTLE_ENDIAN), j.decode(0, 0, 0));
+        j.close(); if (!ok) printf("%d\n", i);
+        at += len; ++i;
+    }
+    return 0;
+}
+'''
+def _checker(outdir):
+    """the screen's own JPEG decoder, built on the Mac (1.11.88): JPEGDEC 1.8.4 refuses some pictures ('decode error') that
+    other decoders read - a few in a film, depending on what is in them - so every picture is tried with it before it goes in"""
+    exe = os.path.join(outdir, 'jpegdec_check')
+    if not os.path.exists(exe):
+        if not os.path.isdir(JPEGDEC_SRC): sys.exit('JPEGDEC not found in %s (build the screen once: pio run -e ota)' % JPEGDEC_SRC)
+        src = os.path.join(outdir, 'jpegdec_check.cpp'); open(src, 'w').write(_CHECKER)
+        subprocess.run(['clang++', '-std=c++17', '-O1', '-w', '-I', JPEGDEC_SRC, '-o', exe, src, os.path.join(JPEGDEC_SRC, 'JPEGDEC.cpp')], check=True)
+    return exe
+def _refused(exe, outdir, jpegs):
+    path = os.path.join(outdir, 'check.bin')
+    with open(path, 'wb') as f:
+        for j in jpegs: f.write(struct.pack('<I', len(j)) + j)
+    r = subprocess.run([exe, path], capture_output=True, text=True, check=True)
+    return set(int(x) for x in r.stdout.split())
+
 class Film:
     def __init__(self, name, title, subtitle):
         self.name, self.title, self.subtitle = name, title, subtitle
@@ -114,7 +179,9 @@ class Film:
         d = ImageDraw.Draw(f, 'RGBA'); cx, cy = self.SX + x * self.SCALE, self.SY + y * self.SCALE; k = max(self.FS, 0.8); r = (26 - 6 * press) * k
         if ripple is not None:
             rr = (28 + 60 * ripple) * k; a = int(200 * (1 - ripple)); d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=(255, 214, 64, a), width=5)
-        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 150), outline=(255, 214, 64, 255), width=5); return f
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 150), outline=(255, 214, 64, 255), width=5)
+        d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=(230, 40, 40, 255))   # (1.11.88) the exact point it touches
+        return f
     def _now(self, ripple=None):
         f = self._caption(self._frame(self.page), self.cap)
         if self.fx is not None: f = self._finger(f, self.fx, self.fy, self.fpress, ripple)
@@ -141,7 +208,7 @@ class Film:
         self.segments.append((len(self.frames), key)); self.cap = cap if cap is not None else self.cap
         self.hold(self.dur[key] + after)
     def glide(self, x, y, secs=GLIDE):
-        x0, y0 = (self.fx, self.fy) if self.fx is not None else (min(780, x + 150), min(470, y + 120))
+        x0, y0 = (self.fx, self.fy) if self.fx is not None else (x, 530)   # (from below the page, straight up: never across another button)
         n = self._n(secs)
         for i in range(n):
             e = self._ease((i + 1) / n); self.fx, self.fy = x0 + (x - x0) * e, y0 + (y - y0) * e; self.frames.append(self._now())
@@ -185,25 +252,52 @@ class Film:
         if self.target == 'screen':
             DEST = os.environ.get('LDRC_FILM_DIR', os.path.join(EMU, 'sd', 'hmi', 'films')); os.makedirs(DEST, exist_ok=True)
             STEP = 3; SFPS = FPS // STEP; keep = self.frames[::STEP]
-            # (version 2) each picture is only the rectangle that changed since the frame before, on 8-pixel steps (whole JPEG blocks)
+            # Version 3: each picture only the rectangle that changed since the frame before (8-pixel steps: whole JPEG blocks);
+            # the sections - each spoken line, from the frame its voice starts - with a key picture (the whole screen, the top
+            # bit of its size) at each, so the screen's Back and Next can start there; and a whole screen anywhere is a key too.
             from PIL import ImageChops
-            blobs, prev = [], None
-            for f in keep:
-                box = (0, 0, self.W, self.H) if prev is None else ImageChops.difference(prev, f).getbbox()
-                if box is None: blobs.append(b'')
+            sections = sorted(set([0] + [s // STEP for s, _ in self.segments if s // STEP >= SFPS]))   # (a line in the first second belongs to the first section)
+            secset = set(sections)
+            blobs, keys, prev = [], [], None
+            crops = []                                                # (index, rectangle, the picture cut out)
+            for i, f in enumerate(keep):
+                full = prev is None or i in secset
+                box = (0, 0, self.W, self.H) if full else ImageChops.difference(prev, f).getbbox()
+                if box is None: crops.append(None)
                 else:
                     l, t0, r, b = box; l, t0 = l // 8 * 8, t0 // 8 * 8; r, b = min(self.W, (r + 7) // 8 * 8), min(self.H, (b + 7) // 8 * 8)
-                    bio = io.BytesIO(); f.crop((l, t0, r, b)).convert('RGB').save(bio, 'JPEG', quality=86, subsampling=0, optimize=True, progressive=False)
-                    blobs.append(struct.pack('<HHHH', l, t0, r - l, b - t0) + bio.getvalue())
+                    crops.append(((l, t0, r, b), f.crop((l, t0, r, b)).convert('RGB')))
                 prev = f
-            head = b'LDRCFILM' + struct.pack('<HHHHI', 2, self.W, self.H, SFPS, len(keep))
-            table, data, off = b'', b'', len(head) + 8 * len(keep)
-            for bl in blobs: table += struct.pack('<II', off if bl else 0, len(bl)); data += bl; off += len(bl)
+            # Every picture tried with the screen's own decoder; one it refuses is saved again a little differently until it
+            # decodes (4:4:4 always - its 4:2:0 at an x not on 16 pixels overran on the Mac).
+            def enc(im, q, opt): bio = io.BytesIO(); im.save(bio, 'JPEG', quality=q, subsampling=0, optimize=opt, progressive=False); return bio.getvalue()
+            tries = [(86, True), (86, False), (85, True), (84, False), (83, True), (82, False), (80, True), (78, False), (75, True)]
+            jp = [enc(c[1], 86, True) if c else None for c in crops]; attempt = [0] * len(crops)
+            exe = _checker(self.out); redone = 0
+            while True:
+                idx = [i for i, c in enumerate(crops) if c]
+                bad = _refused(exe, self.out, [jp[i] for i in idx])
+                if not bad: break
+                for b in bad:
+                    i = idx[b]; attempt[i] += 1
+                    if attempt[i] >= len(tries): sys.exit('picture %d of %s: the screen\'s decoder refuses it however it is saved' % (i, self.name))
+                    q, opt = tries[attempt[i]]; jp[i] = enc(crops[i][1], q, opt); redone += 1
+            for c, j in zip(crops, jp):
+                if not c: blobs.append(b''); keys.append(False)
+                else:
+                    (l, t0, r, b), _ = c
+                    blobs.append(struct.pack('<HHHH', l, t0, r - l, b - t0) + j); keys.append((l, t0, r, b) == (0, 0, self.W, self.H))
+            if redone: print('(%d pictures saved again for the screen\'s decoder)' % redone)
+            head = b'LDRCFILM' + struct.pack('<HHHHI', 3, self.W, self.H, SFPS, len(keep))
+            secbytes = struct.pack('<I', len(sections)) + b''.join(struct.pack('<I', s) for s in sections)
+            table, data, off = b'', b'', len(head) + 8 * len(keep) + len(secbytes)
+            for bl, k in zip(blobs, keys): table += struct.pack('<II', off if bl else 0, len(bl) | (0x80000000 if k else 0)); data += bl; off += len(bl)
+            table += secbytes
             ldf = os.path.join(DEST, self.name + '.ldf'); open(ldf, 'wb').write(head + table + data)
             wav = os.path.join(DEST, self.name + '.wav')
             subprocess.run([FF, '-y', '-loglevel', 'error', '-i', tw, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '22050', '-ac', '1', '-c:a', 'pcm_s16le', wav], check=True)
             real = sum(1 for bl in blobs if bl)
-            print('film %s: %d frames at %d a second (%.1f s), %d pictures, %d kB; the largest %d kB; sound %d kB' % (ldf, len(keep), SFPS, len(keep) / SFPS, real, os.path.getsize(ldf) // 1024, max(len(bl) for bl in blobs) // 1024, os.path.getsize(wav) // 1024))
+            print('film %s: %d frames at %d a second (%.1f s), %d pictures (%d keys), %d sections, %d kB; the largest %d kB; sound %d kB' % (ldf, len(keep), SFPS, len(keep) / SFPS, real, sum(keys), len(sections), os.path.getsize(ldf) // 1024, max(len(bl) for bl in blobs) // 1024, os.path.getsize(wav) // 1024))
             return ldf
         out = os.path.join(self.out, 'LDRC-%s-%s.mp4' % (self.name.lower(), self.voice_name.replace('_', '-')))
         p = subprocess.Popen([FF, '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '%dx%d' % (self.W, self.H), '-r', str(FPS), '-i', '-', '-i', tw,

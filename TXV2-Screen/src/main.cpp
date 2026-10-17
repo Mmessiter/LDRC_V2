@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.87"
+#define SCREEN_VERSION "1.11.88"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2574,13 +2574,18 @@ static void audioStart(int id, bool loopIt) {
 }
 // (1.11.85) A film's sound, by its path: streamed off the card as it plays (it is minutes long: never kept in memory)
 static const int FILM_AUDIO_ID = -2;
-static void audioStartFile(const char *path) {
+static void audioStartFile(const char *path, uint32_t fromMs = 0) {   // (1.11.88) fromMs: from that point in it (Back, Next, Play after a pause)
     audioStop();
     if (!audioRing) return;
     audioLoop = false; audioId = FILM_AUDIO_ID;
     uint32_t rate;
     if (!sdOk || !wavOpenPath(path, rate)) { audioId = -1; return; }
     if (rate != audioRate) { i2s_set_sample_rates(I2S_PORT, rate); audioRate = rate; }
+    if (fromMs) {                                       // (a film's sound is mono, 16-bit: two bytes a sample)
+        const uint64_t skip = (uint64_t) fromMs * rate / 1000 * 2;
+        if (skip >= audioDataLeft) { audioStop(); return; }
+        audioFile.seek(audioDataStart + (uint32_t) skip); audioDataLeft -= (uint32_t) skip;
+    }
     audioPlaying = true;
     audioFill();
 }
