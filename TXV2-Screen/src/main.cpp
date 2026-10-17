@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.92"
+#define SCREEN_VERSION "1.11.93"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -509,6 +509,7 @@ static bool filmButtonTouch(bool pressed, int x, int y, uint32_t now);   // the 
 static void filmNoteHelp(const std::string &script);
 static void filmButtonCancel();
 static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0;   // (src/film_device.h: how the last film went, for /status)
+static uint32_t filmFadeSteps = 0, filmFadeMax = 0;     // (1.11.93) the fades' steps made by the screen, and the longest (us)
 static void cliTouch(bool pressed, int x, int y, uint32_t now);
 static void cliPoll(); static void cliWeb();
 // (B59) a corner held while one of our pages has the screen: that page forgets the finger (src/*_device.h)
@@ -2133,8 +2134,8 @@ static void webBegin() {
                                 (unsigned long) frameEnds, (unsigned long) frameUs, (unsigned long) quietN, (unsigned long) quietLateN, (unsigned long) quietOverN, (unsigned long) quietWaitMs,
                                 (unsigned long) quietCopyUs, (unsigned long) quietCopyMax, (unsigned long) quietDrawUs, (unsigned long) quietDrawMax,
                                 (unsigned long) quietKeptN, (unsigned long) quietFullN, (unsigned long) quietWarmN, (unsigned long) quietStepMax, (unsigned long) quietStoreN, (unsigned long) quietStoreMax); out += q; }
-        { char q[160]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu}",
-                                (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
+        { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
+                                (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
         { std::string l = sysLast(); for (size_t i = 0; i < l.size(); ++i) if (l[i] == '"' || l[i] == '\\') l[i] = '\''; out += ",\"sys\":\"" + l + "\"}"; }   // (1.11.5) the system's last error line
         web.send(200, "application/json", out.c_str());
     });
@@ -2455,6 +2456,10 @@ static volatile size_t ringHead = 0, ringTail = 0;      // head: loop() writes; 
 static volatile bool audioDraining = false;             // nothing more is coming: play the tail, padded
 static File audioFile; static bool audioPlaying = false, audioLoop = false;
 static uint32_t audioDataStart = 0, audioDataSize = 0, audioDataLeft = 0, audioRate = 22050;
+// (1.11.93) A film's sound may be IMA ADPCM (src/ima_adpcm.h): a quarter of the bytes to fetch. Made 16-bit here a block at
+// a time, into the same ring. audioBlock 0: 16-bit samples as they are (every clip, and the films before 1.11.93).
+#include "ima_adpcm.h"
+static uint32_t audioBlock = 0, audioBlockSamples = 0, audioSkip = 0;   // a block's bytes and samples; samples not to play (a start part way into a block)
 struct Clip { int id; uint8_t *data; uint32_t len; uint32_t used; };
 static std::vector<Clip> clips; static size_t clipBytes = 0; static const size_t CLIP_BUDGET = 1500 * 1024;
 static Clip *curClip = nullptr; static uint32_t curPos = 0;          // playing from memory
@@ -2469,21 +2474,30 @@ static void clipMakeRoom(size_t need) {
     }
 }
 static void clipAdd(int id, uint8_t *data, uint32_t len) { clips.push_back({ id, data, len, millis() }); clipBytes += len; }
-static bool wavOpenPath(const char *path, uint32_t &rate);
+static bool wavOpenPath(const char *path, uint32_t &rate, bool adpcmOk = false);
 static bool wavOpen(int id, uint32_t &rate) {           // leaves audioFile at the samples; sets audioDataStart/Size/Left
     char path[32]; snprintf(path, sizeof(path), "/hmi/audio/%d.wav", id);
     return wavOpenPath(path, rate);
 }
-static bool wavOpenPath(const char *path, uint32_t &rate) {   // (1.11.85: a film's sound too)
+static bool wavOpenPath(const char *path, uint32_t &rate, bool adpcmOk) {   // (1.11.85: a film's sound too; 1.11.93: adpcmOk, a film's may be IMA ADPCM)
     audioFile = SD.open(path); if (!audioFile) return false;
     uint8_t h[12]; if (audioFile.read(h, 12) != 12 || memcmp(h, "RIFF", 4) || memcmp(h + 8, "WAVE", 4)) { audioFile.close(); return false; }
-    rate = 22050; bool haveData = false;
+    rate = 22050; bool haveData = false; uint32_t tag = 1, chans = 1, bits = 16, align = 2;
+    audioBlock = 0; audioBlockSamples = 0; audioSkip = 0;
     while (audioFile.available()) {
         uint8_t ch[8]; if (audioFile.read(ch, 8) != 8) break;
         const uint32_t sz = ch[4] | (ch[5] << 8) | (ch[6] << 16) | ((uint32_t) ch[7] << 24);
-        if (!memcmp(ch, "fmt ", 4)) { uint8_t f[16]; audioFile.read(f, 16); rate = f[4] | (f[5] << 8) | (f[6] << 16) | ((uint32_t) f[7] << 24); if (sz > 16) audioFile.seek(audioFile.position() + sz - 16); }
+        if (!memcmp(ch, "fmt ", 4)) {
+            uint8_t f[16]; audioFile.read(f, 16); rate = f[4] | (f[5] << 8) | (f[6] << 16) | ((uint32_t) f[7] << 24);
+            tag = f[0] | (f[1] << 8); chans = f[2] | (f[3] << 8); align = f[12] | (f[13] << 8); bits = f[14] | (f[15] << 8);
+            if (sz > 16) audioFile.seek(audioFile.position() + sz - 16);
+        }
         else if (!memcmp(ch, "data", 4)) { audioDataStart = audioFile.position(); audioDataSize = audioDataLeft = sz; haveData = true; break; }
         else audioFile.seek(audioFile.position() + sz + (sz & 1));
+    }
+    if (haveData && tag == 0x11) {                          // IMA ADPCM: a film's, mono, 4 bits, blocks of up to 1 kB; else not played (never as noise)
+        if (adpcmOk && chans == 1 && bits == 4 && align > 4 && align <= 1024) { audioBlock = align; audioBlockSamples = ldrcaudio::imaSamples(align); }
+        else haveData = false;
     }
     if (!haveData) audioFile.close();
     return haveData;
@@ -2519,11 +2533,28 @@ static void audioBegin() {
 }
 static void audioStop() {
     if (audioFile) audioFile.close();
-    audioPlaying = false; audioId = -1; curClip = nullptr; audioDraining = false;
+    audioPlaying = false; audioId = -1; curClip = nullptr; audioDraining = false; audioBlock = 0; audioSkip = 0;
     if (capture) { free(capture); capture = nullptr; }
     ringHead = ringTail;
 }
 static void ringPush(const uint8_t *src, size_t n) { for (size_t i = 0; i < n; ++i) { audioRing[ringHead] = src[i]; ringHead = (ringHead + 1) % RING; } }
+static void ringPushSamples(const int16_t *s, uint32_t n) {   // (1.11.93) decoded samples, less those a start part way into a block leaves out
+    const uint32_t skip = std::min(audioSkip, n); audioSkip -= skip;
+    if (n > skip) ringPush((const uint8_t *) (s + skip), (size_t) (n - skip) * 2);
+}
+// (1.11.93) An IMA ADPCM block off the card, into the ring as 16-bit samples. False: the card or the block failed
+static bool audioFillBlock(uint8_t *tmp) {
+    const size_t want = std::min((size_t) audioBlock, (size_t) audioDataLeft);
+    const int got = audioFile.read(tmp, want);
+    if (got < 4 || (size_t) got != want) return false;
+    audioDataLeft -= got;
+    ldrcaudio::Ima ima; int16_t first;
+    if (!ima.head(tmp, first)) return false;
+    ringPushSamples(&first, 1);
+    int16_t out[256];                                       // (a block's body in pieces: 128 bytes are 256 samples)
+    for (int at = 4; at < got; at += 128) { const int n = std::min(128, got - at); ima.body(tmp + at, (size_t) n, out); ringPushSamples(out, (uint32_t) n * 2); }
+    return true;
+}
 static void audioFill() {                               // called from loop(): keep the ring topped up
     if (!audioPlaying || !audioRing) return;
     const size_t used = (ringHead + RING - ringTail) % RING, space = RING - 1 - used;
@@ -2539,6 +2570,13 @@ static void audioFill() {                               // called from loop(): k
     }
     if (space < 4096) return;
     static uint8_t tmp[4096];
+    if (audioBlock) {                                       // (1.11.93) IMA ADPCM: up to two blocks a call (each some 93 ms of sound)
+        for (int b = 0; b < 2 && audioDataLeft > 0; ++b) {
+            if ((RING - 1 - (ringHead + RING - ringTail) % RING) < audioBlockSamples * 2) return;
+            if (!audioFillBlock(tmp)) { audioStop(); return; }
+        }
+        return;
+    }
     const size_t want = min((size_t) 4096, min(space, (size_t) audioDataLeft));
     const int got = audioFile.read(tmp, want);
     if (got <= 0) { audioStop(); return; }
@@ -2579,9 +2617,13 @@ static void audioStartFile(const char *path, uint32_t fromMs = 0) {   // (1.11.8
     if (!audioRing) return;
     audioLoop = false; audioId = FILM_AUDIO_ID;
     uint32_t rate;
-    if (!sdOk || !wavOpenPath(path, rate)) { audioId = -1; return; }
+    if (!sdOk || !wavOpenPath(path, rate, true)) { audioId = -1; return; }
     if (rate != audioRate) { i2s_set_sample_rates(I2S_PORT, rate); audioRate = rate; }
-    if (fromMs) {                                       // (a film's sound is mono, 16-bit: two bytes a sample)
+    if (fromMs && audioBlock) {                         // (1.11.93) IMA ADPCM: from the block that holds that moment, its samples before it left out
+        uint64_t skip; uint32_t samples; ldrcaudio::imaFrom(fromMs, rate, audioBlock, skip, samples);
+        if (skip >= audioDataLeft) { audioStop(); return; }
+        audioFile.seek(audioDataStart + (uint32_t) skip); audioDataLeft -= (uint32_t) skip; audioSkip = samples;
+    } else if (fromMs) {                                // (a film's sound is mono, 16-bit: two bytes a sample)
         const uint64_t skip = (uint64_t) fromMs * rate / 1000 * 2;
         if (skip >= audioDataLeft) { audioStop(); return; }
         audioFile.seek(audioDataStart + (uint32_t) skip); audioDataLeft -= (uint32_t) skip;

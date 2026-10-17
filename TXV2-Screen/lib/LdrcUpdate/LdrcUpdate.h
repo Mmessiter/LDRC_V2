@@ -82,6 +82,10 @@ public:
     // in pieces, and a connection to messiter.com wants some 45 kB in one; the update then restarts the screen first
     // and goes on by itself (1.11.31). The default says "plenty".
     virtual uint32_t roomForTls() { return 0xFFFFFFFFu; }
+    // (1.11.93) Where a fetch's time went on the machine - asking, the network, writing the card, reading it back, the WiFi's
+    // strength - for the record after it (Malcolm's 1 h 50 min update, 17 Oct: was it the WiFi, or the card?). "" : nothing to say
+    virtual void fetchBegins() {}
+    virtual std::string fetchNotes() { return ""; }
 };
 
 struct UpdRow { std::string what, now, next; };

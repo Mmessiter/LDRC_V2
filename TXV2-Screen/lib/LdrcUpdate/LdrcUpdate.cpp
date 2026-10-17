@@ -675,7 +675,7 @@ void Updater::startFetch() {
     note(num((uint32_t) items_.size()) + " files in the update, " + num((uint32_t) fetchCount_) + " to fetch (" + sizeText(fetchTotal_) + ")");
     if (fetchCount_ && host_.freeKb() < fetchTotal_ / 1024 + 4096) { fail("checking the card's free space", "the screen's card is full: " + sizeText(fetchTotal_) + " are needed"); return; }
     fetchDone_ = 0; fetchIndex_ = 0; at_ = 0; tries_ = 0; waiting_ = false;
-    clock_.clear(); fetchBegan_ = host_.ms(); leftAt_ = fetchBegan_; leftSecs_ = -1; leftShown_ = -1;
+    host_.fetchBegins(); clock_.clear(); fetchBegan_ = host_.ms(); leftAt_ = fetchBegan_; leftSecs_ = -1; leftShown_ = -1;
     bar(0, fetchTotal_ ? fetchTotal_ : 1);
     phase_ = P_FETCH; fetchNext();
 }
@@ -729,6 +729,7 @@ void Updater::afterFetch() {
         char b[160]; snprintf(b, sizeof b, "fetched %lu files, %s, in %lu min %lu s (%.0f kB/s; at the end %.1f s a file and %.0f kB/s)", (unsigned long) fetchCount_, sizeText(fetchTotal_).c_str(),
                               (unsigned long) (ms / 60000), (unsigned long) (ms / 1000 % 60), ms ? (double) fetchTotal_ / ms : 0.0, perFile / 1000, perByte > 0 ? 1.0 / perByte : 0.0);
         note(b);
+        const std::string where = host_.fetchNotes(); if (!where.empty()) note(where);
     }
     leftSecs_ = -1;
     if (view_.lines.size() > 1) { view_.lines.resize(1); changed(); }

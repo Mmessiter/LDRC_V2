@@ -10,7 +10,7 @@ static const int FILM_AUDIO_ID = -2; static int audioId = -1;
 static void audioStartFile(const char *, uint32_t = 0) { audioId = FILM_AUDIO_ID; }
 static void audioStop() { audioId = -1; }
 static int flyingNow() { return 0; }                               // (the motor safe: films allowed)
-static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0;
+static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0, filmFadeSteps = 0, filmFadeMax = 0;
 static uint16_t *topFb = nullptr;                                  // (the layer: here the one frame, as the glass shows it)
 #include "film_device.h"
 static void filmShot(const std::string &args) {

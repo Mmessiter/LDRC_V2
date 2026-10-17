@@ -24,7 +24,7 @@ Nothing is ever offered or done by itself. The pilot presses **Check for update*
 | **Up to date** | Both versions are shown. **OK**, or **Earlier versions**. |
 | **Update available** | What would change (now / new) and the release's note. **Install now**, **Later**, or **Earlier versions**. |
 | **Choose a version** | The latest release and the three before it, the one installed marked. Touch one: what would change is shown, then **Install now** or **Back**. |
-| **Fetching the update** | Everything is fetched to the screen's card first, each file checked. **Cancel** is still possible: nothing has been changed. Once the files fetched can say it, the time left: *About 40 minutes left* (1.11.92). |
+| **Fetching the update** | Everything is fetched to the screen's card first, each file checked. **Cancel** is still possible: nothing has been changed. Once the files fetched can say it, the time left: *About 40 minutes left* (1.11.92). The log says where the time went (1.11.93). |
 | **Updating ... Do not switch off** | The Teensy (about 80 s, with its trial), then the screen's files, then the screen's firmware and a restart. |
 | **Update complete** (green) | Both versions. OK. |
 | **Update failed** (red) | Where it stopped, why, and what state things are in. |
@@ -185,6 +185,43 @@ could not resume.
 
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
+
+## Animations a quarter of the size (screen 1.11.93, Teensy B123 unchanged, 17 Oct 2026)
+
+Malcolm, after installing the 62 animations on his second transmitter: "1 hour and 50 minutes!" The 509 MB were mostly
+two things that need not travel:
+
+- **The fades: 203 MB.** Every page change fades in over 0.8 s, and each of its eight steps was sent as a whole picture of
+  75 kB: 2,745 of the films' 10,638 pictures. **Film version 4** sends the page once, whole, and bits 24-30 of its size say
+  over how many frames the screen blends into it from what it shows (`film_core.h` fadeOf/fadeShare/mix565/fadeStepOf;
+  `film_device.h` filmFadeMove, one pass over the screen a frame, each pixel moved its share of what is left of its way,
+  the last step the page itself). The film kit's own curve (smoothstep), so a fade looks as it did. Paused half way, the
+  fade waits and goes on; the slider into a fade shows the page whole. The 750 kB the page needs is taken while a film
+  plays and given back after it; without it, the page is drawn at once.
+- **The whole picture at each spoken line: 55 MB.** Version 3 sent one at every section for Back and Next, which went in
+  1.11.90 (the slider decodes from the whole picture before it, and the film kit keeps that within about a screen's worth
+  anyway). Version 4 sends only what changed.
+- **The sound: 224 MB.** 16-bit samples at 22.05 kHz. Now **IMA ADPCM**, a quarter of the bytes (`<name>.ima`, a WAV of
+  format 0x11, 1 kB blocks; `src/ima_adpcm.h`), decoded a block at a time into the same ring as before; a start part way
+  in (Play, the slider) begins at the block holding that moment and leaves out its samples before it. Each step as
+  ffmpeg's encoder reckons it, (2d + 1) x step / 8: the screen's decoding is ffmpeg's to the bit
+  (`hmi/test_film/ima_test.py`, from the start and five moments in). Trellis-searched: about 29 dB signal to noise while
+  the voice speaks (8-bit mu-law would give 37 dB at twice the bytes). A film's .wav still plays where there is no .ima.
+
+**Easy tuning**, made again (TXV1B dev/video, LDRC_TARGET=screen): 852 frames, 118 pictures, 7 fades; 941 kB of pictures
+(5,031 kB before) and 921 kB of sound (3,669 kB). Its pictures are those of the film before except inside the fades,
+and its voice the same. It is the first in the new form, for Malcolm to hear; the other 61 follow when they are made
+again (all of them: about 120 MB, some 25 minutes at the 80 kB/s his transmitters got).
+
+**Where the time goes**: the update's log on the card now follows *fetched ... kB/s* with *where the time went (N
+files): asking ..., the network ..., writing the card ..., reading it back ..., its free space ...; WiFi -NN dBm on
+average, -NN at worst* - whether a slow update is the WiFi or the card. messiter.com itself gave this Mac 40 MB/s and
+answers in 5 ms; the screen's TCP window is 5,760 bytes (Arduino's lwIP).
+
+Tests: test_film (film_core: version 4's table, the fade's share frame by frame, a fade made of steps within two greens
+of a straight blend; the sound by hand), decode_test and flow_test on a card with the new Easy tuning (half way through a
+fade every pixel within 1 of a straight blend; paused it waits; Play ends on the page exactly; the slider into a fade
+shows the page), ima_test for every .ima on the card, test_update 364; the renderer draws a fade half way.
 
 ## The time left while an update is fetched (screen 1.11.92, Teensy B123 unchanged, 17 Oct 2026)
 

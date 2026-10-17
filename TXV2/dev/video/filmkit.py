@@ -3,7 +3,8 @@
 Every screen is drawn by the transmitter screen's own code (ESP32-board2 hmi/render_pages.py, from its scenarios), the voice
 is Kokoro (an open speech model run on this Mac: nothing sent anywhere) or the Mac's own, the finger and the captions are
 drawn here, and the result is an MP4 (phones, computers) or, with LDRC_TARGET=screen, an LDRC film for the transmitter's
-own screen (sd/hmi/films/<NAME>.ldf + .wav, played from the help pages' Films menu, screen 1.11.87).
+own screen (sd/hmi/films/<NAME>.ldf + .ima, played from the help pages' Films menu, screen 1.11.87; the .ima and the
+fades the screen makes itself from screen 1.11.93 - the animations' update had taken Malcolm's transmitter 1 h 50 min).
 
 Malcolm's rules for the pace (17 Oct): "a little bit more slow ... the viewer probably understands nothing at the start";
 "the redrawing of the screen is not terribly fast ... make sure that the pace of the video and of the talking is no
@@ -133,6 +134,7 @@ class Film:
         for d in ('scripts', 'shots', 'voice'): os.makedirs(os.path.join(self.out, d), exist_ok=True)
         self.scripts, self.lines, self.img, self.dur = {}, [], {}, {}
         self.frames, self.segments = _Frames(self), []
+        self.fades = []                                       # (the frame each page starts fading in at, the frames it takes): the screen makes the steps itself
         self.page = None; self.cap = None; self.fx = self.fy = None; self.fpress = 0.0
         self.touches = []                                     # (the frame, x, y, the page) at every press and slider stop: finish() checks each
         self._layout()
@@ -236,6 +238,7 @@ class Film:
         """the next page (a shot's key, or a card): faded in, in silence, the finger gone; then looked at"""
         a = self._now(); self.page = self.img[page] if isinstance(page, str) else page; self.cap = None; self.fx = None; self.fpress = 0.0
         b = self._now(); n = self._n(FADE)
+        self.fades.append((len(self.frames), n))
         for i in range(n): self.frames.append(Image.blend(a, b, self._ease((i + 1) / n)))
         self.hold(look)
     def say(self, key, cap=None, after=AFTER):
@@ -326,17 +329,28 @@ class Film:
         if self.target == 'screen':
             DEST = os.environ.get('LDRC_FILM_DIR', os.path.join(EMU, 'sd', 'hmi', 'films')); os.makedirs(DEST, exist_ok=True)
             STEP = 3; SFPS = FPS // STEP; keep = self.frames[::STEP]
-            # Version 3: each picture only the rectangle that changed since the frame before (8-pixel steps: whole JPEG blocks);
-            # the sections - each spoken line, from the frame its voice starts - with a key picture (the whole screen, the top
-            # bit of its size) at each, so the screen's Back and Next can start there; and a whole screen anywhere is a key too.
+            # Version 4 (screen 1.11.93): each picture only the rectangle that changed since the frame before (8-pixel steps:
+            # whole JPEG blocks); a whole screen is a key (the top bit of its size: the slider starts there); the sections - each
+            # spoken line, from the frame its voice starts - mark the slider's track. A page fading in is sent ONCE, whole, bits
+            # 24-30 of its size the frames the screen takes to blend into it: the eight whole pictures of each fade had been
+            # three quarters of the bytes. (Version 3 also sent a whole screen at each section, for Back and Next, gone in 1.11.90.)
             from PIL import ImageChops
             sections = sorted(set([0] + [s // STEP for s, _ in self.segments if s // STEP >= SFPS]))   # (a line in the first second belongs to the first section)
-            secset = set(sections)
-            blobs, keys, prev = [], [], None
+            fadeAt, inFade = {}, set()                                # (in kept frames: a fade's first, and the rest of it)
+            for s, n in self.fades:
+                j0 = (s + STEP - 1) // STEP; L = min(max(1, int(round(n / STEP))), len(keep) - j0)
+                if L < 1: continue
+                assert j0 not in fadeAt and j0 not in inFade and not inFade.intersection(range(j0, j0 + L)), 'two fades at once'
+                fadeAt[j0] = (L, self.frames[s + n - 1]); inFade.update(range(j0 + 1, j0 + L))
+            blobs, keys, fadeN, prev = [], [], [], None
             crops = []                                                # (index, rectangle, the picture cut out)
             whole = self.W * self.H; since = 0                         # (the area decoded since the last whole picture)
             for i, f in enumerate(keep):
-                full = prev is None or i in secset
+                if i in fadeAt:                                       # the page that fades in, whole; the steps are the screen's
+                    L, page = fadeAt[i]; crops.append(((0, 0, self.W, self.H), page.convert('RGB'))); fadeN.append(L); prev = page; since = 0; continue
+                fadeN.append(0)
+                if i in inFade: crops.append(None); continue
+                full = prev is None
                 box = (0, 0, self.W, self.H) if full else ImageChops.difference(prev, f).getbbox()
                 if box is None: crops.append(None)
                 else:
@@ -369,10 +383,12 @@ class Film:
                     (l, t0, r, b), _ = c
                     blobs.append(struct.pack('<HHHH', l, t0, r - l, b - t0) + j); keys.append((l, t0, r, b) == (0, 0, self.W, self.H))
             print('every picture checked with the screen\'s own decoder against Pillow: %d saved again' % redone)
-            head = b'LDRCFILM' + struct.pack('<HHHHI', 3, self.W, self.H, SFPS, len(keep))
+            head = b'LDRCFILM' + struct.pack('<HHHHI', 4, self.W, self.H, SFPS, len(keep))
             secbytes = struct.pack('<I', len(sections)) + b''.join(struct.pack('<I', s) for s in sections)
             table, data, off = b'', b'', len(head) + 8 * len(keep) + len(secbytes)
-            for bl, k in zip(blobs, keys): table += struct.pack('<II', off if bl else 0, len(bl) | (0x80000000 if k else 0)); data += bl; off += len(bl)
+            for bl, k, fn in zip(blobs, keys, fadeN):
+                assert len(bl) < 1 << 24 and fn < 128
+                table += struct.pack('<II', off if bl else 0, len(bl) | (0x80000000 if k else 0) | (fn << 24)); data += bl; off += len(bl)
             table += secbytes
             ldf = os.path.join(DEST, self.name + '.ldf'); open(ldf, 'wb').write(head + table + data)
             want = {n // STEP: n for n, _, _, _ in self.touches}; got = {}; fb = Image.new('RGB', (self.W, self.H))
@@ -383,10 +399,15 @@ class Film:
             self.check_touches(lambda n: got.get(n), 'in ' + os.path.basename(ldf), 4.0, 1.0)
             import json as _json                                  # (for a review: each touch's kept frame, to look at - pointsheet.py)
             open(os.path.join(self.out, 'touches.json'), 'w').write(_json.dumps([{'frame': n // STEP, 'x': round(x), 'y': round(y)} for n, x, y, _ in self.touches]))
-            wav = os.path.join(DEST, self.name + '.wav')
-            subprocess.run([FF, '-y', '-loglevel', 'error', '-i', tw, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '22050', '-ac', '1', '-c:a', 'pcm_s16le', wav], check=True)
+            # The sound: IMA ADPCM (screen 1.11.93, src/ima_adpcm.h), a quarter of the bytes of 16-bit samples; trellis-searched
+            # (some 2.5 dB better than ffmpeg's plain search). The screen's decoding is ffmpeg's to the bit (hmi/test_film/ima_test.py).
+            wav = os.path.join(DEST, self.name + '.ima')
+            subprocess.run([FF, '-y', '-loglevel', 'error', '-i', tw, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '22050', '-ac', '1', '-c:a', 'adpcm_ima_wav', '-trellis', '8',
+                            '-fflags', '+bitexact', '-map_metadata', '-1', '-f', 'wav', wav], check=True)
+            old = os.path.join(DEST, self.name + '.wav')
+            if os.path.exists(old): os.remove(old)                # (the 16-bit sound of before: a screen plays the .ima when there is one)
             real = sum(1 for bl in blobs if bl)
-            print('film %s: %d frames at %d a second (%.1f s), %d pictures (%d keys), %d sections, %d kB; the largest %d kB; sound %d kB' % (ldf, len(keep), SFPS, len(keep) / SFPS, real, sum(keys), len(sections), os.path.getsize(ldf) // 1024, max(len(bl) for bl in blobs) // 1024, os.path.getsize(wav) // 1024))
+            print('film %s: %d frames at %d a second (%.1f s), %d pictures (%d keys, %d fades), %d sections, %d kB; the largest %d kB; sound %d kB' % (ldf, len(keep), SFPS, len(keep) / SFPS, real, sum(keys), sum(1 for x in fadeN if x), len(sections), os.path.getsize(ldf) // 1024, max(len(bl) for bl in blobs) // 1024, os.path.getsize(wav) // 1024))
             return ldf
         out = os.path.join(self.out, 'LDRC-%s-%s.mp4' % (self.name.lower(), self.voice_name.replace('_', '-')))
         p = subprocess.Popen([FF, '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '%dx%d' % (self.W, self.H), '-r', str(FPS), '-i', '-', '-i', tw,

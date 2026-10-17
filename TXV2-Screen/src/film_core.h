@@ -7,8 +7,12 @@
 // on top of the picture before it, so from version 2 on no picture is ever skipped (nextPicture), however late.
 // Version 3 (1.11.88, for Back / Play / Next): a size's top bit marks a key picture - the whole screen, where a jump can
 // start - and after the table come the sections: their number (u32), then each one's first frame (u32; the first 0,
-// rising). A section is one spoken line and what follows it. Written by TXV1B dev/video (LDRC_TARGET=screen),
-// played by src/film_device.h from /hmi/films, its sound beside it (<name>.wav, 22.05 kHz). Why a film at all: film_device.h.
+// rising). A section is one spoken line and what follows it. Version 4 (1.11.93): a fade. A page fading in used to be
+// eight whole pictures of 75 kB, one a step of the fade - three quarters of a film's bytes, and most of the 1 h 50 min an
+// update of the animations took (Malcolm, 17 Oct). Now the page comes once, and bits 24-30 of its size say over how many
+// frames the screen blends into it from what it shows; the frames of the fade have no picture. Sizes are 24 bits (no
+// picture comes near: MAX_PICTURE). Written by TXV1B dev/video (LDRC_TARGET=screen), played by src/film_device.h from
+// /hmi/films, its sound beside it (<name>.ima, IMA ADPCM, from 1.11.93; <name>.wav, 16-bit, before). Why a film: film_device.h.
 #pragma once
 #include <stdint.h>
 #include <string.h>
@@ -18,15 +22,17 @@ struct Header { uint16_t version = 0, w = 0, h = 0, fps = 0; uint32_t frames = 0
 static const uint32_t HEADER_BYTES = 20, MAX_FRAMES = 20000, MAX_PICTURE = 400000;
 inline uint16_t rd16(const uint8_t *p) { return (uint16_t) (p[0] | (p[1] << 8)); }
 inline uint32_t rd32(const uint8_t *p) { return (uint32_t) p[0] | ((uint32_t) p[1] << 8) | ((uint32_t) p[2] << 16) | ((uint32_t) p[3] << 24); }
-// Ours, version 1, the screen's own size, 1 to 30 frames a second, 1 to MAX_FRAMES frames
+// Ours, version 1 to 4, the screen's own size, 1 to 30 frames a second, 1 to MAX_FRAMES frames
 inline bool parseHeader(const uint8_t *b, uint32_t n, Header &h, uint16_t screenW, uint16_t screenH) {
     if (n < HEADER_BYTES || memcmp(b, "LDRCFILM", 8) != 0) return false;
     h.version = rd16(b + 8); h.w = rd16(b + 10); h.h = rd16(b + 12); h.fps = rd16(b + 14); h.frames = rd32(b + 16);
-    return h.version >= 1 && h.version <= 3 && h.w == screenW && h.h == screenH && h.fps >= 1 && h.fps <= 30 && h.frames >= 1 && h.frames <= MAX_FRAMES;
+    return h.version >= 1 && h.version <= 4 && h.w == screenW && h.h == screenH && h.fps >= 1 && h.fps <= 30 && h.frames >= 1 && h.frames <= MAX_FRAMES;
 }
-static const uint32_t KEY_FLAG = 0x80000000u, SIZE_MASK = 0x7FFFFFFFu;
+static const uint32_t KEY_FLAG = 0x80000000u, SIZE_MASK = 0x00FFFFFFu, FADE_SHIFT = 24, FADE_MAX = 0x7F;
 inline uint32_t sizeOf(const uint8_t *t, int32_t i) { return rd32(t + 8 * i + 4) & SIZE_MASK; }
 inline bool isKey(const uint8_t *t, int32_t i) { return (rd32(t + 8 * i + 4) & KEY_FLAG) != 0; }
+// (version 4) The frames picture i fades in over: 0, none - it is drawn at once
+inline uint32_t fadeOf(const uint8_t *t, int32_t i) { return (rd32(t + 8 * i + 4) >> FADE_SHIFT) & FADE_MAX; }
 // The table sound: the first frame a picture, every picture inside the file and after the table (and, version 3, after the
 // sections: extra = their bytes), none too big. maxSize: the largest.
 inline bool tableSound(const uint8_t *t, const Header &h, uint32_t fileSize, uint32_t &maxSize, uint32_t extra = 0) {
@@ -34,8 +40,11 @@ inline bool tableSound(const uint8_t *t, const Header &h, uint32_t fileSize, uin
     const uint32_t dataStart = HEADER_BYTES + 8 * h.frames + extra;
     if (fileSize < dataStart) return false;
     for (uint32_t i = 0; i < h.frames; ++i) {
-        const uint32_t off = rd32(t + 8 * i), size = sizeOf(t, (int32_t) i);
+        const uint32_t off = rd32(t + 8 * i), size = sizeOf(t, (int32_t) i), fade = fadeOf(t, (int32_t) i);
         if (h.version < 3 && isKey(t, (int32_t) i)) return false;
+        // (version 4) a fade: a key picture (the whole screen), ending inside the film, no picture in its frames
+        if (fade && (h.version < 4 || size == 0 || !isKey(t, (int32_t) i) || fade > h.frames - i)) return false;
+        for (uint32_t j = 1; j < fade; ++j) if (sizeOf(t, (int32_t) (i + j))) return false;
         if (size == 0) { if (i == 0) return false; continue; }
         if (off < dataStart || off > fileSize || size > fileSize - off || size > MAX_PICTURE || (h.version >= 2 && size <= 8)) return false;
         if (size > maxSize) maxSize = size;
@@ -74,6 +83,28 @@ inline int32_t nextPicture(int32_t want, int32_t last, const uint8_t *t) {
 inline int32_t keyAtOrBefore(int32_t f, const uint8_t *t, uint16_t version) {
     for (int32_t i = f; i >= 0; --i) if (sizeOf(t, i) && (i == 0 || version < 2 || isKey(t, i))) return i;
     return -1;
+}
+// (version 4) How much of the picture fading in is on the screen, of 256, j frames after its own (0: its first) in a fade
+// of n frames: the film kit's own curve (smoothstep, ease((j + 1) / n)), the whole picture from the fade's last frame on
+inline uint32_t fadeShare(int32_t j, uint32_t n) {
+    if (j < 0) return 0;
+    if (n == 0 || (uint32_t) j + 1 >= n) return 256;
+    const uint64_t t = ((uint64_t) (j + 1) << 16) / n;                    // (of 65536)
+    return (uint32_t) (((t * t >> 16) * (3 * 65536 - 2 * t) >> 16) >> 8);
+}
+// One step of a fade: a pixel moved a of 256 of its way from `from` to `to`, each colour of RGB565 apart, rounded
+inline uint16_t mix565(uint16_t from, uint16_t to, uint32_t a) {
+    const uint32_t k = 256 - a;
+    const uint32_t r = ((from >> 11) * k + (to >> 11) * a + 128) >> 8, g = (((from >> 5) & 63) * k + ((to >> 5) & 63) * a + 128) >> 8,
+                   b = ((from & 31) * k + (to & 31) * a + 128) >> 8;
+    return (uint16_t) ((r << 11) | (g << 5) | b);
+}
+// The step that takes a screen showing `shown` of 256 of the new picture to `want` of 256: each pixel moves this much of
+// what is left of its way (the screen keeps no copy of the page it fades from: it is in the pixels)
+inline uint32_t fadeStepOf(uint32_t shown, uint32_t want) {
+    if (want >= 256) return 256;
+    if (want <= shown) return 0;
+    return ((want - shown) * 256 + (256 - shown) / 2) / (256 - shown);
 }
 // The sections (version 3): n of them, at least one, the first at frame 0, rising, inside the film
 static const uint32_t MAX_SECTIONS = 200;

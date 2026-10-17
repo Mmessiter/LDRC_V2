@@ -28,6 +28,10 @@ static TaskHandle_t updTaskHandle = nullptr;
 static WiFiClientSecure *updTls = nullptr; static HTTPClient *updHttp = nullptr;
 static uint8_t *updBuf = nullptr; static const size_t UPD_BUF = 16384;
 static volatile uint32_t updFreeKb = 0; static volatile bool updFreeKnown = false;      // the card's free space: asking takes seconds the first time, so the task asks
+// (1.11.93) Where a fetch's time goes, file by file (ScreenHost::fetchNotes): asking for it, the bytes coming, writing them to
+// the card, reading the card back, asking the card's free space; and the WiFi's strength after each
+static volatile uint32_t updAskMs = 0, updReadMs = 0, updCardUs = 0, updCheckMs = 0, updFreeMs = 0, updFiles = 0;
+static volatile int32_t updRssiSum = 0, updRssiMin = 0;
 
 static void updHangUp() { if (updHttp) updHttp->end(); if (updTls) updTls->stop(); }
 static volatile bool updNoMemory = false;                   // (1.11.32) the last ask failed for want of memory: mbedTLS could not get its buffers (-0x7F00), or there is plainly no room
@@ -131,20 +135,29 @@ static void updFetchText(ldrc::Work &w) {
 static void updFetchFile(ldrc::Work &w) {
     int len = 0;
     if (!sdOk) { w.error = "the screen's card is not there"; return; }
-    if (!updAsk(updJob.url, len, w.error)) return;
+    const uint32_t asked = millis();
+    const bool answered = updAsk(updJob.url, len, w.error);
+    updAskMs += millis() - asked;
+    if (!answered) return;
     if ((uint32_t) len != updJob.size) { w.error = "its length is not what the list names"; updHangUp(); return; }
     const std::string part = updJob.local + ".part";
     sdMakeFolders(part.c_str()); SD.remove(part.c_str());
     File f = SD.open(part.c_str(), FILE_WRITE);
     if (!f) { w.error = "the screen's card would not take it"; updHangUp(); return; }
     uint32_t crc = 0;
-    const bool got = updRead(len, w.error, [&](const uint8_t *b, size_t n) { crc = ldrc::crc32(b, n, crc); return f.write(b, n) == n; });
+    const uint32_t reading = millis();
+    const bool got = updRead(len, w.error, [&](const uint8_t *b, size_t n) { crc = ldrc::crc32(b, n, crc); const uint32_t t = micros(); const bool ok = f.write(b, n) == n; updCardUs += micros() - t; return ok; });
     f.close();
+    updReadMs += millis() - reading;
     if (got && crc != updJob.crc) { w.error = "what arrived is not what the list names"; }
     if (!got || crc != updJob.crc) { SD.remove(part.c_str()); return; }
     // What arrived was right. Is what the CARD holds? (close() does not say when the card is full.)
     uint32_t size = 0, held = 0;
-    if (!updReadBack(part, size, held) || size != (uint32_t) len || held != crc) { SD.remove(part.c_str()); w.error = updStop ? "cancelled" : "the screen's card did not keep what was written (is it full?)"; return; }
+    const uint32_t checking = millis();
+    const bool back = updReadBack(part, size, held);
+    updCheckMs += millis() - checking;
+    { const int32_t r = WiFi.RSSI(); updRssiSum += r; if (!updFiles || r < updRssiMin) updRssiMin = r; updFiles++; }
+    if (!back || size != (uint32_t) len || held != crc) { SD.remove(part.c_str()); w.error = updStop ? "cancelled" : "the screen's card did not keep what was written (is it full?)"; return; }
     if (!updReplace(part, updJob.local, false)) { SD.remove(part.c_str()); w.error = "the screen's card would not take it"; return; }
     w.size = (uint32_t) len; w.crc = crc; w.ok = true;
 }
@@ -235,8 +248,10 @@ static void updTask(void *) {
         if (updStop && !w.ok) w.error = "cancelled";
         if (!w.ok && updNoMemory && !updStop) w.memory = true;
         if (sdOk && (!updFreeKnown || updJob.kind == 2)) {
+            const uint32_t asking = millis();
             const uint64_t total = SD.totalBytes(), used = SD.usedBytes();
             if (total > 0 && used <= total) { updFreeKb = (uint32_t) ((total - used) / 1024); updFreeKnown = true; }      // (a card that answers nothing is asked again)
+            if (updJob.kind == 2) updFreeMs += millis() - asking;
         }
         enableCore0WDT();
         updWork = w;
@@ -358,7 +373,16 @@ struct ScreenHost : public ldrc::UpdateHost {
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
     bool reject() override { flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // comes back only if there is nothing to go back to
     void restart() override { flushOut(); delay(200); ESP.restart(); }
-    uint32_t roomForTls() override { return (uint32_t) ESP.getMaxAllocHeap(); }   // (1.11.31) the largest piece of internal memory: mbedTLS takes its buffers from nowhere else (CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC)
+    uint32_t roomForTls() override { return (uint32_t) ESP.getMaxAllocHeap(); }
+    void fetchBegins() override { updAskMs = 0; updReadMs = 0; updCardUs = 0; updCheckMs = 0; updFreeMs = 0; updFiles = 0; updRssiSum = 0; updRssiMin = 0; }
+    std::string fetchNotes() override {                     // (1.11.93) "where the time went: ..." (see updAskMs)
+        if (!updFiles) return "";
+        auto t = [](uint32_t ms) { char b[24]; if (ms >= 60000) snprintf(b, sizeof b, "%lu min %lu s", (unsigned long) (ms / 60000), (unsigned long) (ms / 1000 % 60)); else snprintf(b, sizeof b, "%.1f s", ms / 1000.0); return std::string(b); };
+        const uint32_t card = updCardUs / 1000, net = updReadMs > card ? updReadMs - card : 0;
+        char b[300]; snprintf(b, sizeof b, "where the time went (%lu files): asking %s, the network %s, writing the card %s, reading it back %s, its free space %s; WiFi %ld dBm on average, %ld at worst",
+                              (unsigned long) updFiles, t(updAskMs).c_str(), t(net).c_str(), t(card).c_str(), t(updCheckMs).c_str(), t(updFreeMs).c_str(), (long) (updRssiSum / (int32_t) updFiles), (long) updRssiMin);
+        return b;
+    }   // (1.11.31) the largest piece of internal memory: mbedTLS takes its buffers from nowhere else (CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC)
 };
 static ScreenHost updHost;
 static ldrc::Updater updater(updHost, teensyLink, LATEST_URL);

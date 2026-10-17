@@ -14,6 +14,13 @@ for f in ../sd/hmi/films/*.ldf; do                         # (1.11.88) each film
     echo "film $(basename "$f"): $(echo "$out" | grep -E 'checks, [0-9]+ failures' | tr '\n' ' ')"; echo "$out" | grep FAIL | head -5
     [ $code -ne 0 ] && bad=1
 done
+FILMPY="/Volumes/2TB SSD/ClaudeScratch/films/venv/bin/python"; [ -x "$FILMPY" ] || FILMPY=python3
+for f in ../sd/hmi/films/*.ima; do                         # (1.11.93) each film's sound: the screen's decoding is ffmpeg's, bit for bit
+    [ -f "$f" ] || continue
+    out=$("$FILMPY" test_film/ima_test.py "$f" 2>&1); code=$?
+    if echo "$out" | grep -q "No such file\|ModuleNotFound\|not found"; then echo "sound $(basename "$f"): no ffmpeg here, not checked"; continue; fi
+    echo "sound $(basename "$f"): $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -5; [ $code -ne 0 ] && bad=1
+done
 out=$(python3 test_film/flow_test.py 2>&1); code=$?          # film_device.h itself: the menu, pause, Back, Next, the keep-awake
 echo "films flow: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
 gate="$HOME/Documents/GitHub/TXV1B/dev/test_release_gate.py"

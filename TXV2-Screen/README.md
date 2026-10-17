@@ -31,10 +31,10 @@
    - Tap **WiFi setup**. Pick your network and type its password on the screen. The password is kept in the chip, never on the card.
    - The screen offers the latest release. Press **Install now**.
    - It fetches the whole card and the published firmware, then restarts as a complete screen. The help animations are most of
-     the card (about 8 MB each, one for every help page), so the first fetch takes a while.
+     the card (one for every help page), so the first fetch takes a while.
    - (Or copy `sd/` to the card first. It then fetches only what differs. The animations themselves, `sd/hmi/films/*.ldf` and
-     `*.wav`, are not kept in this repository: they are large and remade from scripts, and the release on messiter.com
-     carries them.)
+     their sound, `*.ima` (or `*.wav`), are not kept in this repository: they are large and remade from scripts, and the
+     release on messiter.com carries them.)
 5. **Connect it to the Teensy**, on the Version 1 board's Nextion header:
 
    | Screen port J10 (HY2.0, 4-pin) | Goes to |

@@ -3,7 +3,8 @@
 stopping - compiled with a stand-in screen (touch, clock, card = this project's sd folder, layer, sound) and the real
 decoder (JPEGDEC from .pio/libdeps), and driven as a pilot would: Help, Films, a film, a tap, OK; the safety off; the
 page gone; a film's end.
-   python3 hmi/test_film/flow_test.py"""
+   python3 hmi/test_film/flow_test.py [CARD]      (CARD: another card's folder than this project's sd - 1.11.93: one with
+                                                   films of version 4 and their .ima sound)"""
 import os, subprocess, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 LIB = os.path.join(ROOT, '.pio', 'libdeps', 'ota', 'JPEGDEC', 'src')
@@ -61,7 +62,7 @@ static std::string sentToTeensy; static void flushOut() {}
 struct FakeSerial { size_t write(const uint8_t *b, size_t n) { sentToTeensy.append((const char *) b, n); return n; } } Serial;
 static int awakes() { int n = 0; size_t at = 0; while ((at = sentToTeensy.find("LDRCAWAKE", at)) != std::string::npos) { ++n; at += 9; } return n; }
 static void audioStop() { audioId = -1; audioPath.clear(); }
-static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0;
+static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0, filmFadeSteps = 0, filmFadeMax = 0;
 #include "@DEV@"
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -203,6 +204,47 @@ int main() {
     // 16. the help page left while a film plays: it stops and everything of ours goes
     tap(80, 30); run(300); CHECK(filmPlaying);
     page.name = "RFView"; run(50); CHECK(!filmPlaying && !filmUp() && !filmMenuUp() && !filmButtonUp() && !topOn);
+    // 18. (1.11.93) version 4: a page fading in is sent once and the screen blends into it, a step a frame, ending on it
+    // exactly; paused half way it waits, and goes on from there; the slider into a fade shows the page whole
+    { page.name = "LogView"; filmStop(); filmName = "EASY"; CHECK(filmStart());
+      int32_t k = -1; uint32_t n = 0;
+      for (uint32_t i = 0; i < filmHead.frames && k < 0; ++i) if (ldrcfilm::fadeOf(filmTable, (int32_t) i)) { k = (int32_t) i; n = ldrcfilm::fadeOf(filmTable, k); }
+      if (k < 0) printf("fades: none in this card's EASY (version %u): not checked\n", (unsigned) filmHead.version);
+      else {
+          auto playTo = [&](int32_t f) { filmStop(); filmName = "EASY"; filmStart(); while (ldrcfilm::frameAt(nowMs - filmStartMs, filmHead) < f) { nowMs += 10; filmPoll(); } for (int i = 0; i < 20; ++i) filmPoll(); return std::vector<uint16_t>(topFb, topFb + W * H); };
+          const std::vector<uint16_t> A = playTo(k - 1), M = playTo(k + (int32_t) n / 2 - 1), B = playTo(k + (int32_t) n + 2);
+          const uint32_t share = ldrcfilm::fadeShare((int32_t) n / 2 - 1, n);
+          long moved = 0, worst = 0;
+          for (int i = 0; i < W * H; ++i) {
+              if (A[i] == B[i]) continue;
+              ++moved;
+              const int ch[3][2] = {{11, 31}, {5, 63}, {0, 31}};
+              for (auto &c : ch) {
+                  const int a = (A[i] >> c[0]) & c[1], b = (B[i] >> c[0]) & c[1], m = (M[i] >> c[0]) & c[1], want = (a * (256 - (int) share) + b * (int) share + 128) >> 8;
+                  worst = std::max(worst, (long) std::abs(m - want));
+              }
+          }
+          CHECK(moved > 10000 && worst <= 2);
+          printf("fade at frame %d over %u frames: half way (%u of 256) every changing pixel within %ld of a straight blend\n", (int) k, (unsigned) n, (unsigned) share, worst);
+          // paused half way: nothing moves while it waits; Play: on from there, to the page exactly
+          playTo(k + (int32_t) n / 2 - 1); tap(400, 200); run(50); CHECK(filmPaused && filmFadeK == k);
+          std::vector<uint16_t> held(topFb, topFb + W * H); memcpy(held.data() + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2);
+          run(3000); { std::vector<uint16_t> now(topFb, topFb + W * H); memcpy(now.data() + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2); CHECK(now == held); }
+          int px, py, pw, ph; filmCtlRect(FILM_CTL_PLAY, px, py, pw, ph); tap(px + pw / 2, py + ph / 2);
+          while (ldrcfilm::frameAt(nowMs - filmStartMs, filmHead) < k + (int32_t) n + 2) { nowMs += 10; filmPoll(); }
+          for (int i = 0; i < 20; ++i) filmPoll();
+          const uint32_t steps = filmFadeSteps, longest = filmFadeMax;
+          CHECK(!filmPaused && filmFadeK < 0 && steps >= n / 2 && memcmp(topFb, B.data(), (size_t) W * H * 2) == 0);
+          // the slider into the fade: the page whole at once
+          playTo(k - 1); tap(400, 200); run(50); CHECK(filmPaused);
+          const int sx = ldrcfilm::seekX(k + (int32_t) n / 2, FILM_SEEK_X0, FILM_SEEK_W, filmHead.frames);
+          for (int i = 0; i < 30; ++i) { finger(true, sx, FILM_SEEK_MID); nowMs += 10; filmPoll(); }
+          for (int i = 0; i < 12; ++i) { finger(false, 0, 0); nowMs += 10; filmPoll(); }
+          CHECK(filmLast == filmSeekWant && filmFadeK < 0 && memcmp(topFb, B.data(), (size_t) W * FILM_BAR_Y * 2) == 0);
+          filmStop();
+          printf("fades: paused half way it waits, Play goes on to the page exactly (%u steps of the screen's, the longest %u us on this Mac); the slider into a fade shows the page\n", (unsigned) steps, (unsigned) longest);
+      }
+    }
     // 17. (1.11.91) the list, ten to a page: a card made up with 25 animations - three pages, the page shown, Next and
     // Previous going round, an empty place on the last page is nothing, a made-up animation that will not play leaves the list up
     SDROOT = "@SD2@"; page.name = "FrontView"; run(5000);
@@ -218,7 +260,7 @@ int main() {
     printf("flow: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
-'''.replace('@SD@', os.path.join(ROOT, 'sd')).replace('@DEV@', os.path.join(ROOT, 'src', 'film_device.h'))
+'''.replace('@SD@', os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, 'sd')).replace('@DEV@', os.path.join(ROOT, 'src', 'film_device.h'))
 with tempfile.TemporaryDirectory() as d:
     sd2 = os.path.join(d, 'sd2'); os.makedirs(os.path.join(sd2, 'hmi', 'films'))   # (step 17's made-up card: 25 animations)
     open(os.path.join(sd2, 'hmi', 'films', 'films.txt'), 'w').write(''.join('T%02d: Made-up animation %d\n' % (i, i) for i in range(1, 26)))

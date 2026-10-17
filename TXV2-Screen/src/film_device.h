@@ -51,6 +51,11 @@ static const int FILM_SEEK_X0 = 112, FILM_SEEK_W = 576, FILM_SEEK_MID = 394, FIL
 static bool filmPaused = false, filmTapDeaf = false, filmCtlHeld = false, filmCtlOnBar = false; static int filmCtlDown = -1; static uint32_t filmTapSeen = 0, filmPosMs = 0;
 static int32_t filmSeekWant = -1; static bool filmSeekHeld = false;   // the frame the slider asks for (-1: none) - the picture follows it - and a finger on it
 static uint16_t *filmStrip = nullptr; static bool filmStripKept = false;
+// (1.11.93, version 4) A page fading in: its picture, whole, kept here while the screen is blended into it a step a frame.
+// The film kit used to send each step as a whole picture, eight a page change; the screen now makes them itself.
+static uint16_t *filmFadeTo = nullptr;
+static int32_t filmFadeK = -1; static uint32_t filmFadeN = 0, filmFadeShown = 0;   // its frame (-1: no fade), the fade's frames, how much of it the screen shows (of 256)
+static std::string filmSound;                                      // (1.11.93) the film's sound: <name>.ima, or the 16-bit <name>.wav of before
 static uint32_t filmAwakeAt = 0;                                   // when the main board was last told someone is watching
 static uint32_t filmStartMs = 0; static int32_t filmLast = -1;
 static JPEGDEC filmJpeg;
@@ -186,21 +191,63 @@ static int filmDraw(JPEGDRAW *p) {
     if (x1 >= x0) dirty(x + x0, y, x1 - x0 + 1, std::min(p->iHeight, barTop - y));
     return 1;
 }
-static bool filmDecode(int32_t k) {
+// (1.11.93) A page to fade into: kept whole, not yet shown
+static int filmDrawTo(JPEGDRAW *p) {
+    if (!filmFadeTo) return 0;
+    const int x = p->x, y = p->y, w = p->iWidth;
+    if (x < 0 || x >= W) return 1;
+    const int n = std::min(p->iWidthUsed > 0 ? p->iWidthUsed : w, W - x);
+    for (int r = 0; r < p->iHeight && y + r < H; ++r) memcpy(filmFadeTo + (y + r) * W + x, p->pPixels + r * w, (size_t) n * 2);
+    return 1;
+}
+// The screen moved a of 256 of the way to the page fading in (256: the page itself); only what changed is marked for the
+// panel. Paused, under the bar, it is what the bar keeps that moves (as filmDraw does).
+static void filmFadeMove(uint32_t a) {
+    if (!filmFadeTo || !topFb || !a) return;
+    const uint32_t t0 = micros();
+    const int barTop = filmStripKept && filmStrip ? FILM_BAR_Y : H;
+    int y0 = H, y1 = -1, x0 = W, x1 = -1;
+    for (int y = 0; y < H; ++y) {                                  // (one pass: each pixel read once, written only if it moves)
+        const uint16_t *to = filmFadeTo + y * W;
+        uint16_t *dst = y >= barTop ? filmStrip + (y - FILM_BAR_Y) * W : topFb + y * W;
+        int f = W, l = -1;
+        for (int x = 0; x < W; ++x) {
+            const uint16_t was = dst[x], want = to[x];
+            if (was == want) continue;
+            dst[x] = a >= 256 ? want : ldrcfilm::mix565(was, want, a);
+            if (f == W) f = x;
+            l = x;
+        }
+        if (l >= 0 && y < barTop) { if (y < y0) y0 = y; y1 = y; if (f < x0) x0 = f; if (l > x1) x1 = l; }
+    }
+    if (y1 >= y0) dirty(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+    const uint32_t us = micros() - t0; filmFadeSteps++; if (us > filmFadeMax) filmFadeMax = us;
+}
+static void filmFadeEnd() { if (filmFadeK >= 0) { filmFadeMove(256); filmFadeK = -1; } }   // a fade not over: its page, whole, now
+// Picture k on the screen. play (1.11.93): it is the film's turn for it, so a page that fades in (version 4) is kept whole and
+// the screen blended into it a frame at a time (filmPoll); else - a jump, or no room for the page - it is drawn at once.
+static bool filmDecode(int32_t k, bool play = false) {
     const uint32_t off = ldrcfilm::rd32(filmTable + 8 * k), size = ldrcfilm::sizeOf(filmTable, k);
     if (!size || size > filmBufSize || !filmFile.seek(off) || filmFile.read(filmBuf, size) != (int) size) return false;
     uint16_t rx, ry, rw, rh; uint32_t jo;                     // (version 2: only the rectangle that changed, drawn where it belongs)
     if (!ldrcfilm::pictureAt(filmBuf, size, filmHead, rx, ry, rw, rh, jo)) return false;
+    filmFadeEnd();                                              // (1.11.93: what comes next is drawn on the whole page)
+    const uint32_t n = play ? ldrcfilm::fadeOf(filmTable, k) : 0;
+    const bool whole = rx == 0 && ry == 0 && rw == W && rh == H;
+    if (n && whole && !filmFadeTo) filmFadeTo = (uint16_t *) ps_malloc((size_t) W * H * 2);
+    const bool fade = n && whole && filmFadeTo;
     const uint32_t t0 = micros();
-    bool ok = filmJpeg.openRAM(filmBuf + jo, (int) (size - jo), filmDraw) != 0;
+    bool ok = filmJpeg.openRAM(filmBuf + jo, (int) (size - jo), fade ? filmDrawTo : filmDraw) != 0;
     if (ok) { filmJpeg.setPixelType(RGB565_LITTLE_ENDIAN); ok = filmJpeg.decode(rx, ry, 0) != 0; filmJpeg.close(); }
     const uint32_t us = micros() - t0; filmDecodeUs = us; if (us > filmDecodeMax) filmDecodeMax = us; filmPictures++;
+    if (ok && fade) { filmFadeK = k; filmFadeN = n; filmFadeShown = 0; }
     return ok;
 }
 
 static void filmStop(bool toMenu = false) {
     if (filmPlaying && audioId == FILM_AUDIO_ID) audioStop();
     filmPlaying = false; filmPaused = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
+    filmFadeK = -1; free(filmFadeTo); filmFadeTo = nullptr;        // (1.11.93: 750 kB back)
     if (filmFile) filmFile.close();
     if (filmUp()) {
         if (toMenu && filmCount) { topWho = FILM_MENU_WHO; filmMenuDown = -1; filmMenuHeld = false; filmMenuDraw(); }   // the films menu again
@@ -232,11 +279,12 @@ static bool filmStart() {
     if (!filmBuf) { filmFile.close(); return false; }
     filmBtnHeld = false;
     topX = 0; topY = 0; topW = W; topH = H; topWho = FILM_WHO; topOn = true;
-    filmLast = -1; filmPictures = filmSkipped = 0; filmDecodeMax = 0; filmPlaying = true;
+    filmLast = -1; filmPictures = filmSkipped = 0; filmDecodeMax = 0; filmFadeSteps = filmFadeMax = 0; filmPlaying = true;
     filmPaused = false; filmTapDeaf = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
     if (!filmDecode(0)) { filmStop(); return false; }          // the first picture before the sound, so they start together
     filmLast = 0;
-    audioStartFile(filmPath(".wav").c_str());
+    filmSound = filmPath(".ima"); if (!SD.exists(filmSound.c_str())) filmSound = filmPath(".wav");   // (1.11.93) the compressed sound, else the 16-bit one
+    audioStartFile(filmSound.c_str());
     filmStartMs = millis();
     return true;
 }
@@ -290,7 +338,7 @@ static void filmBarDown() {                                        // the bar go
     if (filmStripKept) { memcpy(topFb + FILM_BAR_Y * W, filmStrip, (size_t) W * FILM_BAR_H * 2); filmStripKept = false; dirty(0, FILM_BAR_Y, W, FILM_BAR_H); touchPainted = true; }
 }
 static void filmPlayFrom(uint32_t ms) {                            // the sound and the clock from ms
-    filmPosMs = ms; audioStartFile(filmPath(".wav").c_str(), ms);
+    filmPosMs = ms; audioStartFile(filmSound.c_str(), ms);
     filmStartMs = millis() - ms; filmPaused = false;
 }
 static bool filmSeekStep(uint32_t budgetMs) {                      // (1.11.89) the picture nearer the slider's frame, for at most budgetMs; false: the film could not be read (stopped)
@@ -387,6 +435,11 @@ static void filmPoll() {
         if (filmPaused) { if (filmSeekWant >= 0 && filmSeekWant != filmLast) filmSeekStep(25); return; }   // (1.11.89: the picture follows the slider)
         const uint32_t ms = now - filmStartMs;
         const int32_t want = ldrcfilm::frameAt(ms, filmHead) < 0 ? (int32_t) filmHead.frames - 1 : ldrcfilm::frameAt(ms, filmHead);
+        if (filmFadeK >= 0) {                                      // (1.11.93) a page fading in: as far as this frame's share of it
+            const uint32_t share = ldrcfilm::fadeShare(want - filmFadeK, filmFadeN);
+            if (share >= 256) filmFadeEnd();
+            else if (share > filmFadeShown) { filmFadeMove(ldrcfilm::fadeStepOf(filmFadeShown, share)); filmFadeShown = share; }
+        }
         // From version 2 every picture is decoded in its turn, however late (a changed rectangle skipped would leave the old
         // finger drawn where it was - Malcolm: "the indication of the pointer hitting a button was frequently rather
         // inaccurate"); the sound runs on, and the pictures catch up while the voice speaks over a still page.
@@ -394,7 +447,7 @@ static void filmPoll() {
         if (k >= 0) {
             if (filmHead.version < 2) { for (int32_t i = filmLast + 1; i < k; ++i) if (ldrcfilm::sizeOf(filmTable, i)) filmSkipped++; }
             else if ((want - k) * 1000 > 300 * (int32_t) filmHead.fps) filmSkipped++;   // (version 2 on: a picture shown more than 0.3 s late)
-            if (!filmDecode(k)) { filmStop(); return; }
+            if (!filmDecode(k, true)) { filmStop(); return; }
             filmLast = k;
         } else if (ms >= ldrcfilm::lengthMs(filmHead) + 700) { filmStop(filmFromList); return; }   // the end: every picture shown, the last held a moment; then back where it was started (1.11.91: the list, or the help page)
         return;

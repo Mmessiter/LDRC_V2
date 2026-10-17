@@ -53,14 +53,17 @@ int main(int argc, char **argv) {
     int32_t last = -1;
     for (uint32_t frame = 0; frame < h.frames; ++frame) {
         const int32_t k = ldrcfilm::pictureFor((int32_t) frame, last, t);
-        if (k < 0) { ++still; continue; }
-        const uint32_t off = ldrcfilm::rd32(t + 8 * k), size = ldrcfilm::sizeOf(t, k);
-        uint16_t x, y, w, hh; uint32_t jo;
-        if (!ldrcfilm::pictureAt(f.data() + off, size, h, x, y, w, hh, jo)) { ++failed; continue; }
-        dirtyPx = 0;
-        if (!decodeOne(k)) { ++failed; printf("FAILED picture %d at frame %u: %u,%u %ux%u, %u bytes, key %d, JPEGDEC error %d\n", (int) k, (unsigned) frame, x, y, w, hh, (unsigned) size, (int) ldrcfilm::isKey(t, k), jpeg.getLastError()); continue; }
-        totalDirty += dirtyPx; totalArea += (long) w * hh; ++pictures; last = k;
+        if (k < 0) ++still;
+        else {
+            const uint32_t off = ldrcfilm::rd32(t + 8 * k), size = ldrcfilm::sizeOf(t, k);
+            uint16_t x, y, w, hh; uint32_t jo;
+            if (!ldrcfilm::pictureAt(f.data() + off, size, h, x, y, w, hh, jo)) { ++failed; continue; }
+            dirtyPx = 0;
+            if (!decodeOne(k)) { ++failed; printf("FAILED picture %d at frame %u: %u,%u %ux%u, %u bytes, key %d, JPEGDEC error %d\n", (int) k, (unsigned) frame, x, y, w, hh, (unsigned) size, (int) ldrcfilm::isKey(t, k), jpeg.getLastError()); continue; }
+            totalDirty += dirtyPx; totalArea += (long) w * hh; ++pictures; last = k;
+        }
         // (1.11.88) at each section's start: a jump there - its key picture, then every picture after it - gives the same screen
+        // (1.11.93: version 4 sends no picture of its own at a section, so a section may start on a still frame)
         for (uint32_t s = 0; s < nsec; ++s) if ((int32_t) ldrcfilm::rd32(secs + 4 * s) == (int32_t) frame) {
             std::vector<uint16_t> jumped(W * H, 0x1234); uint16_t *keep = topFb; topFb = jumped.data();
             const int32_t k0 = ldrcfilm::keyAtOrBefore((int32_t) frame, t, h.version); bool ok = k0 >= 0 && decodeOne(k0);
@@ -68,7 +71,7 @@ int main(int argc, char **argv) {
             topFb = keep; ++jumps;
             if (!ok || memcmp(jumped.data(), fb.data(), W * H * 2) != 0) ++badJumps;
         }
-        if (pictures == 1 || pictures % 40 == 0 || frame + 1 == h.frames) {
+        if (k >= 0 && (pictures == 1 || pictures % 40 == 0 || frame + 1 == h.frames)) {
             char path[512]; snprintf(path, sizeof path, "%s/pic_%u.565", argv[2], (unsigned) k);
             FILE *o = fopen(path, "wb"); fwrite(fb.data(), 2, W * H, o); fclose(o); printf("SAVED %u\n", (unsigned) k);
         }
