@@ -211,6 +211,7 @@ int main()
         uint16_t at = NO_MARKER;
         for (int k = 0; k < pathLen + 40; ++k) {
             int x; if (k < pathLen) x = PATH[k]; else { seed = seed * 1103515245u + 12345u; x = GRAPH_MARKER_FIRST + (int) ((seed >> 8) % (GRAPH_MARKER_LAST - GRAPH_MARKER_FIRST + 1)); }
+            for (int k = 0; k < CURVE_POINTS_MAX; ++k) { xPoints[k] = 300 + 400 * k; yPoints[k] = 500 + 200 * k; }   // (B120) the flying maths used to leave stick readings here between moves
             stream.clear(); GraphMarkerMove(at, (uint16_t) x); paint(stream); ++moves;
             if (stream.size() > moveBytes) moveBytes = stream.size();
             if (commandsIn(stream) > moveCmds) moveCmds = commandsIn(stream);
@@ -279,6 +280,10 @@ check('DisplayCurve();' in dcs and dcs.index('DisplayCurve();') < dcs.index('Sho
 dc = lift('src/main.cpp', 'FASTRUN void DisplayCurve()')
 check('SavedLineX = NO_MARKER;' in dc and 'CurveSegments(sx1, sy1, sx2, sy2)' in dc and 'adaptiveStep' not in dc, 'DisplayCurve: the segments from CurveSegments, and no marker on the glass after it')
 check(int(re.search(r'#define TXVERSION_EXTRA "B(\d+)', defs).group(1)) >= 117, 'B117 or later')
+csi = lift('src/main.cpp', 'uint16_t CatmullSplineInterpolation(')
+check('xPoints[k] =' not in csi and 'yPoints[k] =' not in csi and 'CatmullSpline(xPoints' not in csi and 'double xs[CURVE_POINTS_MAX], ys[CURVE_POINTS_MAX];' in csi, 'the smooth maths has arrays of its own (B120): the curve page keeps its dots')
+gmm = lift('src/main.cpp', 'FLASHMEM void GraphMarkerMove(')
+check(gmm.index('GetDotPositions();') < gmm.index('if (From >= GRAPH_MARKER_FIRST'), 'the marker mover takes the dots afresh')
 CORE = os.path.expanduser('~/.platformio/packages/framework-arduinoteensy/cores/teensy4/wiring.h')
 if os.path.exists(CORE):
     core = open(CORE).read()

@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## A smooth curve no longer breaks up as the stick moves (Teensy B120, screen 1.11.83 unchanged, 17 Oct 2026)
+
+Malcolm: "if you move the stick side to side quite a few times, the line gets broken up because it's not repaired." Only
+a Smooth curve did it. Its flying maths (CatmullSplineInterpolation, 40 times a second for every smooth channel) filled
+the same xPoints/yPoints arrays the curve page uses for the dots' places on the glass - a sharing that never mattered
+while every move of the marker redrew the whole curve (before B117), but since then the marker's repair took the
+segments through its column from those arrays, now holding stick readings and microseconds: the wrong segments were
+redrawn, so the column it had painted black stayed black, and after many sweeps the curve was a row of gaps. Now the
+smooth maths has arrays of its own, and the marker mover takes the dots' places afresh before every repair. The marker
+test clobbers the arrays between moves as the maths did and still finds every pixel right (it finds 1.9 million wrong
+without the fix); a source check keeps the maths out of the page's arrays.
+
 ## The curve page's upright reference line at the centre (Teensy B119, screen 1.11.83 unchanged, 17 Oct 2026)
 
 Malcolm, of B118 ("Looks good!!!"): "the vertical red centre line should of course be in the centre, and it is where there

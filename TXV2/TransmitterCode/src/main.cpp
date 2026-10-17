@@ -507,14 +507,17 @@ FASTRUN void ShowServoPos()
 // B118: the three shapes over the channel's CurveDotsN points (GetCurveDots: 3, 5, 7 or 9, with the rate applied); the stick's
 // reading at each point from CurveX. With five points every one of these gives exactly what it gave before.
 uint16_t CatmullSplineInterpolation(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel)
-{
+{ // B120: its own arrays - it used the curve page's xPoints/yPoints (the dots' places on the glass), and so, running 40 times a
+  // second for every smooth channel, left them as stick readings and microseconds: the marker's repair (B117) then redrew the
+  // wrong segments and a smooth curve broke up as the stick moved (Malcolm, 17 Oct 2026)
     const uint8_t n = CurveDotsN;
+    double xs[CURVE_POINTS_MAX], ys[CURVE_POINTS_MAX];
     for (uint8_t k = 0; k < n; ++k)
     {
-        xPoints[k] = CurveX(InputChannel, k, n);
-        yPoints[k] = CurveMicros(CurveDots[k]);
+        xs[k] = CurveX(InputChannel, k, n);
+        ys[k] = CurveMicros(CurveDots[k]);
     }
-    return Interpolation::CatmullSpline(xPoints, yPoints, n, InputValue);
+    return Interpolation::CatmullSpline(xs, ys, n, InputValue);
 }
 /*********************************************************************************************************************************/
 uint16_t StraightLineInterpolation(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel)
@@ -2305,6 +2308,7 @@ FLASHMEM void GraphMarkerMove(uint16_t From, uint16_t To)
 {
     char Buffer[512] = "";
     char Cmd[80];
+    GetDotPositions(); // B120: the dots' places afresh (xPoints/yPoints are globals: nothing may be trusted to have left them alone)
     if (From >= GRAPH_MARKER_FIRST && From <= GRAPH_MARKER_LAST)
     { // the old marker's column, then what it covered, in the order DisplayCurve draws
         snprintf(Cmd, sizeof(Cmd), "line %d,%d,%d,%d,%d", From, GRAPH_MARKER_TOP, From, GRAPH_MARKER_BOTTOM, Black);
