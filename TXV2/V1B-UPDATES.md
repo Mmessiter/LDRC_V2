@@ -186,6 +186,19 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The curve page's switches: Smooth or Exponential after Straight (Teensy B115, screen 1.11.81, 17 Oct 2026)
+
+Malcolm: "after selecting Straight, I cannot afterwards select Smooth or Exponential. If I do it just reverts to Straight."
+Two faults, one on each board. The screen flipped a switch at the LIFT of the finger, after its press event had run: page
+21's switches clear the other two in their press event ("if(Smooth.val==1) { Lines.val=0 Exp.val=0 }"), which saw the old
+value - so Straight stayed on beside the one tapped. The main board then read the three and let the last one asked (Lines)
+win whenever two were on; from Smooth, Exponential lost the same way (Smooth is asked after Exp). Screen 1.11.81: a switch,
+dual-state button, checkbox or radio changes as the finger lands, then the press event runs - as a Nextion's does (the
+pages were written for one; the front page's bank buttons expected the same). B115: the tapped switch is the one now on
+that is not the type already chosen, so an older screen's two-on state reads right too; and a read that failed (65535) no
+longer counts as on, nor moves the expo. Host test dev/test_curve_type: every transition on either screen, the failed
+reads, the expo's arithmetic; the screen's order and page 21's events as source (both old versions fail it).
+
 ## The max range's byte right after the record's checksum; the stick calibration checked (Teensy B114, screen 1.11.80 unchanged, 17 Oct 2026)
 
 Malcolm, going to bed: "Tomorrow I will test stick recalibration so during the night you might like to check we have not

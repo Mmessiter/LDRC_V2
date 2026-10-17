@@ -4040,20 +4040,24 @@ FASTRUN void ButtonWasPressed()
         }
 
         if (InStrng(Exrite, TextIn) > 0)
-        { //  *******************
-            if (GetValue(ExpR))
+        { // ******************* the curve page: one of its three switches tapped, or its expo slider moved
+            // B115 (Malcolm, 17 Oct 2026: "after selecting Straight, I cannot afterwards select Smooth or Exponential"): the
+            // tapped switch is the one now ON that is not the type already chosen. Before, the last switch asked (Lines) won
+            // whenever two were on - which the screen left so until 1.11.81 - and a read that failed (65535) counted as on.
+            static_assert(STRAIGHTLINES == 0 && SMOOTHEDCURVES == 1 && EXPONENTIALCURVES == 2, "the switches are asked in that order");
+            uint8_t &Type = InterpolationTypes[Bank][ChanneltoSet - 1];
+            const bool On[3] = {GetValue(Lines) == 1, GetValue(Smooth) == 1, GetValue(ExpR) == 1};
+            for (uint8_t t = 0; t < 3; ++t)
             {
-                InterpolationTypes[Bank][ChanneltoSet - 1] = EXPONENTIALCURVES;
+                if (On[t] && t != Type)
+                {
+                    Type = t;
+                    break;
+                }
             }
-            if (GetValue(Smooth))
-            {
-                InterpolationTypes[Bank][ChanneltoSet - 1] = SMOOTHEDCURVES;
-            }
-            if (GetValue(Lines))
-            {
-                InterpolationTypes[Bank][ChanneltoSet - 1] = STRAIGHTLINES;
-            }
-            Exponential[Bank][ChanneltoSet - 1] = GetValue(Expo) + 50; // Note: Getting this value from slider was not reliable (could not return 36!)
+            const uint32_t Ex = GetValue(Expo); // the number shown (-50 to 150: the slider less 50)
+            if (Ex != 65535)                    // (a read that failed leaves the expo as it was)
+                Exponential[Bank][ChanneltoSet - 1] = Ex + 50; // Note: Getting this value from slider was not reliable (could not return 36!)
             ClearText();
             DisplayCurveAndServoPos();
             return;

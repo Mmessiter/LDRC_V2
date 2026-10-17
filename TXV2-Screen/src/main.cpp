@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.80"
+#define SCREEN_VERSION "1.11.81"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1291,7 +1291,7 @@ struct Host : public NextionHost {
     }
     void click(const std::string &pg, const std::string &nm, bool press) override {
         bool off; Comp *c = get(pg, nm, off); if (off || !c) return;
-        if (c->type == "dual-state button" && !press) { c->val = !c->val; keepTouched(*c); redraw(*c); }
+        if (press && (c->type == "dual-state button" || c->type == "checkbox" || c->type == "switch" || c->type == "radio")) { c->val = c->type == "radio" ? 1 : !c->val; keepTouched(*c); redraw(*c); }   // (1.11.81) as a finger: it changes at the press, then the press event runs
         const int key = c->key, cid = c->id; const std::string pgName = page.name;
         runScript(press ? c->evPress : c->evRelease, nm);
         if (!press && key != 255 && page.name == pgName) openKeyboard(key, cid);   // (1.11.36) a box clicked by the main board opens its keyboard, as a finger would: the adjustments bar's zones edit their values that way
@@ -1962,7 +1962,18 @@ static void pollTouch() {
             c.extra["drag"] = best;
             c.extra["tap"] = best < 0 ? constrain(rbUs(c, x[0], lo, hi), lo, hi) : -1;
         }
-        if (held >= 0) { Comp &c = page.comps[held]; c.pressed = true; dragS0 = c.scroll; if (c.type == "slider" && sliderTo(c, x[0], y[0])) keepTouched(c); if (c.type == "button" || c.type == "slider") redraw(c); runScript(c.evPress, c.name); }
+        if (held >= 0) {
+            Comp &c = page.comps[held]; c.pressed = true; dragS0 = c.scroll;
+            // (1.11.81) As a Nextion does: a switch, dual-state button or checkbox flips as the finger LANDS, a radio turns on, and
+            // the press event then sees the new value. They flipped at the lift, after the press event had run: the curve page's
+            // switches clear the other two in their press event "if(Smooth.val==1)", which saw the old value, so after Straight
+            // neither Smooth nor Exponential could be chosen - two stayed on and the main board kept Straight (Malcolm, 17 Oct 2026).
+            const bool flips = c.type == "dual-state button" || c.type == "checkbox" || c.type == "switch" || c.type == "radio";
+            if (flips) c.val = c.type == "radio" ? 1 : !c.val;
+            if (c.type == "slider" && sliderTo(c, x[0], y[0])) keepTouched(c);
+            if (c.type == "button" || c.type == "slider" || flips) redraw(c);
+            runScript(c.evPress, c.name);
+        }
         else runScript(page.evPress, "");
     } else if (pressed && down && held >= 0 && held < (int) page.comps.size() && page.comps[held].type == "rangebar") {
         Comp &c = page.comps[held]; const int k = rbGet(c, "drag", -1);   // dragging a handle: 5 us steps, never past its neighbours
@@ -1991,10 +2002,7 @@ static void pollTouch() {
         down = false; lastRelease = now;
         host.sys["tch2"] = lastX; host.sys["tch3"] = lastY; host.sys["tch0"] = 0; host.sys["tch1"] = 0;   // the curve page reads where the finger lifted
         if (held >= 0 && held < (int) page.comps.size()) {
-            Comp &c = page.comps[held]; c.pressed = false;
-            if (c.type == "dual-state button") c.val = !c.val;
-            if (c.type == "checkbox" || c.type == "switch") c.val = !c.val;
-            if (c.type == "radio") c.val = 1;
+            Comp &c = page.comps[held]; c.pressed = false;   // (a switch, dual-state button, checkbox or radio changed as the finger landed, above)
             if (c.type == "textselect") {
                 if (!dragged) c.scroll = listWrap(c, floorDiv(lastY - listBandY(c) + c.scroll, listRowH(c)) * listRowH(c));   // a tap turns the wheel to that row
                 listSnap(c);
