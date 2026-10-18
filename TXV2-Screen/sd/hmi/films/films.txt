@@ -1,7 +1,8 @@
 # The animations (screen 1.11.91). "<NAME>: <title>" lines are the list, in its order, ten to a page. The animation is
-# /hmi/films/<NAME>.ldf with its sound <NAME>.wav, made by TXV1B dev/video/films/<name>.py with LDRC_TARGET=screen.
-# A help page plays the animation of its own name (help FRONT.TXT plays FRONT.ldf) from its "Animation" button, or the
-# one a "<HELP>=<NAME>" line gives it. (Up to 96; a title up to 40 characters.)
+# /hmi/films/<NAME>.ldf with its sound <NAME>.ima (1.11.93; or the 16-bit <NAME>.wav of before), made by TXV1B
+# dev/video/films/<name>.py with LDRC_TARGET=screen. A help page plays the animation of its own name (help FRONT.TXT plays
+# FRONT.ldf) from its "Animation" button, or the one a "<HELP>=<NAME>" line gives it. (Up to 96; a title up to 40
+# characters.) The problems and their animations are listed in problems.txt (1.11.94: "Fix problems").
 FRONT: The front page
 TXSETUP: Transmitter setup
 CALIB: Calibrating the sticks

@@ -1,0 +1,2 @@
+Designed 18 Oct 2026 with Qwen3-TTS-12Hz-1.7B-VoiceDesign (mlx-audio), saying woman.ref.txt, from:
+A warm, friendly British woman in her forties with a clear southern English accent, like a patient and encouraging teacher. She speaks clearly at a relaxed pace, sounding cheerful, kind and genuinely interested.

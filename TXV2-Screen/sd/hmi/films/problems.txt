@@ -1,0 +1,14 @@
+# Fix problems (screen 1.11.94): common helicopter problems, each with an animation of its likely cure. "<NAME>: <title>"
+# lines are the list, in its order, as films.txt's: the animation is /hmi/films/<NAME>.ldf with its sound <NAME>.ima, made
+# by TXV1B dev/video/films/<name>.py with LDRC_TARGET=screen. Every help page's "Fix problems" button (top right) opens it,
+# and so does the list of all the animations (bottom left). A line whose animation is not on the card is left out.
+TAILWAG: Tail wags
+TAILKICK: Tail kicks or bounces
+WOBBLE: Wobbles or shakes
+DRIFT: Mushy or drifts
+FEEL: Too twitchy or too slow
+FLIPBNC: Bounces after a flip
+HEADSAG: Head speed sags
+BUZZ: Servos buzz or run hot
+NOARM: Will not arm
+GLITCH: Radio glitches

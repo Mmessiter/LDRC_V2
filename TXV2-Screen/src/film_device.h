@@ -13,6 +13,13 @@
 // Back, Play, Next, Films; 1.11.89: a slider above them, to any moment; 1.11.90: Play, Films, Exit - the slider does what
 // Back and Next did); the safety going off or the motor on, the page going, and the film's end stop it. The format and its sums: film_core.h (host-tested,
 // hmi/test_film); the films are made by TXV1B dev/video (LDRC_TARGET=screen).
+// 1.11.94 (18 Oct 2026). Malcolm: "Some of the animations begin without first clearing the screen which looks untidy" - a
+// film started from its help page's button decoded its first picture into our layer, which still held an older picture
+// (the last film's), and marked for the panel only the pixels that differed: wherever the two matched, the help page stayed
+// in view. The first picture is now shown whole. And: "We might even include a sub menu that lists common rc heli flying
+// issues linked to animations that can help correct that issue" - /hmi/films/problems.txt lists them ("<NAME>: <title>",
+// as films.txt); every help page shows "Fix problems" top right (where other pages have Help), and the list of all the
+// animations has it bottom left: it opens that list, whose own bottom left goes back to "Animations".
 #pragma once
 #include <JPEGDEC.h>
 #include "film_core.h"
@@ -26,6 +33,9 @@ static const uint32_t FILM_HELP_WINDOW_MS = 4000;              // a Help tap thi
 // with an animation of its own shows "Animation", which plays it; the paused bar's "Animations" opens the list of them all,
 // ten to a page (there will be one for each help page). An animation returns to where it was started from.
 static const int FILM_MAX = 96, FILM_OK = 99, FILM_PREV = 98, FILM_NEXT = 97, FILM_PER_PAGE = 10;   // the list: two columns of five a page; < Previous, Next >, OK
+static const int FILM_SWAP = 100;                                // (1.11.94) the list's bottom left: "Fix problems" in the list of them all, "Animations" in the problems list
+static const int FILM_FIX_X = 620, FILM_FIX_W = 170;            // (1.11.94) the help page's "Fix problems": top right, where other pages have Help (a help page has none)
+static_assert(FILM_BTN_WHO == TOP_TWIN_WHO, "the help page's buttons are the layer's two stretches (main.cpp)");
 static int filmMenuPage = 0;                                     // the list's page shown
 static std::string filmListText, filmOwn;                        // films.txt as read; this help page's own animation ("": none)
 static bool filmFromList = false;                                // the animation playing was chosen from the list (else: the help page's button)
@@ -34,6 +44,9 @@ static uint32_t filmTopicAt = 0;
 static bool filmLatched = false, filmHas = false;               // the help page is up (a Help tap named it); it has an animation of its own on the card
 static bool filmBtnHeld = false, filmBtnDrawnDown = false; static uint32_t filmBtnSeen = 0;
 static ldrcfilm::Entry filmList[FILM_MAX]; static int filmCount = 0;   // (1.11.87) the menu's films, in films.txt's order, those on the card
+static ldrcfilm::Entry filmProb[FILM_MAX]; static int filmProbCount = 0;   // (1.11.94) the problems, in problems.txt's order, those whose animation is on the card
+static int filmMenuList = 0;                                     // (1.11.94) the list shown: 0 every animation, 1 the problems
+static bool filmBtnOwn = false, filmBtnFix = false; static int filmBtnWhich = 0;   // (1.11.94) the help page's buttons shown (Animation, Fix problems); the one held (0, 1)
 static int filmMenuDown = -1; static uint32_t filmMenuSeen = 0; static bool filmMenuHeld = false;
 static bool filmMenuDeaf = false;                               // the finger that stopped a film: the menu ignores it until it lifts
 static File filmFile; static ldrcfilm::Header filmHead;
@@ -76,16 +89,21 @@ static void filmNoteHelp(const std::string &script) {
 }
 static std::string filmName;                                     // the film playing
 static std::string filmPath(const char *ext) { return "/hmi/films/" + filmName + ext; }   // (under /hmi: the folders every screen's updater takes - a /films of its own would have made an older screen refuse the release)
-static void filmReadList() {                                     // the menu's films: films.txt's lines "<NAME>: <title>", those whose film is on the card
-    filmCount = 0; filmListText.clear();
-    if (!sdOk) return;
-    std::string &list = filmListText;
-    File l = SD.open("/hmi/films/films.txt"); if (l) { while (l.available() && list.size() < 16384) list += (char) l.read(); l.close(); }
+static int filmReadFile(const char *path, std::string &list, ldrcfilm::Entry *out) {   // a list's lines "<NAME>: <title>", those whose film is on the card
+    list.clear(); int count = 0;
+    File l = SD.open(path); if (l) { while (l.available() && list.size() < 16384) list += (char) l.read(); l.close(); }
     static ldrcfilm::Entry all[FILM_MAX * 2]; const int n = ldrcfilm::parseFilms(list.c_str(), all, FILM_MAX * 2);
-    for (int i = 0; i < n && filmCount < FILM_MAX; ++i) {
-        const std::string path = std::string("/hmi/films/") + all[i].name + ".ldf";
-        if (SD.exists(path.c_str())) filmList[filmCount++] = all[i];
+    for (int i = 0; i < n && count < FILM_MAX; ++i) {
+        const std::string film = std::string("/hmi/films/") + all[i].name + ".ldf";
+        if (SD.exists(film.c_str())) out[count++] = all[i];
     }
+    return count;
+}
+static void filmReadList() {                                     // the menu's films (films.txt) and (1.11.94) the problems (problems.txt)
+    filmCount = filmProbCount = 0; filmListText.clear();
+    if (!sdOk) return;
+    filmCount = filmReadFile("/hmi/films/films.txt", filmListText, filmList);
+    std::string problems; filmProbCount = filmReadFile("/hmi/films/problems.txt", problems, filmProb);
 }
 
 static void filmBevel(int x, int y, int w, int h, bool down, const std::string &label) {   // a button as the pages draw theirs (on our layer: TopDraw first)
@@ -105,33 +123,49 @@ static void filmDrawButton(bool down) {
     filmBtnDrawnDown = down;
     dirty(FILM_BTN_X, FILM_BTN_Y, FILM_BTN_W, FILM_BTN_H); touchPainted = true;
 }
-static void filmButtonShow() {
+static void filmDrawFix(bool down) {                             // (1.11.94) the help page's "Fix problems", top right
     if (!topReady()) return;
-    topX = FILM_BTN_X; topY = FILM_BTN_Y; topW = FILM_BTN_W; topH = FILM_BTN_H; topWho = FILM_BTN_WHO; topOn = true;
-    filmDrawButton(false);
+    { TopDraw td; filmBevel(FILM_FIX_X, FILM_BTN_Y, FILM_FIX_W, FILM_BTN_H, down, "Fix problems"); }
+    dirty(FILM_FIX_X, FILM_BTN_Y, FILM_FIX_W, FILM_BTN_H); touchPainted = true;
+}
+static void filmButtonShow() {                                   // the help page's buttons: Animation (its own film), Fix problems (1.11.94): either or both
+    if (!topReady()) return;
+    filmBtnOwn = filmHas; filmBtnFix = filmProbCount > 0;
+    if (!filmBtnOwn && !filmBtnFix) return;
+    topY = FILM_BTN_Y; topH = FILM_BTN_H; top2X = 0; top2W = 0;
+    if (filmBtnOwn) { topX = FILM_BTN_X; topW = FILM_BTN_W; if (filmBtnFix) { top2X = FILM_FIX_X; top2W = FILM_FIX_W; } }   // (two stretches of the layer: the title between them stays the page's)
+    else { topX = FILM_FIX_X; topW = FILM_FIX_W; }
+    topWho = FILM_BTN_WHO; topOn = true;
+    if (filmBtnOwn) filmDrawButton(false);
+    if (filmBtnFix) filmDrawFix(false);
 }
 static void filmButtonHide() {
-    if (filmButtonUp()) { topOn = false; topWho = 0; dirty(FILM_BTN_X, FILM_BTN_Y, FILM_BTN_W, FILM_BTN_H); touchPainted = true; }
-    filmBtnHeld = false;
+    if (filmButtonUp()) { topOn = false; topWho = 0; dirty(FILM_BTN_X, FILM_BTN_Y, FILM_BTN_W, FILM_BTN_H); dirty(FILM_FIX_X, FILM_BTN_Y, FILM_FIX_W, FILM_BTN_H); touchPainted = true; }
+    filmBtnHeld = false; top2W = 0;
 }
 
 // ------------------------------------------------------------------ the films menu (1.11.87): the help page's look - its title bar, its navy card - and the pages' buttons
-static int filmMenuPages() { return filmCount > FILM_PER_PAGE ? (filmCount + FILM_PER_PAGE - 1) / FILM_PER_PAGE : 1; }
-static void filmMenuRect(int i, int &x, int &y, int &w, int &h) {   // (1.11.91) the bottom row in the system pages' slots: < Previous, Next >, OK bottom right
+static int filmMenuCount() { return filmMenuList ? filmProbCount : filmCount; }   // (1.11.94) the list shown: the problems, or every animation
+static const ldrcfilm::Entry &filmMenuEntry(int i) { return filmMenuList ? filmProb[i] : filmList[i]; }
+static bool filmMenuSwaps() { return filmMenuList || filmProbCount > 0; }   // (the other list's button: in the problems list always; in the list of them all while there are problems)
+static int filmMenuPages() { return filmMenuCount() > FILM_PER_PAGE ? (filmMenuCount() + FILM_PER_PAGE - 1) / FILM_PER_PAGE : 1; }
+static void filmMenuRect(int i, int &x, int &y, int &w, int &h) {   // (1.11.91) the bottom row in the system pages' slots: the other list (1.11.94), < Previous, Next >, OK bottom right
     y = 414; w = 180; h = 52;
     if (i == FILM_OK) { x = 605; return; }
+    if (i == FILM_SWAP) { x = 14; return; }
     if (i == FILM_NEXT) { x = 408; return; }
     if (i == FILM_PREV) { x = 211; return; }
     const int k = i % FILM_PER_PAGE; x = 40 + (k % 2) * 366; y = 68 + (k / 2) * 62; w = 354; h = 54;
 }
 static int filmMenuAt(int px, int py) {
     auto in = [&](int i) { int x, y, w, h; filmMenuRect(i, x, y, w, h); return px >= x && px < x + w && py >= y && py < y + h; };
-    for (int i = filmMenuPage * FILM_PER_PAGE; i < filmCount && i < (filmMenuPage + 1) * FILM_PER_PAGE; ++i) if (in(i)) return i;
+    for (int i = filmMenuPage * FILM_PER_PAGE; i < filmMenuCount() && i < (filmMenuPage + 1) * FILM_PER_PAGE; ++i) if (in(i)) return i;
     if (in(FILM_OK)) return FILM_OK;
+    if (filmMenuSwaps() && in(FILM_SWAP)) return FILM_SWAP;
     if (filmMenuPages() > 1) { if (in(FILM_PREV)) return FILM_PREV; if (in(FILM_NEXT)) return FILM_NEXT; }
     return -1;
 }
-static std::string filmMenuLabel(int i) { return i == FILM_OK ? "OK" : i == FILM_PREV ? "< Previous" : i == FILM_NEXT ? "Next >" : std::string(filmList[i].title); }
+static std::string filmMenuLabel(int i) { return i == FILM_OK ? "OK" : i == FILM_PREV ? "< Previous" : i == FILM_NEXT ? "Next >" : i == FILM_SWAP ? (filmMenuList ? "Animations" : "Fix problems") : std::string(filmMenuEntry(i).title); }
 static void filmMenuDrawButton(int i, bool down) {
     int x, y, w, h; filmMenuRect(i, x, y, w, h);
     { TopDraw td; filmBevel(x, y, w, h, down, filmMenuLabel(i)); }
@@ -144,26 +178,31 @@ static void filmMenuDraw() {
         TopDraw td;
         gfx->fillRect(0, 0, W, 58, 2214);                         // the title bar, as the help page's
         gfx->fillRect(0, 58, W, H - 58, 4426);                    // its navy card
-        const std::string title = "Animations";
+        const std::string title = filmMenuList ? "Fix problems" : "Animations";
         drawGlyphs((W - textWidth(0, title)) / 2, (58 - fontHeight(0)) / 2, 0, 0xFFFF, title);
         const std::string hint = "While an animation plays, tap it to pause.";
         drawGlyphs(40, 378 + (30 - fontHeight(2)) / 2, 2, 0xFFFF, topCut(hint, 2, 720));
-        for (int i = filmMenuPage * FILM_PER_PAGE; i < filmCount && i < (filmMenuPage + 1) * FILM_PER_PAGE; ++i) { int x, y, w, h; filmMenuRect(i, x, y, w, h); filmBevel(x, y, w, h, false, filmList[i].title); }
+        for (int i = filmMenuPage * FILM_PER_PAGE; i < filmMenuCount() && i < (filmMenuPage + 1) * FILM_PER_PAGE; ++i) { int x, y, w, h; filmMenuRect(i, x, y, w, h); filmBevel(x, y, w, h, false, filmMenuEntry(i).title); }
         int x, y, w, h; filmMenuRect(FILM_OK, x, y, w, h); filmBevel(x, y, w, h, false, "OK");
+        if (filmMenuSwaps()) { filmMenuRect(FILM_SWAP, x, y, w, h); filmBevel(x, y, w, h, false, filmMenuLabel(FILM_SWAP)); }
         if (filmMenuPages() > 1) {
             for (int b : {FILM_PREV, FILM_NEXT}) { filmMenuRect(b, x, y, w, h); filmBevel(x, y, w, h, false, filmMenuLabel(b)); }
-            char pg[24]; snprintf(pg, sizeof pg, "Page %d of %d", filmMenuPage + 1, filmMenuPages());
-            drawGlyphs(14 + (180 - textWidth(2, pg)) / 2, 414 + (52 - fontHeight(2)) / 2, 2, 0xFFFF, pg);
+            char pg[24]; snprintf(pg, sizeof pg, "Page %d of %d", filmMenuPage + 1, filmMenuPages());   // (1.11.94: in the title bar, right - its old place, bottom left, is the other list's button)
+            drawGlyphs(W - 20 - textWidth(2, pg), (58 - fontHeight(2)) / 2, 2, 0xFFFF, pg);
         }
     }
     dirty(0, 0, W, H); touchPainted = true;
 }
-static void filmMenuShowFilm(const std::string &name) {         // the list at the page that holds this animation
-    for (int i = 0; i < filmCount; ++i) if (name == filmList[i].name) { filmMenuPage = i / FILM_PER_PAGE; return; }
+static void filmMenuShowFilm(const std::string &name) {         // the list at the page that holds this animation (1.11.94: the problems list for a problem's)
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int i = 0; i < filmMenuCount(); ++i) if (name == filmMenuEntry(i).name) { filmMenuPage = i / FILM_PER_PAGE; return; }
+        if (!filmMenuSwaps()) return;
+        filmMenuList = !filmMenuList; filmMenuPage = 0;
+    }
 }
-static void filmMenuOpen() {
-    if (!topReady() || !filmCount) return;
-    filmMenuPage = 0;
+static void filmMenuOpen(int list = 0) {                          // (1.11.94: list 1, the problems - the help page's "Fix problems")
+    if (!topReady() || !(list ? filmProbCount : filmCount)) return;
+    filmMenuList = list; filmMenuPage = 0;
     topX = 0; topY = 0; topW = W; topH = H; topWho = FILM_MENU_WHO; topOn = true;
     filmMenuDown = -1; filmMenuHeld = false;
     filmMenuDraw();
@@ -282,6 +321,7 @@ static bool filmStart() {
     filmLast = -1; filmPictures = filmSkipped = 0; filmDecodeMax = 0; filmFadeSteps = filmFadeMax = 0; filmPlaying = true;
     filmPaused = false; filmTapDeaf = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
     if (!filmDecode(0)) { filmStop(); return false; }          // the first picture before the sound, so they start together
+    dirty(0, 0, W, H); touchPainted = true;                    // (1.11.94) all of it shown: only what differed from the layer's old picture was marked, and the help page showed through the rest
     filmLast = 0;
     filmSound = filmPath(".ima"); if (!SD.exists(filmSound.c_str())) filmSound = filmPath(".wav");   // (1.11.93) the compressed sound, else the 16-bit one
     audioStartFile(filmSound.c_str());
@@ -404,10 +444,11 @@ static void filmMenuTouch(bool pressed, int x, int y, uint32_t now) {
     filmMenuDrawButton(i, false);
     if (i == FILM_OK) { filmMenuClose(); return; }
     if (i == FILM_PREV || i == FILM_NEXT) { const int n = filmMenuPages(); filmMenuPage = (filmMenuPage + (i == FILM_NEXT ? 1 : n - 1)) % n; filmMenuDraw(); return; }   // (round: Next from the last page is the first)
+    if (i == FILM_SWAP) { filmMenuList = !filmMenuList; filmMenuPage = 0; filmMenuDraw(); return; }   // (1.11.94) the other list
     filmFromList = true;
-    if (i < filmCount && !filmStartName(filmList[i].name)) { if (!filmUp()) filmMenuDraw(); }   // (a film that will not play: the menu stays)
+    if (i < filmMenuCount()) { const std::string name = filmMenuEntry(i).name; if (!filmStartName(name.c_str()) && !filmUp()) filmMenuDraw(); }   // (a film that will not play: the menu stays)
 }
-static void filmButtonCancel() { if (filmBtnHeld) { filmBtnHeld = false; if (filmButtonUp()) filmDrawButton(false); } }   // (a corner held on it: radios or the door, not the film)
+static void filmButtonCancel() { if (filmBtnHeld) { filmBtnHeld = false; if (filmButtonUp()) { if (filmBtnWhich) filmDrawFix(false); else filmDrawButton(false); } } }   // (a corner held on it: radios or the door, not the film)
 
 // The help page's button: true while it has the finger (the page underneath sees none of it)
 static bool filmButtonTouch(bool pressed, int x, int y, uint32_t now) {
@@ -415,12 +456,16 @@ static bool filmButtonTouch(bool pressed, int x, int y, uint32_t now) {
         if (pressed) { filmBtnSeen = now; return true; }
         if (now - filmBtnSeen < 80) return true;              // (a sample the touch chip dropped is not a lift)
         filmBtnHeld = false;
-        if (filmButtonUp()) { filmDrawButton(false); filmFromList = false; filmAwakeAt = 0; if (!filmStartName(filmOwn.c_str()) && !filmUp()) filmButtonShow(); }   // (1.11.91) this help page's own animation (1.11.88: the main board told at once that someone is here)
+        if (!filmButtonUp()) return true;
+        if (filmBtnWhich) { filmDrawFix(false); filmAwakeAt = 0; filmMenuOpen(1); return true; }   // (1.11.94) the problems list
+        filmDrawButton(false); filmFromList = false; filmAwakeAt = 0; if (!filmStartName(filmOwn.c_str()) && !filmUp()) filmButtonShow();   // (1.11.91) this help page's own animation (1.11.88: the main board told at once that someone is here)
         return true;
     }
-    if (!pressed || !filmButtonUp()) return false;
-    if (x < FILM_BTN_X || x >= FILM_BTN_X + FILM_BTN_W || y < FILM_BTN_Y || y >= FILM_BTN_Y + FILM_BTN_H) return false;
-    filmBtnHeld = true; filmBtnSeen = now; filmDrawButton(true);
+    if (!pressed || !filmButtonUp() || y < FILM_BTN_Y || y >= FILM_BTN_Y + FILM_BTN_H) return false;
+    const bool own = filmBtnOwn && x >= FILM_BTN_X && x < FILM_BTN_X + FILM_BTN_W, fix = filmBtnFix && x >= FILM_FIX_X && x < FILM_FIX_X + FILM_FIX_W;
+    if (!own && !fix) return false;
+    filmBtnHeld = true; filmBtnWhich = fix ? 1 : 0; filmBtnSeen = now;
+    if (fix) filmDrawFix(true); else filmDrawButton(true);
     return true;
 }
 
@@ -457,12 +502,12 @@ static void filmPoll() {
     if (!helpPage) { filmLatched = false; if (filmButtonUp()) filmButtonHide(); if (!filmTopic.empty() && now - filmTopicAt > FILM_HELP_WINDOW_MS) filmTopic.clear(); return; }
     if (!filmLatched) {
         if (filmTopic.empty() || now - filmTopicAt > FILM_HELP_WINDOW_MS) return;
-        filmLatched = true;
+        filmLatched = true; filmMenuList = 0;                      // (1.11.94: a new help page's list starts as the list of them all)
         filmReadList();                                            // (1.11.87) the list of them all
         char own[16]; ldrcfilm::filmFor(filmListText.c_str(), filmTopic.c_str(), own, sizeof own);   // (1.11.91) this help page's own: its name, or films.txt's "<HELP>=<NAME>"
         filmOwn = own; filmHas = !filmOwn.empty() && SD.exists(("/hmi/films/" + filmOwn + ".ldf").c_str());
     }
-    const bool want = filmHas && filmAllowed() && (!topOn || topWho == FILM_BTN_WHO);
+    const bool want = (filmHas || filmProbCount > 0) && filmAllowed() && (!topOn || topWho == FILM_BTN_WHO);   // (1.11.94: Fix problems on every help page)
     if (want && !filmButtonUp()) filmButtonShow();
     else if (!want && filmButtonUp()) filmButtonHide();
 }

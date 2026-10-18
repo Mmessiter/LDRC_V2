@@ -186,6 +186,45 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Livelier animations, real uses, and Fix problems (screen 1.11.94, Teensy B123 unchanged, 18 Oct 2026)
+
+Malcolm watched all 62 animations and asked for: a voice "a bit more human with some emotion" ("If she sounds bored,
+that's not a good thing!"); starts that do not show the page behind for a moment ("Some of the animations begin without
+first clearing the screen which looks untidy"); starts on Model setup or Transmitter setup rather than the front page every
+time; "real uses people might not think of" (two macros on one trigger channel, one's WAIT as long as the other's DURATION,
+run one after the other); "how to use for solving real-world flying issues"; no "That's all there is to it" at the end;
+"the likely cure for tail-wag and other common set up issues"; and "a sub menu that lists common rc heli flying issues
+linked to animations that can help correct that issue". Then: "Take your time with this job because it needs to be
+imaginative, well executed, informative and entertaining! We have ALL DAY!!"
+
+- **The clean start (the screen's firmware).** An animation started from its help page decoded its first picture into
+  the screen's top layer, which still held the last animation's picture, and marked for the panel only the pixels that
+  differed: wherever the two matched, the help page stayed in view. The first picture is now shown whole
+  (`film_device.h` filmStart; a flow test reproduces the fault: 384,000 pixels wrong before, none after).
+- **Fix problems.** Every help page now has a second button of the screen's own, **Fix problems**, top right (where other
+  pages have Help); the list of all the animations has it bottom left, and the problems list has **Animations** there to go
+  back. `/hmi/films/problems.txt` lists them ("<NAME>: <title>", as films.txt), each with its own animation: the symptom
+  drawn and moving, the likely cause, the cure shown on the transmitter's own Rotorflight pages with the RAW 420's real
+  numbers, and how to test it. Ten: Tail wags, Tail kicks or bounces, Wobbles or shakes, Mushy or drifts, Too twitchy or
+  too slow, Bounces after a flip, Head speed sags, Servos buzz or run hot, Will not arm, Radio glitches. The help page's
+  two buttons share the layer's rows with the page's title between them (`src/layer_rows.h`: a row is the page with up
+  to two stretches of the layer; host-tested).
+- **Every animation written again.** Friendlier, livelier words; each starts on Model setup, Transmitter setup or the
+  Rotorflight menu (the front page's own keeps the front page); each page named as it appears; after the tour an
+  **In practice** part with real uses and fixes, shown on the page with example values (captions starting *Tip:*);
+  no closing line. Every fact checked against the help files and the pages.
+- **The voice:** Emma as before, made livelier (Chatterbox, on this Mac, from a recording of her: Malcolm chose "Emma,
+  number three"); every line written down again by Whisper and compared word for word, and spoken again until it matches.
+- **Drawings:** the problems and some real uses are shown, not only told: the receiver's own 3D helicopter (the Goblin of
+  its View channels page), rendered from above, the side and the front (`TXV1B dev/video/heli3d/make_sprites.py`, headless
+  Chrome) and moved by `dev/video/illus.py`: a wagging tail, a wobble, a sagging head speed, a gap in the link, rescue
+  turning it upright; title cards carry it too.
+
+**All 72** (62 help pages + 10 problems): 143 minutes in all, 57 to 178 s each (119 s on average); 82.6 MB of pictures and
+94.8 MB of sound, 177 MB to fetch (some 38 minutes at the 77 kB/s his transmitters got; the 62 of 1.11.91 were 509 MB).
+Tests: every animation through the screen's own decoders (test_film 122 checks each, ima_test bit-exact), the flow test
+(the clean start; Fix problems from a help page, the two lists and back), test_update, the release gate: ALL GOOD.
+
 ## Animations a quarter of the size (screen 1.11.93, Teensy B123 unchanged, 17 Oct 2026)
 
 Malcolm, after installing the 62 animations on his second transmitter: "1 hour and 50 minutes!" The 509 MB were mostly

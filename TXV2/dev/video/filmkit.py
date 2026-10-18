@@ -13,8 +13,12 @@ silence first; the voice speaks only over a still picture; the finger moves, pre
 
    PY/bin/python dev/video/films/<film>.py [OUTDIR]
    LDRC_TARGET=screen  the film for the transmitter (else an MP4 in OUTDIR, default dev/out/video/<NAME>)
-   LDRC_VOICE=kokoro:bf_emma (default) | kokoro:bm_george | say:Daniel     LDRC_SPEED (0.9 for Kokoro)
+   LDRC_VOICE=cbox:emma (the default: Emma made livelier, 18 Oct) | qwen:emma | kokoro:bf_emma | kokoro:bm_george | say:Daniel
+              cbox and qwen speak in the voice of voices/<who>.wav (voice_clone.py)     LDRC_SPEED (0.9 for Kokoro)
+   LDRC_EMOTION (cbox: 0.25 to 1, how lively; 0.75, Malcolm's choice)
+   TTS_PY (default /Volumes/2TB SSD/ClaudeScratch/tts/venv/bin/python: a Python with mlx-audio, for cbox and qwen)
    KOKORO_DIR (default /Volumes/2TB SSD/ClaudeScratch/kokoro-model: kokoro-v1.0.onnx, voices-v1.0.bin)
+   LDRC_COLLECT=<file.json>: only add this film's lines to that list, and stop (speak_all.py then speaks them all at once)
 A Python with Pillow, imageio-ffmpeg and kokoro-onnx."""
 import io, os, struct, subprocess, sys, wave
 from PIL import Image, ImageDraw, ImageFont
@@ -23,6 +27,10 @@ import imageio_ffmpeg
 EMU = os.path.expanduser('~/Documents/GitHub/ESP32-board2/board4/nextion-emulator')
 SCN = os.path.join(EMU, 'hmi', 'scenarios')
 FF = imageio_ffmpeg.get_ffmpeg_exe()
+HERE = os.path.dirname(os.path.abspath(__file__))
+VOICE = 'cbox:emma'                                          # (the voice unless LDRC_VOICE says another: 18 Oct, Malcolm chose "Emma, number three")
+EMOTION = '0.75'                                              # (how lively, for cbox: his number three was 0.75; number two 0.5)
+VOICE_CACHE = '/Volumes/2TB SSD/ClaudeScratch/tts/cache'     # (lines already spoken, by voice and words: a film rebuilt speaks only what changed)
 LOOK, GLIDE, REST, PRESS, FADE, AFTER = 1.2, 0.9, 0.5, 0.45, 0.8, 0.7   # seconds: a page looked at; the finger's way; ...
 
 def prefix(scenario, shot, edits=()):
@@ -143,16 +151,31 @@ class Film:
     def shot(self, key, text): self.scripts[key] = text if text.rstrip().endswith('@shot ' + key) else text.rstrip('\n') + '\n@shot %s\n' % key
     def line(self, key, text): self.lines.append((key, text))
     def prepare(self):
+        if os.environ.get('LDRC_COLLECT'):                    # (18 Oct) only this film's words, added to a list: one run of voice_clone.py then speaks
+            p = os.environ['LDRC_COLLECT']                     # every film's lines with its models loaded once, and the films' own builds find them all
+            have = json.load(open(p)) if os.path.exists(p) else []   # in the cache
+            have += [{'film': self.name, 'key': k, 'text': t} for k, t in self.lines]
+            json.dump(have, open(p, 'w'), indent=0); print('%s: %d lines collected' % (self.name, len(self.lines))); sys.exit(0)
         for k, v in self.scripts.items(): open(os.path.join(self.out, 'scripts', k + '.txt'), 'w').write(v)
         r = subprocess.run([sys.executable, os.path.join(EMU, 'hmi', 'render_pages.py'), os.path.join(self.out, 'shots')] + [os.path.join(self.out, 'scripts', k + '.txt') for k in self.scripts], capture_output=True, text=True, cwd=EMU)
         for k in self.scripts:
             p = os.path.join(self.out, 'shots', k + '.png')
             if not os.path.exists(p): sys.exit('shot %s was not drawn: %s %s' % (k, r.stdout[-400:], r.stderr[-400:]))
             self.img[k] = Image.open(p).convert('RGB')
-        voice = os.environ.get('LDRC_VOICE', 'kokoro:bf_emma'); engine, vname = voice.split(':', 1)
+        voice = os.environ.get('LDRC_VOICE', VOICE); engine, vname = voice.split(':', 1)
         self.voice_name = vname
         speed = float(os.environ.get('LDRC_SPEED', '0.9' if engine == 'kokoro' else '1.0'))
         kokoro = None
+        if engine in ('cbox', 'qwen'):                        # (18 Oct) every line at once, by the voice's own Python; checked by ear (Whisper) there
+            job = os.path.join(self.out, 'voice', 'job.json')
+            json.dump({'engine': engine, 'voice': os.path.join(HERE, 'voices', vname + '.wav'), 'cache': VOICE_CACHE,
+                       'emotion': float(os.environ.get('LDRC_EMOTION', EMOTION)),
+                       'lines': [{'text': text, 'out': os.path.join(self.out, 'voice', k + '.raw.wav')} for k, text in self.lines]}, open(job, 'w'))
+            env = dict(os.environ); env.setdefault('HF_HOME', '/Volumes/2TB SSD/ClaudeScratch/hf')
+            r = subprocess.run([os.environ.get('TTS_PY', '/Volumes/2TB SSD/ClaudeScratch/tts/venv/bin/python'), os.path.join(HERE, 'voice_clone.py'), job], env=env, capture_output=True, text=True)
+            for l in r.stdout.splitlines():
+                if l.startswith('VOICE FAULT') or l.startswith('   heard'): print(l)
+            if r.returncode: sys.exit('%s: the voice failed (%s)' % (self.name, (r.stdout + r.stderr)[-600:]))
         if engine == 'kokoro':
             import numpy as np
             from kokoro_onnx import Kokoro, EspeakConfig
@@ -166,6 +189,7 @@ class Film:
             raw = os.path.join(self.out, 'voice', k + ('.aiff' if engine == 'say' else '.raw.wav')); wav = os.path.join(self.out, 'voice', k + '.wav')
             if engine == 'say':
                 subprocess.run(['say', '-v', vname, '-r', str(int(172 * speed)), '-o', raw, text], check=True)
+            elif engine in ('cbox', 'qwen'): pass             # (spoken above)
             else:
                 samples, sr = kokoro.create(text, voice=vname, speed=speed, lang='en-gb')
                 pcm = (np.clip(samples, -1, 1) * 32767).astype('<i2').tobytes()
@@ -224,8 +248,13 @@ class Film:
         return self._sign(f)
     def _n(self, secs): return max(1, int(round(secs * self.FPS)))
     def _ease(self, t): return t * t * (3 - 2 * t)
-    def card(self, big, small):
-        f = self.BG.copy(); d = ImageDraw.Draw(f)
+    def card(self, big, small, art=True):
+        """a card of the film's own: a big line and a small one (18 Oct: with a little helicopter drawn above them, illus.py)"""
+        if art:
+            from illus import Art
+            f = Art(self).title_heli(); f.ldrc_card = False
+        else: f = self.BG.copy()
+        d = ImageDraw.Draw(f)
         tw = d.textlength(big, font=self.F_TITLE); d.text(((self.W - tw) / 2, self.H * 0.375), big, font=self.F_TITLE, fill=(255, 255, 255))
         sw = d.textlength(small, font=self.F_SUB); d.text(((self.W - sw) / 2, self.H * 0.5), small, font=self.F_SUB, fill=(255, 214, 64))
         f.ldrc_card = True; return f
@@ -241,6 +270,12 @@ class Film:
         self.fades.append((len(self.frames), n))
         for i in range(n): self.frames.append(Image.blend(a, b, self._ease((i + 1) / n)))
         self.hold(look)
+    def anim(self, draw, secs, t0=0.0):
+        """(18 Oct) a drawing that moves (illus.py), in silence: draw(t) is the picture t seconds in; the last one stays as
+        the page, for the voice that follows - Malcolm's rule for the films: movement in silence, the voice over a still"""
+        self.cap = None; self.fx = None; self.fpress = 0.0
+        for i in range(self._n(secs)):
+            self.page = draw(t0 + (i + 1) / float(self.FPS)); self.frames.append(self._now())
     def say(self, key, cap=None, after=AFTER):
         """the voice, over the still picture (the caption with it); then a moment"""
         self.segments.append((len(self.frames), key)); self.cap = cap if cap is not None else self.cap
@@ -285,9 +320,11 @@ class Film:
     def begin(self):
         self.page = self.card(self.title, self.subtitle); self.cap = None
         self.hold(0.8)
-    def end(self, key):
-        self.show(self.card("That's all.", 'LockDownRadioControl V2'), look=0.4)
-        self.say(key, cap=None, after=2.0)
+    def end(self, key=None):
+        """the film's own card again, in silence (18 Oct, Malcolm: "Let's remove 'That's all there is to it' from the end" -
+        the films used to end on a card saying "That's all." and a line such as that one)"""
+        assert key is None, 'end() says nothing now: put a last line of use before it'
+        self.cap = None; self.show(self.card(self.title, 'LockDownRadioControl V2'), look=2.0)
 
     # ------------------------------------------------------------ the check (17 Oct, after Malcolm's photos of the transmitter)
     def check_touches(self, frame_of, what, page_tol, dot_tol):

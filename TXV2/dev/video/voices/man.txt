@@ -1,0 +1,2 @@
+Designed 18 Oct 2026 with Qwen3-TTS-12Hz-1.7B-VoiceDesign (mlx-audio), saying man.ref.txt, from:
+A warm, friendly British man in his fifties with a gentle southern English accent, like a patient and encouraging flying instructor. He speaks clearly at a relaxed pace, sounding genuinely enthusiastic and kind.

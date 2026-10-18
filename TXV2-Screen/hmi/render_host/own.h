@@ -18,7 +18,7 @@
 //   @link STATE      working done failed
 //   @banner TEXT     the two-second banner along the top, saying TEXT
 //   @pipe [late]     "Connecting Bluetooth" over the Rotorflight menu (late: after six seconds of trying)
-//   @film menu | NAME SECONDS [drag TO]   the films menu; a film paused at SECONDS, its bar and slider (film.h)
+//   @film menu | problems | NAME SECONDS [drag TO]   the films menu; the problems list (1.11.94); a film paused at SECONDS, its bar and slider (film.h)
 //   @measure TEXT    prints TEXT's width in fonts 0, 2 and 6 (will a label fit its button?)
 // Each is drawn over whatever is on the glass, as the screen lays its layer over the Teensy's page.
 #pragma once
@@ -32,6 +32,8 @@
 
 // ------------------------------------------------------------------ the layer (main.cpp): drawn on the one frame here
 static bool topOn = false; static int topWho = 0, topX = 40, topY = 36, topW = 720, topH = 408;
+static const int TOP_TWIN_WHO = 12; static int top2X = 0, top2W = 0;   // (1.11.94: main.cpp's second stretch of the layer)
+static bool topTwin() { return topWho == TOP_TWIN_WHO && top2W > 0; }
 static bool topReady() { return true; }
 struct TopDraw { TopDraw() {} };                         // (on the transmitter gfx draws on the layer meanwhile; here, over the page: what the glass shows)
 static uint32_t bannerUntil = 0;

@@ -1,27 +1,46 @@
 #!/usr/bin/env python3
-"""Film SERVOS: Rotorflight's servos, a tour. The words are SERVOS.TXT's. Made with dev/video/filmkit.py."""
+"""Film SERVOS: Rotorflight's servos - a tour, then real uses: level arms with Centre, a buzzing or hot servo (its update
+rate), and Geometry correction for the swash. The facts are SERVOS.TXT's. Made with dev/video/filmkit.py.
+18 Oct 2026 (Malcolm: start at the setup pages, real uses, livelier words, no closing line): starts on the Rotorflight menu."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from filmkit import Film, prefix, at
-from common import model_route, model_route_play, rf_route, rf_route_play, keypad_shots, KEY
+from filmkit import Film, at
+from common import rf_route, rf_route_play, rfs, SAVE_SHOWN
+from illus import Art
 f = Film('SERVOS', 'Servos (Rotorflight)', 'Each servo, one at a time')
+art = Art(f)
 rf_route(f, 'Servos ...')
-f.shot('p', prefix('60.txt', '60_loaded', [('Black Thunder 2', 'RAW 420 MCM')])); f.shot('e', prefix('60.txt', '60_loaded', [('Black Thunder 2', 'RAW 420 MCM')]) + 'vis b3,1\n')
+opn = rfs('60.txt', '60_loaded')                     # (servo 1 of 4: centre 1500, update rate 333 Hz, Geometry correction on)
+f.shot('p', opn); f.shot('e', opn + SAVE_SHOWN)
+f.shot('centre', opn + 'tn0.txt="1512"\n' + SAVE_SHOWN)   # (the tips point at a row's name: its value stays in sight)
 f.line('title', "Servos. Rotorflight's settings for each servo, one at a time.")
-f.line('page', 'This is the Servos page. The same in every bank. The title says which servo you are on, and its job.')
-f.line('step', 'Servo back and Servo on step through the servos. Servos one, two and three are usually the swashplate, four the tail.')
-f.line('centre', 'Centre, the subtrim: where the arm sits with the sticks centred. Adjust it so the linkages are level.')
+f.line('page', "This is the Servos page. It's the same in every bank.")
+f.line('servo', "The title says which servo you're on, and its job: here, servo one of four, on the swashplate.")
+f.line('step', 'The two Servo buttons step through them. Servos one, two and three are usually the swashplate, and four the tail.')
+f.line('centre', 'Centre, the subtrim: where the arm sits with the sticks centred, in microseconds. Usually about fifteen hundred.')
 f.line('limits', 'Travel limit low and high: the stops. The servo never moves past them.')
-f.line('save', 'Save appears once something is changed. Save each servo before you move on.')
-f.line('ok', 'OK leaves. With a change not saved it asks first.')
-f.line('end', "That's the Servos page.")
+f.line('throw', 'Throw, low side and high side: how far the arm moves for a full stick, each way. Usually both the same.')
+f.line('reversed', 'Reversed turns this servo the other way. To reverse a whole control, use Travel extents instead.')
+f.line('save', "Save appears once something's changed. Save each servo before you move on to the next.")
+f.line('ok', 'OK leaves. With a change not saved, it asks first.')
+f.line('level', "Here's a first job on a new model. Blades off, sticks centred: each servo arm should sit at right angles to its pushrod, and the linkages level.")
+f.line('level2', "Not quite? Nudge that servo's Centre, a few microseconds at a time. Here, fifteen hundred and twelve. Then save, and on to the next servo.")
+f.line('rate', 'A servo that buzzes, or runs hot? Check its Update rate is within its specification. Analogue servos usually need fifty hertz. Many digital ones take three hundred and thirty three.')
+f.line('geometry', "And for the three swash servos, Geometry correction is usually on. It evens out the arc of the arm, so the swash moves equally up and down.")
 f.prepare()
-f.begin(); f.say('title', after=1.6)
+f.begin(); f.say('title', after=1.2)
 rf_route_play(f, 'Servos ...', 'p')
 f.say('page', 'Servos.')
+f.point(*at('ServoView', 't0'), 'servo', 'Which servo, and its job.')
 f.point(*at('ServoView', 'b2'), 'step', '< Servo, Servo >.')
 f.point(*at('ServoView', 'tn0'), 'centre', 'Centre.')
 f.point(*at('ServoView', 'tn1'), 'limits', 'Travel limits.')
+f.point(*at('ServoView', 'tn3'), 'throw', 'Throw.')
+f.point(*at('ServoView', 'tn7'), 'reversed', 'Reversed: this servo only.')
 f.under('e'); f.hold(0.6); f.point(*at('ServoView', 'b3'), 'save', 'Save each servo.')
 f.point(*at('ServoView', 'b1'), 'ok', 'OK.')
-f.end('end'); f.finish()
+f.show(art.servo_centre()); f.say('level', 'Tip: arms square, linkages level.')
+f.show('centre'); f.point(*at('ServoView', 'ltn0'), 'level2', 'Tip: nudge the Centre.')
+f.point(*at('ServoView', 'ltn5'), 'rate', 'Tip: hot servo? Check its rate.')
+f.point(*at('ServoView', 'ltn8'), 'geometry', 'Tip: Geometry on for the swash.')
+f.end(); f.finish()

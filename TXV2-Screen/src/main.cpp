@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.93"
+#define SCREEN_VERSION "1.11.94"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -62,6 +62,11 @@ static Arduino_Canvas *topCanvas = nullptr; static uint16_t *topFb = nullptr;
 static bool topOn = false;
 static int topWho = 0;                                        // whose it is: 1 the update panel (src/update_device.h), 2 the WiFi page (src/wifi_device.h), 3 the link's panel, 4 the picture chooser (src/pics_device.h), 5 the flight screen, 6 its setup page (src/flight_device.h)
 static int topX = 40, topY = 36, topW = 720, topH = 408;      // the part of the screen it covers
+// (1.11.94) A second stretch of the layer, on the same rows as the first: the help page's "Fix problems" button, top right,
+// beside "Animation" top left - with the page's title between them, showing. Used only while those buttons have the layer.
+static const int TOP_TWIN_WHO = 12;                          // (film_device.h's FILM_BTN_WHO)
+static int top2X = 0, top2W = 0;
+static bool topTwin() { return topWho == TOP_TWIN_WHO && top2W > 0; }
 // Copy a finished rectangle from the canvas to the panel: one move per component, so nothing is ever seen
 // half-drawn (the help text flashed white on every scroll step), and the panel's PSRAM buffer is written
 // back from the CPU cache for its DMA.
@@ -83,6 +88,7 @@ template <typename Tag, typename Tag::type M> struct PanelRob { friend typename 
 struct RgbPanelTag { typedef esp_rgb_panel_t *Arduino_ESP32RGBPanel::*type; friend type panelMember(RgbPanelTag); };
 template struct PanelRob<RgbPanelTag, &Arduino_ESP32RGBPanel::_rgb_panel>;
 #include "quiet_time.h"                                // (the quiet time's sums and jobs, host-tested: hmi/test_quiet)
+#include "layer_rows.h"                                // (1.11.94: the panel's rows with our layer over one or two stretches, host-tested: hmi/test_film)
 static bool IRAM_ATTR onFrameEnd(esp_lcd_panel_handle_t, esp_lcd_rgb_panel_event_data_t *, void *) { quietFrameEnd(); return false; }
 static void hookFrameEnd() {
     esp_rgb_panel_t *p = panel->*panelMember(RgbPanelTag());
@@ -96,10 +102,8 @@ static void copyRows(int x, int y, int w, int h, bool over) {
     for (int yy = 0; yy < h; ++yy) {
         const int row = y + yy;
         if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
-            const int a = max(x, topX), b = min(x + w, topX + topW);
-            if (a > x) memcpy(screenFb + row * W + x, pageFb + row * W + x, (a - x) * 2);
-            memcpy(screenFb + row * W + a, topFb + row * W + a, (b - a) * 2);
-            if (x + w > b) memcpy(screenFb + row * W + b, pageFb + row * W + b, (x + w - b) * 2);
+            const bool twin = topTwin();                                     // (1.11.94: page | button | title | button | page)
+            ldrclayer::composeRow(screenFb + row * W, pageFb + row * W, topFb + row * W, x, w, topX, topX + topW, twin ? top2X : 0, twin ? top2X + top2W : 0);
         } else memcpy(screenFb + row * W + x, pageFb + row * W + x, w * 2);
     }
 }
@@ -108,7 +112,7 @@ static void present(int x, int y, int w, int h) {
     if (x < 0) { w += x; x = 0; } if (y < 0) { h += y; y = 0; }
     if (x + w > W) w = W - x; if (y + h > H) h = H - y;
     if (w <= 0 || h <= 0) return;
-    const bool over = topOn && topFb && x < topX + topW && x + w > topX && y < topY + topH && y + h > topY;
+    const bool over = topOn && topFb && y < topY + topH && y + h > topY && (ldrclayer::spans(x, w, topX, topX + topW) || (topTwin() && ldrclayer::spans(x, w, top2X, top2X + top2W)));
     copyRows(x, y, w, h, over);
     Cache_WriteBack_Addr((uint32_t) (screenFb + y * W + x), (uint32_t) (((h - 1) * W + w) * 2));
 }

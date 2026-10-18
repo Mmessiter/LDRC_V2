@@ -1,0 +1,1 @@
+Here's a neat trick that many pilots never think of. One switch can start two macros, one after the other. Give the second macro a delay that's the same as the first one's duration, and they'll run in turn.

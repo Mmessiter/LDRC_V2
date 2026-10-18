@@ -1,44 +1,44 @@
 #!/usr/bin/env python3
-"""Film RXSETUP: the Model setup page, a tour of its main buttons. The words are RXSETUP.TXT's (and MODELS.TXT's for
-Models); every place pointed at is a button's centre from the page's own definition (sd/hmi/pages/4.json). Made with
-dev/video/filmkit.py."""
+"""Film RXSETUP: the Model setup page, a tour of its main buttons, then how pilots use it. The words are RXSETUP.TXT's (and
+MODELS.TXT's for Models); every place pointed at is a button's centre from the page's own definition (sd/hmi/pages/4.json).
+Made with dev/video/filmkit.py.
+18 Oct 2026, Malcolm: start on Model setup, not the front page; real uses; no "That's ..." at the end."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from filmkit import Film, prefix, at
 
 f = Film('RXSETUP', 'Model setup', 'Every setting of the model in use')
-f.shot('m_front', prefix('13.txt', '13_conn', [
-    ('bt0.txt="Motor is ON"\nbt0.bco=2016\nbt0.bco2=2016\nbt0.pco=0\nbt0.pco2=0', 'bt0.txt="Motor is OFF"\nbt0.bco=63488\nbt0.bco2=63488\nbt0.pco=65535\nbt0.pco2=65535'),
-    ('RPM: 2150', 'RPM: 0'), ('Amps: 12.4', 'Amps: 0.3'), ('mAh: 345', 'mAh: 0'), ('ESC: 52.3', 'ESC: 21.5')]))
-f.shot('m_setup', prefix('4.txt', '4_open'))
-f.line('title', 'Model setup. Every setting of the model in use.')
-f.line('front', "This is the transmitter's front page. Press Model.")
-f.line('setup', 'This is the Model setup page. Every setting of the model in use starts here. Each button opens a page with its own help.')
-f.line('models', 'Models: choose the model to use, and back models up.')
-f.line('options', "Options: the trims, the motor switch, the timer, warnings, and the model's picture.")
-f.line('channels', 'Channels: watch each channel move, and edit its curves.')
+f.shot('p', prefix('4.txt', '4_open'))
+f.line('title', "Model setup. Every setting of the model you're flying starts here.")
+f.line('page', "This is the Model setup page. You'll find it behind Model, on the front page. Each button opens a page with its own help.")
+f.line('models', 'Models: choose the model to fly, and back your models up.')
+f.line('options', "Options: the trims, the motor switch, the timer, the warnings, and the model's picture.")
 f.line('inputs', 'Inputs: what moves each channel, its name, and its output.')
-f.line('servo', 'Servo speed slows a servo down, for flaps or an undercarriage.')
-f.line('banks', 'Bank names: a name for each of the four banks.')
-f.line('ids', "Model I Ds stores the I D of this model's receiver.")
-f.line('rf', "Rotorflight: the flight controller's settings.")
-f.line('rxupd', 'Receiver updates checks messiter dot com for the receiver. Nothing is installed until you press Install now.')
-f.line('ok', 'OK goes back to the front page.')
-f.line('end', "That's the Model setup page.")
+f.line('channels', 'Channels: watch every channel move, live, and shape its curve.')
+f.line('ids', "Model I Ds: store the I D of this model's receiver.")
+f.line('rf', "Rotorflight: the flight controller's own settings, right here on the transmitter.")
+f.line('rxupd', "Receiver updates finds new software for a Version two receiver. The model must be on and connected, with the safety on. Don't worry: nothing's installed until you press Install now.")
+f.line('ok', 'And OK takes you back to the front page.')
+f.line('name', "Now, some real uses. Before every flight, glance up here, top left. That's the model now loaded: make sure it's the one you're about to fly!")
+f.line('new1', "Setting up a new model? Here's a good order. Start with Options: set the timer and the warnings.")
+f.line('new2', 'Next, Inputs and Channels. Move every stick and switch, and check each one moves the right channel.')
+f.line('new3', "Flying Rotorflight? Finish with Rotorflight, for the flight controller's own settings.")
+f.line('field', "Here's one many pilots miss: receiver updates work at the field, with your phone's hotspot. Add it to the transmitter's WiFi, and give it to the receiver once, with the phone app.")
 f.prepare()
 
-f.begin(); f.say('title', after=1.6)
-f.show('m_front'); f.say('front', 'Press Model.', after=0.3); f.tap(*at('FrontView', 'b1'), 'm_setup')
-f.say('setup', 'Model setup.')
-f.point(*at('RXSetupView', txt='Models'), 'models', 'Choose a model.')
+f.begin(); f.say('title', after=1.2)
+f.show('p'); f.say('page', 'Model setup.')
+f.point(*at('RXSetupView', txt='Models'), 'models', 'Choose a model, back it up.')
 f.point(*at('RXSetupView', txt='Options'), 'options', 'Trims, motor, timer, warnings.')
-f.point(*at('RXSetupView', txt='Channels'), 'channels', 'Channels and curves.')
 f.point(*at('RXSetupView', txt='Inputs'), 'inputs', 'What moves each channel.')
-f.point(*at('RXSetupView', txt='Servo speed'), 'servo', 'Slower servos.')
-f.point(*at('RXSetupView', txt='Bank names'), 'banks', 'Names for the banks.')
+f.point(*at('RXSetupView', txt='Channels'), 'channels', 'Channels, live, and curves.')
 f.point(*at('RXSetupView', txt='Model IDs'), 'ids', "The receiver's ID.")
 f.point(*at('RXSetupView', txt='Rotorflight'), 'rf', 'The flight controller.')
-f.point(*at('RXSetupView', txt='Receiver updates'), 'rxupd', 'Receiver updates.')
+f.point(*at('RXSetupView', 'ldrcRxUpdate'), 'rxupd', 'Nothing until Install now.')
 f.point(*at('RXSetupView', txt='OK'), 'ok', 'Back to the front page.')
-f.end('end')
-f.finish()
+f.point(*at('RXSetupView', 'ModelName'), 'name', 'Tip: check the name first.')
+f.point(*at('RXSetupView', txt='Options'), 'new1', 'Tip: a new model? 1. Options')
+f.point(*at('RXSetupView', txt='Inputs'), 'new2', '2. Inputs and Channels')
+f.point(*at('RXSetupView', txt='Rotorflight'), 'new3', '3. Rotorflight')
+f.point(*at('RXSetupView', 'ldrcRxUpdate'), 'field', 'Tip: update at the field.')
+f.end(); f.finish()

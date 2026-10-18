@@ -9,31 +9,29 @@ FRONT_NO_MODEL = prefix('13.txt', '13_nomodel') + ('ModelName.txt="RAW 420 MCM (
 MODEL_PICTURE = 'sd0/images/Bthundr1.jpg'                             # (RAW 420 MCM's picture on the front page: Malcolm's own)
 
 from filmkit import at
+# (18 Oct 2026) Malcolm: "All start at front screen which seems repetitive. Let's start most at model or transmitter screen."
+# So a film now opens on the setup page its subject lives on (Model setup, Transmitter setup, or the Rotorflight menu),
+# named as it appears; only the front page's own film starts on the front page. (front_shot is no longer used: kept so that
+# a call naming it still works.)
 def model_route(f, button, spoken=None, front_shot=None, setup_shot=None):
-    """the way in, declared: the front page, then Model, then this page's button on Model setup (shots r_front, r_setup)"""
-    f.shot('r_front', front_shot or FRONT_CONNECTED); f.shot('r_setup', setup_shot or prefix('4.txt', '4_open'))
-    f.line('front', "This is the transmitter's front page. Press Model.")
-    f.line('setup', 'This is the Model setup page. Press %s.' % (spoken or button))
+    """the way in, declared: the Model setup page, then this page's button on it (shot r_setup)"""
+    f.shot('r_setup', setup_shot or prefix('4.txt', '4_open'))
+    f.line('setup', "Here's the Model setup page. Press %s." % (spoken or button))
 def model_route_play(f, button, page_key):
-    """... and played: each page shown, named, the finger to its button"""
-    f.show('r_front'); f.say('front', 'Press Model.', after=0.3); f.tap(*at('FrontView', 'b1'), 'r_setup')
-    f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('RXSetupView', txt=button), page_key)
+    """... and played: the page shown and named, the finger to its button"""
+    f.show('r_setup'); f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('RXSetupView', txt=button), page_key)
 def tx_route(f, button, spoken=None, front_shot=None):
-    """the way in, declared: the front page, then Transmitter, then this page's button on Transmitter setup"""
-    f.shot('r_front', front_shot or FRONT_CONNECTED); f.shot('r_setup', prefix('33.txt', '33_open'))
-    f.line('front', "This is the transmitter's front page. Press Transmitter.")
-    f.line('setup', 'This is the Transmitter setup page. Press %s.' % (spoken or button))
+    """the way in, declared: the Transmitter setup page, then this page's button on it"""
+    f.shot('r_setup', prefix('33.txt', '33_open'))
+    f.line('setup', "Here's the Transmitter setup page. Press %s." % (spoken or button))
 def tx_route_play(f, button, page_key):
-    f.show('r_front'); f.say('front', 'Press Transmitter.', after=0.3); f.tap(*at('FrontView', 'b0'), 'r_setup')
-    f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('TXSetupView', txt=button), page_key)
-def rf_route(f, button):
-    """the way in, declared: the front page, Model, Rotorflight, then this page's button on the Rotorflight menu"""
-    model_route(f, 'Rotorflight')
+    f.show('r_setup'); f.say('setup', 'Press %s.' % button, after=0.3); f.tap(*at('TXSetupView', txt=button), page_key)
+def rf_route(f, button, spoken=None):
+    """the way in, declared: the Rotorflight menu (Model setup's Rotorflight button opens it), then this page's button"""
     f.shot('r_rf', prefix('8.txt', '8_open'))
-    f.line('rf', 'This is the Rotorflight menu. Press %s.' % button.rstrip(' .'))
+    f.line('rf', "Here's the Rotorflight menu, from Model setup. Press %s." % (spoken or button.rstrip(' .')))
 def rf_route_play(f, button, page_key):
-    model_route_play(f, 'Rotorflight', 'r_rf')
-    f.say('rf', 'Press %s.' % button.rstrip(' .'), after=0.3); f.tap(*at('RFView', txt=button), page_key)
+    f.show('r_rf'); f.say('rf', 'Press %s.' % button.rstrip(' .'), after=0.3); f.tap(*at('RFView', txt=button), page_key)
 def keypad_shots(f, base, page_id, box, box_id, shows, key='kp'):
     """the number pad over a page (keybdB, page 57, no background of its own): the box touched, then each value shown"""
     pad = base + 'click %s,0\nkeybdB.loadpageid.val=%d\nkeybdB.loadcmpid.val=%d\npage keybdB\n' % (box, page_id, box_id)

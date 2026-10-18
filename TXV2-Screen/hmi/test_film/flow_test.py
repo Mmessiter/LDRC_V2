@@ -40,6 +40,8 @@ struct SDClass {
 } SD;
 static bool sdOk = true, touchPainted = false;
 static bool topOn = false; static int topWho = 0, topX = 0, topY = 0, topW = 0, topH = 0;
+static const int TOP_TWIN_WHO = 12; static int top2X = 0, top2W = 0;   // (1.11.94: main.cpp's second stretch of the layer)
+static bool topTwin() { return topWho == TOP_TWIN_WHO && top2W > 0; }
 static uint16_t *topFb = nullptr;
 static bool topReady() { if (!topFb) topFb = (uint16_t *) calloc(W * H, 2); return true; }
 struct FakeGfx { void fillRect(int x, int y, int w, int h, uint16_t c) { for (int j = y; j < y + h && j < H; ++j) for (int i = x; i < x + w && i < W; ++i) topFb[j * W + i] = c; }
@@ -53,7 +55,18 @@ static int textWidth(int, const std::string &s) { return (int) s.size() * 14; }
 static int fontHeight(int) { return 28; }
 static std::string topCut(const std::string &s, int, int) { return s; }
 static uint16_t shade(uint16_t c, int) { return c; }
-static long dirtied = 0; static void dirty(int, int, int w, int h) { dirtied += (long) w * h; }
+// (1.11.94) the glass, as main.cpp's present() makes it: where something is marked, our layer where it covers (one stretch,
+// or the help page's two), the page elsewhere - the page here one colour
+static const uint16_t PAGE_COLOUR = 0x1234;
+static std::vector<uint16_t> panel(W * H, PAGE_COLOUR);
+static long dirtied = 0;
+static void dirty(int x, int y, int w, int h) {
+    dirtied += (long) w * h;
+    for (int j = std::max(0, y); j < std::min(H, y + h); ++j) for (int i = std::max(0, x); i < std::min(W, x + w); ++i) {
+        const bool ours = topOn && topFb && j >= topY && j < topY + topH && ((i >= topX && i < topX + topW) || (topTwin() && i >= top2X && i < top2X + top2W));
+        panel[j * W + i] = ours ? topFb[j * W + i] : PAGE_COLOUR;
+    }
+}
 struct Page { std::string name = "FrontView"; } page;
 static int flying = 0; static int flyingNow() { return flying; }
 static const int FILM_AUDIO_ID = -2; static int audioId = -1; static std::string audioPath; static uint32_t audioFrom = 0;
@@ -88,8 +101,8 @@ int main() {
     CHECK(filmButtonUp() && filmOwn == "EASY" && filmCount >= 3);
     CHECK(filmIndex("CALIB") >= 0 && filmIndex("CURVES") > filmIndex("CALIB") && filmIndex("EASY") > filmIndex("CURVES"));   // (films.txt's order)
     { bool lab = false; for (auto &s : texts) if (s == "Animation") lab = true; CHECK(lab); }
-    // 1b. a help page with none of its own: no button
-    page.name = "FrontView"; run(5000); helpTap("NOSUCH"); run(100); CHECK(!filmButtonUp() && filmOwn == "NOSUCH" && !filmHas);   // (a help page with no animation of its own: since 17 Oct every real one has one)
+    // 1b. a help page with none of its own: no Animation button (1.11.94: Fix problems alone, while there are problems on the card)
+    page.name = "FrontView"; run(5000); helpTap("NOSUCH"); run(100); CHECK(filmOwn == "NOSUCH" && !filmHas && (filmProbCount ? (filmButtonUp() && !filmBtnOwn && filmBtnFix) : !filmButtonUp()));   // (a help page with no animation of its own: since 17 Oct every real one has one)
     page.name = "FrontView"; run(5000); helpTap("FRONT"); run(100); CHECK(filmButtonUp() && filmOwn == "FRONT");
     // 2. the log viewer (the same page, no Help tap): no button
     page.name = "FrontView"; run(5000); page.name = "LogView"; run(200); CHECK(!filmButtonUp());
@@ -110,8 +123,8 @@ int main() {
     tap(300, 30); run(50); CHECK(filmMenuUp());
     int x, y, w, h;
     pickFilm("CURVES"); run(50);
-    CHECK(filmUp() && filmPlaying && filmFromList && !filmPaused && filmName == "CURVES" && audioId == FILM_AUDIO_ID && audioPath == "/hmi/films/CURVES.wav" && audioFrom == 0 && filmPictures >= 1);
-    CHECK(filmHead.version == 3 && filmSectionCount >= 10);
+    CHECK(filmUp() && filmPlaying && filmFromList && !filmPaused && filmName == "CURVES" && audioId == FILM_AUDIO_ID && (audioPath == "/hmi/films/CURVES.ima" || audioPath == "/hmi/films/CURVES.wav") && audioFrom == 0 && filmPictures >= 1);
+    CHECK(filmHead.version >= 3 && filmSectionCount >= 10);   // (1.11.94: every animation is version 4, its sound .ima)
     run(3000); CHECK(filmPlaying && filmPictures == 1);   // (the title card: still, nothing new to decode)
     run(9000); CHECK(filmPlaying && filmPictures > 1 && filmLast > 0);
     // 5. never a picture skipped, however late: the clock jumps 10 s at once, and every picture in between is decoded in turn
@@ -245,6 +258,51 @@ int main() {
           printf("fades: paused half way it waits, Play goes on to the page exactly (%u steps of the screen's, the longest %u us on this Mac); the slider into a fade shows the page\n", (unsigned) steps, (unsigned) longest);
       }
     }
+    // 19. (1.11.94) Malcolm: "Some of the animations begin without first clearing the screen which looks untidy". The layer
+    // holding the very picture a film starts with (the same film, stopped: as after it has played once), the help page on
+    // the glass: started again, its whole first picture must reach the glass - before 1.11.94 only what differed from the
+    // layer's old picture was marked, so here nothing at all was, and the help page stayed in view
+    { page.name = "LogView"; filmStop(); run(50); filmName = "EASY"; CHECK(filmStart()); const std::vector<uint16_t> first(topFb, topFb + W * H);
+      filmStop(); run(50); CHECK(!topOn && panel[240 * W + 400] == PAGE_COLOUR);
+      filmName = "EASY"; CHECK(filmStart());
+      long wrong = 0; for (int i = 0; i < W * H; ++i) wrong += panel[i] != first[i];
+      CHECK(wrong == 0 && memcmp(topFb, first.data(), (size_t) W * H * 2) == 0);
+      printf("clean start: the film's first picture whole on the glass, over a layer that held it already (%ld pixels not)\n", wrong);
+      filmStop(); }
+    // 20. (1.11.94) "Fix problems": a made-up card with two animations and two problems (a third listed, not on the card).
+    // On a help page, Fix problems top right beside Animation - the layer two stretches, the page's title between them on the
+    // glass; it opens the problems list; a problem's animation plays and its end comes back to that list; bottom left swaps
+    // to every animation (which has Fix problems there) and back; the paused bar's Animations finds a problem's own list;
+    // OK: the help page and both buttons again; a help page with no animation of its own: Fix problems alone
+    SDROOT = "@SD3@"; page.name = "FrontView"; run(5000); topOn = false; dirty(0, 0, W, H);
+    texts.clear(); helpTap("CALIB"); run(100);
+    CHECK(filmButtonUp() && filmBtnOwn && filmBtnFix && filmCount == 2 && filmProbCount == 2 && !strcmp(filmProb[0].name, "P1") && !strcmp(filmProb[1].title, "Wobbles or shakes"));
+    CHECK(topX == FILM_BTN_X && topW == FILM_BTN_W && top2X == FILM_FIX_X && top2W == FILM_FIX_W && topY == FILM_BTN_Y && topTwin());
+    { bool a = false, b = false; for (auto &s : texts) { if (s == "Animation") a = true; if (s == "Fix problems") b = true; } CHECK(a && b); }
+    CHECK(panel[30 * W + 80] == topFb[30 * W + 80] && panel[30 * W + 700] == topFb[30 * W + 700] && panel[30 * W + 400] == PAGE_COLOUR && topFb[30 * W + 700] != PAGE_COLOUR);
+    texts.clear(); tap(FILM_FIX_X + FILM_FIX_W / 2, FILM_BTN_Y + FILM_BTN_H / 2); run(50);
+    CHECK(filmMenuUp() && filmMenuList == 1 && filmMenuPage == 0 && filmMenuCount() == 2 && filmMenuPages() == 1 && !filmPlaying);
+    { bool t = false, sw = false; for (auto &s : texts) { if (s == "Fix problems") t = true; if (s == "Animations") sw = true; } CHECK(t && sw); }
+    { long wrong = 0; for (int i = 0; i < W * H; ++i) wrong += panel[i] != topFb[i]; CHECK(wrong == 0); }   // (the list: the whole glass ours)
+    filmMenuRect(0, x, y, w, h); tap(x + w / 2, y + h / 2); run(50);
+    CHECK(filmPlaying && filmFromList && filmName == "P1");
+    run(ldrcfilm::lengthMs(filmHead) + 1500); CHECK(!filmPlaying && filmMenuUp() && filmMenuList == 1);
+    texts.clear(); filmMenuRect(FILM_SWAP, x, y, w, h); tap(x + w / 2, y + h / 2); run(50);
+    CHECK(filmMenuUp() && filmMenuList == 0 && filmMenuCount() == 2);
+    { bool t = false, sw = false; for (auto &s : texts) { if (s == "Animations") t = true; if (s == "Fix problems") sw = true; } CHECK(t && sw); }
+    tap(x + w / 2, y + h / 2); run(50); CHECK(filmMenuList == 1);
+    filmMenuRect(1, x, y, w, h); tap(x + w / 2, y + h / 2); run(500); CHECK(filmPlaying && filmName == "P2");
+    filmMenuList = 0;                                               // (as if the list of them all had been the last one shown)
+    tap(400, 200); run(50); { int fx, fy, fw, fh; filmCtlRect(FILM_CTL_FILMS, fx, fy, fw, fh); tap(fx + fw / 2, fy + fh / 2); run(50); }
+    CHECK(!filmPlaying && filmMenuUp() && filmMenuList == 1 && filmMenuPage == 0);
+    filmMenuRect(FILM_OK, x, y, w, h); tap(x + w / 2, y + h / 2); run(100);
+    CHECK(!filmMenuUp() && filmButtonUp() && filmBtnOwn && filmBtnFix && topTwin());
+    page.name = "FrontView"; run(5000); helpTap("NOSUCH"); run(100);
+    CHECK(filmButtonUp() && !filmBtnOwn && filmBtnFix && topX == FILM_FIX_X && topW == FILM_FIX_W && !topTwin());
+    tap(80, 30); run(50); CHECK(!filmPlaying && !filmMenuUp() && filmButtonUp());   // (nothing top left)
+    tap(FILM_FIX_X + 20, 30); run(50); CHECK(filmMenuUp() && filmMenuList == 1);
+    filmMenuRect(FILM_OK, x, y, w, h); tap(x + w / 2, y + h / 2); run(100); CHECK(!filmMenuUp());
+    printf("Fix problems: on the help page beside Animation (the title between them the page's), the list, a problem's animation and back, the other list, OK\n");
     // 17. (1.11.91) the list, ten to a page: a card made up with 25 animations - three pages, the page shown, Next and
     // Previous going round, an empty place on the last page is nothing, a made-up animation that will not play leaves the list up
     SDROOT = "@SD2@"; page.name = "FrontView"; run(5000);
@@ -266,6 +324,13 @@ with tempfile.TemporaryDirectory() as d:
     open(os.path.join(sd2, 'hmi', 'films', 'films.txt'), 'w').write(''.join('T%02d: Made-up animation %d\n' % (i, i) for i in range(1, 26)))
     for i in range(1, 26): open(os.path.join(sd2, 'hmi', 'films', 'T%02d.ldf' % i), 'w').write('not a film')
     PROG = PROG.replace('@SD2@', sd2)
+    # (1.11.94) step 20's made-up card: two animations, and two problems (a third listed is not on the card), all real films
+    card = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, 'sd'); real = os.path.join(card, 'hmi', 'films')
+    sd3 = os.path.join(d, 'sd3'); f3 = os.path.join(sd3, 'hmi', 'films'); os.makedirs(f3)
+    for name, src in (('CALIB', 'CALIB'), ('EASY', 'EASY'), ('P1', 'CURVES'), ('P2', 'EASY')): os.symlink(os.path.join(real, src + '.ldf'), os.path.join(f3, name + '.ldf'))
+    open(os.path.join(f3, 'films.txt'), 'w').write('CALIB: Calibrating the sticks\nEASY: Rotorflight: Easy tuning\n')
+    open(os.path.join(f3, 'problems.txt'), 'w').write('# made up\nP1: Tail wags\nNOFILM: Not on the card\nP2: Wobbles or shakes\n')
+    PROG = PROG.replace('@SD3@', sd3)
     cpp = os.path.join(d, 'flow.cpp'); exe = os.path.join(d, 'flow')
     open(cpp, 'w').write(PROG)
     r = subprocess.run(['clang++', '-std=c++17', '-O1', '-w', '-I', LIB, '-I', os.path.join(ROOT, 'src'), '-o', exe, cpp, os.path.join(LIB, 'JPEGDEC.cpp')], capture_output=True, text=True)
