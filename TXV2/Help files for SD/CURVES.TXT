@@ -7,8 +7,8 @@ TO CHANGE THE CURVE:|
 point you want, then press '-' or '+'.|
 - Choose the shape: 'Straight', 'Smooth' or 'Exponential'.|
 - Choose how many points: 'Points: 3 5 7 9' (see below).|
-- Turn on 'Copy to all banks' to copy this curve to all four|
-banks when you press 'OK'.|
+- Turn on 'Copy to all banks' to copy this curve to every bank|
+(four, or six with 'Six banks' on) when you press 'OK'.|
 - Press 'OK' to save.|
 Each bank has its own curve.|
 Move the bank switch to change another bank's curve.||

@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The help and the animations catch up with the day (Teensy B134, films, 19 Oct 2026)
+
+Malcolm: "Please revise the help files and animations where today's additions call for it. Eg motor off value is no longer -67."
+Help: CHANNELS.TXT (a curve in every bank: four, or six), CURVES.TXT (Copy to all banks: every bank), RXSETUP.TXT (Bank names:
+four or six), TRIMS.TXT (centred in every bank), ADJUST.TXT (the kind box's words: 1 to 6 with six banks). The earlier ones
+today already said it (RXSETUP1 microseconds and six banks, BANKNAME, ONESWICH, FLIGHT's double tap, CALIB's power-up check).
+Animations remade (the voice speaks only the changed lines; the pages are drawn afresh, so Model options shows 833 and Bank
+names its six-box form): NOARM and RXSETUP1 ("Motor off value, in microseconds: eight hundred and thirty-three is nearly
+always right"), BANKNAME (a name for each bank; "Turn on Six banks, on Model options, and two more boxes appear"), ONESWICH
+("With Six banks on, mid and near pick bank four, five or six"). The page scenarios too (9: 833; 20: the vis of boxes 5 and 6).
+Teensy B134 = B133 with the version word only (the help files are the Teensy's files); screen 1.11.98 unchanged.
+
 ## The selector has a zone for every bank, at once (Teensy B133, 19 Oct 2026)
 
 Malcolm, on B132: "That's a good fix and working! But you made it switchable which I think isn't needed. If user chose 6 then six

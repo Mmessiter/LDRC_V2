@@ -1,6 +1,6 @@
 # 9 RXOptionsView ("Model options") - RXSetupView "Options" (va0.val=128+38) -> RXOptionsViewStart, MenuOptions.h:1037-1068
 # t10 = snprintf(Vbuf,5,"%1.2f",StopFlyingVoltsPerCell) (4 chars max); t12 = snprintf(Vbuf,15,"%3.0d",Max_Safe_Amps)
-# n0 = map(MotorChannelZero 30, 0,180, -100,100) = -67; sw0.val=1 goes to a component this page does not have
+# n0 = MotorOffMicros() = 833 (B129: microseconds; the byte 30 of old = -67); sw0.val=1 goes to a component this page does not have
 # DisplayModelImage (MenuOptions.h:353-361): findfile check, then exp0.path
 Screen_Background=8
 @model 1
@@ -8,7 +8,7 @@ page RXOptionsView
 c1.val=1
 n3.val=5
 t10.txt="3.70"
-n0.val=-67
+n0.val=833
 n1.val=5
 c0.val=1
 n2.val=0
@@ -38,7 +38,7 @@ page RXOptionsView
 c1.val=0
 n3.val=5
 t10.txt="3.70"
-n0.val=-67
+n0.val=833
 n1.val=5
 c0.val=0
 n2.val=0
@@ -57,7 +57,7 @@ page RXOptionsView
 c1.val=1
 n3.val=65535
 t10.txt="10.0"
-n0.val=-100
+n0.val=2500
 n1.val=16
 c0.val=1
 n2.val=-32768

@@ -6,7 +6,8 @@ WHERE TO FIND THINGS:|
 'Channels': watch each channel move, and edit its curves.|
 'Inputs': what moves each channel, its name and its output.|
 'Servo speed': slow a servo down (flaps, undercarriage).|
-'Bank names': a name for each of the four banks.|
+'Bank names': a name for each bank (four, or six with|
+'Six banks' on, on 'Options').|
 'Model IDs': store the ID of this model's receiver.|
 'Rotorflight': the flight controller's settings.||
 RECEIVER UPDATES:|

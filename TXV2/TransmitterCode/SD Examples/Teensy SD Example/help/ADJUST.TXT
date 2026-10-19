@@ -74,7 +74,7 @@ THE BANK SELECTOR:|
 A bank selector ('Bank (Profile) selector' or 'Rates selector')|
 is matched to this transmitter's banks, so there is nothing|
 to drag. Its kind box then says, for example,|
-'Banks 1 to 4 of this transmitter'.|
+'Banks 1 to 4 of this transmitter' (1 to 6 with 'Six banks').|
 Each bank sends its own value on the bank channel.|
 The values rise from bank 1.|
 The transmitter picks the travel whose even divisions give|

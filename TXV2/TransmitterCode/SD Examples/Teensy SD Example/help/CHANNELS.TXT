@@ -22,11 +22,12 @@ curve taken to the top and bottom then gives its full range even|
 with a stick that stops a little short.|
 A change keeps every point's value; one beyond the new range|
 moves to its edge. Check every channel after a change.||
-There are 64 curves: 16 channels x 4 banks.|
+Every channel has a curve of its own in every bank: four banks,|
+or six with 'Six banks' on ('Model options').|
 To give every bank the same curve, turn on 'Copy to all banks'|
 on the curve page before you press 'OK'.|
 This is often what you want.||
 RATES:|
 'Rates' (Model setup) sets three rates for up to eight channels.|
 Each rate is 0 to 200 per cent.|
-They work in every bank: 3 rates and 4 banks give 12 set-ups.|
+They work in every bank: three rates in each bank.|

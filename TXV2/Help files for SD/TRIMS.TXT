@@ -19,7 +19,7 @@ the trims apply ONLY to the bank in use, shown top left.||
 MOVE TO SUBTRIM:|
 Once the trims are right, 'Move to subtrim' moves|
 this bank's four trims into the subtrims. It asks first.|
-The four trims are then centred in all four banks.|
+The four trims are then centred in every bank.|
 Subtrims act in every bank alike, so this bank flies as before.|
 Other banks lose any trims of their own.|
 Other channels' subtrims do not change.|

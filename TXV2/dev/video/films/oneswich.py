@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Film ONESWICH: one switch's job - a tour of the jobs, then three things worth knowing. The words are ONESWICH.TXT's (with
-RXSETUP1.TXT: 'Bank 4 & Motor' is the motor switch, near = bank 4 with the motor OFF). One job per switch is the Teensy's
+RXSETUP1.TXT: 'Bank 4 & Motor' is the motor switch, near = bank 4 with the motor OFF; B130: with Six banks on, mid and near pick 4, 5 or 6 by the Banks 1 2 3 switch). One job per switch is the Teensy's
 ReadNewSwitchFunction (main.cpp): the switch that had the job lets go of it, and this switch's old job is then on no switch.
 Made with dev/video/filmkit.py.
 18 Oct 2026 (Malcolm: start at the model or transmitter screen; real uses): Transmitter setup > Switches > switch 3, each page
@@ -24,7 +24,7 @@ f.line('title', "A switch's job. Choosing what one switch does.")
 f.line('switches', "This is the Switches page. Touch a switch's job to change it. Let's take switch three.")
 f.line('page', "This is switch three's own page. Choose its job, then press OK to save it.")
 f.line('banks', 'Banks one two three: away is bank one, mid is bank two, and near is bank three.')
-f.line('motor', 'Bank four and Motor: away is motor on. Mid is bank four, with the motor on. Near is bank four, with the motor off.')
+f.line('motor', 'Bank four and Motor: away is motor on. Mid is bank four, with the motor on. Near is bank four, with the motor off. With Six banks on, mid and near pick bank four, five or six, by the Banks one two three switch.')
 f.line('safety', 'Safety: near is safety off. With a Rotorflight model, safety off arms it.')
 f.line('rates', 'Rates: away, mid and near pick rates one, two and three.')
 f.line('buddy', 'Buddy hands control to the pupil. A spring-return switch is best for it.')

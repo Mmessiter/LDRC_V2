@@ -21,7 +21,7 @@ f.line('page', "This is the Model options page. Touch a box to type a new value,
 f.line('trim', 'Trim multiplier: how far each trim step moves. Five is a very good default, and nought turns the trims off.')
 f.line('copy', 'Copy trims to all banks: on, a trim change goes to every bank. Off, each bank keeps its own.')
 f.line('throttle', "Throttle channel: the channel your motor's E S C is on. Usually three.")
-f.line('motoroff', "Motor off value: what the throttle channel gets while the motor's off, or the safety's on. Minus sixty-seven is nearly always right.")
+f.line('motoroff', "Motor off value, in microseconds: what the throttle channel gets while the motor's off, or the safety's on. Eight hundred and thirty-three is nearly always right.")
 f.line('kill', 'Use motor kill switch: on, the transmitter checks the motor switch before the model connects.')
 f.line('countdown', "Timer counts down: on, the timer counts down from the minutes just below, and says the last ten seconds.")
 f.line('volts', "Stop flying volts, per cell: when the model's battery drops below this, the transmitter says Stop flying.")
