@@ -186,6 +186,31 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The log viewer no longer sticks at the end (screen 1.11.96, Teensy B125, 19 Oct 2026)
+
+Malcolm, 19 Oct, from the field after three good flights with the Havok: "in the log file, when I scrolled to the end by
+hitting the end button, I could not scroll up with my finger any more. It was stuck, so I had to go to the top and scroll
+all the way down with my finger manually."
+
+- **Why it stuck.** The viewer shows a file a window at a time: a read of 1,536 bytes from a remembered line, up to 40 lines;
+  the finger scrolls within the window, and when the scroll nears an end of it the main board fetches the next or the
+  previous one. Bottom walks to the end in strides of nearly a window, so the last window held whatever was left: today's log
+  (86 lines) left eight. Eight lines fit the 14-line box, a box whose text fits cannot be scrolled, the screen never reports a
+  movement, and the lines before were never asked for. Scrolling down to the end could do the same, more rarely.
+- **The fix (B125).** The last window is widened backwards while one read still holds everything to the end of the file and
+  the window has room for the lines: as full as any other window, so there is always something to scroll, and the first
+  finger upwards fetches the lines before. Bottom and the end reached by scrolling both show that window. Two more: the box
+  height the main board assumes before the screen has reported one is the real 336 px (it was 240, so the first Bottom of a
+  session asked for a scroll 96 px past the last line), and a window of very long lines is never asked to scroll past its
+  own end.
+- **The screen (1.11.96)** keeps a slide text's scroll inside its text, whatever it is asked.
+- **Tested** by `dev/test_logview/test_logview.py`: the viewer's own file compiled on the Mac over a fake card and a fake
+  screen (page 44's box, the finger as the screen drags it), 29 files from one line to 5,200, long lines, logs shaped like a
+  real day's, and the real logs of 18 and 19 Oct when the SSD is here. For each: Bottom, then a finger up to the top; Top,
+  down to the end and up again; Bottom once more. Every step must move, every line shown must be the file's line, and no
+  scroll sent may lie past the text. Before the fix the same test stuck on seven of the files, today's real log among them.
+  6,010 checks, 0 failures.
+
 ## Old announcements replayed, and calibration made safer (screen 1.11.95, Teensy B124, 19 Oct 2026)
 
 Malcolm, 19 Oct: "Yesterday, I discovered to my surprise that the sticks needed recalibrating on my transmitter. I did it.

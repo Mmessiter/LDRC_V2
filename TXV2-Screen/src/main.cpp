@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.95"
+#define SCREEN_VERSION "1.11.96"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1272,7 +1272,7 @@ struct Host : public NextionHost {
         }
         else if (attr == "x") { repaintHole(c->x, c->y, c->w, c->h); c->x = v; } else if (attr == "y") { repaintHole(c->x, c->y, c->w, c->h); c->y = v; }
         else if (attr == "w") c->w = v; else if (attr == "h") c->h = v; else if (attr == "pic") c->pic = v; else if (attr == "pic2") c->pic2 = v; else if (attr == "font") c->font = v;
-        else if (attr == "val_y") c->scroll = max(0, (int) v);
+        else if (attr == "val_y") c->scroll = c->type == "sltext" ? constrain((int) v, 0, (int) getInt(pg, nm, "maxval_y")) : max(0, (int) v);   // (1.11.96) never past the text: a sum on the main board's side once scrolled the log 96 px beyond its last line, and the box showed blank
         else if (attr == "en") { c->en = v; paint = false; } else if (attr == "tim") { c->tim = v; paint = false; }
         else if (c->type == "rangebar") { auto it = c->extra.find(attr); if (it != c->extra.end() && it->second == v && !c->damaged) { perfSkipped++; return; } c->extra[attr] = v; }   // (a divider, the marker, the kind: the bar is drawn again)
         else { c->extra[attr] = v; paint = false; }

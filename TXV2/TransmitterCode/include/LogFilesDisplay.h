@@ -33,10 +33,32 @@ int16_t StartReadLine = 0;
 uint32_t ThisSeekPosition = 0;
 uint16_t FinalReadStartLine = 0xFFFF;
 int LastShownLines = 0;                             // how many lines the current window displays (set by ShowLogFileNew)
-int LogViewHeight = BUFFEREDLINES * FONTPOINTS;     // visible height of the LogText box in px. Learned exactly from the
-                                                    // HMI's own report on the first scroll (content − Max_Y); this is
-                                                    // the fallback until then. Needed so End can scroll to the true
+int LogViewHeight = 14 * FONTPOINTS;                // visible height of the LogText box in px: page 44's box is 348 px
+                                                    // with a 6 px border each side, 336 = 14 lines (B125: it was 240,
+                                                    // and the first Bottom of a session scrolled 96 px past the text).
+                                                    // Learned exactly from the HMI's own report on the first scroll
+                                                    // (content − Max_Y). Needed so Bottom can scroll to the true
                                                     // bottom of the final window: val_y = content − height.
+uint32_t ViewFileSize = 0;                          // B125: the size of the file the viewer reads (the wrapped copy)
+
+// B125 (19 Oct 2026, Malcolm from the field: "when I scrolled to the end by hitting the end button, I could not scroll up
+// with my finger any more. It was stuck"). The window that holds the end of the file was whatever was left when a read
+// reached the end: Bottom's stride left today's log with eight lines, which fit the box. A box whose text fits cannot be
+// scrolled, the screen reports no movement, and the lines before were never asked for. So the last window is widened
+// backwards while the read buffer still holds everything to its end and the window still has room for the lines: as
+// full as any other window, and it scrolls. Every line before it has its place in SeekPosition by now (the windows
+// that found the end overlap). Returns the lines of the window now at StartReadLine.
+uint16_t WidenFinalWindow(uint16_t L) // L: the lines the window at StartReadLine (the one that reached the end) showed
+{
+    const uint32_t total = (uint32_t)StartReadLine + L;
+    int start = StartReadLine;
+    while (start > 0 && total - (uint32_t)(start - 1) <= MXLINES - 1 && ViewFileSize - SeekPosition[start - 1] < READBUFFERSIZE)
+        --start;
+    if (start == StartReadLine)
+        return L;
+    StartReadLine = start;
+    return ReadAFewLines(); // (this read reaches the end too: FinalReadStartLine moves with it)
+}
 
 // ******************************************************************************************************************************/
 void TopOfLogFileNEW()
@@ -74,6 +96,8 @@ void BottomOfLogFileNEW()
     if (FinalReadStartLine != 0xFFFF)
         StartReadLine = FinalReadStartLine; // the window that contains the end of the file
     uint16_t L = ReadAFewLines();
+    if (FinalReadStartLine == StartReadLine)
+        L = WidenFinalWindow(L); // B125: as full a window as the buffer allows, so that a finger can scroll it
     ShowLogFileNew(L);
     int y = (int)L * FONTPOINTS - LogViewHeight; // scroll to the BOTTOM of that window
     if (y < 0)
@@ -128,11 +152,15 @@ void LogReleasedNEW()
                 Previous_Current_Y = Current_Y;
                 return;
             }
-            Current_Y -= (next - StartReadLine) * FONTPOINTS; // exact pixels for the lines removed at the top
+            const int from = StartReadLine;
+            StartReadLine = next;
+            uint16_t L = ReadAFewLines();
+            if (FinalReadStartLine == StartReadLine)
+                L = WidenFinalWindow(L); // B125: the end reached by scrolling: the same full last window as Bottom shows
+            Current_Y -= (StartReadLine - from) * FONTPOINTS; // exact pixels for the lines removed at the top
             if (Current_Y < 0)
                 Current_Y = 0;
-            StartReadLine = next;
-            ShowLogFileNew(ReadAFewLines());
+            ShowLogFileNew(L);
             SendOtherValue(Current_Y_Nextion_Label, Current_Y);
             Previous_Current_Y = Current_Y;
             return;
@@ -152,7 +180,11 @@ void LogReleasedNEW()
             if (StartReadLine < 0)
                 StartReadLine = 0;
             Current_Y += (prev - StartReadLine) * FONTPOINTS; // exact pixels for the lines added at the top
-            ShowLogFileNew(ReadAFewLines());
+            uint16_t L = ReadAFewLines();
+            const int most = (int)L * FONTPOINTS - LogViewHeight; // B125: the screen's own limit for this window (lines of a
+            if (Current_Y > most)                                 // hundred characters make a window barely taller than the box)
+                Current_Y = most > 0 ? most : 0;
+            ShowLogFileNew(L);
             SendOtherValue(Current_Y_Nextion_Label, Current_Y);
             Previous_Current_Y = Current_Y;
             return;
@@ -254,6 +286,7 @@ bool MakeWrappedCopy()
     uint16_t oi = 0;
     int n;
 
+    ViewFileSize = 0;
     File src = OpenTextFileForReading(); // the real file (TextFileName, with its /help/ or /log/ path)
     if (!src)
     {
@@ -298,13 +331,17 @@ bool MakeWrappedCopy()
             if (oi >= sizeof(out) - 4)
             {
                 dst.write(out, oi);
+                ViewFileSize += oi;
                 oi = 0;
             }
         }
         KickTheDog(); // big file: keep the watchdog fed while we copy
     }
     if (oi)
+    {
         dst.write(out, oi);
+        ViewFileSize += oi;
+    }
     dst.close();
     src.close();
     LogFileOpen = false;
