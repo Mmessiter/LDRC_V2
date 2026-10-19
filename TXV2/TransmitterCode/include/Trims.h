@@ -498,7 +498,7 @@ void TrimsToSubtrim()
 
     // Trims range from 40 to 120. 80 is centre.
 
-    char Prompt[] = "Move these trims into subtrim?\r\n\r\nThe trims of all four banks\r\ngo back to centre.";
+    char Prompt[] = "Move these trims into subtrim?\r\n\r\nThe trims of every bank\r\ngo back to centre.";
     char ItsCancelled[] = "Cancelled.\r\nSubtrim not changed.";
     char ItsAllDone[] = "Done.\r\nThe trims are now in subtrim,\r\nand back at centre.";
 

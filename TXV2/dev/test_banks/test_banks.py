@@ -348,6 +348,10 @@ check('#define BANKS_USED 6' in defs1 and '#define BANKS_IN_FILE 4' in defs1 and
 check(sw.count('Bank = UpperBank();') == 2 and 'Bank = 4;' not in sw.split('void ReadAutoAndMotorSwitch()')[1].split('/****')[0], 'Switches.h: the mid and near positions pick the upper bank')
 check('SendValue((char *)"c3", SixBanks ? 1 : 0);' in menu and 'SixBanksSet(six == 1);' in menu, 'Model options: the Six banks switch sent and read')
 check('b <= BanksCount() && found < 3' in main_cpp and '"vis BK%d,%d"' in main_cpp and 'SixBanks = false; // B130' in main_cpp and 'if (Bank >= 1 && Bank <= 4)\n        SendCommand(FMPress[Bank - 1]);' in main_cpp, 'main.cpp: the centre note, the Bank names page, the defaults and the old front marks')
+wnc = main_cpp[main_cpp.index('void WriteNewCurve()'):]; wnc = wnc[:wnc.index('\n}\n')]
+check('for (int p = 1; p <= BanksCount(); ++p)' in wnc, "B131: the curve page's Copy to all banks reaches banks 5 and 6 (Malcolm, 19 Oct: 'omitted 5,6')")
+check(main_cpp.count('for (int fm = 1; fm <= BanksCount(); ++fm)') == 1 and 'for (int fm = 1; fm < 5; ++fm)' not in main_cpp and 'for (j = 1; j <= 4; ++j)' not in main_cpp and 'for (int j = 1; j <= 4; ++j)' not in main_cpp, 'main.cpp: no four-bank loop left (trims to centre, the defaults, InitCentreDegrees)')
+check('The trims of every bank' in src('include/Trims.h') and 'fm <= BanksCount()' in src('include/Trims.h'), 'Trims.h: every bank')
 for f, want in (('BANKNAME.TXT', "'Six banks'"), ('ONESWICH.TXT', "'Six banks'"), ('RXSETUP1.TXT', 'SIX BANKS:')):
     t = open(os.path.join(ROOT, 'Help files for SD', f)).read()
     check(want in t and all(len(l) <= 70 for l in t.replace('|', '\n').split('\n')), f + ' says six banks, lines of 70 or fewer')

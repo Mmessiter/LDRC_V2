@@ -186,6 +186,14 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Copy to all banks reaches six (Teensy B131, 19 Oct 2026)
+
+Malcolm, minutes after B130 went in: "I had a quick look! EXCELLENT!! Copy to all banks (on curves screen) omitted 5,6". The
+curve page's copy went to banks 1 to 4 by number; now to every bank the model uses (BanksCount()). The same sweep found three more
+loops that stopped at four and widened them: the trims' "centre all banks", a new model's straight curves and InitCentreDegrees
+(all six in memory, used or not); the trims-to-subtrim box says "every bank". dev/test_banks checks that main.cpp has no four-bank
+loop left. Screen 1.11.98 unchanged.
+
 ## Six banks (Teensy B130, screen 1.11.98, 19 Oct 2026)
 
 Malcolm: "I have an idea for allowing the transmitter to support six banks rather than only four. We could re-define the switch

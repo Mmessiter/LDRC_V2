@@ -914,7 +914,7 @@ FLASHMEM void InitSwitchesAndTrims()
 FLASHMEM void InitCentreDegrees()
 {
 
-    for (int j = 1; j <= 4; ++j)
+    for (int j = 1; j <= BANKS_USED; ++j) // (B131: every bank in memory)
     {
         for (int i = 0; i < CHANNELSUSED; ++i)
         {
@@ -1801,7 +1801,7 @@ void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when
     for (i = 0; i < CHANNELSUSED; ++i)
     {
         CurvePointCount[i] = 5; // (B118: five points, as ever)
-        for (j = 1; j <= 4; ++j)
+        for (j = 1; j <= BANKS_USED; ++j) // (B131: banks 5 and 6 too)
             CurveSetStraight(j, i, 30, 150); // 30, 60, 90, 120, 150
     }
     MaxRangeNarrow = 0; // B113: 500 to 2500, as ever
@@ -3151,7 +3151,7 @@ void WriteNewCurve()
 
     if (GetValue(CopyToAllBanks))
     {
-        for (int p = 1; p <= 4; ++p)
+        for (int p = 1; p <= BanksCount(); ++p) // (B131: banks 5 and 6 too when the model uses them - Malcolm, 19 Oct: "Copy to all banks omitted 5, 6")
         {
             if (p != Bank)
             {
@@ -4628,7 +4628,7 @@ FASTRUN void ButtonWasPressed()
             {
                 for (i = 0; i < 15; ++i)
                 {
-                    for (int fm = 1; fm < 5; ++fm)
+                    for (int fm = 1; fm <= BanksCount(); ++fm) // (B131: six when the model uses them)
                     {
                         Trims[fm][i] = 80;
                     }
