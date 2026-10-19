@@ -92,7 +92,7 @@ FlightValue flightValue(int item, FlightSource &src) {
         // PER CELL voltage big, and the total voltage smaller"). The small line says "total" so it cannot be read as the
         // cell (10-04: "per cell  7.82 V" below a big number had read as if the total were per cell).
         // The percentage is the part's tag, at the right of its name (or under it), so it is there in every size of box.
-        auto battery = [&](bool rx, std::string &big, std::string &unit, std::string &small, std::string &tag, FlightState &state) {
+        auto battery = [&](bool rx, std::string &big, std::string &unit, std::string &small, std::string &tag, FlightState &state, int8_t &level) {
             float t = 0, c = 0;
             if (rx && !linked) { big = "--"; tag = noModel(); state = FS_STALE; return; }
             if (!flightBattery(src.text(rx ? "RXBV" : "TXBV"), t, c)) { big = "--"; state = FS_STALE; return; }
@@ -100,11 +100,12 @@ FlightValue flightValue(int item, FlightSource &src) {
             big = fmt("%.2f", c); unit = "V";
             small = fmt("%.2f V total", t);
             if (pct >= 0 && pct <= 100) tag = fmt("%.0f %%", (double) pct);
+            level = pct >= 0 && pct <= 100 ? (int8_t) pct : -1;   // (1.11.97) for the battery picture beside the name
             state = pct >= 0 && pct <= 20 ? FS_ALARM : pct >= 0 && pct <= 40 ? FS_WARN : FS_NORMAL;
             // (the front page's "Battery LOW" is for either battery: it turns the strip red, not this box)
         };
-        battery(true, v.big, v.unit, v.small, v.tag, v.state);
-        battery(false, v.big2, v.unit2, v.small2, v.tag2, v.state2);
+        battery(true, v.big, v.unit, v.small, v.tag, v.state, v.level);
+        battery(false, v.big2, v.unit2, v.small2, v.tag2, v.state2, v.level2);
         break;
     }
     case FL_AMSTRIM: {                                 // (1.11.70) AMS above, the trims below, as the main board words them on the front page
@@ -350,6 +351,8 @@ FlightPartPlan flightPartPlan(const FlightRect &p, int item, int part, FlightFon
     int col = wider(flightPartShort(item, part), flightPartShort(item, other));
     rw.tagBelow = p.h >= 2 * nameH + 4 && *partTagRef(item, part);
     if (rw.tagBelow && f) col = std::max(col, wider(partTagRef(item, part), partTagRef(item, other)));
+    if (item == FL_BATTS && f && p.w >= 180)                            // (1.11.97) room for the battery picture beside the name
+        col = std::max(col, wider(flightPartShort(item, part), flightPartShort(item, other)) + 8 + flightGlyphW(nameH));
     if (col + 12 > p.w / 2) col = p.w / 2 - 12;                       // (the number keeps half the part at least)
     rw.column = col;
     rw.number = FlightRect(p.x + 10 + col + 12, p.y + 4, p.w - 20 - col - 12, p.h - 8);
@@ -555,11 +558,19 @@ void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
         return;
     }
     if (!down || (int32_t) (now - lastSeen) <= 80) return;   // a sample the chip dropped mid-press, not a lift (the long press's clock runs on)
+    const int tapped = heldBox; const bool quick = heldBox >= 0 && (int32_t) (now - heldSince) < (int32_t) TAP_MS;   // (1.11.97) a short press on a box
     heldBox = -1;                                              // a real lift: the long press, if any, starts again
     down = false;
     const int was = pressedId; const bool off = slidOff;
     pressedId = -1; slidOff = false;
-    if (was < 0 || off) return;
+    if (was < 0 || off) {
+        if (!setup && shown && !inFlight && quick && !off) {   // (1.11.97) a second short tap on the same box, soon after the first: that box's chooser
+            if (tapped == lastTapBox && (int32_t) (now - lastTapAt) <= (int32_t) DOUBLE_TAP_MS) { lastTapBox = -1; openSetup(); chooser = tapped; quickEdit = true; }
+            else { lastTapBox = tapped; lastTapAt = now; }
+        } else lastTapBox = -1;
+        return;
+    }
+    lastTapBox = -1;
     if (!setup) {
         if (!shown) return;
         if (was == ID_ORIGINAL) { if (cfg.manual != FM_ORIGINAL) { cfg.manual = FM_ORIGINAL; saved = true; } shown = false; }   // the front page, until its "Defined screen" (or the next take-off or landing); kept across a switch-off

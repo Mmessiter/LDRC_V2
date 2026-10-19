@@ -186,6 +186,32 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Centres checked at power-up; battery pictures and a double tap on the defined screens (screen 1.11.97, Teensy B126, 19 Oct 2026)
+
+Three requests from Malcolm on the afternoon of 19 Oct, after the Havok's three flights.
+
+- **The centre note (B126).** "When the transmitter boots up, if it sees Rotorflight is used for this model, and if it also
+  sees that the centre position of Aileron, elevator, or rudder is not where it should be, 1500, then it should warn the
+  user of this as well as which flight mode is not properly centred." At power-up, and when a model is chosen, a
+  Rotorflight model's outputs are worked out with every stick at its calibrated centre, bank by bank, through the stages
+  of a frame (the curves, the mixes, the trims and subtrims, the routing, the reversing). A stick-fed channel that does
+  not come out at 1500 is named with its bank, three at most: "Bank 4: Elevator is 1456 / with the stick centred. / A
+  curve, trim or subtrim moves it. / Put it right before flying." The throttle or collective stick's channels, the motor
+  channel, the arming channel and the knobs are left alone. Nothing is said when all is well. The note waits for the
+  front page, nothing connected, no question open and no firmware on trial (a box at power-up would stall a trial's
+  confirmation), as the clock's message does. Tested by `dev/test_centre/test_centre.py`: the real CentreNote over fake
+  curve, trim and subtrim stages with the real routing and reversing (22 checks), and the flow as source (9).
+- **The battery picture (screen 1.11.97).** "In the box that shows receiver and transmitter voltage, please, could we have
+  the little picture of a battery, as we did on the original screen." A battery beside each name, filled to its per cent,
+  green on a dark face, the ink's colour on a light one or when the half is amber or red. A part 180 px wide or more keeps
+  a column for it; a narrower one keeps its words. Drawn on the Mac in three box sizes and the low-battery colours before
+  release (hmi/render_host).
+- **A double tap (screen 1.11.97).** "A double tap on one of the boxes should allow us to redefine the contents of that
+  box." Two short taps on the same box within 0.6 s, on the ground, open that box's chooser, exactly as the two-second
+  hold of 1.10.2 does (which stays). A single tap, a slide, a slow pair, two boxes, or in flight: nothing. FLIGHT.TXT says
+  both. hmi/test_flight: the pair, the slow pair, two boxes, a long first press, a slide, in flight, the tabs, the
+  picture's room (2,662 checks).
+
 ## The log viewer no longer sticks at the end (screen 1.11.96, Teensy B125, 19 Oct 2026)
 
 Malcolm, 19 Oct, from the field after three good flights with the Havok: "in the log file, when I scrolled to the end by

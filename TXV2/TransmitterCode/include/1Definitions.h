@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B125 19/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B126 19/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -824,6 +824,11 @@ void TryToReconnect();
 void FlushFifos();
 FLASHMEM void SetDS1307ToCompilerTime();
 void ClockMessageTick();                     // B63: main.cpp
+void CentreNoteTick();                       // B126: main.cpp - a Rotorflight model's cyclic and tail outputs at stick centre, bank by bank, once on the front page
+void CentreNote(char *out, size_t n);        // B126: main.cpp - the note itself ("" when all is well)
+void DoTrimsAndSubtrims();                   // (main.cpp, after CentreNote: B126 calls them)
+void RerouteOutputs();
+bool CentreNotePending = false;              // B126: set at power-up and when a model is chosen
 int GetOtherValue(char *nbox);
 void CheckInvisiblePoint();
 void GotoFrontView();

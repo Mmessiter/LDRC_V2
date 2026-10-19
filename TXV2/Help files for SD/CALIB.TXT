@@ -51,3 +51,5 @@ Set it again on the Clock page: 'System', then 'Next >'.|
 Or let it set itself over WiFi.|
 The reset sets stick mode 2.|
 Fly mode 1? Set 'Stick mode' in 'System' BEFORE you calibrate.|
+At power-up, and when a model is chosen, a Rotorflight model is checked: aileron, elevator and rudder must give 1500 with the sticks centred, in every bank.|
+A bank that does not is named, with the channel and its value: look at that bank's curve, trim or subtrim.|

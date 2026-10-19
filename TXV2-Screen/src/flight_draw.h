@@ -177,6 +177,20 @@ static void flTwoPartBox(const ldrc::FlightTile &t, bool setup) {
         gfx->drawFastHLine(r.x + 10, mid, r.w - 20, setup ? FL_SOFT : edge);   // (a colour change is the line when a half needs a look)
     }
 }
+// (1.11.97, Malcolm 19 Oct: "in the box that shows receiver and transmitter voltage, please, could we have the little picture
+// of a battery, as we did on the original screen") A battery beside the part's name, filled to its per cent, where there is
+// room for it (flightPartPlan keeps the room in a part 180 px wide or more; a narrower one keeps its words).
+static void flBatteryBeside(const ldrc::FlightTile &t, int part, int x, int y, int nameH, int room, uint16_t edge, uint16_t fill) {
+    if (t.item != ldrc::FL_BATTS) return;
+    const int level = part ? t.v.level2 : t.v.level;
+    const int h = ldrc::flightGlyphH(nameH), w = ldrc::flightGlyphW(nameH);
+    if (level < 0 || h < 8 || room < w) return;
+    y += (nameH - h) / 2;
+    gfx->drawRect(x, y, w - 3, h, edge);
+    gfx->fillRect(x + w - 3, y + h / 4, 3, h - 2 * (h / 4), edge);      // the terminal
+    const int fw = (w - 3 - 4) * (level > 100 ? 100 : level) / 100;
+    if (fw > 0) gfx->fillRect(x + 2, y + 2, fw, h - 4, fill);
+}
 static void flPart(const ldrc::FlightRect &p, const ldrc::FlightTile &t, int part, const std::string &label, const std::string &big,
                    const std::string &unit, const std::string &small, const std::string &tag, ldrc::FlightState state, int scale) {
     using namespace ldrc;
@@ -188,6 +202,7 @@ static void flPart(const ldrc::FlightRect &p, const ldrc::FlightTile &t, int par
     const bool lightFace = ldrc::themeIsLight(face);
     const uint16_t dim = own || lightFace ? soft : FL_DIM;
     const uint16_t valueInk = state == FS_STALE ? dim : state == FS_GOOD ? (lightFace ? ink : FL_GREEN) : ink;
+    const uint16_t fillInk = (state == FS_WARN || state == FS_ALARM) ? ink : (lightFace ? ink : FL_GREEN);   // (1.11.97) the battery picture's charge
     const FlightPartPlan pl = flightPartPlan(p, t.item, part, &flightFonts);
     const int nameH = fontHeight(pl.font), wpad = 10;
     flClip(FlightRect(p.x + 2, p.y + 2, p.w - 4, p.h - 4));
@@ -197,10 +212,13 @@ static void flPart(const ldrc::FlightRect &p, const ldrc::FlightTile &t, int par
         const int y0 = p.y + (p.h - nameH * (two ? 2 : 1)) / 2;
         flText(p.x + wpad, y0, pl.font, soft, nm);
         if (two) flText(p.x + wpad, y0 + nameH, pl.font, soft, tag);
+        flBatteryBeside(t, part, p.x + wpad + textWidth(pl.font, nm) + 8, y0, nameH, pl.column - textWidth(pl.font, nm) - 8, soft, fillInk);
     } else {                                                      // the name above, its tag at the right of the same line
         const int tw = tag.empty() ? 0 : textWidth(pl.font, tag);
         if (tw) flText(p.x + p.w - wpad - tw, p.y + 8, pl.font, soft, tag);
-        flText(p.x + wpad, p.y + 8, pl.font, soft, flCut(label, pl.font, p.w - 2 * wpad - (tw ? tw + 12 : 0)));
+        const std::string nm = flCut(label, pl.font, p.w - 2 * wpad - (tw ? tw + 12 : 0));
+        flText(p.x + wpad, p.y + 8, pl.font, soft, nm);
+        flBatteryBeside(t, part, p.x + wpad + textWidth(pl.font, nm) + 8, p.y + 8, nameH, p.w - 2 * wpad - textWidth(pl.font, nm) - 8 - (tw ? tw + 12 : 0), soft, fillInk);
     }
     if (!pl.row && pl.small && !small.empty()) flText(p.x + wpad, p.y + p.h - nameH - 8, pl.font, soft, flCut(small, pl.font, p.w - 2 * wpad));
     flNumber(pl.number, big, unit, scale, valueInk, state == FS_STALE ? FL_DIM : soft);

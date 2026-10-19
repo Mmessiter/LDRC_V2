@@ -66,6 +66,7 @@ struct FlightValue {
     // A box of two parts (1.11.70): the upper part is label, big, unit, small and state above; the lower part these. tag: a
     // short word on the name's line, at its right ("62 %"; under the name in a part's one-row form)
     bool twoPart = false; std::string label2, big2, unit2, small2; FlightState state2 = FS_NORMAL; std::string tag, tag2;
+    int8_t level = -1, level2 = -1;                    // (1.11.97) a battery's per cent for the picture beside its name, -1 none
 };
 FlightValue flightValue(int item, FlightSource &src);
 // A warning the front page shows, for the flight screen's strip whatever its boxes: "Battery LOW", or no link in flight.
@@ -149,6 +150,8 @@ struct FlightTile { int id = 0; FlightRect r; int item = FL_NONE; FlightValue v;
 void flightSplit(const FlightRect &r, FlightRect &upper, FlightRect &lower);
 struct FlightPartPlan { int font = 2; bool row = false, small = false, tagBelow = false; int column = 0; FlightRect number; };
 FlightPartPlan flightPartPlan(const FlightRect &p, int item, int part, FlightFonts *f);
+inline int flightGlyphH(int nameH) { return nameH - 8; }            // (1.11.97) the battery picture beside a part's name: as tall as its letters
+inline int flightGlyphW(int nameH) { return flightGlyphH(nameH) * 9 / 4; }
 // layout: a choice of box sizes, drawn as its boxes. swatch: a colour to touch, drawn in face with its name in ink.
 // label: words on the page, not a button.
 struct FlightButton { int id = 0; FlightRect r; std::string text; bool chosen = false, pressed = false; uint32_t serial = 0; int8_t layout = -1;
@@ -224,6 +227,11 @@ private:
     bool inFlight = false;                             // (poll) the model could be flying: no long press then - setup pages close in flight by rule
     bool quickEdit = false;                            // the setup page was opened by a long press: it closes as soon as the box is chosen
     bool waitLift = false;                             // the finger that opened it is still down: nothing counts until it has really lifted (1.10.4)
+    // (1.11.97, Malcolm 19 Oct: "a double tap on one of the boxes should allow us to redefine the contents of that box") Two
+    // short taps on the same box, the second within DOUBLE_TAP_MS of the first's lift, on the ground: that box's chooser, as
+    // the long press opens it. A tap is a press shorter than TAP_MS that has not slid.
+    static const uint32_t DOUBLE_TAP_MS = 600, TAP_MS = 500;
+    int lastTapBox = -1; uint32_t lastTapAt = 0;
     uint32_t lastSeen = 0;                             // the last sample with the finger on the glass: a lift is real after 80 ms of none
     int idAt(int x, int y) const;
     FlightConfig before;                               // the settings when the page opened

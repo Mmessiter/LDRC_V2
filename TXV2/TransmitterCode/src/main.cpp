@@ -434,6 +434,62 @@ FLASHMEM void CalibrationNote(char *out, size_t n)
         return;
     }
 }
+// B126 (Malcolm, 19 Oct 2026, the day after the Havok's Bank 4 aileron curve had him recalibrating twice: "when the
+// transmitter boots up, if it sees Rotorflight is used for this model, and if it also sees that the centre position of
+// Aileron, elevator, or rudder is not where it should be, 1500, then it should warn the user of this as well as which
+// flight mode is not properly centred"). Every stick and knob is put at its calibrated centre and the outputs are worked
+// out bank by bank through the stages of a frame (the curves, the mixes, the trims and subtrims, the routing, the
+// reversing): a stick-fed channel that does not come out at 1500 is named with its bank. The throttle or collective
+// stick's channels are left out, with the motor and arming channels: a collective curve has its own reasons. Nothing is
+// said when all is well. The frame's buffers are worked out again from the sticks afterwards. The front page shows the
+// note once, at power-up and when a model is chosen (CentreNoteTick, as the clock's message).
+static void StagesAfterInputs() // a frame's stages after GetAllInputs, less the slow servos (they keep time)
+{
+    MixInputs();
+    CalculateAllOutputs();
+    MixOutputs();
+    DoTrimsAndSubtrims();
+    RerouteOutputs();
+    ServoReverse();
+}
+FLASHMEM void CentreNote(char *out, size_t n) // out: "" when every bank is centred, or the model has no Rotorflight
+{
+    out[0] = 0;
+    if (!RotorFlight_V)
+        return;
+    const uint8_t bankWas = Bank;
+    const uint8_t collective = MotorChannel < CHANNELSUSED ? InPutStick[MotorChannel] : 255; // the stick that feeds the motor channel
+    uint8_t found = 0;
+    for (uint8_t b = 1; b <= 4 && found < 3; ++b)
+    {
+        Bank = b;
+        for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
+        {
+            const uint8_t dev = InPutStick[ch];
+            InputsBuffer[ch] = (dev < 8 && !InputIsSwitch(dev)) ? ChannelCentre[dev] : ReadThreePositionSwitch(dev); // (as GetAllInputs, the sticks centred)
+        }
+        StagesAfterInputs();
+        for (uint8_t ch = 0; ch < CHANNELSUSED && found < 3; ++ch)
+        {
+            const uint8_t dev = InPutStick[ch];
+            if (dev > 3 || dev == collective || ch == MotorChannel || (ArmingChannel >= 1 && ch == ArmingChannel - 1))
+                continue; // a knob or a switch feeds it, the throttle or collective stick does, or the firmware forces it
+            const uint8_t at = ChannelOutPut[ch] < CHANNELSUSED ? ChannelOutPut[ch] : ch; // where RerouteOutputs put it
+            const int v = SendBuffer[at];
+            if (abs(v - 1500) <= 10)
+                continue;
+            char line[48];
+            snprintf(line, sizeof(line), "%sBank %d: %s is %d", found ? "\r\n" : "", b, ChannelNames[ch], v);
+            strlcat(out, line, n);
+            ++found;
+        }
+    }
+    Bank = bankWas;
+    GetAllInputs();
+    StagesAfterInputs(); // the frame's buffers as the sticks have them now
+    if (found)
+        strlcat(out, "\r\nwith the stick centred.\r\nA curve, trim or subtrim moves it.\r\nPut it right before flying.", n); // (three lines of names at most + these three: the popup's 180 characters, 7 lines)
+}
 static uint16_t GraphShown[2];   // what Input and Output show (0: nothing yet - DisplayCurveAndServoPos)
 static uint32_t GraphMovedAt[2];
 FLASHMEM void ShowGraphMicros(uint16_t in, uint16_t out)
@@ -755,6 +811,25 @@ void ClockMessageTick()
     if (!I2cSeen[0]) snprintf(dead, sizeof(dead), "The clock does not answer.\r\nNothing answers on the I2C bus:\r\ncheck 5 V to the module, SDA to pin 18,\r\nSCL to pin 19, and its pull-up resistors.");
     else snprintf(dead, sizeof(dead), "The clock does not answer (0x68).\r\nOn the I2C bus: %s.\r\nThe time is set from WiFi or a phone\r\nuntil it does.", I2cSeen);
     MsgBox(pFront, ClockDead ? dead : (char *)"The clock had stopped answering\r\nand was started again.\r\n\r\nThe time is put right by itself\r\nfrom WiFi, or from a phone.");
+    GotoFrontView();
+}
+/*********************************************************************************************************************************/
+
+// B126: the centre note (CentreNote), once, on the front page, when nothing is connected, no question is waiting and no
+// firmware is on trial (B63: a box at power-up would stall the trial's confirmation). CentreNotePending is set at
+// power-up and when a model is chosen (ModelViewEnd).
+void CentreNoteTick()
+{
+    char pFront[] = "page FrontView";
+    if (!CentreNotePending || FwTrialRunning || CurrentView != FRONTVIEW || ModelMatched || ModalWaits)
+        return;
+    CentreNotePending = false;
+    char note[200];
+    CentreNote(note, sizeof(note));
+    if (!note[0])
+        return;
+    PlaySound(WHAHWHAHMSG);
+    MsgBox(pFront, note);
     GotoFrontView();
 }
 /*********************************************************************************************************************************/
@@ -1282,6 +1357,8 @@ FLASHMEM void setup()
     GotoFrontView();
     RedLedOn();
     ClockMessageTick(); // V2 B30/B62/B63: a clock that did not answer, said once - but not while new firmware is on trial (below)
+    CentreNotePending = true; // B126: a Rotorflight model's cyclic and tail at stick centre, bank by bank
+    CentreNoteTick();
     TXBuildAge = GetBuildDaysSince2020(); // days since 1st Jan 2020 for this build
     Look(BUILD_ID_STR);
     Look(TXBuildAge);
@@ -5286,6 +5363,7 @@ void FASTRUN ManageTransmitter()
         TellScreenRx();            // V1B: the receiver's release number, and how its update is going (RxUpdate.h)
         PipeTick();                // B44: the Rotorflight menu's ask for the receiver's Bluetooth, renewed (Parameters.h)
         ClockMessageTick();        // B63: the clock's word, once a trial is over
+        CentreNoteTick();          // B126: the centre note, once a trial is over or the model is chosen
         LastTimeRead = millis();   // Reset this timer
         return;                    // That's enough housekeeping for this time around
     }

@@ -436,6 +436,8 @@ void ModelViewEnd()
             ModelNumber = PreviousModelNumber;
             ReadOneModel(ModelNumber);
         }
+        else
+            CentreNotePending = true; // B126: the model chosen is looked at on the front page (CentreNoteTick)
     }
     SaveAllParameters();
     GotoFrontView();

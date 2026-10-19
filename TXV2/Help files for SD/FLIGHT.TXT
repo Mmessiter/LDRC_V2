@@ -10,9 +10,10 @@ until you press the other button.|
 The tabs 1 to 6 (top right) switch between your six screens at|
 a touch, even in flight. The yellow tab is the one in use.||
 TO CHANGE A BOX FROM HERE:|
-On the ground, press and hold the box for two full seconds.|
+On the ground, tap the box twice quickly, or press and hold it|
+for two full seconds.|
 Its chooser opens. Your choice brings this screen straight back.|
-A tap or a slide does nothing.|
+A single tap or a slide does nothing.|
 (On the ground means the safety is on. With no safety switch,|
 it means the motor is off.)||
 WARNING COLOURS:|

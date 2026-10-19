@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
         if (content.empty()) { fprintf(stderr, "cannot read %s\n", argv[i + 1]); return 2; }
         exercise(content, argv[i], true); exercise(content, argv[i], false);
     }
-    printf("%d checks, %d failures\n", checks, fails);
+    printf("test_logview: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
 '''
