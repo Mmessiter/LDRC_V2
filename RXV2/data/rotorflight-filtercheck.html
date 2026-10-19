@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Read black box &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=398">
-<script src="/app.js?v=398" defer></script>
+<link rel=stylesheet href="/style.css?v=399">
+<script src="/app.js?v=399" defer></script>
 <script src="/bbcheck.js?v=1" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
@@ -31,8 +31,10 @@
 .more{background:#e6edf2;border-radius:10px;padding:.6em .8em;margin:.4em 0;line-height:1.4;font-size:.95em}
 .applyBtn{width:100%;margin-top:.5em;padding:.7em;border:0;border-radius:10px;background:#6cab5e;color:#fff;font-size:1em;font-weight:700;cursor:pointer}
 .applyBtn:disabled{opacity:.5}
-.startBtn{width:100%;margin:.55em 0 0;padding:.8em;border:0;border-radius:10px;background:#3f8f6a;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
+.startBtn{width:100%;margin:0 0 .7em;padding:.9em;border:0;border-radius:10px;background:#3f8f6a;color:#fff;font-size:1.1em;font-weight:700;cursor:pointer}
 .startBtn:disabled{opacity:.5}
+.phase{font-weight:700;color:#2f4452;line-height:1.35;margin:0 0 .1em}
+.recLink.held{opacity:.45;pointer-events:none}
 .cancelBtn{width:100%;margin-top:.5em;padding:.6em;border:0;border-radius:10px;background:#c98a4a;color:#fff;font-size:.95em;font-weight:700;cursor:pointer}
 table.pk{width:100%;border-collapse:collapse;font-size:.9em;margin:.4em 0}
 table.pk th,table.pk td{padding:.3em .35em;text-align:right;border-bottom:1px solid #d7dee4;color:#2f4452}
@@ -68,15 +70,17 @@ table.pk td:first-child,table.pk th:first-child,table.pk td:nth-child(3),table.p
     <div id=status class="banner info" style="display:none"></div>
 
     <div class=card id=startCard>
-        <p class=do id=recNote><b>Record Gyro raw, Gyro and Head speed at 1 in 2, erase, fly a hover and a few brisk moves, land, transmitter off.</b> Then check. One change, one flight, check again.</p>
-        <div id=recWarn class=more style="display:none"></div>
-        <a class=recLink href="/rotorflight-blackbox"><span class=ico>&#128209;</span> What to record, and how often &rarr;</a>
-        <button class="startBtn usbOnly" id=startBtn onclick="startCheck(0)">&#128200; Check the last flight</button>
+        <button class="startBtn usbOnly" id=startBtn onclick="startCheck(0)">&#128200; Read the black box now</button>
         <div id=progWrap style="display:none">
+            <div class=phase id=phaseText></div>
             <div class=bar><i id=barFill style="width:0"></i></div>
             <div class=prog id=progText></div>
             <button class=cancelBtn onclick="cancelCheck()">Cancel</button>
         </div>
+        <p class=do id=recNote><b>Record Gyro raw, Gyro and Head speed at 1 in 2, erase, fly a hover and a few brisk moves, land, transmitter off, USB cable in.</b> Then read it here. One change, one flight, read again.</p>
+        <div id=recWarn class=more style="display:none"></div>
+        <a class=recLink id=recLink href="/rotorflight-blackbox"><span class=ico>&#128209;</span> What to record, and how often &rarr;</a>
+        <p class=sub id=recHold style="display:none">Back when the read is done: it has the flight controller to itself.</p>
     </div>
 
     <div class=card id=memCard>
@@ -171,7 +175,7 @@ function paintMem(){
     else if(supported&&mem.used) $('eraseMsg').textContent='';
 }
 async function eraseLogs(){
-    if(polling){ setStatus('warn','Wait for the check to finish'); return; }
+    if(polling){ setStatus('warn','Wait for the read to finish'); return; }
     const g=await groundCheck(); if(g){ setStatus('bad',g); return; }
     if(!(await LDRC.confirm('Erase every flight log on the flight controller? They cannot be got back, and anything you have not checked yet goes with them.',
         {title:'Erase flight logs',icon:'🗑️',yes:'Erase',kind:'danger'}))) return;
@@ -262,9 +266,34 @@ async function startCheck(logIdx, attempt){
         setStatus('bad',msg); return;
     }
     setStatus('','');
-    $('result').style.display='none'; $('progWrap').style.display=''; $('barFill').style.width='0'; $('progText').textContent='Starting…';
-    polling=true; document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=true; });
+    $('result').style.display='none';
+    setBusy(true);
     poll();
+}
+// A read running takes the card over: the button becomes the progress, and the What-to-record link waits
+// (that page would be refused: the read has the flight controller's link to itself).
+function setBusy(on){
+    polling=on;
+    document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=on; });
+    $('startBtn').style.display=on?'none':'';
+    $('progWrap').style.display=on?'':'none';
+    $('recLink').className='recLink'+(on?' held':'');
+    $('recHold').style.display=on?'':'none';
+    if(on){ $('barFill').style.width='0'; $('phaseText').textContent='Starting'; $('progText').textContent=''; }
+}
+// The progress in words: what it is doing, and how far it has got. Honest when it widens the window: that says so and
+// starts the bar again, further back.
+function progressWords(st){
+    const span=Math.max(0,(st.end||0)-(st.start||0)), win=st.window||WIN, logs=st.logs||0;
+    let phase;
+    if(st.state==='summary') phase='Asking the flight controller what it holds';
+    else if(logs) phase='Reading: '+logs+' flight'+(logs>1?'s':'')+' found so far'+(st.hs?', head speed '+st.hs+' rpm':'');
+    else if(win>WIN) phase='No flight in the last '+mb(WIN)+': reading further back, '+mb(win);
+    else phase='Reading back through the last '+mb(win)+' for the newest flight';
+    if(st.state!=='reading') return {phase, line:'', pct:0};
+    const pct=Math.min(100, st.pct!=null?st.pct:(span?Math.round((st.bytes||0)*100/span):0));
+    const eta=st.eta?(st.eta>90?'about '+Math.round(st.eta/60)+' min left':st.eta+' s left'):'';
+    return {phase, line: mb(st.bytes||0)+' of '+mb(span)+' · '+pct+' %'+(eta?' · '+eta:''), pct};
 }
 async function cancelCheck(){ try{ await fetch('/api/blackbox/cancel',{method:'POST',cache:'no-store'}); }catch(e){} }
 async function poll(){
@@ -272,21 +301,20 @@ async function poll(){
     try{ st=await (await fetch('/api/blackbox/status',{cache:'no-store'})).json(); }catch(e){}
     if(!st){ setTimeout(poll,1000); return; }
     if(st.state==='reading'||st.state==='summary'){
-        $('barFill').style.width=(st.pct||0)+'%';
-        const secs=Math.round((st.ms||0)/1000);
-        const eta=st.eta?(st.eta>90?Math.round(st.eta/60)+' min left':st.eta+' s left'):'';
-        $('progText').textContent=(st.state==='summary'?'Asking the flight controller…':(mb(st.bytes)+' of '+mb(st.end-st.start)+' read'+(st.logs?' — '+st.logs+' flight'+(st.logs>1?'s':'')+' so far':'')+(st.hs?' — head speed '+st.hs+' rpm':'')+' — '+secs+' s'+(eta?', '+eta:'')));
+        const p=progressWords(st);
+        $('phaseText').textContent=p.phase; $('barFill').style.width=p.pct+'%'; $('progText').textContent=p.line;
         setTimeout(poll,700); return;
     }
-    polling=false; $('progWrap').style.display='none';
-    document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=false; });
-    if(st.state==='failed'){ setStatus('bad','Stopped: '+st.reason); return; }
-    if(st.state==='done'){ $('progText').textContent=''; if(!filtRaw) await readContext(); await showResult(st); return; }
-    setStatus('info','State: '+st.state);
+    if(st.state==='failed'){ setBusy(false); setStatus('bad','Stopped: '+st.reason); return; }
+    if(st.state==='done'){
+        $('phaseText').textContent='Working out what the flight says'; $('barFill').style.width='100%'; $('progText').textContent='';
+        if(!filtRaw) await readContext();
+        await showResult(st); setBusy(false); return;
+    }
+    setBusy(false); setStatus('info','State: '+st.state);
 }
 async function fetchPart(n){ const r=await fetch('/api/blackbox/result?part='+n,{cache:'no-store'}); if(!r.ok) throw new Error('result part '+n+': '+(await r.text())); return r.json(); }
 async function showResult(st){
-    setStatus('info','Reading the result…');
     try{
         const [summary,fly,gnd,order,timeline,orderFilt,flight]=await Promise.all([0,1,2,3,4,5,6].map(fetchPart));
         parts={summary,fly,gnd,order,timeline,orderFilt,flight};
@@ -441,15 +469,24 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     let hadUsb=!!s;
     setInterval(async()=>{ if(polling) return; const now=await usbGate(); if(now&&!hadUsb){ hadUsb=true; if(!filtRaw) await readContext(); } else if(!now) hadUsb=false; }, 3000);
     // a check already running or finished on the receiver (the page was left and reopened)
+    let running=false;
     try{ const st=await (await fetch('/api/blackbox/status',{cache:'no-store'})).json();
-         if(st.state==='reading'||st.state==='summary'){ polling=true; $('progWrap').style.display=''; document.querySelectorAll('.usbOnly').forEach(el=>{ el.disabled=true; }); poll(); }
+         if(st.state==='reading'||st.state==='summary'){ running=true; setBusy(true); poll(); }
          else if(st.state==='done'&&st.result){ await showResult(st); } }catch(e){}
+    // Arrived from the Black box page's button: the read starts by itself (Malcolm, 19 Oct 2026, sat at this page waiting
+    // for a read that had not begun). No cable: the banner above says what to connect, and the button waits.
+    if(autoStart()&&!running&&!polling&&s) startCheck(0);
 });
+function autoStart(){
+    let on=false; try{ on=new URLSearchParams(location.search||'').get('start')==='1'; }catch(e){}
+    if(on){ try{ history.replaceState(null,'',location.pathname); }catch(e){} }   // once: a reload does not read again
+    return on;
+}
 </script>
 <template id=helpContent><h2>Read black box</h2>
 <p>Reads the flight controller&rsquo;s black box over the USB cable, works out the vibration spectrum of the gyro before and after the filters, and says in one line which filter to change. What the Rotorflight Blackbox Explorer shows on a computer, judged for you.</p>
 <h3>What to record</h3>
-<p>On the Black box page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b> (RPM), set <b>How often</b> to <b>1 in 2</b>, and <b>Erase</b> so the next flight is the only one. Fly a normal flight: a hover and a few brisk moves. Land, switch the transmitter off, connect the USB cable, tap <b>Check the last flight</b>.</p>
+<p>On the Black box page tick <b>Gyro raw</b>, <b>Gyro</b> and <b>Head speed</b> (RPM), set <b>How often</b> to <b>1 in 2</b>, and <b>Erase</b> so the next flight is the only one. Fly a normal flight: a hover and a few brisk moves. Land, switch the transmitter off, connect the USB cable, tap <b>Read the black box now</b> (the Black box page&rsquo;s own button starts the read as it opens this page). A bar shows how far the read has got and how long is left.</p>
 <h3>What it looks for</h3>
 <ul>
 <li><b>Lines at multiples of the head speed</b> (1 per rev, the blades, the motor, the tail) are rotor vibration. The rotor-speed notches remove them &mdash; when they have a head-speed signal and cover enough harmonics (strength Low, Medium, High).</li>

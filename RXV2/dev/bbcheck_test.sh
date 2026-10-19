@@ -24,4 +24,6 @@ for pg in data/*.html; do
 done
 echo "page_test: $(ls data/*.html | wc -l | tr -d ' ') pages checked"
 node dev/keptcheck_test.js
+node dev/bbstart_test.js
+node dev/route_gate.js | tail -1
 node dev/help_test.js

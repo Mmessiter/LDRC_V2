@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.899-read-black-box-now",
+      "url": "https://messiter.com/rxv2/release/v0.9.899/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.899/littlefs.bin",
+      "fs_md5": "03ea2d0c02bb1e95bc23df771f2f728e",
+      "notes": "Read black box: the Black box page's button now starts the read as the page opens, with a progress bar (how far, how long is left, the flights found so far) and a line saying what it is doing; the What-to-record link waits while a read runs. Over Bluetooth the phone could never start a black box read in 0.9.898: its routes were registered on the WiFi server only, so the app got 'not found'. Fixed, with a gate (dev/route_gate.js) that keeps every route on the router that serves both."
+    },
+    {
       "name": "RXV2-0.9.898-sbus-standard-scale",
       "url": "https://messiter.com/rxv2/release/v0.9.898/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.898/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.888/littlefs.bin",
       "fs_md5": "9b385921164b128c5a26d6ea12fba9b5",
       "notes": "The ESC settings page answers for the brand the flight controller is set to (a Hobbywing V4 owner was told to 'set it to Scorpion'): the Scorpion is read and changed there; a Hobbywing Platinum V4 is read-only for Rotorflight (LCD box / WiFi module); the Platinum V5, FlyRotor, OpenYGE and XDFly are programmable but not from that page yet. Wiring + help: the Platinum V4's telemetry is its programming port's signal pin, never the red pin."
-    },
-    {
-      "name": "RXV2-0.9.887-direct-drive",
-      "url": "https://messiter.com/rxv2/release/v0.9.887/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.887/littlefs.bin",
-      "fs_md5": "8f37f74f076019a2d0c0297eb34fa38c",
-      "notes": "The gear-ratio page accepts 1 : 1 as direct drive (head speed = motor RPM) with an amber note that it is also the factory setting; it called 1 : 1 'Not set' and asked to save anyway. Found on the SAB Havoc."
     }
   ],
   "rotorflight": {

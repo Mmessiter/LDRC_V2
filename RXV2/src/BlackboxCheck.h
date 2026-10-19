@@ -293,6 +293,10 @@ inline String statusJson() {
     return s;
 }
 
+// Through the router, as WebPages.h's routes are: it serves WiFi and Bluetooth alike. This file is included AFTER
+// WebPages.h has taken its `#define server g_bleRouter` back, so until 0.9.899 these routes went onto the WiFi server
+// only, and the phone over Bluetooth got "not found" for every one of them (Malcolm, 19 Oct 2026, at the bench).
+#define server g_bleRouter
 inline void registerRoutes() {
     server.on("/rotorflight-filtercheck", []() { if (!serveLittleFsFile("/rotorflight-filtercheck.html", "text/html")) server.send(503, "text/plain", "page missing - update the web files"); });
     server.on("/api/blackbox/check", HTTP_POST, []() {
@@ -315,6 +319,7 @@ inline void registerRoutes() {
         server.send(200, "application/json", String(jsonBuf));
     });
 }
+#undef server
 
 } // namespace BbCheck
 #endif // _SRC_BLACKBOXCHECK_H

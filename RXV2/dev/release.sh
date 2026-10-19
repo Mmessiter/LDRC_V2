@@ -14,6 +14,9 @@
 #                            lines); absent = a human release, no trailer
 #     --withdraw <x.y.z-slug>  pull a bad release off both trees and re-publish
 #     --install-ios          just install the last iOS build to both devices
+#     --no-watcher           do not (re)start the fleet watcher: a board on the
+#                            network is in use and must not be updated now
+#     --no-ping              no ntfy ping at the end (someone else tells him)
 #
 # What a full release does, in order, stopping hard at the first failure:
 #   1 bump FW_VERSION          6 build fw + fs, check the fs image is whole
@@ -59,11 +62,13 @@ die()  { echo; echo "${RED}STOPPED: $*${OFF}" >&2; exit 1; }
 WARNINGS=""
 
 # ---------------------------------------------------------------- arguments
-MODE=release; VER=""; NOTE=""; FW_ONLY=0; ANDROID_NOTE=""; NO_INSTALL=0; TRAILER=""
+MODE=release; VER=""; NOTE=""; FW_ONLY=0; ANDROID_NOTE=""; NO_INSTALL=0; TRAILER=""; NO_WATCHER=0; NO_PING=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --fw-only)       FW_ONLY=1 ;;
     --no-install)    NO_INSTALL=1 ;;
+    --no-watcher)    NO_WATCHER=1 ;;
+    --no-ping)       NO_PING=1 ;;
     --android-note)  ANDROID_NOTE="$2"; shift ;;
     --trailer)       TRAILER="$2"; shift ;;
     --withdraw)      MODE=withdraw; VER="$2"; shift ;;
@@ -168,7 +173,7 @@ fi
 
 # ---------------------------------------------------------------- 5 gates
 step "5  Gates"
-for g in check_page_syntax check_links check_page_order check_banks name_gate_test help_test lane_test; do
+for g in check_page_syntax check_links check_page_order check_banks name_gate_test help_test lane_test route_gate; do
   node "dev/$g.js" | tail -1 | grep -q "ALL PASS" || die "dev/$g.js failed - run it to see why"
   ok "$g"
 done
@@ -334,10 +339,14 @@ fi
 
 # ---------------------------------------------------------------- 11 watcher
 step "11 Fleet watcher"
-pkill -f "fleet_watch.sh" 2>/dev/null || true; sleep 1
-nohup zsh "$HERE/fleet_watch.sh" "$NAME" "$MD5" >> "$HERE/fleet_watch.log" 2>&1 &
-sleep 3
-pgrep -f "zsh .*fleet_watch.sh" >/dev/null && ok "watching for $NAME" || warn "watcher did not start - nohup zsh dev/fleet_watch.sh $NAME $MD5"
+if [[ $NO_WATCHER == 1 ]]; then
+  warn "fleet watcher NOT started (--no-watcher): a board is in use. Later: nohup zsh dev/fleet_watch.sh $NAME $MD5"
+else
+  pkill -f "fleet_watch.sh" 2>/dev/null || true; sleep 1
+  nohup zsh "$HERE/fleet_watch.sh" "$NAME" "$MD5" >> "$HERE/fleet_watch.log" 2>&1 &
+  sleep 3
+  pgrep -f "zsh .*fleet_watch.sh" >/dev/null && ok "watching for $NAME" || warn "watcher did not start - nohup zsh dev/fleet_watch.sh $NAME $MD5"
+fi
 
 # ---------------------------------------------------------------- 12 commit
 step "12 Commit + push"
@@ -348,7 +357,7 @@ MSG=$(mktemp)
   echo "$NOTE" | fold -s -w 72
   echo
   if [[ $FW_ONLY == 1 ]]; then echo "Firmware only; pages unchanged (receivers skip the fs flash)."
-  else echo "Apps $IOS_V (iOS, installed to both devices) / $AND_V (Android, published)."; fi
+  else echo "Apps $IOS_V (iOS, $( [[ $NO_INSTALL == 1 ]] && echo "built, not yet installed" || echo "installed to both devices" )) / $AND_V (Android, published)."; fi
   if [[ -n "$TRAILER" ]]; then echo; printf '%b\n' "$TRAILER"; fi
 } > "$MSG"
 ( cd "$ROOT" && git add -A && git commit -q -F "$MSG" && git push -q origin HEAD:main ) || die "commit/push failed"
@@ -356,7 +365,8 @@ ok "pushed"
 
 # ---------------------------------------------------------------- 13 ping
 step "13 Ping"
-if [[ -f "$HERE/notify.sh" ]]; then
+if [[ $NO_PING == 1 ]]; then warn "not pinged (--no-ping)"
+elif [[ -f "$HERE/notify.sh" ]]; then
   source "$HERE/notify.sh"
   ping_watch "$VER live — $FIRST_SENTENCE Apps $IOS_V / $AND_V."
   ok "sent"
