@@ -25,7 +25,12 @@ Then press 'Finish'.|
 This records the centres, and which way each top switch works.|
 The box then says 'Calibration saved.'|
 and the button 'Calibrate again'.|
+If a stick is centred but its channel's output is not,|
+the box names it: 'Aileron is 1456 at centre: its curve,|
+trim or subtrim moves it.' That is not the calibration:|
+look at that channel's curve, trim and subtrim.|
 Once you have started, go on to 'Finish' before you press 'OK'.|
+'OK' part way through keeps the old calibration, and says so.|
 The bars 'Ch 1' to 'Ch 8' grow from the middle|
 as you move each control.||
 TRIMS:|

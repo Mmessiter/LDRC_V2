@@ -388,20 +388,17 @@ FASTRUN uint16_t ReadThreePositionSwitch(uint8_t InputDevice)
 
 /************************************************************************************************************/
 void CalibrateEdgeSwitches()
-{ // This function avoids the need to rotate the four edge switches if installed backwards
-    for (int i = 0; i < 8; ++i)
+{ // This function avoids the need to rotate the four edge switches if installed backwards: the position each top switch is
+  // held in while the sticks are centred ("fully AWAY") becomes position 1, by swapping a pair's pins when the other contact
+  // is the closed one. B124: only when exactly ONE contact of the pair is closed. It ran on every pass of the centring step
+  // and swapped whenever the even pin read open, so a switch left in its MIDDLE (both contacts open) was swapped on every
+  // pass and kept whichever order the last pass left - a coin toss that could turn a switch's sense round (the safety's, the
+  // motor's). A switch in its middle now keeps the sense it had.
+    for (int i = 0; i < 8; i += 2)
     {
-        if (digitalRead(SwitchNumber[i]))
-        {
-            if (i == 0)
-                swap(&SwitchNumber[i], &SwitchNumber[i + 1]); // swap over switches' pin number if wrongly installed
-            if (i == 2)
-                swap(&SwitchNumber[i], &SwitchNumber[i + 1]); // swap over switches' pin number if wrongly installed
-            if (i == 4)
-                swap(&SwitchNumber[i], &SwitchNumber[i + 1]); // swap over switches' pin number if wrongly installed
-            if (i == 6)
-                swap(&SwitchNumber[i], &SwitchNumber[i + 1]); // swap over switches' pin number if wrongly installed
-        }
+        const bool evenClosed = !digitalRead(SwitchNumber[i]), oddClosed = !digitalRead(SwitchNumber[i + 1]); // (active low)
+        if (oddClosed && !evenClosed)
+            swap(&SwitchNumber[i], &SwitchNumber[i + 1]); // the closed contact becomes the even pin: this position reads 1
     }
 }
 

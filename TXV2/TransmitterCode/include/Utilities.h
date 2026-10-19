@@ -1218,6 +1218,8 @@ uint16_t GetSuccessRate()
 FASTRUN float MapWithExponential(float xx, float Xxmin, float Xxmax, float Yymin, float Yymax, float Expo)
 {
     Expo = map(Expo, -100, 100, -0.25, 0.75);
+    if (Xxmax == Xxmin)
+        return Yymin; // B124: an input whose centre IS its calibrated end (never swept): nothing to divide by
     xx = pow(xx * xx, Expo);
     Xxmin = pow(Xxmin * Xxmin, Expo);
     Xxmax = pow(Xxmax * Xxmax, Expo);

@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.94"
+#define SCREEN_VERSION "1.11.95"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2456,7 +2456,8 @@ static const i2s_port_t I2S_PORT = I2S_NUM_0;
 static const size_t RING = 262144;                      // 5.9 s of audio ahead of the DMA (1.11.37: every clip fits whole, so a stall of the main loop - a page and its picture loading from the card - cannot starve the speaker; was 1.5 s)
 static const int FRAMES = 256;                          // one DMA buffer
 static uint8_t *audioRing = nullptr;
-static volatile size_t ringHead = 0, ringTail = 0;      // head: loop() writes; tail: the task reads
+#include "audio_ring.h"                                 // (1.11.95) the ring's two ends, each written by one core: the stop/start race is gone
+static ldrcring::Ends ringEnds;                         // head: loop() writes; tail: the task
 static volatile bool audioDraining = false;             // nothing more is coming: play the tail, padded
 static File audioFile; static bool audioPlaying = false, audioLoop = false;
 static uint32_t audioDataStart = 0, audioDataSize = 0, audioDataLeft = 0, audioRate = 22050;
@@ -2509,13 +2510,14 @@ static bool wavOpenPath(const char *path, uint32_t &rate, bool adpcmOk) {   // (
 static void audioTask(void *) {
     static int16_t frame[FRAMES * 2];
     for (;;) {
-        size_t avail = (ringHead + RING - ringTail) % RING;
+        size_t avail = ldrcring::begin(ringEnds, RING);  // (1.11.95: a stop from loop() is acted on here, by this task alone)
         const bool tail = audioDraining && avail > 0;
         if (avail < (size_t) FRAMES * 2 && !tail) { vTaskDelay(pdMS_TO_TICKS(3)); continue; }
         int n = 0;
         while (n < FRAMES && avail >= 2) {
-            int16_t v = (int16_t) (audioRing[ringTail] | (audioRing[(ringTail + 1) % RING] << 8));
-            ringTail = (ringTail + 2) % RING; avail -= 2;
+            const size_t t = ringEnds.tail;
+            int16_t v = (int16_t) (audioRing[t] | (audioRing[(t + 1) % RING] << 8));
+            ldrcring::took(ringEnds, RING, 2); avail -= 2;
             v = limit16(((int32_t) v * audioGain) >> 10);
             frame[2 * n] = v; frame[2 * n + 1] = v; n++;
         }
@@ -2539,9 +2541,9 @@ static void audioStop() {
     if (audioFile) audioFile.close();
     audioPlaying = false; audioId = -1; curClip = nullptr; audioDraining = false; audioBlock = 0; audioSkip = 0;
     if (capture) { free(capture); capture = nullptr; }
-    ringHead = ringTail;
+    ldrcring::stop(ringEnds);                             // (1.11.95) a note for the task: it moves its own tail (loop() set head = tail here, and lost the race once)
 }
-static void ringPush(const uint8_t *src, size_t n) { for (size_t i = 0; i < n; ++i) { audioRing[ringHead] = src[i]; ringHead = (ringHead + 1) % RING; } }
+static void ringPush(const uint8_t *src, size_t n) { ldrcring::push(ringEnds, audioRing, RING, src, n); }
 static void ringPushSamples(const int16_t *s, uint32_t n) {   // (1.11.93) decoded samples, less those a start part way into a block leaves out
     const uint32_t skip = std::min(audioSkip, n); audioSkip -= skip;
     if (n > skip) ringPush((const uint8_t *) (s + skip), (size_t) (n - skip) * 2);
@@ -2561,7 +2563,7 @@ static bool audioFillBlock(uint8_t *tmp) {
 }
 static void audioFill() {                               // called from loop(): keep the ring topped up
     if (!audioPlaying || !audioRing) return;
-    const size_t used = (ringHead + RING - ringTail) % RING, space = RING - 1 - used;
+    const size_t used = ldrcring::used(ringEnds, RING), space = ldrcring::space(ringEnds, RING);
     if (curClip) {                                       // from memory: everything there is room for, at once
         if (curPos >= curClip->len) { if (audioLoop) curPos = 0; else { audioDraining = true; if (used == 0) audioStop(); } return; }
         const size_t n = min(space, (size_t) (curClip->len - curPos)); if (!n) return;
@@ -2576,7 +2578,7 @@ static void audioFill() {                               // called from loop(): k
     static uint8_t tmp[4096];
     if (audioBlock) {                                       // (1.11.93) IMA ADPCM: up to two blocks a call (each some 93 ms of sound)
         for (int b = 0; b < 2 && audioDataLeft > 0; ++b) {
-            if ((RING - 1 - (ringHead + RING - ringTail) % RING) < audioBlockSamples * 2) return;
+            if (ldrcring::space(ringEnds, RING) < audioBlockSamples * 2) return;
             if (!audioFillBlock(tmp)) { audioStop(); return; }
         }
         return;

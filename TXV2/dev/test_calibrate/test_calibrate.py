@@ -64,8 +64,19 @@ static void GetAllInputs() { ++inputsRead; }
 static void CalculateAllOutputs() { ++outputsDone; }
 static void ShowServoPos() { ++barsShown; }
 static void GetNewChannelValues() { ++pipelines; }
-static void CalibrateEdgeSwitches() { ++edgeSwitches; }
+static void CalibrateEdgeSwitches();   // (B124: the real one, lifted below, behind this counter)
 ''' + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'uint8_t CurveStorePos(uint8_t n, uint8_t k)') + lift('include/Utilities.h', 'void CurveStoreSync(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveStoreClear(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/Calibrate.h', 'void ReduceLimits()') + lift('include/Calibrate.h', 'void CalibrateSticks()') + lift('include/Calibrate.h', 'void ChannelCentres()') + lift('include/Calibrate.h', 'FLASHMEM void InitMaxMin()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + r'''
+// B124: the top switches' orientation step and the note at Finish, over fake pins, a fake model and the fake ADC above
+static int pinLevel[64];                                 // what each pin reads (1 = open, 0 = closed: the switches are active low)
+static int digitalRead(int pin) { return pinLevel[pin]; }
+static uint8_t SwitchNumber[8] = {31, 32, 29, 30, 27, 28, 26, 25};
+static void swap(uint8_t *a, uint8_t *b) { uint8_t t = *a; *a = *b; *b = t; }
+static uint8_t InPutStick[CHANNELSUSED] = {0, 1, 2, 3, 2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};   // (the Havok's: channel 5, the throttle, from the collective stick)
+static uint8_t MotorChannel = 4, ArmingChannel = 6;
+static uint16_t SendBuffer[CHANNELSUSED + 1];
+static char ChannelNames[CHANNELSUSED][11] = {{"Aileron"}, {"Elevator"}, {"Collective"}, {"Rudder"}, {"Throttle"}, {"Arming"}, {"Bank"}, {"Ch8"}, {"Ch9"}, {"Rescue"}, {"Ch11"}, {"Ch12"}, {"Ch13"}, {"Ch14"}, {"Ch15"}, {"Ch16"}};
+''' + lift('include/Switches.h', 'void CalibrateEdgeSwitches()').replace('void CalibrateEdgeSwitches()', 'static void CalibrateEdgeSwitchesReal()') + 'static void CalibrateEdgeSwitches() { ++edgeSwitches; CalibrateEdgeSwitchesReal(); }\n' + lift('src/main.cpp', 'FLASHMEM void CalibrationNote(') + r'''
+static int longestLine(const char *s) { int best = 0, cur = 0; for (; *s; ++s) { if (*s == '\r' || *s == '\n') { if (cur > best) best = cur; cur = 0; } else ++cur; } return cur > best ? cur : best; }
 int main()
 {
     // the sticks and knobs: each input its own ends and centre (none at the ADC's own ends, none at its middle)
@@ -117,6 +128,46 @@ int main()
     // 6. InitMaxMin (a reset): the ADC's whole span
     InitMaxMin();
     for (int i = 0; i < CHANNELSUSED; ++i) CHECK(ChannelMax[i] == 4095 && ChannelMidHi[i] == 3071 && ChannelCentre[i] == 2047 && ChannelMidLow[i] == 1023 && ChannelMin[i] == 0);
+    // 7. B124: the top switches' orientation. Pins 31/32, 29/30, 27/28, 26/25 are the four pairs (even index, odd index).
+    for (int p = 0; p < 64; ++p) pinLevel[p] = 1;                       // every contact open
+    const uint8_t asWas[8] = {31, 32, 29, 30, 27, 28, 26, 25};
+    pinLevel[32] = 0;                                                    // switch 1 held with its ODD pin's contact closed: the pair swaps, once
+    pinLevel[29] = 0;                                                    // switch 2 held with its EVEN pin's contact closed: stays
+    //  switch 3 (27/28) in its middle: both open; switch 4 (26/25) in its middle too
+    for (int pass = 0; pass < 41; ++pass) CalibrateEdgeSwitches();      // (an odd number of passes: the coin toss of old would have left the middle ones swapped)
+    CHECK(SwitchNumber[0] == 32 && SwitchNumber[1] == 31);              // swapped: the closed contact is the even pin now
+    CHECK(SwitchNumber[2] == 29 && SwitchNumber[3] == 30);              // as it was
+    CHECK(SwitchNumber[4] == 27 && SwitchNumber[5] == 28 && SwitchNumber[6] == 26 && SwitchNumber[7] == 25);   // the middle ones untouched, however many passes
+    pinLevel[32] = 1; pinLevel[31] = 0;                                  // the same switch held the other way next time: back
+    CalibrateEdgeSwitches(); CalibrateEdgeSwitches();
+    for (int k = 0; k < 8; ++k) CHECK(SwitchNumber[k] == asWas[k]);
+    pinLevel[26] = 0; pinLevel[25] = 0;                                  // both contacts closed (a fault): left alone
+    CalibrateEdgeSwitches();
+    CHECK(SwitchNumber[6] == 26 && SwitchNumber[7] == 25);
+    // 8. B124: the note at Finish. The calibration of §3 stands (reading == centre: Input 1500); the outputs are the model's
+    for (int i = 0; i < PROPOCHANNELS; ++i) reading[i] = mid[i];
+    for (int i = 0; i < PROPOCHANNELS; ++i) { ChannelMin[i] = lo[i]; ChannelCentre[i] = mid[i]; ChannelMax[i] = hi[i]; }
+    for (int ch = 0; ch < CHANNELSUSED; ++ch) SendBuffer[ch] = 1500;
+    SendBuffer[4] = 667; SendBuffer[5] = 667;                            // the motor and arming channels, forced low: never named
+    char note[100];
+    CalibrationNote(note, sizeof(note));
+    CHECK(strcmp(note, "Calibration saved.") == 0);                      // all four sticks agree in and out: nothing more to say
+    SendBuffer[0] = 1456;                                                // the Havok of 19 Oct 2026: the Bank 4 aileron curve's centre at 83 degrees
+    CalibrationNote(note, sizeof(note));
+    CHECK(strcmp(note, "Saved. Aileron is 1456 at\r\ncentre: its curve, trim or\r\nsubtrim moves it.") == 0);
+    CHECK(longestLine(note) <= 28);
+    SendBuffer[0] = 1500; SendBuffer[2] = 1200; reading[2] = lo[2] + (mid[2] - lo[2]) / 2;   // the collective stick a quarter down, its output low: the stick is not centred - no note
+    CalibrationNote(note, sizeof(note));
+    CHECK(strcmp(note, "Calibration saved.") == 0);
+    reading[2] = mid[2]; SendBuffer[2] = 1500; SendBuffer[3] = 1511; SendBuffer[1] = 1488;   // two differ: the first by channel number is named; 11 is enough, 10 is not
+    CalibrationNote(note, sizeof(note));
+    CHECK(strncmp(note, "Saved. Elevator is 1488 at", 26) == 0 && longestLine(note) <= 28);
+    SendBuffer[1] = 1510;
+    CalibrationNote(note, sizeof(note));
+    CHECK(strncmp(note, "Saved. Rudder is 1511 at", 24) == 0);
+    SendBuffer[1] = SendBuffer[3] = 1500; SendBuffer[4] = 1300;          // the motor channel off centre: the firmware forces it - not named
+    CalibrationNote(note, sizeof(note));
+    CHECK(strcmp(note, "Calibration saved.") == 0);
     printf("%d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -142,8 +193,14 @@ check('MaxRangeNarrow = 0;' in sdv and sdv.index('MaxRangeNarrow = 0;') < sdv.in
 check(re.search(r'case CALIBRATELIMITS:[^\n]*\n\s*CalibrateSticks\(\);', main) is not None and re.search(r'case CENTRESTICKS:[^\n]*\n\s*ChannelCentres\(\);', main) is not None, 'the two steps run from the main loop, nothing sent meanwhile')
 i1 = main.find('if (CurrentMode == CENTRESTICKS)'); seg = main[i1:i1 + 700]
 check('SaveTransmitterParameters();' in seg and seg.index('SaveTransmitterParameters();') < seg.index('LoadAllParameters();') and 'CurrentMode = NORMAL;' in seg, 'Finish: the calibration saved, then everything (the model too) read back from the card')
-i2 = main.find('B17: OK part way through'); seg = main[i2 - 200:i2 + 500]
+i2 = main.find('B17: OK part way through'); seg = main[i2 - 200:i2 + 900]
 check('LoadAllParameters();' in seg and 'ReadOneModel(ModelNumber);' in seg, "OK part way: the card's values back, the model re-read")
+check('abandoned = true;' in seg and 'Calibration NOT saved.' in seg and seg.index('SendCommand(pTXSetupView);') < seg.index('Calibration NOT saved.'), 'B124: OK part way says that the calibration was NOT saved, after the Transmitter setup page is up')
+seg = main[i1:i1 + 900]
+check(seg.index('LoadAllParameters();') < seg.index('GetNewChannelValues();') < seg.index('CalibrationNote(note, sizeof(note));') < seg.index('SendText(SvT11, note);'), 'B124: Finish works the outputs out from the model read back, then says what it found')
+check('if (Xxmax == Xxmin)\n        return Yymin;' in util, 'B124: MapWithExponential divides by nothing when an input was never swept')
+sw = src('include/Switches.h'); ces = lift('include/Switches.h', 'void CalibrateEdgeSwitches()')
+check('i += 2' in ces and 'oddClosed && !evenClosed' in ces and ces.count('swap(') == 1, 'B124: a pair of pins is swapped only when exactly one contact is closed')
 sdc = src('include/SDcard.h')
 lap = lift('include/SDcard.h', next(l for l in sdc.split('\n') if l.endswith('LoadAllParameters()') and not l.startswith(' ') and ';' not in l))
 check('ReadOneModel(' in lap and 'ReadCheckSum32();\n    ReadModelExtension();' in sdc, "the model read back after a calibration brings its max range with it (B113's extension)")

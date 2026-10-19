@@ -413,6 +413,27 @@ FLASHMEM int StickMicros(uint8_t dev, int raw)
         f = -(float)(mid - raw) / (float)(mid - lo);
     return constrain((int)lroundf(1500.0f + 500.0f * f), MINMICROS, MAXMICROS); // (past a calibrated end it goes on; not past the scale)
 }
+// B124 (Malcolm, 19 Oct 2026: two mornings of "the sticks need recalibrating again" were the Havok's Bank 4 aileron curve, its
+// centre point left at 83 degrees after an experiment with the curve page; the calibration itself was sound every time). When a
+// calibration is saved the outputs are looked at with the sticks where the pilot has just centred them: a channel whose stick
+// reads centred but whose output does not is named, with what moves it - the page says where to look, instead of inviting
+// another calibration. Nothing is said when they agree. Three lines of at most 28 characters: the Calibrate page's box.
+FLASHMEM void CalibrationNote(char *out, size_t n)
+{
+    strlcpy(out, "Calibration saved.", n);
+    for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
+    {
+        const uint8_t dev = InPutStick[ch];
+        if (dev > 3 || ch == MotorChannel || (ArmingChannel >= 1 && ch == ArmingChannel - 1))
+            continue; // a knob or a switch feeds it, or the firmware forces it
+        if (abs(StickMicros(dev, AnalogueReed(dev)) - 1500) > 10)
+            continue; // its stick is not at the centre now
+        if (abs((int)SendBuffer[ch] - 1500) <= 10)
+            continue;
+        snprintf(out, n, "Saved. %s is %d at\r\ncentre: its curve, trim or\r\nsubtrim moves it.", ChannelNames[ch], (int)SendBuffer[ch]);
+        return;
+    }
+}
 static uint16_t GraphShown[2];   // what Input and Output show (0: nothing yet - DisplayCurveAndServoPos)
 static uint32_t GraphMovedAt[2];
 FLASHMEM void ShowGraphMicros(uint16_t in, uint16_t out)
@@ -3645,8 +3666,7 @@ FASTRUN void ButtonWasPressed()
         char CMsg2[] = "Next";
         char Cmsg3[] = "Centre all channels.\r\nPush every top switch fully AWAY\r\nfrom you, then press Finish."; // B30: the position held becomes "away"
         char Cmsg4[] = "Finish";
-        char Cmsg5[] = "Calibrate again";
-        char Cmsg6[] = "Calibration saved.";
+        char Cmsg5[] = "Calibrate again"; // (B124: "Calibration saved." and what else there is to say come from CalibrationNote)
         char TypeView[] = "TypeView";
         char CopyToAllBanks[] = "callfm";
         char RXBAT[] = "RXBAT";
@@ -3760,6 +3780,7 @@ FASTRUN void ButtonWasPressed()
         if (InStrng(SetupView, TextIn) > 0)
         { //  goto main TX setup screen
             ClearText();
+            bool abandoned = false;
             if (CurrentView == CALIBRATEVIEW)
             {
                 if (CurrentMode == CALIBRATELIMITS || CurrentMode == CENTRESTICKS)
@@ -3767,6 +3788,7 @@ FASTRUN void ButtonWasPressed()
                     CurrentMode = NORMAL;
                     LoadAllParameters();
                     RedLedOn();
+                    abandoned = true;
                 }
                 ReadOneModel(ModelNumber); // because it was cleared for calibration
             }
@@ -3777,6 +3799,8 @@ FASTRUN void ButtonWasPressed()
             CurrentView = TXSETUPVIEW;
             ClearText();
             UpdateModelsNameEveryWhere();
+            if (abandoned)
+                MsgBox(pTXSetupView, (char *)"Calibration NOT saved.\r\nNext time press Finish first."); // B124: OK beside Finish said nothing when it threw the new calibration away
             return;
         }
 
@@ -4724,7 +4748,13 @@ FASTRUN void ButtonWasPressed()
                 SaveTransmitterParameters(); // Save calibrations
                 LoadAllParameters();         // Restore all current model settings
                 SendText(SvB0, Cmsg5);
-                SendText(SvT11, Cmsg6);
+                {
+                    char note[100];
+                    NewCompressNeeded = false; // (as ChannelCentres: nothing is being sent)
+                    GetNewChannelValues();     // B124: the outputs as the model, read back, makes them now
+                    CalibrationNote(note, sizeof(note));
+                    SendText(SvT11, note);
+                }
                 LastTimeRead = 0;
                 ClearText();
                 return;

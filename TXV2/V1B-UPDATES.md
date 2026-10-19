@@ -186,6 +186,50 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Old announcements replayed, and calibration made safer (screen 1.11.95, Teensy B124, 19 Oct 2026)
+
+Malcolm, 19 Oct: "Yesterday, I discovered to my surprise that the sticks needed recalibrating on my transmitter. I did it.
+Then all was well. This morning, to my great surprise, they needed recalibrating again! Again, Aileron centre was a little
+off to the left, so I recalibrated as the calibration finished, the firmware crashed doing strange things and making
+interesting sounds. I switched off." Later: the sounds were "many announcements one after the other, with some background
+noise"; the other two V2 transmitters did neither; five or six calibrations since went without a sound.
+
+- **The aileron was not the calibration.** The transmitter's settings file, read over WiFi through the workshop door along
+  with the twelve copies the screen keeps from the updates of 16-17 Oct, held a sound calibration every time: the aileron's
+  centre moved 7 counts in 3,300 (0.2 %) between 17 Oct and this morning, the checksums all good. What moved the output was
+  the Havok's **Bank 4 aileron curve**: a 3-point curve whose centre point had been left at 83 degrees (and its top at 173)
+  after an experiment on the curve page on the 17th - 83 degrees of the 945..2055 range is 1456. Banks 1-3 have 90. Malcolm
+  found the same on the curve page himself: Input 1498, Output 1456. (The curve's points had also walked by a degree between
+  the 17th and today: switching Max range to and fro converts every point to microseconds and back, and the integer degree
+  rounds each way. Known, harmless.)
+- **The "crash" was the screen's sound (the screen's firmware).** Neither board had stopped: the Teensy's next hello said it
+  went off by its button with no hang recorded, and the screen's stored core dump is from an older build. What happened was a
+  race in the audio ring. loop() wrote at the ring's head and the audio task, on the other core, read at its tail; a stop
+  (every new sound stops the one before) set head = tail FROM LOOP(), and when it landed while the task was half way through
+  advancing the tail for one DMA buffer, the tail ended up past the head: the task's next count of what was waiting came out
+  as the whole ring less a few bytes, and it played **5.9 s of whatever the ring held - the last several announcements over
+  again, with old sound between them**. Finish is a moment when two or three sounds follow within milliseconds (the bank, the
+  rate), so the window was there at every calibration's end, and at every bank or rate change in flight; one day it was hit.
+  Now each end is written by one core only: a stop is a note (a generation and the head of that moment) and the task moves
+  its own tail at the top of its next buffer (`src/audio_ring.h`). Host test `hmi/test_audio`: the interleaving of the 19th
+  step by step (the old protocol: 262,000 stale bytes; the new: none), then two threads with 400,000 stop-and-start pairs
+  three times over - the old protocol replayed the past in 750,000 of 3.6 million buffers, the new in none of 810,000.
+- **Calibration (B124).** (1) The top switches' orientation step swapped a pair's pins on EVERY pass of the centring step
+  whenever the even pin read open, so a switch left in its MIDDLE (both contacts open) was swapped on each pass and kept
+  whichever order the last pass left: a coin toss that could turn a switch's sense round - the safety's, the motor's. A pair
+  is now swapped only when exactly one contact is closed, once; a switch in its middle keeps the sense it had. (2) **OK**
+  beside **Finish** threw a half-made calibration away without a word: it now says "Calibration NOT saved. Next time press
+  Finish first." (3) After Finish the page looks at the outputs with the sticks where the pilot has just centred them, and a
+  channel whose stick reads centred but whose output does not is named: *"Saved. Aileron is 1456 at centre: its curve, trim
+  or subtrim moves it."* - the hint that would have saved two mornings. Nothing more is said when they agree. (4)
+  MapWithExponential no longer divides by nothing for an input whose centre is its calibrated end (one never swept). Test:
+  `dev/test_calibrate` 171 behaviour checks (the pin pairs: an end swaps once, the middle never, 41 passes; the note's six
+  cases) + 18 of the flow, the page and CALIB.TXT, which now describes the note and OK.
+- Looked at and found sound: every writer of the settings block (no path puts an older calibration back; the screen's
+  backups are copies, restored only on request); the five calibration arrays' neighbours in RAM (no writer can reach them);
+  the stick pipeline's rounding (the reversal of the aileron's reading is exact); the Finish path under ASan/UBSan with
+  every calibration shape; the Calibrate page's traffic at the emulator; the 1.11.93/1.11.94 film changes on other pages.
+
 ## Livelier animations, real uses, and Fix problems (screen 1.11.94, Teensy B123 unchanged, 18 Oct 2026)
 
 Malcolm watched all 62 animations and asked for: a voice "a bit more human with some emotion" ("If she sounds bored,
