@@ -85,7 +85,8 @@ int main() {
     reset(); Bank = 3; curveOff[4][1] = -44;
     { const std::string s = note();
       CHECK(s.rfind("Bank 4: Elevator is 1456", 0) == 0);
-      CHECK(s.find("with the stick centred.") != std::string::npos && s.find("curve, trim or subtrim") != std::string::npos && s.find("before flying.") != std::string::npos);
+      CHECK(s.find("with the stick centred.") != std::string::npos && s.find("before flying.") != std::string::npos);
+      CHECK(s.find("curve") == std::string::npos);                                               // (B127, Malcolm: the line about curves, trims and subtrims is not needed)
       CHECK(s.size() <= 180 && lines(s) <= 6 && longest(s) <= 40);                                 // the popup's box: 180 characters, 7 lines of 28 px in 218, ~40 characters wide
       CHECK(Bank == 3); }
     // 3. what is left alone: the collective stick's channels (the collective and the throttle), the arming channel, a knob

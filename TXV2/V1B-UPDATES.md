@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The centre note, shorter (Teensy B127, 19 Oct 2026)
+
+Malcolm, with the box on his screen after the update ("Bank 2: Rudder is 1599 / with the stick centred. / A curve, trim or
+subtrim moves it. / Put it right before flying."): "This check is tested and working! Please remove 'A curve, trim or subtrim
+moves it', the line is not needed." Gone. The box now says the bank, the channel and its value, "with the stick centred.
+Put it right before flying." (It caught a real one: the Havok's Bank 2 rudder, 1599 at centre.)
+
 ## Centres checked at power-up; battery pictures and a double tap on the defined screens (screen 1.11.97, Teensy B126, 19 Oct 2026)
 
 Three requests from Malcolm on the afternoon of 19 Oct, after the Havok's three flights.
@@ -196,7 +203,7 @@ Three requests from Malcolm on the afternoon of 19 Oct, after the Havok's three 
   Rotorflight model's outputs are worked out with every stick at its calibrated centre, bank by bank, through the stages
   of a frame (the curves, the mixes, the trims and subtrims, the routing, the reversing). A stick-fed channel that does
   not come out at 1500 is named with its bank, three at most: "Bank 4: Elevator is 1456 / with the stick centred. / A
-  curve, trim or subtrim moves it. / Put it right before flying." The throttle or collective stick's channels, the motor
+  curve, trim or subtrim moves it. / Put it right before flying." (B127 drops the third line.) The throttle or collective stick's channels, the motor
   channel, the arming channel and the knobs are left alone. Nothing is said when all is well. The note waits for the
   front page, nothing connected, no question open and no firmware on trial (a box at power-up would stall a trial's
   confirmation), as the clock's message does. Tested by `dev/test_centre/test_centre.py`: the real CentreNote over fake

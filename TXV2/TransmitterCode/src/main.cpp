@@ -488,7 +488,7 @@ FLASHMEM void CentreNote(char *out, size_t n) // out: "" when every bank is cent
     GetAllInputs();
     StagesAfterInputs(); // the frame's buffers as the sticks have them now
     if (found)
-        strlcat(out, "\r\nwith the stick centred.\r\nA curve, trim or subtrim moves it.\r\nPut it right before flying.", n); // (three lines of names at most + these three: the popup's 180 characters, 7 lines)
+        strlcat(out, "\r\nwith the stick centred.\r\nPut it right before flying.", n); // (three lines of names at most + these two: the popup's 180 characters. B127, Malcolm: "A curve, trim or subtrim moves it" is not needed)
 }
 static uint16_t GraphShown[2];   // what Input and Output show (0: nothing yet - DisplayCurveAndServoPos)
 static uint32_t GraphMovedAt[2];
