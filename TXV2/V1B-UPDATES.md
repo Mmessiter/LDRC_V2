@@ -186,12 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
-## The centre note, shorter (Teensy B127, 19 Oct 2026)
+## The centre note, shorter (Teensy B127 and B128, 19 Oct 2026)
 
 Malcolm, with the box on his screen after the update ("Bank 2: Rudder is 1599 / with the stick centred. / A curve, trim or
 subtrim moves it. / Put it right before flying."): "This check is tested and working! Please remove 'A curve, trim or subtrim
-moves it', the line is not needed." Gone. The box now says the bank, the channel and its value, "with the stick centred.
-Put it right before flying." (It caught a real one: the Havok's Bank 2 rudder, 1599 at centre.)
+moves it', the line is not needed." Gone. Then (B128): "Instead of please put it right, perhaps we should say, please put it to the centre." The box now
+says the bank, the channel and its value, "with the stick centred. Please put it to the centre before flying." (The 1599
+was his deliberate error, to test it.)
 
 ## Centres checked at power-up; battery pictures and a double tap on the defined screens (screen 1.11.97, Teensy B126, 19 Oct 2026)
 
