@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B129 19/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B130 19/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -68,7 +68,9 @@
 #define PROPOCHANNELS 8                       // Only 4 have knobs / 2 sticks (= 4 hall sensors)
 #define BANKSWITCH 4                          // Default BANK switch
 #define AUTOSWITCH 1                          // Default AUTO switch
-#define BANKS_USED 4                          // Flight modes (AKA Banks)
+#define BANKS_USED 6                          // Flight modes (AKA Banks): B130 - six (banks 5 and 6 only when the model's 'Six banks' is on)
+#define BANKS_IN_FILE 4                       // B130: the banks the record's checked sequence holds (NEVER widen: the file's layout and the fingerprint); 5 and 6 are in the model's banks block
+#define BANK_NAMES_N 38                       // B130: BankNames / BankSounds (32 of old + 'Flight mode 5' .. 'Profile 6')
 #define LOWBATTERY 42                         // Default percent for warning (User definable)
 #define DEFAULTTRIMREPEATSPEED 600            //
 #define INACTIVITYTIMEOUT 10 * TICKSPERMINUTE // Default time after which to switch off
@@ -198,7 +200,7 @@
 #define PARAMETER_QUEUE_MAXIMUM 250      // Maximum queued parameters allowed at once
 
 #define GOV_PROFILE_PAYLOAD_SIZE 18
-uint8_t Saved_GOV_Profiles_Values[GOV_PROFILE_PAYLOAD_SIZE][4];
+uint8_t Saved_GOV_Profiles_Values[GOV_PROFILE_PAYLOAD_SIZE][BANKS_USED]; // (B130: six banks)
 
 // **************************************************************************
 // Parameter ID definitions.
@@ -415,6 +417,10 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 #define BANKTWO 13
 #define BANKTHREE 14
 #define BANKFOUR 15
+#define BANKFIVE 105 // B130: the screen's clips 105-108 ("Bank five", "Bank six", "Flight mode five", "Flight mode six")
+#define BANKSIX 106
+#define BFM5 107
+#define BFM6 108
 #define BEEPMIDDLE 16
 #define BEEPCOMPLETE 17
 #define THEFANFARE 18
@@ -525,7 +531,7 @@ bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when 
 
 #define TXSIZE 512            // SD space reserved for transmitter (WAS  250)
 #define MODELSIZE 1024 * 3    // SD space reserved for each model (2k)
-#define MAXFILELEN (1024 * 3) // 3?? MAX SIZE FOR HELP AND LOG FILES
+#define MAXFILELEN (1024 * 4) // MAX SIZE FOR HELP AND LOG FILES (B130: a .MOD with six banks and curves is 3551 bytes: 3k was not enough)
 #define MAXBACKUPFILES 95
 
 // **************************************************************************
@@ -829,6 +835,13 @@ void CentreNote(char *out, size_t n);        // B126: main.cpp - the note itself
 void DoTrimsAndSubtrims();                   // (main.cpp, after CentreNote: B126 calls them)
 void RerouteOutputs();
 bool CentreNotePending = false;              // B126: set at power-up and when a model is chosen
+bool SixBanks = false;                       // B130: this model uses banks 5 and 6 (Model options); the 'Bank 4 & Motor' switch's middle and near positions then pick 4, 5 or 6 by the 'Banks 1 2 3' switch
+uint8_t BanksCount();                        // B130: Switches.h - 6 when SixBanks, else 4
+uint8_t BankOf123();                         // B130: Switches.h - the 'Banks 1 2 3' switch's bank (1 when none)
+void BanksCopy(uint8_t from, uint8_t to);    // B130: SDcard.h - one bank's trims, speeds, expo, curve types and curves into another
+void SixBanksSet(bool on);                   // B130: SDcard.h - Model options: on, banks 5 and 6 from their file if it is there, else copies of bank 4
+bool BanksFileRead(uint8_t slot, uint8_t *blk, int n);        // B130: SDFiles.h - /banks56/<slot>.b56
+bool BanksFileWrite(uint8_t slot, const uint8_t *blk, int n);
 int GetOtherValue(char *nbox);
 void CheckInvisiblePoint();
 void GotoFrontView();
@@ -1440,7 +1453,7 @@ uint16_t PreMixBuffer[CHANNELSUSED + 1];              //    Data collected from 
 // and, after the record's checksum, the count and every point (SDcard.h ReadModelExtension / SaveModelExtension).
 #define CURVE_POINTS_MAX 9
 uint8_t CurvePointCount[CHANNELSUSED + 1];            //    3, 5, 7 or 9 points (B118)
-uint8_t CurvePoint[5][CHANNELSUSED + 1][CURVE_POINTS_MAX]; // the points, in degrees (B118; banks 1 .. 4)
+uint8_t CurvePoint[BANKS_USED + 1][CHANNELSUSED + 1][CURVE_POINTS_MAX]; // the points, in degrees (B118; banks 1 .. 4; B130: 5 and 6 too)
 // B121 (Malcolm, 17 Oct 2026: a curve set with several points, changed to another count and back, "has lost their values ...
 // I wonder if it might be possible to store them?"). Every point keeps its height: the store holds, per bank and channel, the
 // 13 stick positions a curve of any count can have - the eighths (0 .. 8: the ends, the quarters and the centre among them)
@@ -1449,7 +1462,7 @@ uint8_t CurvePoint[5][CHANNELSUSED + 1][CURVE_POINTS_MAX]; // the points, in deg
 // the never-set ones on the curve as it is (CurveResample). The file keeps the store (SDcard.h, block 0x5A 0xC6).
 #define CURVE_STORE_MAX 13
 #define CURVE_UNSET 255
-uint8_t CurveStore[5][CHANNELSUSED + 1][CURVE_STORE_MAX];
+uint8_t CurveStore[BANKS_USED + 1][CHANNELSUSED + 1][CURVE_STORE_MAX];
 uint8_t SubTrims[CHANNELSUSED + 1];                   //    Subtrims
 uint8_t SubTrimToEdit = 1;
 uint32_t LastPacketSentTime = 0;
@@ -1457,7 +1470,7 @@ uint8_t Bank = 1;
 void SendOtherValue(char *nbox, int value);
 // User defined bank names zone
 // ************************************** 0                  1                 2                  3                4          5           6           7          8                9        10          11       12        13             14            15          16          17      18        19           20         21     22           23         24         25          26           27        ***
-char BankNames[32][14] = {{"Flight mode 1"},
+char BankNames[BANK_NAMES_N][14] = {{"Flight mode 1"},
                           {"Flight mode 2"},
                           {"Flight mode 3"},
                           {"Flight mode 4"},
@@ -1488,8 +1501,14 @@ char BankNames[32][14] = {{"Flight mode 1"},
                           {"Profile 1"},
                           {"Profile 2"},
                           {"Profile 3"},
-                          {"Profile 4"}};
-uint8_t BankSounds[32] = {
+                          {"Profile 4"},
+                          {"Flight mode 5"}, // B130: 32 .. 37, for banks 5 and 6 (the screen's list has them in the same order)
+                          {"Flight mode 6"},
+                          {"Bank 5"},
+                          {"Bank 6"},
+                          {"Profile 5"},
+                          {"Profile 6"}};
+uint8_t BankSounds[BANK_NAMES_N] = {
     BFM1,       // "Flight mode 1"
     BFM2,       // "Flight mode 2"
     BFM3,       // "Flight mode 3"
@@ -1521,8 +1540,14 @@ uint8_t BankSounds[32] = {
     BANKONE,    // "Bank 1"
     BANKTWO,    // "Bank 2"
     BANKTHREE,  // "Bank 3"
-    BANKFOUR};  // "Bank 4"
-uint8_t BanksInUse[4] = {0, 1, 2, 3};
+    BANKFOUR,   // "Bank 4"
+    BFM5,       // "Flight mode 5" (B130)
+    BFM6,       // "Flight mode 6"
+    BANKFIVE,   // "Bank 5"
+    BANKSIX,    // "Bank 6"
+    BANKFIVE,   // "Profile 5"
+    BANKSIX};   // "Profile 6"
+uint8_t BanksInUse[BANKS_USED] = {0, 1, 2, 3, 32, 33}; // (B130: 5 and 6 live in the model's banks block)
 uint8_t PreviousBank = 1;
 // ************************************
 char ChannelNames[CHANNELSUSED][11] = {{"Aileron"}, {"Elevator"}, {"Throttle"}, {"Rudder"}, {"Gear"}, {"AUX1"}, {"AUX2"}, {"AUX3"}, {"AUX4"}, {"AUX5"}, {"AUX6"}, {"AUX7"}, {"AUX8"}, {"AUX9"}, {"AUX10"}, {"AUX11"}};
@@ -1866,7 +1891,7 @@ uint8_t Drate2 = 75;
 uint8_t Drate3 = 50;
 
 uint8_t DualRateChannels[8] = {1, 2, 4, 0, 0, 0, 0, 0};
-uint8_t DualRateRate[5];
+uint8_t DualRateRate[BANKS_USED + 1]; // (the Rates page: bank N uses rate X; B130: six)
 uint8_t DualRateValue = 100;
 uint16_t CurveDots[CURVE_POINTS_MAX]; // the points of the channel being worked out, with its rate (GetCurveDots)
 uint8_t CurveDotsN = 5;               // B118: how many of them
@@ -2120,10 +2145,10 @@ uint8_t Rate_Values[MAX_RATES_BYTES];
 uint8_t Rate_Advanced_Values[MAX_RATES_ADVANCED_BYTES];
 uint8_t PID_Advanced_Values[MAX_PIDS_ADVANCED_BYTES];
 
-uint16_t Saved_PID_Values[MAX_PID_WORDS + 5][4];
-uint8_t Saved_Rate_Values[MAX_RATES_BYTES][4];
-uint8_t Saved_Rate_Advanced_Values[MAX_RATES_ADVANCED_BYTES][4];
-uint8_t Saved_PID_Advanced_Values[MAX_PIDS_ADVANCED_BYTES][4];
+uint16_t Saved_PID_Values[MAX_PID_WORDS + 5][BANKS_USED]; // (B130: six banks)
+uint8_t Saved_Rate_Values[MAX_RATES_BYTES][BANKS_USED];
+uint8_t Saved_Rate_Advanced_Values[MAX_RATES_ADVANCED_BYTES][BANKS_USED];
+uint8_t Saved_PID_Advanced_Values[MAX_PIDS_ADVANCED_BYTES][BANKS_USED];
 
 uint16_t PID_Send_Duration = 0;
 uint16_t PID_Advanced_Send_Duration = 0;

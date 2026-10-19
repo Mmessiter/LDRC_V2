@@ -484,7 +484,7 @@ void MoveaTrim(uint8_t i)
     {
         for (i = 0; i < 4; ++i)
         {
-            for (int fm = 1; fm < 5; ++fm)
+            for (int fm = 1; fm <= BanksCount(); ++fm) // (B130: six banks when the model uses them)
             {
                 Trims[fm][i] = Trims[Bank][i];
             }

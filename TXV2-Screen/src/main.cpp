@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.97"
+#define SCREEN_VERSION "1.11.98"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1751,6 +1751,7 @@ static std::string keepQueue(const std::string &firmwareNow) {   // the jobs tha
     teensyLink.keepFolder("/", folder, "");
     teensyLink.mustHold("/models.dat", folder + "/models.dat");      // the models and the settings: if the transmitter has them, we have them, or the job stops
     teensyLink.keepFolder("/mod", folder + "/mod", ".MOD");
+    teensyLink.keepFolder("/banks56", folder + "/banks56", ".B56");   // 1.11.98: banks 5 and 6 of the models that use them (Teensy B130)
     teensyLink.keepFolder("/log", std::string(KEEP_ROOT) + "/log", ".LOG", 4u * 1024u * 1024u, true);   // the logs: one store that grows; only what we do not hold yet
     return folder;
 }
@@ -2327,8 +2328,8 @@ static void webBegin() {
         if (!keepIsWhole(set) && web.arg("half") != "1") { web.send(409, "text/plain", "that copy is not whole (the job that made it failed). Add half=1 to put back what it holds all the same"); return; }
         int n = 0;
         auto endsWith = [](const std::string &name, const char *end) { const size_t m = strlen(end); if (name.size() < m) return false; for (size_t i = 0; i < m; ++i) if (tolower((unsigned char) name[name.size() - m + i]) != tolower((unsigned char) end[i])) return false; return true; };
-        for (int pass = 0; pass < 2; ++pass) {              // the card's own folder, then mod
-            const std::string from = pass ? folder + "/mod" : folder, to = pass ? "/mod/" : "/";
+        for (int pass = 0; pass < 3; ++pass) {              // the card's own folder, then mod, then banks56 (1.11.98)
+            const std::string from = pass == 1 ? folder + "/mod" : pass == 2 ? folder + "/banks56" : folder, to = pass == 1 ? "/mod/" : pass == 2 ? "/banks56/" : "/";
             File d = SD.open(from.c_str());
             if (d && d.isDirectory()) {
                 File f;
@@ -2336,7 +2337,7 @@ static void webBegin() {
                     const std::string name = f.name(); const bool dir = f.isDirectory(); f.close();
                     // Only the models and the settings: models.dat, and the model files (*.MOD). Not the logs (a log put
                     // back would take the place of the log as it is now), not a half file (*.part), not a copy moved aside.
-                    const bool wanted = pass ? endsWith(name, ".mod") : (name.size() == 10 && endsWith(name, "models.dat"));
+                    const bool wanted = pass == 1 ? endsWith(name, ".mod") : pass == 2 ? endsWith(name, ".b56") : (name.size() == 10 && endsWith(name, "models.dat"));
                     if (dir || !wanted || !ldrc::plainPath((to + name).c_str())) continue;
                     teensyLink.put(from + "/" + name, to + name, ldrc::LF_USER_DATA, true); n++;
                 }

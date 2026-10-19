@@ -57,6 +57,7 @@ static uint16_t InputsBuffer[CHANNELSUSED + 1], PreMixBuffer[CHANNELSUSED + 1], 
 static uint16_t ReversedChannelBITS = 0;
 static char ChannelNames[CHANNELSUSED][11] = {{"Aileron"}, {"Elevator"}, {"Collective"}, {"Rudder"}, {"Throttle"}, {"Arming"}, {"Bank"}, {"Ch8"}, {"Ch9"}, {"Rescue"}, {"Ch11"}, {"Ch12"}, {"Ch13"}, {"Ch14"}, {"Ch15"}, {"Ch16"}};
 static bool InputIsSwitch(uint8_t) { return false; }
+static uint8_t BanksCount() { return 4; }   // (B130: four banks here)
 static uint16_t ReadThreePositionSwitch(uint8_t) { return 1500; }
 // the fake stages: a curve as an offset at the centre and a straight slope, a trim per bank and stick, a subtrim per channel
 static int curveOff[5][CHANNELSUSED], trimOff[5][8], subtrimOff[CHANNELSUSED];

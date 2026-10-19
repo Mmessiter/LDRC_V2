@@ -23,7 +23,21 @@ The motor switch has the job 'Bank 4 & Motor'|
 ('Transmitter setup', 'Switches'). Its three positions:|
 Away = bank 1, 2 or 3, motor on.|
 Mid = bank 4, motor on.|
-Near = bank 4, motor OFF.||
+Near = bank 4, motor OFF.|
+With 'Six banks' on, mid and near pick bank 4, 5 or 6|
+by the 'Banks 1 2 3' switch.||
+SIX BANKS:|
+On, this model has six banks (flight modes), as Rotorflight|
+has six. Banks 5 and 6 start as copies of bank 4, with names|
+of their own on 'Bank names', and their own trims, curves,|
+expo and servo speeds. Reach them with the 'Bank 4 & Motor'|
+switch at mid or near: the 'Banks 1 2 3' switch then picks|
+4, 5 or 6. Off, the four banks as before; banks 5 and 6 are|
+kept on the card, and come back if it is turned on again.||
+For Rotorflight to follow banks 5 and 6, the bank line's|
+channel needs a height of its own in each bank (its curve, on|
+'Model setup'), and the bank selector six positions: see|
+'In-flight adjustments' and the phone app's 'Switches' page.||
 TIMER:|
 The timer runs while the motor is on, and pauses when it is off.|
 Timer counts down: on, the timer counts down from|

@@ -4618,6 +4618,22 @@
   "104": {
    "file": "audio/104.wav",
    "name": "Update completed (screen 1.11.37: the update panel plays it at Update complete)"
+  },
+  "105": {
+   "file": "audio/105.wav",
+   "name": "Bank five (screen 1.11.98, Teensy B130: the fifth and sixth banks; the Mac's British voice Daniel, as clip 104)"
+  },
+  "106": {
+   "file": "audio/106.wav",
+   "name": "Bank six (screen 1.11.98, Teensy B130: the fifth and sixth banks; the Mac's British voice Daniel, as clip 104)"
+  },
+  "107": {
+   "file": "audio/107.wav",
+   "name": "Flight mode five (screen 1.11.98, Teensy B130: the fifth and sixth banks; the Mac's British voice Daniel, as clip 104)"
+  },
+  "108": {
+   "file": "audio/108.wav",
+   "name": "Flight mode six (screen 1.11.98, Teensy B130: the fifth and sixth banks; the Mac's British voice Daniel, as clip 104)"
   }
  }
 }

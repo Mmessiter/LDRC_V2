@@ -463,7 +463,7 @@ FLASHMEM static void AdjSeenClear() { for (int b = 0; b <= BANKS_USED; ++b) for 
 extern uint16_t (*Interpolate[3])(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel);
 FLASHMEM static int AdjTxBankUs(int ch0, int bank) // this transmitter's output on channel ch0 (0-based) in a bank, as the flight controller sees it; -1 if unknown
 {
-    if (ch0 < 0 || ch0 >= CHANNELSUSED || bank < 1 || bank > BANKS_USED) return -1;
+    if (ch0 < 0 || ch0 >= CHANNELSUSED || bank < 1 || bank > BanksCount()) return -1;
     if (AdjSeenUs[bank][ch0] >= 0) return AdjSeenUs[bank][ch0];                  // measured beats computed
     const uint8_t saved = Bank;
     Bank = (uint8_t)bank;
@@ -482,9 +482,9 @@ FLASHMEM static int AdjTxBankUs(int ch0, int bank) // this transmitter's output 
 // How many banks the channel tells apart, rising from bank 1 (their values into vals[1..]); 1 = none
 FLASHMEM static int AdjBankValues(int ch0, int *vals)
 {
-    for (int b = 1; b <= BANKS_USED; ++b) vals[b] = AdjTxBankUs(ch0, b);
+    for (int b = 1; b <= BanksCount(); ++b) vals[b] = AdjTxBankUs(ch0, b);   // (B130: six when the model uses them)
     int n = 1;
-    while (n < BANKS_USED && vals[n + 1] > vals[n]) ++n;
+    while (n < BanksCount() && vals[n + 1] > vals[n]) ++n;
     return n;
 }
 // The bank line's ends for this transmitter: the travel whose even divisions give each bank its own zone with the most room
@@ -501,7 +501,7 @@ FLASHMEM static bool AdjBankFit(int ch0, int16_t &lo, int16_t &hi, int &n, char 
         snprintf(why, len, "This transmitter's bank values on channel %d (%s us) cannot all be told apart by Rotorflight's even spacing: space them more evenly in Model setup.", ch0 + 1, v);
         return false;
     }
-    if (n < BANKS_USED) snprintf(why, len, "Banks 1 to %d; bank %d has no value of its own on channel %d (%d us).", n, n + 1, ch0 + 1, vals[n + 1]);
+    if (n < BanksCount()) snprintf(why, len, "Banks 1 to %d; bank %d has no value of its own on channel %d (%d us).", n, n + 1, ch0 + 1, vals[n + 1]);
     else why[0] = 0;
     return true;
 }

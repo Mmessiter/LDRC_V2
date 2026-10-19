@@ -1089,6 +1089,7 @@ void RXOptionsViewStart() // model Options screen
     SendValue(UseKill, UseMotorKill);
     SendValue(RxVCorrextion, RxVoltageCorrection);
     SendValue(c2, TimerDownwards);
+    SendValue((char *)"c3", SixBanks ? 1 : 0); // B130: six banks
     SendCommand((char *)"click c2,0"); // V1B B23: its script shades the minutes box by c2 (the page's start-up ran before c2 came: on, it stayed grey)
     SendValue(n4, TimerStartTime / 60);
     SendValue((char *)"sw0", 1); // redundant
@@ -1144,6 +1145,11 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
         MotorChannel = 2; // ClaudeFix-2-7-2026 comms error returns 65535 -> 254 -> OOB writes every loop pass
     SendValue(Progress, 60);
     TimerDownwards = GetValue(c2);
+    {
+        const int six = GetValue((char *)"c3"); // B130: six banks (a comms error, 65535, keeps it as it was)
+        if (six == 0 || six == 1)
+            SixBanksSet(six == 1);
+    }
     SendValue(Progress, 70);
     TimerStartTime = GetValue(n4) * 60;
 

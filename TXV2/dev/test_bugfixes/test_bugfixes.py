@@ -202,6 +202,7 @@ static bool SafetyIsOff() { return safetyOff; } static bool SafetyIsDefined() { 
 void RerouteOutputs(); uint8_t SourceOfOutput(uint8_t out); int CheckRange(int v, int min, int max); void UpdateButtonLabels(); void CheckMotorOff(); void GetBank();
 static void MaxRangeShow() {} // (B113: the Channels page's max range, tested in dev/test_channel_us)
 uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber); void ReadAutoAndMotorSwitch(); void ReadSafetySwitch(); void ReadDualRateSwitch();
+static bool SixBanks = false; static uint8_t UpperBank() { return 4; } static void SixBanksSet(bool on) { SixBanks = on; }   // (B130: four banks here; the six-bank mapping is test_banks')
 void ShowMotorTimer(); void ShowMotor(); void MotorEnabledHasChanged(); void TrimsToSubtrim(); int GetTrimAmount(uint8_t InputChannel); void ResetAllTrims();
 void MixInputs(); void ReadDualRatesValues(); void CheckServoSpeeds(); void CheckServoType(); void ReadMixValues(); void ReceiveLotsofData();
 void ExitMacrosView(); void ReadRXOptionsView(); void StartWifiScan(); uint8_t ScreenStatusNow(); void swap(uint8_t *a, uint8_t *b);

@@ -328,8 +328,9 @@ void GetCommandbytes(uint8_t *C, uint8_t *C1)
     }
     else // Otherwise, inform pupil of all our switch positions
     {
-        *C1 = (DualRateInUse - 1) << 1; // Uses low two bits, clears all the rest.
-        *C1 |= (Bank - 1) << 3;         // Sets the bank bits in the command byte at bits 3 & 4
+        *C1 = ((DualRateInUse - 1) & 3) << 1; // Uses low two bits, clears all the rest.
+        *C1 |= ((Bank - 1) & 3) << 3;         // Sets the bank bits in the command byte at bits 3 & 4
+        *C1 |= (((Bank - 1) >> 2) & 1) << 7;  // B130: the bank's third bit (banks 5 and 6) at bit 7
         *C1 |= MotorEnabled << 5;       // Sets the motor bit in the command byte at bit 5
         *C1 |= SafetyON << 6;           // Sets the safety bit in the command byte at bit 6
     }
@@ -418,7 +419,9 @@ void TestTheCommandByte(uint8_t C, uint8_t C1) // two bytes really
     if (!BuddyHasAllSwitches)       // If Buddy does not have switch control, he must get these from Master
     {
         DualRateInUse = ((C1 >> 1) & 3) + 1; // Get the dual rate bits
-        Bank = ((C1 >> 3) & 3) + 1;          // Get the bank bits
+        Bank = (((C1 >> 3) & 3) | (((C1 >> 7) & 1) << 2)) + 1; // Get the bank bits (B130: bit 7 = the third one, banks 5 and 6)
+        if (Bank > BanksCount())
+            Bank = 4; // (a master on six banks, this pupil on four: bank 4, the nearest it has)
         MotorEnabled = (C1 >> 5) & 1;        // Get the motor bit
         SafetyON = (C1 >> 6) & 1;            // Get the safety bit
     }

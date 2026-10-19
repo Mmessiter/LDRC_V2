@@ -9,6 +9,9 @@ A switch's positions are near (towards you), mid and away.|
 'Bank 4 & Motor': away is motor on, in the bank the 'Banks 1 2 3'|
 switch picks. Mid is bank 4 with the motor on. Near is bank 4|
 with the motor off.|
+With 'Six banks' on ('Model options'), mid and near pick bank 4, 5|
+or 6 by the 'Banks 1 2 3' switch: away is 4, mid 5, near 6.|
+So the two switches together reach all six banks.|
 'Safety': near is safety off. With a Rotorflight model, safety|
 off arms the model.|
 'Rates': away, mid and near pick rates 1, 2 and 3.|

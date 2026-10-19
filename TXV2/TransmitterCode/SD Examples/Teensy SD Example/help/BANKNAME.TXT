@@ -1,12 +1,14 @@
-Give each of this model's four banks (flight modes) a name for what|
-it does. The name shows on the front screen and other pages, and|
-is spoken when you change bank.||
+Give each of this model's banks (flight modes) a name for what|
+it does. There are four, or six with 'Six banks' on 'Model|
+options'. The name shows on the front screen and other pages,|
+and is spoken when you change bank.||
 TO NAME THE BANKS:|
 - Scroll each bank's list to the name you want.|
-- Or press a set of four: 'Default' (Flight mode 1 to 4), 'Vbar'|
-(Bank 1 to 4), 'Heli' (Hover, Idle up 1, Idle up 2, Hold) or|
-'Glider' (Launch, Normal, Speed, Thermal).|
-- 'Listen' plays the four names in turn.|
+- Or press a set: 'Default' (Flight mode 1 to 6), 'Vbar'|
+(Bank 1 to 6), 'Heli' (Hover, Idle up 1, Idle up 2, Hold,|
+Bank 5, Bank 6) or 'Glider' (Launch, Normal, Speed, Thermal,|
+Bank 5, Bank 6).|
+- 'Listen' plays the names in turn.|
 - Press 'OK' to save.||
 The names come from a fixed list: each has its own spoken sound.|
 To silence them, turn off 'Bank voice' ('Transmitter setup',|

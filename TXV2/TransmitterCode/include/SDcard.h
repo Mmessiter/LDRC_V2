@@ -218,7 +218,7 @@ bool ReadOneModel(uint32_t Mnum)
             Mixes[j][M_MasterChannel] = 0;
     }
 
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {
@@ -226,7 +226,7 @@ bool ReadOneModel(uint32_t Mnum)
             ++SDCardAddress;
         }
     }
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {
@@ -333,7 +333,7 @@ bool ReadOneModel(uint32_t Mnum)
         }
     }
 
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {
@@ -345,7 +345,7 @@ bool ReadOneModel(uint32_t Mnum)
             ++SDCardAddress;
         }
     }
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {
@@ -416,8 +416,8 @@ bool ReadOneModel(uint32_t Mnum)
     for (i = 0; i < 4; ++i)
     {
         BanksInUse[i] = SDRead8BITS(SDCardAddress);
-        if (BanksInUse[i] > 31)
-            BanksInUse[i] = i + 4; // ClaudeFix-2-7-2026 BankNames is [32]; corrupt index strcpy'd garbage into a stack buffer on bank change
+        if (BanksInUse[i] >= BANK_NAMES_N)
+            BanksInUse[i] = i + 4; // ClaudeFix-2-7-2026 BankNames is [BANK_NAMES_N]; corrupt index strcpy'd garbage into a stack buffer on bank change
         ++SDCardAddress;
     }
 
@@ -726,6 +726,144 @@ static uint8_t Ext2Sum(const uint8_t *p, int n)
     return s;
 }
 static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }
+// B130 (Malcolm, 19 Oct 2026: six banks). Banks 5 and 6 have no room in the record (3072 bytes: 2111 the checked sequence,
+// 854 the max range and the curves, 107 left), so they live in a block of their own, BANKS_BLOCK_LEN bytes: the markers 0x5A
+// 0xC8, a version, the model's name (30), the two banks' names and rates, then for each of the two banks the trims, servo
+// speeds, expo and curve types of the 16 channels and the curve store (13 heights) of every channel, and a checksum byte. In
+// models.dat the block is a file of its own, /banks56/<slot>.b56 (SDFiles.h), with the model's name inside so that a stale
+// file of another model once in the same slot is never taken; in a .MOD (a backup, an exchange) it follows in-line, so that
+// a copy carries everything. The record itself keeps a four-byte header after the curves' block - 0x5A 0xC7 flags sum, flags
+// bit 0 = this model uses six banks. A firmware before B130 reads none of this and flies the four banks it knows.
+#define TX_EXT_MAGIC7 0xC7 // the six-banks header
+#define TX_EXT_MAGIC8 0xC8 // the banks 5 and 6 block
+#define BANKS_BLOCK_LEN (37 + 4 * 2 * CHANNELSUSED + 2 * CHANNELSUSED * CURVE_STORE_MAX + 1) // 582
+static uint8_t BanksSlot() { return SingleModelFlag ? 0 : (uint8_t)((StartLocation - TXSIZE) / (MODELSIZE) + 1); } // (MODELSIZE is 1024 * 3, unbracketed: the brackets matter)
+FLASHMEM void BanksCopy(uint8_t from, uint8_t to) // one bank's trims, speeds, expo, curve types and curves into another (in memory)
+{
+    if (from < 1 || from > BANKS_USED || to < 1 || to > BANKS_USED || from == to)
+        return;
+    for (int i = 0; i < CHANNELSUSED + 1; ++i)
+    {
+        Trims[to][i] = Trims[from][i];
+        ServoSpeed[to][i] = ServoSpeed[from][i];
+        Exponential[to][i] = Exponential[from][i];
+        InterpolationTypes[to][i] = InterpolationTypes[from][i];
+        for (int k = 0; k < CURVE_POINTS_MAX; ++k)
+            CurvePoint[to][i][k] = CurvePoint[from][i][k];
+        for (int s = 0; s < CURVE_STORE_MAX; ++s)
+            CurveStore[to][i][s] = CurveStore[from][i][s];
+    }
+}
+FLASHMEM static void BanksFromFour() // banks 5 and 6 as bank 4's twins, named after the four's pattern (Flight mode 5, Bank 5 or Profile 5 ...)
+{
+    BanksCopy(4, 5);
+    BanksCopy(4, 6);
+    const uint8_t n4 = BanksInUse[3];
+    BanksInUse[4] = n4 == 3 ? 32 : n4 == 31 ? 36 : 34;
+    BanksInUse[5] = (uint8_t)(BanksInUse[4] + 1);
+    DualRateRate[4] = DualRateRate[5] = 0;
+}
+FLASHMEM static int BanksBlockBuild(uint8_t *blk) // banks 5 and 6 into the block; its length
+{
+    memset(blk, 0, BANKS_BLOCK_LEN);
+    blk[0] = TX_EXT_MAGIC;
+    blk[1] = TX_EXT_MAGIC8;
+    blk[2] = 1;
+    strncpy((char *)blk + 3, ModelName, 30);
+    blk[33] = BanksInUse[4];
+    blk[34] = BanksInUse[5];
+    blk[35] = DualRateRate[4];
+    blk[36] = DualRateRate[5];
+    int p = 37;
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c)
+            blk[p++] = (uint8_t)Trims[b][c];
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c)
+            blk[p++] = ServoSpeed[b][c];
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c)
+            blk[p++] = Exponential[b][c];
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c)
+            blk[p++] = InterpolationTypes[b][c];
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c)
+            for (int s = 0; s < CURVE_STORE_MAX; ++s)
+                blk[p++] = CurveStore[b][c][s];
+    blk[p] = Ext2Sum(blk + 2, p - 2); // (p is BANKS_BLOCK_LEN - 1)
+    return BANKS_BLOCK_LEN;
+}
+FLASHMEM static bool BanksBlockTake(const uint8_t *blk, bool checkName) // a block into banks 5 and 6: false, nothing changed, unless it is whole and sound
+{
+    if (blk[0] != TX_EXT_MAGIC || blk[1] != TX_EXT_MAGIC8 || blk[2] != 1)
+        return false;
+    if (Ext2Sum(blk + 2, BANKS_BLOCK_LEN - 3) != blk[BANKS_BLOCK_LEN - 1])
+        return false;
+    if (checkName && strncmp((const char *)blk + 3, ModelName, 30) != 0)
+        return false;
+    const int st = 37 + 4 * 2 * CHANNELSUSED; // the curve store
+    for (int k = 0; k < 2 * CHANNELSUSED * CURVE_STORE_MAX; ++k)
+    {
+        const uint8_t v = blk[st + k];
+        const int s = k % CURVE_STORE_MAX;
+        if (v > 180 && v != CURVE_UNSET)
+            return false;
+        if (s <= 8 && (s % 2) == 0 && v == CURVE_UNSET) // (the five of old are always set)
+            return false;
+    }
+    for (int b = 0; b < 2; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c)
+            for (uint8_t k = 0; k < CurveN(c); ++k)
+                if (blk[st + (b * CHANNELSUSED + c) * CURVE_STORE_MAX + CurveStorePos(CurveN(c), k)] == CURVE_UNSET)
+                    return false; // (a height the count needs, never set)
+    // whole and sound: taken, each value kept in its range as the sequence's reader keeps them
+    BanksInUse[4] = blk[33] < BANK_NAMES_N ? blk[33] : 34;
+    BanksInUse[5] = blk[34] < BANK_NAMES_N ? blk[34] : 35;
+    DualRateRate[4] = blk[35] <= 3 ? blk[35] : 0;
+    DualRateRate[5] = blk[36] <= 3 ? blk[36] : 0;
+    int p = 37;
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c, ++p)
+            Trims[b][c] = (blk[p] >= 40 && blk[p] <= 120) ? blk[p] : 80;
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c, ++p)
+            ServoSpeed[b][c] = (blk[p] >= 1 && blk[p] <= 100) ? blk[p] : 100;
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c, ++p)
+            Exponential[b][c] = (blk[p] >= 1 && blk[p] <= 200) ? blk[p] : DEFAULT_EXPO;
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c, ++p)
+            InterpolationTypes[b][c] = blk[p] <= 2 ? blk[p] : EXPONENTIALCURVES;
+    for (int b = 5; b <= 6; ++b)
+        for (int c = 0; c < CHANNELSUSED; ++c)
+        {
+            for (int s = 0; s < CURVE_STORE_MAX; ++s)
+                CurveStore[b][c][s] = blk[p++];
+            for (uint8_t k = 0; k < CURVE_POINTS_MAX; ++k) // the active points: the count's view of the store
+                CurvePoint[b][c][k] = k < CurveN(c) ? CurveStore[b][c][CurveStorePos(CurveN(c), k)] : 0;
+        }
+    for (int b = 5; b <= 6; ++b) // (the spare 17th column)
+    {
+        Trims[b][CHANNELSUSED] = 80;
+        ServoSpeed[b][CHANNELSUSED] = 100;
+        Exponential[b][CHANNELSUSED] = DEFAULT_EXPO;
+        InterpolationTypes[b][CHANNELSUSED] = EXPONENTIALCURVES;
+    }
+    return true;
+}
+FLASHMEM void SixBanksSet(bool on) // Model options: on, banks 5 and 6 from their file if it is there (turned off and on again: nothing lost), else bank 4's twins
+{
+    if (on == SixBanks)
+        return;
+    if (on)
+    {
+        uint8_t blk[BANKS_BLOCK_LEN];
+        if (!(ModelNumber >= 1 && ModelNumber <= MAXMODELNUMBER && BanksFileRead((uint8_t)ModelNumber, blk, BANKS_BLOCK_LEN) && BanksBlockTake(blk, true)))
+            BanksFromFour();
+    }
+    SixBanks = on;
+}
 void ReadModelExtension()
 {
     const int a = SDCardAddress; // (just past the checksum)
@@ -744,8 +882,10 @@ void ReadModelExtension()
     }
     MaxRangeNarrow = (m0 == TX_EXT_MAGIC && m1 == TX_EXT_MAGIC2 && r == 1) ? 1 : 0;
     const int size = (int)ModelsFileNumber.size();
+    int pos = a + 3; // B130: where the six-banks header follows (after the curves' block when there is one, sound or not)
     if (first && size >= a + 5 && SDRead8BITS(a + 3) == TX_EXT_MAGIC && SDRead8BITS(a + 4) == TX_EXT_MAGIC4 && size >= a + 3 + MODEL_EXT2_LEN)
     { // B121: the count and the store
+        pos = a + 3 + MODEL_EXT2_LEN;
         uint8_t blk[MODEL_EXT2_LEN];
         for (int i = 0; i < MODEL_EXT2_LEN; ++i)
             blk[i] = SDRead8BITS(a + 3 + i);
@@ -790,6 +930,7 @@ void ReadModelExtension()
     }
     else if (first && size >= a + 5 && SDRead8BITS(a + 3) == TX_EXT_MAGIC && SDRead8BITS(a + 4) == TX_EXT_MAGIC3 && size >= a + 3 + MODEL_EXT2_LEN_B118)
     { // B118's block: the count and the active points - into the store
+        pos = a + 3 + MODEL_EXT2_LEN_B118;
         uint8_t blk[MODEL_EXT2_LEN_B118];
         for (int i = 0; i < MODEL_EXT2_LEN_B118; ++i)
             blk[i] = SDRead8BITS(a + 3 + i);
@@ -816,6 +957,33 @@ void ReadModelExtension()
                 }
             }
     }
+    // B130: the six-banks header, then banks 5 and 6 - in-line in a .MOD, from the slot's own file in models.dat
+    bool six = false, taken = false;
+    if (first && size >= pos + 4 && SDRead8BITS(pos) == TX_EXT_MAGIC && SDRead8BITS(pos + 1) == TX_EXT_MAGIC7)
+    {
+        const uint8_t flags = SDRead8BITS(pos + 2), sum = SDRead8BITS(pos + 3);
+        if (sum == (uint8_t)(TX_EXT_MAGIC7 + flags))
+            six = (flags & 1) != 0;
+        pos += 4;
+    }
+    if (six)
+    {
+        uint8_t blk[BANKS_BLOCK_LEN];
+        if (SingleModelFlag)
+        {
+            if (size >= pos + BANKS_BLOCK_LEN)
+            {
+                for (int i = 0; i < BANKS_BLOCK_LEN; ++i)
+                    blk[i] = SDRead8BITS(pos + i);
+                taken = BanksBlockTake(blk, false);
+            }
+        }
+        else if (BanksFileRead(BanksSlot(), blk, BANKS_BLOCK_LEN))
+            taken = BanksBlockTake(blk, true);
+    }
+    SixBanks = six;
+    if (!taken)
+        BanksFromFour(); // (four banks, or the block missing or unsound: banks 5 and 6 are bank 4's twins until set)
     DoingCheckSm = false;
 }
 void SaveModelExtension()
@@ -835,7 +1003,8 @@ void SaveModelExtension()
     DoingCheckSm = true;
     if (size >= a + 5)
         had2 = SDRead8BITS(a + 3) == TX_EXT_MAGIC && (SDRead8BITS(a + 4) == TX_EXT_MAGIC4 || SDRead8BITS(a + 4) == TX_EXT_MAGIC3);
-    if (MaxRangeNarrow || curves || had2 || size > a)
+    int pos = a + 3; // B130: where the six-banks header goes
+    if (MaxRangeNarrow || curves || had2 || size > a || SixBanks)
     {
         SDUpdate8BITS(a, TX_EXT_MAGIC);
         SDUpdate8BITS(a + 1, TX_EXT_MAGIC2);
@@ -854,6 +1023,29 @@ void SaveModelExtension()
             blk[MODEL_EXT2_LEN - 1] = Ext2Sum(blk + 2, MODEL_EXT2_LEN - 3);
             for (int i = 0; i < MODEL_EXT2_LEN; ++i)
                 SDUpdate8BITS(a + 3 + i, blk[i]);
+            pos = a + 3 + MODEL_EXT2_LEN;
+        }
+        // B130: the six-banks header - written when the model uses six banks, and kept (saying four) once it is there - then
+        // the banks 5 and 6 block: in-line in a .MOD, in the slot's own file for models.dat. A four-bank model that never had
+        // the header writes exactly what B129 wrote.
+        const bool hadC7 = size >= pos + 2 && SDRead8BITS(pos) == TX_EXT_MAGIC && SDRead8BITS(pos + 1) == TX_EXT_MAGIC7;
+        if (SixBanks || hadC7)
+        {
+            const uint8_t flags = SixBanks ? 1 : 0;
+            SDUpdate8BITS(pos, TX_EXT_MAGIC);
+            SDUpdate8BITS(pos + 1, TX_EXT_MAGIC7);
+            SDUpdate8BITS(pos + 2, flags);
+            SDUpdate8BITS(pos + 3, (uint8_t)(TX_EXT_MAGIC7 + flags));
+            if (SixBanks)
+            {
+                uint8_t blk[BANKS_BLOCK_LEN];
+                BanksBlockBuild(blk);
+                if (SingleModelFlag)
+                    for (int i = 0; i < BANKS_BLOCK_LEN; ++i)
+                        SDUpdate8BITS(pos + 4 + i, blk[i]);
+                else
+                    BanksFileWrite(BanksSlot(), blk, BANKS_BLOCK_LEN);
+            }
         }
     }
     DoingCheckSm = false;
@@ -1392,7 +1584,7 @@ void SaveOneModel(uint32_t mnum)
             ++SDCardAddress;
         }
     }
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {
@@ -1400,7 +1592,7 @@ void SaveOneModel(uint32_t mnum)
             ++SDCardAddress;
         }
     }
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {
@@ -1481,7 +1673,7 @@ void SaveOneModel(uint32_t mnum)
             ++SDCardAddress;
         }
     }
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {
@@ -1490,7 +1682,7 @@ void SaveOneModel(uint32_t mnum)
         }
     }
 
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
     {
         for (i = 0; i < CHANNELSUSED + 1; ++i)
         {

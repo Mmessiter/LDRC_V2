@@ -120,10 +120,10 @@ uint32_t ControlFingerprint()
     for (j = 0; j < MAXMIXES; ++j)
         for (i = 0; i < CHANNELSUSED + 1; ++i)
             Fp(Mixes[j][i]);
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
         for (i = 0; i < CHANNELSUSED + 1; ++i)
             Fp(Trims[j][i]);
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
         for (i = 0; i < CHANNELSUSED + 1; ++i)
             Fp(ServoSpeed[j][i]);
     Fp(TrimMultiplier);
@@ -141,10 +141,10 @@ uint32_t ControlFingerprint()
     Fp(ArmingChannel);
     for (i = 0; i < CHANNELSUSED; ++i)
         Fp(FailSafeChannel[i] ? 1 : 0);
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
         for (i = 0; i < CHANNELSUSED + 1; ++i)
             Fp(Exponential[j][i]);
-    for (j = 0; j < BANKS_USED + 1; ++j)
+    for (j = 0; j < BANKS_IN_FILE + 1; ++j)
         for (i = 0; i < CHANNELSUSED + 1; ++i)
             Fp(InterpolationTypes[j][i]);
     for (j = 0; j < BYTESPERMACRO; ++j)
@@ -235,6 +235,26 @@ uint32_t ControlFingerprint()
                 for (int k = 0; k < CurveN(i); ++k)
                     Fp(CurvePoint[j][i][k]);
         }
+    if (SixBanks) // B130: banks 5 and 6 - only when the model uses them, after everything else (a four-bank model gives the number it always gave)
+    {
+        Fp(0x5EC6);
+        for (j = 5; j <= 6; ++j)
+        {
+            for (i = 0; i < CHANNELSUSED + 1; ++i)
+                Fp(Trims[j][i]);
+            for (i = 0; i < CHANNELSUSED + 1; ++i)
+                Fp(ServoSpeed[j][i]);
+            for (i = 0; i < CHANNELSUSED + 1; ++i)
+                Fp(Exponential[j][i]);
+            for (i = 0; i < CHANNELSUSED + 1; ++i)
+                Fp(InterpolationTypes[j][i]);
+            for (i = 0; i < CHANNELSUSED; ++i)
+                for (int k = 0; k < CurveN(i); ++k)
+                    Fp(CurvePoint[j][i][k]);
+            Fp(DualRateRate[j - 1]);
+            Fp(BanksInUse[j - 1]);
+        }
+    }
     return FingerprintSoFar;
 }
 

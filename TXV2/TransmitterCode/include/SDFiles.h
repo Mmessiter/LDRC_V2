@@ -58,6 +58,47 @@ FASTRUN void DeleteLogFile()
     AddPath(TextFileName);
     TINYCARD.remove(SearchFile);
 }
+/************************************************************************************************************/
+// B130: the banks file - banks 5 and 6 of a model in models.dat (SDcard.h BanksBlockBuild / BanksBlockTake: the record has
+// no room for them). /banks56/<slot>.b56, the whole block; read only whole. Written only when it would differ from the last
+// block written (a trim moved in bank 1 saves the model but leaves this file alone).
+#define BANKS_DIR "/banks56"
+static void BanksFileName(uint8_t slot, char *p, size_t n) { snprintf(p, n, BANKS_DIR "/%u.b56", (unsigned)slot); }
+FLASHMEM bool BanksFileRead(uint8_t slot, uint8_t *blk, int n)
+{
+    char p[24];
+    BanksFileName(slot, p, sizeof(p));
+    File f = TINYCARD.open(p, FILE_READ);
+    if (!f)
+        return false;
+    const bool ok = (int)f.size() == n && f.read(blk, n) == n;
+    f.close();
+    return ok;
+}
+DMAMEM static uint8_t BanksLast[BANKS_BLOCK_LEN]; // (the last block written, RAM2)
+FLASHMEM bool BanksFileWrite(uint8_t slot, const uint8_t *blk, int n)
+{
+    static uint8_t lastSlot = 0;
+    uint8_t *last = BanksLast;
+    if (n == BANKS_BLOCK_LEN && slot == lastSlot && memcmp(last, blk, n) == 0)
+        return true;
+    char p[24];
+    BanksFileName(slot, p, sizeof(p));
+    if (!TINYCARD.exists(BANKS_DIR))
+        TINYCARD.mkdir(BANKS_DIR);
+    TINYCARD.remove(p);
+    File f = TINYCARD.open(p, FILE_WRITE);
+    if (!f)
+        return false;
+    const bool ok = (int)f.write(blk, n) == n;
+    f.close();
+    if (ok && n == BANKS_BLOCK_LEN)
+    {
+        lastSlot = slot;
+        memcpy(last, blk, n);
+    }
+    return ok;
+}
 /******************************************************************************************************************************/
 
 void DeleteThisLogFile()

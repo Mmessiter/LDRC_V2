@@ -413,8 +413,8 @@ FLASHMEM void Save_SOME_RF_Parameters()
 FLASHMEM void Collect_data_from_dialog() // and close it
 {
     LocalBank = GetValue((char *)"n0");
-    if (LocalBank < 1 || LocalBank > 4)
-        LocalBank = 1; // ClaudeFix-2-7-2026 Saved_* arrays are [4]; a comms error returns 65535
+    if (LocalBank < 1 || LocalBank > BanksCount())
+        LocalBank = 1; // ClaudeFix-2-7-2026 Saved_* arrays are [BANKS_USED]; a comms error returns 65535 (B130: 1 .. 6 with Six banks)
     Which_Params = 0;
     if (GetValue((char *)"sw0"))
         Which_Params |= DO_PIDS;

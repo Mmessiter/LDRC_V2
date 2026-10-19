@@ -186,6 +186,41 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Six banks (Teensy B130, screen 1.11.98, 19 Oct 2026)
+
+Malcolm: "I have an idea for allowing the transmitter to support six banks rather than only four. We could re-define the switch
+which currently handles 'motor off', 'bank 4', 'motor on' ... the switch would select bank 4 only if the switch handling banks
+1, 2 & 3 is in the Bank 1 position. Thus, it would convert that switch in selecting banks 4, 5, 6." And: "using six or four
+banks could become an option so that you can stay on four if you really want to."
+
+- **Six banks, a switch on Model options**, off by default: nothing changes for a model until it is turned on. On, banks 5 and 6
+  start as bank 4's twins (trims, servo speeds, expo, curve types, curves), named after the four's pattern (Flight mode 5 and 6,
+  Bank 5 and 6, or Profile 5 and 6) on the Bank names page, which now has six boxes; four new voices (clips 105-108, the Mac's
+  Daniel as clip 104) say them. Turned off, the two are kept on the card and come back if it is turned on again.
+- **The switches.** With six banks, the 'Bank 4 & Motor' switch's middle and near positions pick bank 4, 5 or 6 by the
+  'Banks 1 2 3' switch (away 4, mid 5, near 6); away is bank 1, 2 or 3 as ever, and near still turns the motor off. With four
+  banks, exactly as before. The buddy byte carries the bank's third bit (bit 7); a pupil on four banks takes 4 for 5 and 6.
+- **Where they live.** The record has no room (3072 bytes: 2111 the checked sequence, 854 the max range and the curves' blocks,
+  107 left; banks 5 and 6 need 582). So the record keeps a four-byte header after the curves' block (0x5A 0xC7 flags sum) and
+  the two banks go in a block of their own: in-line in a .MOD (a backup, an exchange: a copy carries everything; MAXFILELEN is
+  4096 now - a six-bank .MOD with curves is 3551 bytes), and for models.dat in /banks56/<slot>.b56, the model's name inside
+  (another model's file once in the same slot is never taken) and a checksum, written only when it would differ. A firmware
+  before B130 reads none of it and flies the four banks it knows; a four-bank model saves exactly the bytes B129 saved. The
+  screen keeps /banks56 beside models.dat and /mod before a Teensy update, and puts it back with them.
+- **The settings guard.** The file loops and the fingerprint's sequence stay at four banks (BANKS_IN_FILE: never widened);
+  banks 5 and 6 fold in at the end only when the model uses them, so a four-bank setup gives the number it always gave and the
+  update is compared and kept.
+- Everywhere else the bank count follows the model: the centre note at power-up, the Adjust page's bank line fit (six of
+  Rotorflight's zones), Save and Restore, the rates linked to banks (rates 5 and 6), copy trims to all banks. For Rotorflight to
+  follow banks 5 and 6 the bank line's channel needs a height of its own in each bank and the bank selector six positions (the
+  Adjust page fits the ends; the phone's Switches page offers 2 to 6 positions already).
+- Memory: RAM1 free for locals 69,824 (72,096 at B129), ITCM code 284,968 (283,656); the screen 92.7 % of its slot.
+
+| Test | What it proves |
+|---|---|
+| `dev/test_banks/test_banks.py` (NEW) | the file, over the real code beside B129's (git show): 120 four-bank saves byte for byte B129's in both kinds of file and read back alike by both; 60 six-bank .MODs round trip, B129's reader takes their curves and ignores the rest, a damaged block or header falls back safely; 40 models.dat six-bank models: the banks file written and named, taken only whole and sound, kept when turned off and back when on. The switches: 96 checks over both counts, three positions, with and without a bank switch, blocked. The buddy byte: 384. The fingerprint: 8 setups the same as B129's, 8 differ with six on. Then the sources, pages, help and clips. It found one bug before it shipped: the slot number divided by the unbracketed MODELSIZE |
+| the earlier tests | taught the new helpers (four banks in their worlds): all pass |
+
 ## Motor off in microseconds (Teensy B129, 19 Oct 2026)
 
 Malcolm, on the Model options page: "Inherited from version one, the value which is usually attributed to motor off of -67

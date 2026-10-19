@@ -91,6 +91,7 @@ PROGRAM = r'''
 #define FLASHMEM
 #define constrain(a, l, h) ((a) < (l) ? (l) : ((a) > (h) ? (h) : (a)))
 @DEFS@
+#define BANKS_USED 4   // (B130: four banks in this test; six are test_banks')
 @MAP@
 #include "InterpolationLib.h"
 static int checks = 0, fails = 0;
@@ -146,6 +147,17 @@ static bool cardSeek(size_t a) { if (a > card.size()) return false; cardPos = a;
 static uint8_t SDRead8BITS(int a) { cardSeek((size_t) a); const uint8_t r = cardPos < card.size() ? card[cardPos++] : 255; if (!DoingCheckSm) FileCheckSum += r * (a + 1); return r; }
 static void SDUpdate8BITS(int a, uint8_t v) { if (!cardSeek((size_t) a)) ++seekWriteFails; if (!DoingCheckSm) FileCheckSum += v * (a + 1); if (cardPos >= card.size()) card.resize(cardPos + 1, 0); card[cardPos++] = v; }
 static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }
+// B130 (six banks): the extension functions reach for these; here the model has four banks and no banks file
+static bool SixBanks = false, SingleModelFlag = false;
+#define TX_EXT_MAGIC7 0xC7
+#define TX_EXT_MAGIC8 0xC8
+#define BANKS_BLOCK_LEN 582
+static uint8_t BanksSlot() { return 1; }
+static bool BanksFileRead(uint8_t, uint8_t *, int) { return false; }
+static bool BanksFileWrite(uint8_t, const uint8_t *, int) { return true; }
+static int BanksBlockBuild(uint8_t *blk) { memset(blk, 0, BANKS_BLOCK_LEN); return BANKS_BLOCK_LEN; }
+static bool BanksBlockTake(const uint8_t *, bool) { return false; }
+static void BanksFromFour() {}
 @EXT@
 // helpers
 static uint32_t seed = 20261017;

@@ -255,6 +255,17 @@ void ReadBankSwitch()
 }
 
 /************************************************************************************************************/
+uint8_t BanksCount() { return SixBanks ? 6 : 4; } // B130: the banks this model uses
+uint8_t BankOf123()                                // B130: what the 'Banks 1 2 3' switch says (1 when there is none)
+{
+    const uint8_t b = GetSwitchPosition(BankSwitch);
+    return (b >= 1 && b <= 3) ? b : 1;
+}
+// B130 (Malcolm, 19 Oct 2026: "We could re-define the switch which currently handles 'motor off', 'bank 4', 'motor on' ...
+// the switch would select bank 4 only if the switch handling banks 1, 2 & 3 is in the Bank 1 position. Thus, it would
+// convert that switch in selecting banks 4, 5, 6"): with 'Six banks' on (Model options), the middle and the near positions
+// of the 'Bank 4 & Motor' switch pick bank 4, 5 or 6 by the 'Banks 1 2 3' switch. With it off, bank 4 as ever.
+static uint8_t UpperBank() { return SixBanks ? (uint8_t)(3 + BankOf123()) : 4; }
 void ReadAutoAndMotorSwitch()
 {
     // Motor state must always reflect the physical switch — never gate on
@@ -268,12 +279,12 @@ void ReadAutoAndMotorSwitch()
         break;
     case 2:
         if (!BlockBankChanges)
-            Bank = 4;
+            Bank = UpperBank();
         MotorEnabled = true;
         break;
     case 3:
         if (!BlockBankChanges)
-            Bank = 4;
+            Bank = UpperBank();
         MotorEnabled = false;
         break;
     default:
@@ -289,7 +300,7 @@ void ReadDualRateSwitch()
         DualRateInUse = GetSwitchPosition(DualRatesSwitch);
         if (DualRateInUse == 0) // if switch not used
             DualRateInUse = 4;
-        if (Bank >= 1 && Bank <= 4 && DualRateRate[Bank - 1] >= 1 && DualRateRate[Bank - 1] <= 3)
+        if (Bank >= 1 && Bank <= BANKS_USED && DualRateRate[Bank - 1] >= 1 && DualRateRate[Bank - 1] <= 3)
             DualRateInUse = DualRateRate[Bank - 1]; // B10: the Rates page's "Bank N will use rate X" (it went missing in June 2025; the page kept offering it)
     }
 

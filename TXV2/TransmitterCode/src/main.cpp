@@ -460,7 +460,7 @@ FLASHMEM void CentreNote(char *out, size_t n) // out: "" when every bank is cent
     const uint8_t bankWas = Bank;
     const uint8_t collective = MotorChannel < CHANNELSUSED ? InPutStick[MotorChannel] : 255; // the stick that feeds the motor channel
     uint8_t found = 0;
-    for (uint8_t b = 1; b <= 4 && found < 3; ++b)
+    for (uint8_t b = 1; b <= BanksCount() && found < 3; ++b) // (B130: six banks when the model uses them)
     {
         Bank = b;
         for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
@@ -1008,7 +1008,7 @@ FLASHMEM static uint8_t RangeDegrees(int us, uint16_t lo, uint16_t hi) // micros
 FLASHMEM void MaxRangeConvert(uint8_t narrow) // every curve point into the new range, keeping its microseconds (MaxRangeNarrow still the old one)
 {
     const uint16_t lo = narrow ? RANGE_NARROW_LO : MINMICROS, hi = narrow ? RANGE_NARROW_HI : MAXMICROS;
-    for (int b = 1; b <= 4; ++b)
+    for (int b = 1; b <= BANKS_USED; ++b) // (B130: banks 5 and 6 too, used or not: they are kept in step)
         for (int ch = 0; ch < CHANNELSUSED; ++ch)
         {
             for (int k = 0; k < CurveN(ch); ++k) // (B118: every point of the curve)
@@ -1900,18 +1900,19 @@ void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when
     DualRateChannels[6] = 0;
     DualRateChannels[7] = 0;
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < BANKS_USED; ++i)
     {
-        BanksInUse[i] = i + 4;
+        BanksInUse[i] = i < 4 ? i + 4 : 30 + i; // "Bank 1" .. "Bank 4"; B130: "Bank 5", "Bank 6" (34, 35)
     }
-    for (int j = 0; j < 4; ++j)
+    SixBanks = false; // B130: four banks until Model options says six
+    for (int j = 0; j <= BANKS_USED; ++j)
     {
         for (int i = 0; i < 16; ++i)
         {
             ServoSpeed[j][i] = 100;
         }
     }
-    for (i = 0; i < 4; ++i)
+    for (i = 0; i < BANKS_USED; ++i)
     {
         DualRateRate[i] = 0;
     }
@@ -2044,7 +2045,7 @@ FASTRUN void updateInterpolationTypes()
 FLASHMEM static void CurveResample(uint8_t ch, uint8_t n)
 {
     const uint8_t was = CurveN(ch), in = InPutStick[ch], SavedBank = Bank;
-    for (uint8_t b = 1; b <= 4; ++b)
+    for (uint8_t b = 1; b <= BANKS_USED; ++b) // (B130: banks 5 and 6 too, used or not: the count is the same in every bank)
     {
         uint8_t fresh[CURVE_POINTS_MAX];
         Bank = b;
@@ -2070,7 +2071,7 @@ FLASHMEM static void CurveResample(uint8_t ch, uint8_t n)
     }
     Bank = SavedBank;
     CurvePointCount[ch] = n;
-    for (uint8_t b = 1; b <= 4; ++b)
+    for (uint8_t b = 1; b <= BANKS_USED; ++b)
         CurveStoreSync(b, ch);           // B121: the new count's points remembered (the never-set ones just placed)
     GetCurveDots(ch, DualRateValue); // (the dots are a global: the bank in use back)
 }
@@ -2584,8 +2585,10 @@ void SoundBank()
 void ShowBank()
 {
     char FMPress[4][12] = {"click fm1,1", "click fm2,1", "click fm3,1", "click fm4,1"};
-    SendCommand(FMPress[Bank - 1]);
-    SendText((char *)"t4", BankNames[BanksInUse[Bank - 1]]);
+    if (Bank >= 1 && Bank <= 4)
+        SendCommand(FMPress[Bank - 1]); // (the old front page's four marks, parked off its edge; B130: none for banks 5 and 6)
+    if (Bank >= 1 && Bank <= BANKS_USED)
+        SendText((char *)"t4", BankNames[BanksInUse[Bank - 1]]);
 }
 
 /*********************************************************************************************************************************/
@@ -2969,27 +2972,39 @@ void StartBankNames()
 {
 
     char GotoBankNames[] = "page BankNameView";
-    char BKS[4][4] = {{"BK1"}, {"BK2"}, {"BK3"}, {"BK4"}};
+    char BKS[BANKS_USED][4] = {{"BK1"}, {"BK2"}, {"BK3"}, {"BK4"}, {"BK5"}, {"BK6"}};
 
     SendCommand(GotoBankNames);
     CurrentView = BANKSNAMESVIEW;
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < BANKS_USED; ++i)
     {
         SendValue(BKS[i], BanksInUse[i]);
     }
+    // B130: the page has six name boxes; banks 5 and 6's show only when the model uses them ('Six banks', Model options)
+    for (int i = 5; i <= 6; ++i)
+    {
+        char v[16];
+        snprintf(v, sizeof(v), "vis BK%d,%d", i, SixBanks ? 1 : 0); SendCommand(v);
+        snprintf(v, sizeof(v), "vis t%d,%d", i, SixBanks ? 1 : 0); SendCommand(v);
+    }
+    SendCommand((char *)(SixBanks ? "vis t7,0" : "vis t7,1")); // ("Six banks: Model options" where the two boxes would be)
     UpdateModelsNameEveryWhere();
 }
 
 /******************************************************************************************************************************/
 
+FLASHMEM static uint8_t BankNameFromPage(int i) // B130: box i's choice, kept in the list (a comms error, 65535, keeps the name as it was)
+{
+    char BKS[BANKS_USED][4] = {{"BK1"}, {"BK2"}, {"BK3"}, {"BK4"}, {"BK5"}, {"BK6"}};
+    const int v = GetValue(BKS[i]);
+    return (v >= 0 && v < BANK_NAMES_N) ? (uint8_t)v : BanksInUse[i];
+}
 void EndBankNames()
 {
-
-    char BKS[4][4] = {{"BK1"}, {"BK2"}, {"BK3"}, {"BK4"}};
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < BanksCount(); ++i)
     {
-        BanksInUse[i] = GetValue(BKS[i]);
+        BanksInUse[i] = BankNameFromPage(i);
     }
     SaveOneModel(ModelNumber);
     StartModelSetup();
@@ -2999,10 +3014,9 @@ void EndBankNames()
 
 void ListenToBanks()
 {
-    char BKS[4][4] = {{"BK1"}, {"BK2"}, {"BK3"}, {"BK4"}};
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < BanksCount(); ++i)
     {
-        BanksInUse[i] = GetValue(BKS[i]);
+        BanksInUse[i] = BankNameFromPage(i);
         PlaySound(BankSounds[BanksInUse[i]]);
         DelayWithDog(1200);
     }

@@ -32,7 +32,7 @@ assert DEFS.count('#define') == 14, DEFS
 DEFS += '\n'.join(l for l in defs1.split('\n') if re.match(r'#define (MAXMACROS|BYTESPERMACRO|MACROTRIGGERCHANNEL|MACROMOVECHANNEL|MACROSTARTTIME|MACRODURATION|MACROMOVETOPOSITION|MACRORUNNINGNOW) ', l)) + '\n'
 assert DEFS.count('#define') == 22, DEFS
 util = src('include/Utilities.h')
-INLINES = '\n'.join(l for l in util.split('\n') if re.match(r'inline uint16_t (RangeLo|RangeHi|CurveMicros)\(', l)) + '\n'
+INLINES = '#define BANKS_USED 4   // (B130: four banks in this test; six are test_banks\')\n' + '\n'.join(l for l in util.split('\n') if re.match(r'inline uint16_t (RangeLo|RangeHi|CurveMicros)\(', l)) + '\n'
 assert INLINES.count('inline') == 3, INLINES
 TEENSY_MAP = r'''
 // Teensy 4's map() for whole numbers (cores/teensy4/wiring.h): it ROUNDS - (deg x range + 90) / 180 - unlike Arduino's
@@ -56,6 +56,19 @@ T map(T x, A in_min, B in_max, C out_min, D out_max, typename std::enable_if<std
 }
 '''
 CORE = os.path.expanduser('~/.platformio/packages/framework-arduinoteensy/cores/teensy4/wiring.h')
+BANKS_STUB = r'''
+// B130 (six banks): the extension functions reach for these; here the model has four banks and no banks file
+static bool SixBanks = false, SingleModelFlag = false;
+#define TX_EXT_MAGIC7 0xC7
+#define TX_EXT_MAGIC8 0xC8
+#define BANKS_BLOCK_LEN 582
+static uint8_t BanksSlot() { return 1; }
+static bool BanksFileRead(uint8_t, uint8_t *, int) { return false; }
+static bool BanksFileWrite(uint8_t, const uint8_t *, int) { return true; }
+static int BanksBlockBuild(uint8_t *blk) { memset(blk, 0, BANKS_BLOCK_LEN); return BANKS_BLOCK_LEN; }
+static bool BanksBlockTake(const uint8_t *, bool) { return false; }
+static void BanksFromFour() {}
+'''
 statics = '\n'.join(l for l in main.split('\n') if re.match(r'static (uint16_t UsShown|uint32_t UsMovedAt|uint8_t UsNext|uint16_t GraphShown|uint32_t GraphMovedAt)\b', l))
 assert statics.count('\n') == 4, statics
 PROG = r'''
@@ -119,7 +132,7 @@ static FakeFile ModelsFileNumber;
 static bool cardSeek(size_t a) { if (a > card.size()) return false; cardPos = a; return true; }
 static uint8_t SDRead8BITS(int a) { cardSeek((size_t)a); const uint8_t r = cardPos < card.size() ? card[cardPos++] : 255; if (!DoingCheckSm) FileCheckSum += r * (a + 1); return r; }
 static void SDUpdate8BITS(int a, uint8_t v) { if (!cardSeek((size_t)a)) ++seekWriteFails; if (!DoingCheckSm) FileCheckSum += v * (a + 1); if (cardPos >= card.size()) card.resize(cardPos + 1, 0); card[cardPos++] = v; }
-''' + statics + '\n' + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'uint16_t CurveX(uint8_t in, uint8_t k, uint8_t n)') + lift('include/Utilities.h', 'void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five)') + lift('include/Utilities.h', 'uint8_t CurveStorePos(uint8_t n, uint8_t k)') + lift('include/Utilities.h', 'void CurveStoreSync(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveStoreClear(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/SDcard.h', 'static uint8_t Ext2Sum(const uint8_t *p, int n)') + 'static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + TEENSY_MAP + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint16_t IntoHigherRes(uint8_t LowRes)') + lift('src/main.cpp', 'FLASHMEM static uint8_t RangeDegrees(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeConvert(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeShow()') + lift('src/main.cpp', 'FLASHMEM static void MaxRangeChosen(') + '\n'.join(l for l in main.split('\n') if l.startswith('FLASHMEM void MaxRange') and 'Tapped() {' in l) + '\n' + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') + lift('include/Utilities.h', 'FASTRUN float MapWithExponential(') + lift('src/main.cpp', 'uint16_t StraightLineInterpolation(') + lift('src/main.cpp', 'uint16_t ExponentialInterpolation(') + lift('src/main.cpp', 'void DoTrimsAndSubtrims()') + lift('include/macros.h', 'void StartMacro(uint8_t m)') + lift('include/macros.h', 'void RunMacro(uint8_t m)') + lift('include/macros.h', 'void StopMacro(uint8_t m)') + lift('include/macros.h', 'void ExecuteMacro()') + r'''
+''' + statics + '\n' + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' + lift('include/Utilities.h', 'uint16_t CurveX(uint8_t in, uint8_t k, uint8_t n)') + lift('include/Utilities.h', 'void CurveLegacyFive(uint8_t b, uint8_t ch, uint8_t *five)') + lift('include/Utilities.h', 'uint8_t CurveStorePos(uint8_t n, uint8_t k)') + lift('include/Utilities.h', 'void CurveStoreSync(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveStoreClear(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + lift('include/SDcard.h', 'static uint8_t Ext2Sum(const uint8_t *p, int n)') + 'static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }\n' + lift('include/RF_Rates.h', 'FLASHMEM bool RcPut(const char *c) //') + lift('src/main.cpp', 'FLASHMEM bool UsSteadyChange(') + lift('src/main.cpp', 'FLASHMEM void ShowChannelMicros()') + lift('src/main.cpp', 'void Force_ReDisplay()') + lift('src/main.cpp', 'FLASHMEM int StickMicros(') + lift('src/main.cpp', 'FLASHMEM void ShowGraphMicros(') + DEFS + TEENSY_MAP + INLINES + lift('include/Utilities.h', 'uint8_t IntoLowerRes(uint16_t HiRes)') + lift('include/Utilities.h', 'uint16_t IntoHigherRes(uint8_t LowRes)') + lift('src/main.cpp', 'FLASHMEM static uint8_t RangeDegrees(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeConvert(') + lift('src/main.cpp', 'FLASHMEM void MaxRangeShow()') + lift('src/main.cpp', 'FLASHMEM static void MaxRangeChosen(') + '\n'.join(l for l in main.split('\n') if l.startswith('FLASHMEM void MaxRange') and 'Tapped() {' in l) + '\n' + BANKS_STUB + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') + lift('include/Utilities.h', 'FASTRUN float MapWithExponential(') + lift('src/main.cpp', 'uint16_t StraightLineInterpolation(') + lift('src/main.cpp', 'uint16_t ExponentialInterpolation(') + lift('src/main.cpp', 'void DoTrimsAndSubtrims()') + lift('include/macros.h', 'void StartMacro(uint8_t m)') + lift('include/macros.h', 'void RunMacro(uint8_t m)') + lift('include/macros.h', 'void StopMacro(uint8_t m)') + lift('include/macros.h', 'void ExecuteMacro()') + r'''
 // the commands sent since the last look: "us3=1500" each (anything else is a fault)
 static std::vector<std::string> sent() {
     std::vector<std::string> r; std::string &o = NEXTION.out; size_t p = 0;
