@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The selector has a zone for every bank, at once (Teensy B133, 19 Oct 2026)
+
+Malcolm, on B132: "That's a good fix and working! But you made it switchable which I think isn't needed. If user chose 6 then six
+should just be there. If 4 then only four. Immediately. User must set the channel... or because we know exactly what that channel
+must do, we could optionally offer to set it for him? Six or four places right in the middle of the zone?!" So: the bank selector
+row is right only when it has a zone for every bank of the model (no more, no fewer) and every bank's value sits in its own zone.
+Otherwise - a bank the channel cannot tell apart (banks 5 and 6 as bank 4's twins), or values no travel divides - the channel is
+set flat in every bank, evenly over its travel (each bank at the middle of its zone: 0, 36, 72, 108, 144, 180 degrees for six;
+0, 60, 120, 180 for four), the model saved, the row fitted, and the busy line says "Channel 7 set bank by bank: ... degrees. Press
+Save: ...". No question asked; B132's offer and its "Banks 1 to 4 of 6" words are gone. A row that already fits is left alone.
+Screen 1.11.98 unchanged.
+
 ## The Adjust page spaces the banks (Teensy B132, 19 Oct 2026)
 
 Malcolm, with the Adjust page's "Bank (Profile) selector" row showing "Banks 1 to 4 of this transmitter" on a six-bank Havok: "Not

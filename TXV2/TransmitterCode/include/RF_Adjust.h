@@ -510,24 +510,31 @@ FLASHMEM static bool AdjBankFit(int ch0, int16_t &lo, int16_t &hi, int &n, char 
 // height of its own in each of the model's banks - flat curves, evenly over its travel (0, 36, 72, 108, 144, 180 degrees for
 // six; 0, 60, 120, 180 for four) - then the row is fitted to them: six zones for Save to write.
 FLASHMEM static int AdjSpacedDeg(int b, int n) { return n > 1 ? ((b - 1) * 180 + (n - 1) / 2) / (n - 1) : 90; }   // bank b of n: its height
-FLASHMEM static void AdjSpaceBanks(int ch0) // the channel flat in every bank the model uses, at AdjSpacedDeg; the model saved
+FLASHMEM static void AdjSpaceBanks(int ch0, char *note, size_t len) // the channel flat in every bank the model uses, at AdjSpacedDeg; the model saved; the note says so
 {
     if (ch0 < 0 || ch0 >= CHANNELSUSED) return;
     const int n = BanksCount();
+    char degs[64] = "";
     for (int b = 1; b <= n; ++b)
     {
         const uint8_t h = (uint8_t)AdjSpacedDeg(b, n);
         CurveSetStraight((uint8_t)b, (uint8_t)ch0, h, h);
+        char one[8]; snprintf(one, sizeof(one), "%s%d", b > 1 ? ", " : "", h); strncat(degs, one, sizeof(degs) - strlen(degs) - 1);
     }
     GetCurveDots((uint8_t)ch0, DualRateValue);   // (the dots are a global: the bank in use's, afresh)
     AdjSeenClear();                                 // (what was measured on this page is stale)
     SaveOneModel(ModelNumber);
+    snprintf(note, len, "Channel %d set bank by bank: %s degrees.", ch0 + 1, degs);
 }
+// B133: a row that MUST follow this transmitter's banks - the bank selector always, the rates selector when the rates follow the
+// banks (Model setup, Rates: "Rates follow banks"). A rates selector on a rates switch of its own is not one: left as the pilot set it.
+FLASHMEM static bool AdjBankLine(const AdjRow &r) { return r.fn == 2 || (r.fn == 1 && LinkRatesToBanks); }
 FLASHMEM static bool AdjBankRowRight(const AdjRow &r) // does the bank line as it is give every bank of this transmitter its own zone?
 {
     int vals[BANKS_USED + 1];
     const int n = AdjBankValues(r.ch + 5, vals);
-    if (n < 2 || r.kind != AK_SWITCH || r.n < n || r.v[0] != 1) return false;
+    if (n < 2 || r.kind != AK_SWITCH || r.v[0] != 1) return false;
+    if (AdjBankLine(r) ? (n < BanksCount() || r.n != BanksCount()) : r.n < n) return false;   // (B133: a bank line has a zone for every bank of the model, no more, no fewer)
     for (int b = 1; b <= n; ++b) if (AdjZoneOf(r.lo, r.hi, r.n, vals[b]) != b) return false;
     return true;
 }
@@ -552,9 +559,23 @@ FLASHMEM static bool AdjFitBankRow(int i) // a bank row's ends from this transmi
     AdjRow &r = AdjRows[i];
     if (r.fn != 1 && r.fn != 2) { AdjBankFitted[i] = false; return false; }
     int16_t lo, hi; int n;
-    if (!AdjBankFit(r.ch + 5, lo, hi, n, AdjBankWhy, sizeof(AdjBankWhy))) { AdjBankFitted[i] = false; return false; }
+    bool spaced = false;
+    const bool fits = AdjBankFit(r.ch + 5, lo, hi, n, AdjBankWhy, sizeof(AdjBankWhy));
+    if (!AdjBankLine(r) && !fits) { AdjBankFitted[i] = false; return false; }   // (a rates switch of its own: as before B133)
+    if (AdjBankLine(r) && (!fits || n < BanksCount()))
+    { // B133 (Malcolm, 19 Oct 2026: "If user chose 6 then six should just be there. If 4 then only four. Immediately ... we know exactly
+      // what that channel must do ... right in the middle of the zone"): the channel does not tell every bank of the model apart (banks
+      // 5 and 6 are bank 4's twins until set), or no travel divides its values: it is set flat in every bank, evenly over its travel
+        AdjSpaceBanks(r.ch + 5, AdjBankWhy, sizeof(AdjBankWhy));
+        char scratch[120];
+        if (!AdjBankFit(r.ch + 5, lo, hi, n, scratch, sizeof(scratch)) || n < BanksCount())
+        { // (cannot happen with evenly spaced values; the travel's ends, all the same)
+            lo = (int16_t)AdjFcUs(CurveMicros(0)); hi = (int16_t)AdjFcUs(CurveMicros(180)); n = BanksCount();
+        }
+        spaced = true;
+    }
     AdjBankFitted[i] = true;
-    if (r.kind == AK_SWITCH && r.n == n && r.lo == lo && r.hi == hi && r.v[0] == 1 && r.v[n - 1] == n) return false;
+    if (!spaced && r.kind == AK_SWITCH && r.n == n && r.lo == lo && r.hi == hi && r.v[0] == 1 && r.v[n - 1] == n) return false;
     AdjBanks before; AdjBankRegions(AdjRows, AdjN, before);
     r.kind = AK_SWITCH; r.n = (uint8_t)n; r.lo = lo; r.hi = hi;
     for (int k = 0; k < n; ++k) r.v[k] = k + 1;
@@ -580,9 +601,10 @@ FLASHMEM static void AdjLive() // the chosen channel's position, from this trans
             const bool wasRight = AdjBankFitted[AdjAt];
             AdjBankFitted[AdjAt] = AdjBankRowRight(r);
             if (!AdjBankFitted[AdjAt] && AdjFitBankRow(AdjAt))
-            { // a bank seen for the first time shows the line as it is cannot follow this transmitter: the ends re-fitted
+            { // a bank seen for the first time shows the line as it is cannot follow this transmitter: the ends re-fitted (B133: the channel spaced if it had to be, said first)
                 AdjEdited(); AdjShow();
-                AdjBusy("Press Save: the bank selector now matches this transmitter's banks."); AdjMsgUntil = millis() + 6000;
+                char m[200]; snprintf(m, sizeof(m), "%s%sPress Save: the bank selector now matches this transmitter's banks.", AdjBankWhy, AdjBankWhy[0] ? "\r\n" : "");
+                AdjBusy(m); AdjMsgUntil = millis() + 8000;
                 return;
             }
             if (wasRight != AdjBankFitted[AdjAt]) { AdjShow(); return; }
@@ -630,9 +652,7 @@ FLASHMEM static void AdjShow()
     AdjText("tn3", b);
     AdjVis("tn3", r.fn > 2);   // (B76, Malcolm: a bank switch IS the bank - no bank box for it)
     const bool bankRow = r.kind == AK_SWITCH && (r.fn == 1 || r.fn == 2);
-    const bool fewer = bankRow && AdjBankFitted[AdjAt] && r.n < BanksCount();   // (B132: banks the channel does not tell apart yet)
-    if (fewer) snprintf(b, sizeof(b), "Banks 1 to %d of %d", r.n, BanksCount());
-    else if (bankRow && AdjBankFitted[AdjAt]) snprintf(b, sizeof(b), "Banks 1 to %d of this transmitter", r.n);
+    if (bankRow && AdjBankFitted[AdjAt]) snprintf(b, sizeof(b), "Banks 1 to %d of this transmitter", r.n);
     else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Switch, %d positions", r.n); else snprintf(b, sizeof(b), "%s", r.kind == AK_KNOB ? "Knob" : "Step adjustment");
     AdjText("tn2", b);
     const int ch = r.ch + 6;
@@ -662,14 +682,7 @@ FLASHMEM static void AdjShow()
     }
     AdjText("bar", labels);
     // the hint under the bar, for the kind (B83)
-    if (fewer)
-    {
-        char h[80];
-        if (r.n + 1 == BanksCount()) snprintf(h, sizeof(h), "Bank %d has no height yet: tap 'Banks 1 to %d of %d'.", BanksCount(), r.n, BanksCount());
-        else snprintf(h, sizeof(h), "Banks %d to %d have no height yet: tap 'Banks 1 to %d of %d'.", r.n + 1, BanksCount(), r.n, BanksCount());
-        AdjText("hint", h);
-    }
-    else if (bankRow) AdjText("hint", AdjBankFitted[AdjAt] ? "Every bank of this transmitter has its own zone: nothing to drag." : "No travel gives every bank its own zone: tap the kind box for why.");
+    if (bankRow) AdjText("hint", AdjBankFitted[AdjAt] ? "Every bank of this transmitter has its own zone: nothing to drag." : "No travel gives every bank its own zone: tap the kind box for why.");
     else if (r.kind == AK_SWITCH) AdjText("hint", "Tap the first or last zone to type its value. Drag the round ends.");
     else if (r.kind == AK_KNOB) AdjText("hint", "Tap the knob's zone to type its values. Drag the round ends.");
     else AdjText("hint", "Tap a zone to type its value. Drag the round dividers.");
@@ -1087,30 +1100,11 @@ FLASHMEM void AdjustKindTapped() // Knob -> Switch 2 -> Switch 3 -> Switch 4 -> 
     AdjGather();
     AdjRow &r = AdjRows[AdjAt];
     if (r.fn == 1 || r.fn == 2)
-    { // a bank switch: matched to this transmitter's banks again; what could not be matched is said
-        const int ch0 = r.ch + 5;
-        int vals[BANKS_USED + 1];
-        if (ch0 >= 0 && ch0 < CHANNELSUSED && AdjBankValues(ch0, vals) < BanksCount())
-        { // B132: the channel tells fewer banks apart than the model has: offered a height of its own in each
-            const int nb = BanksCount();
-            char ask[200], degs[64] = "";
-            for (int k = 1; k <= nb; ++k) { char one[8]; snprintf(one, sizeof(one), "%s%d", k > 1 ? ", " : "", AdjSpacedDeg(k, nb)); strncat(degs, one, sizeof(degs) - strlen(degs) - 1); }
-            snprintf(ask, sizeof(ask), "Give channel %d a height of its own\r\nin each of the %d banks?\r\n\r\n%s degrees\r\n(%u to %u us), flat in every bank.", ch0 + 1, nb, degs, (unsigned)CurveMicros(0), (unsigned)CurveMicros(180));
-            if (GetConfirmation((char *)"page AdjustView", ask))
-            {
-                AdjSpaceBanks(ch0);
-                if (AdjFitBankRow(AdjAt)) AdjEdited();
-                AdjHead(); AdjShow();
-                if (AdjBankFitted[AdjAt]) { AdjBusy("Press Save: the bank selector now has a zone for every bank."); AdjMsgUntil = millis() + 6000; }
-                else { MsgBox((char *)"page AdjustView", AdjBankWhy); AdjHead(); AdjShow(); }
-                return;
-            }
-            AdjHead();
-        }
+    { // a bank switch: matched to this transmitter's banks again (B133: the channel spaced if it has to be - said); what could not be matched is said
         if (AdjFitBankRow(AdjAt)) AdjEdited();
         if (!AdjBankFitted[AdjAt]) { MsgBox((char *)"page AdjustView", AdjBankWhy); AdjHead(); }
         AdjShow();
-        if (AdjBankFitted[AdjAt]) { AdjBusy(AdjBankWhy[0] ? AdjBankWhy : "Matched to this transmitter's banks"); AdjMsgUntil = millis() + 5000; }
+        if (AdjBankFitted[AdjAt]) { char m[200]; snprintf(m, sizeof(m), "%s%s", AdjBankWhy, AdjBankWhy[0] ? "\r\nPress Save." : "Matched to this transmitter's banks"); AdjBusy(m); AdjMsgUntil = millis() + 6000; }
         return;
     }
     int32_t lo = r.v[0], hi = r.v[0];

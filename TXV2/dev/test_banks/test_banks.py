@@ -223,7 +223,8 @@ int main()
     // ---- d. the Adjust page's spacing (B132): the bank line's channel flat in every bank, evenly over its travel
     for (int six = 0; six < 2; ++six) {
         randomModel(six); SixBanks = six; const int ch = 6; savesSeen = seenClears = 0;
-        AdjSpaceBanks(ch);
+        char note[120]; AdjSpaceBanks(ch, note, sizeof(note));
+        CHECK(strstr(note, six ? "0, 36, 72, 108, 144, 180 degrees" : "0, 60, 120, 180 degrees") && strncmp(note, "Channel 7 set bank by bank", 26) == 0);
         const int n = six ? 6 : 4; const int want4[] = {0, 60, 120, 180}, want6[] = {0, 36, 72, 108, 144, 180};
         for (int b = 1; b <= n; ++b) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[b][ch][k] == (six ? want6 : want4)[b - 1]);
         CHECK(savesSeen == 1 && seenClears == 1);
@@ -361,8 +362,12 @@ check(sw.count('Bank = UpperBank();') == 2 and 'Bank = 4;' not in sw.split('void
 check('SendValue((char *)"c3", SixBanks ? 1 : 0);' in menu and 'SixBanksSet(six == 1);' in menu, 'Model options: the Six banks switch sent and read')
 check('b <= BanksCount() && found < 3' in main_cpp and '"vis BK%d,%d"' in main_cpp and 'SixBanks = false; // B130' in main_cpp and 'if (Bank >= 1 && Bank <= 4)\n        SendCommand(FMPress[Bank - 1]);' in main_cpp, 'main.cpp: the centre note, the Bank names page, the defaults and the old front marks')
 adj = src('include/RF_Adjust.h'); kt = adj[adj.index('FLASHMEM void AdjustKindTapped()'):]; kt = kt[:kt.index('\n}\n')]
-check('AdjBankValues(ch0, vals) < BanksCount()' in kt and 'GetConfirmation((char *)"page AdjustView", ask)' in kt and 'AdjSpaceBanks(ch0);' in kt and kt.index('AdjSpaceBanks(ch0);') < kt.index('if (AdjFitBankRow(AdjAt)) AdjEdited();\n        if (!AdjBankFitted'), "B132: the kind box offers to space the banks the channel does not tell apart, before the match")
-check('"Banks 1 to %d of %d"' in adj and "have no height yet: tap 'Banks 1 to %d of %d'." in adj, 'B132: the kind box and the hint say which banks have no height yet')
+fit = adj[adj.index('FLASHMEM static bool AdjFitBankRow(int i)'):]; fit = fit[:fit.index('\n}\n')]
+right = adj[adj.index('FLASHMEM static bool AdjBankRowRight(const AdjRow &r)'):]; right = right[:right.index('\n}\n')]
+check('if (AdjBankLine(r) && (!fits || n < BanksCount()))' in fit and 'AdjSpaceBanks(r.ch + 5, AdjBankWhy, sizeof(AdjBankWhy));' in fit and 'if (!spaced && r.kind == AK_SWITCH && r.n == n' in fit and 'if (!AdjBankLine(r) && !fits) { AdjBankFitted[i] = false; return false; }' in fit, "B133: a bank line that cannot tell every bank apart is spaced, no question asked, then fitted; a rates switch of its own is left alone")
+check('AdjBankLine(r) ? (n < BanksCount() || r.n != BanksCount()) : r.n < n' in right and 'return r.fn == 2 || (r.fn == 1 && LinkRatesToBanks);' in adj, "B133: a bank line is right only with a zone for every bank of the model; the rates selector follows the banks only when the rates do")
+check('GetConfirmation((char *)"page AdjustView", ask)' not in kt and '"Banks 1 to %d of %d"' not in adj, "B132's offer and its words are gone")
+check('Press Save: the bank selector now matches this transmitter' in adj and 'AdjBankWhy[0] ? "\\r\\n" : ""' in adj, 'the live fit says what it set, then Press Save')
 wnc = main_cpp[main_cpp.index('void WriteNewCurve()'):]; wnc = wnc[:wnc.index('\n}\n')]
 check('for (int p = 1; p <= BanksCount(); ++p)' in wnc, "B131: the curve page's Copy to all banks reaches banks 5 and 6 (Malcolm, 19 Oct: 'omitted 5,6')")
 check(main_cpp.count('for (int fm = 1; fm <= BanksCount(); ++fm)') == 1 and 'for (int fm = 1; fm < 5; ++fm)' not in main_cpp and 'for (j = 1; j <= 4; ++j)' not in main_cpp and 'for (int j = 1; j <= 4; ++j)' not in main_cpp, 'main.cpp: no four-bank loop left (trims to centre, the defaults, InitCentreDegrees)')

@@ -35,6 +35,7 @@ static uint32_t millis() { return now; }
 // microseconds per bank and channel; trims, subtrims and reversal are the real formulas with neutral values
 #define BANKS_USED 4
 static uint8_t BanksCount() { return 4; }   // (B130: four banks here)
+static bool LinkRatesToBanks = false;   // (B133: the rates selector is a rates switch of its own here)
 #define MINMICROS 1000
 #define MAXMICROS 2000
 static inline uint16_t RangeLo() { return MINMICROS; } // (B113: the model's max range - here the widest, as ever; tested in dev/test_channel_us)
