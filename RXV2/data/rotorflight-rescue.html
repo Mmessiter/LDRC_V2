@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rescue &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=399">
-<script src="/app.js?v=399" defer></script>
+<link rel=stylesheet href="/style.css?v=400">
+<script src="/app.js?v=400" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -215,7 +215,7 @@ async function loadRescueSwitch(){
             const sg=v=>v>127?v-256:v;                 // RF: signed 5 µs steps about 1500
             const lo=1500+5*sg(b[o+2]), hi=1500+5*sg(b[o+3]);
             if(hi<=lo)continue;                       // empty range = unused slot
-            hits.push({ch:b[o+1]+5,aux:b[o+1]+1,lo,hi});
+            hits.push({ch:b[o+1]+6,aux:b[o+1]+1,lo,hi});   // AUX1 = channel 6 (five control channels, the collective among them), as the Switches page counts (0.9.900: this said channel 9 for AUX 5)
         }
         if(hits.length===0){
             el.innerHTML='<b style="color:#b5442a">⚠ NO SWITCH ASSIGNED — rescue can never trigger!</b><br>'

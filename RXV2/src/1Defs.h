@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.899-read-black-box-now";
+constexpr const char* FW_VERSION = "RXV2-0.9.900-rescue-channel";
 
 //*********************************************************************
 //  Auto-update manifest URLs

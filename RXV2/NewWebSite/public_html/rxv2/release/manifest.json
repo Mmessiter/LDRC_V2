@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.900-rescue-channel",
+      "url": "https://messiter.com/rxv2/release/v0.9.900/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.900/littlefs.bin",
+      "fs_md5": "e35c6cec6e6d95cfff24dde81f8ef617",
+      "notes": "The Rescue page names the rescue switch's channel as the Switches page does: AUX 5 is channel 10, not 9 (AUX 1 is channel 6)."
+    },
+    {
       "name": "RXV2-0.9.899-read-black-box-now",
       "url": "https://messiter.com/rxv2/release/v0.9.899/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.899/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.889/littlefs.bin",
       "fs_md5": "db27bf1bd16c6b57b4fae48a7cd0d802",
       "notes": "The floating Save bar comes back after typing in a box: it hides only while a box is being typed in and the keyboard covers the window, measured zoom-proof (height x scale). A page zoomed in - by a pinch, or by iOS itself on focusing a small box - read as 'covered' before, and the bar stayed hidden for good (Malcolm, the Travel page). The leftover 2026-08-06 ride-up code that re-lifted the bar on every scroll is removed."
-    },
-    {
-      "name": "RXV2-0.9.888-hobbywing-v4",
-      "url": "https://messiter.com/rxv2/release/v0.9.888/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.888/littlefs.bin",
-      "fs_md5": "9b385921164b128c5a26d6ea12fba9b5",
-      "notes": "The ESC settings page answers for the brand the flight controller is set to (a Hobbywing V4 owner was told to 'set it to Scorpion'): the Scorpion is read and changed there; a Hobbywing Platinum V4 is read-only for Rotorflight (LCD box / WiFi module); the Platinum V5, FlyRotor, OpenYGE and XDFly are programmable but not from that page yet. Wiring + help: the Platinum V4's telemetry is its programming port's signal pin, never the red pin."
     }
   ],
   "rotorflight": {
