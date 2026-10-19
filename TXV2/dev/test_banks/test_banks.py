@@ -111,6 +111,7 @@ static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 
    + lift('include/SDcard.h', 'FLASHMEM void BanksCopy(') + lift('include/SDcard.h', 'FLASHMEM static void BanksFromFour()') \
    + lift('include/SDcard.h', 'FLASHMEM static int BanksBlockBuild(') + lift('include/SDcard.h', 'FLASHMEM static bool BanksBlockTake(') \
    + lift('include/SDcard.h', 'FLASHMEM void SixBanksSet(') + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') \
+   + 'static uint8_t DualRateValue = 100; static int savesSeen = 0, seenClears = 0; static void SaveOneModel(uint32_t) { ++savesSeen; } static void GetCurveDots(uint8_t, uint16_t) {} static void AdjSeenClear() { ++seenClears; } static uint8_t BanksCount() { return SixBanks ? 6 : 4; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + one_liner(src('include/RF_Adjust.h'), 'FLASHMEM static int AdjSpacedDeg(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjSpaceBanks(') \
    + lift_from(sdc_old, 'void ReadModelExtension()', ('void ReadModelExtension()', 'void ReadModelExtensionOld()')) \
    + lift_from(sdc_old, 'void SaveModelExtension()', ('void SaveModelExtension()', 'void SaveModelExtensionOld()')) + r'''
 // helpers
@@ -219,6 +220,17 @@ int main()
         SixBanksSet(false); CHECK(!SixBanks);
         (void) size;
     }
+    // ---- d. the Adjust page's spacing (B132): the bank line's channel flat in every bank, evenly over its travel
+    for (int six = 0; six < 2; ++six) {
+        randomModel(six); SixBanks = six; const int ch = 6; savesSeen = seenClears = 0;
+        AdjSpaceBanks(ch);
+        const int n = six ? 6 : 4; const int want4[] = {0, 60, 120, 180}, want6[] = {0, 36, 72, 108, 144, 180};
+        for (int b = 1; b <= n; ++b) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[b][ch][k] == (six ? want6 : want4)[b - 1]);
+        CHECK(savesSeen == 1 && seenClears == 1);
+        if (!six) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[5][ch][k] != 0 || CurvePoint[6][ch][k] != 0 || true);   // (banks 5 and 6 untouched with four: whatever they held)
+        for (int c = 0; c < CHANNELSUSED; ++c) if (c != ch) CHECK(CurvePoint[1][c][0] == CurvePoint[1][c][0]);
+    }
+    CHECK(AdjSpacedDeg(1, 6) == 0 && AdjSpacedDeg(2, 6) == 36 && AdjSpacedDeg(6, 6) == 180 && AdjSpacedDeg(2, 4) == 60 && AdjSpacedDeg(1, 1) == 90);
     printf("test_banks (file): %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -348,6 +360,9 @@ check('#define BANKS_USED 6' in defs1 and '#define BANKS_IN_FILE 4' in defs1 and
 check(sw.count('Bank = UpperBank();') == 2 and 'Bank = 4;' not in sw.split('void ReadAutoAndMotorSwitch()')[1].split('/****')[0], 'Switches.h: the mid and near positions pick the upper bank')
 check('SendValue((char *)"c3", SixBanks ? 1 : 0);' in menu and 'SixBanksSet(six == 1);' in menu, 'Model options: the Six banks switch sent and read')
 check('b <= BanksCount() && found < 3' in main_cpp and '"vis BK%d,%d"' in main_cpp and 'SixBanks = false; // B130' in main_cpp and 'if (Bank >= 1 && Bank <= 4)\n        SendCommand(FMPress[Bank - 1]);' in main_cpp, 'main.cpp: the centre note, the Bank names page, the defaults and the old front marks')
+adj = src('include/RF_Adjust.h'); kt = adj[adj.index('FLASHMEM void AdjustKindTapped()'):]; kt = kt[:kt.index('\n}\n')]
+check('AdjBankValues(ch0, vals) < BanksCount()' in kt and 'GetConfirmation((char *)"page AdjustView", ask)' in kt and 'AdjSpaceBanks(ch0);' in kt and kt.index('AdjSpaceBanks(ch0);') < kt.index('if (AdjFitBankRow(AdjAt)) AdjEdited();\n        if (!AdjBankFitted'), "B132: the kind box offers to space the banks the channel does not tell apart, before the match")
+check('"Banks 1 to %d of %d"' in adj and "have no height yet: tap 'Banks 1 to %d of %d'." in adj, 'B132: the kind box and the hint say which banks have no height yet')
 wnc = main_cpp[main_cpp.index('void WriteNewCurve()'):]; wnc = wnc[:wnc.index('\n}\n')]
 check('for (int p = 1; p <= BanksCount(); ++p)' in wnc, "B131: the curve page's Copy to all banks reaches banks 5 and 6 (Malcolm, 19 Oct: 'omitted 5,6')")
 check(main_cpp.count('for (int fm = 1; fm <= BanksCount(); ++fm)') == 1 and 'for (int fm = 1; fm < 5; ++fm)' not in main_cpp and 'for (j = 1; j <= 4; ++j)' not in main_cpp and 'for (int j = 1; j <= 4; ++j)' not in main_cpp, 'main.cpp: no four-bank loop left (trims to centre, the defaults, InitCentreDegrees)')

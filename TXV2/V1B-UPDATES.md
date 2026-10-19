@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The Adjust page spaces the banks (Teensy B132, 19 Oct 2026)
+
+Malcolm, with the Adjust page's "Bank (Profile) selector" row showing "Banks 1 to 4 of this transmitter" on a six-bank Havok: "Not
+sure how to extend this screen to 6". The page counts the banks the bank line's channel tells apart, rising from bank 1; banks 5
+and 6 are bank 4's twins until set, so it stopped at four and said all was well. Now, when the model has more banks than the
+channel tells apart, the kind box says "Banks 1 to 4 of 6" and the hint "Banks 5 to 6 have no height yet: tap 'Banks 1 to 4 of
+6'." A tap offers: "Give channel 7 a height of its own in each of the 6 banks? 0, 36, 72, 108, 144, 180 degrees (833 to 2167 us),
+flat in every bank." Yes: the channel's curve is set flat in every bank at those heights (AdjSpaceBanks: CurveSetStraight, the
+model saved), the row fitted to them (six zones, Rotorflight's even divisions), "Press Save". No: as before. With four banks the
+page is unchanged. ADJUST.TXT says so. dev/test_banks: the heights for four and six, the save, the order of the offer and the match.
+
 ## Copy to all banks reaches six (Teensy B131, 19 Oct 2026)
 
 Malcolm, minutes after B130 went in: "I had a quick look! EXCELLENT!! Copy to all banks (on curves screen) omitted 5,6". The

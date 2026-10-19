@@ -39,6 +39,9 @@ static uint8_t BanksCount() { return 4; }   // (B130: four banks here)
 #define MAXMICROS 2000
 static inline uint16_t RangeLo() { return MINMICROS; } // (B113: the model's max range - here the widest, as ever; tested in dev/test_channel_us)
 static inline uint16_t RangeHi() { return MAXMICROS; }
+static uint32_t ModelNumber = 1; static int modelSaves = 0; static void SaveOneModel(uint32_t) { ++modelSaves; }   // (B132: the spacing saves the model)
+static void CurveSetStraight(uint8_t, uint8_t, uint8_t, uint8_t) {}
+static inline uint16_t CurveMicros(uint8_t d) { return (uint16_t)(RangeLo() + ((uint32_t)d * (RangeHi() - RangeLo()) + 90) / 180); }
 static uint8_t Bank = 2;
 static uint8_t ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 static uint8_t SourceOfOutput(uint8_t out) { for (uint8_t k = 0; k < 16; ++k) if (ChannelOutPut[k] == out) return k; return out; }   // (B31: main.cpp's - the channel routed to an output)

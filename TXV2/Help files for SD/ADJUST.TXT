@@ -84,7 +84,13 @@ Flip through the banks: the line under the bar shows each bank's|
 value, and says so if Rotorflight would pick another bank.|
 When no travel can tell the banks apart, the hint says so.|
 Tap the kind box for why. Then space the banks' values on that|
-channel more evenly in Model setup.||
+channel more evenly in Model setup.|
+With 'Six banks' on ('Model options'), banks 5 and 6 start as|
+copies of bank 4, so the channel tells only four apart: the kind|
+box says 'Banks 1 to 4 of 6'. Tap it: the transmitter offers to|
+give the channel a height of its own in every bank (0, 36, 72,|
+108, 144 and 180 degrees, flat), then fits the selector to them.|
+Press 'Save' to write the six zones to Rotorflight.||
 SAVE AND OK:|
 'Save' appears once something is changed.|
 It writes only the lines that changed, stores them,|
