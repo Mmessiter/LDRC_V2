@@ -1020,6 +1020,11 @@ uint16_t IntoHigherRes(uint8_t LowRes) // This returns the main curve-points at 
 {
     return map(LowRes, 0, 180, MINMICROS, MAXMICROS);
 }
+// B129 (Malcolm, 19 Oct 2026: "the value which is usually attributed to motor off of -67 is not in helpful units! ... change
+// this to microseconds"). The byte stays what it was (0..180 over 500..2500, never moved by the model's range, so the model
+// file keeps its shape); the Model options page shows and takes microseconds. -67 was 30: 833 microseconds.
+uint16_t MotorOffMicros() { return IntoHigherRes(MotorChannelZero); }
+uint8_t MotorOffFromMicros(int32_t us) { return (uint8_t)map(constrain(us, (int32_t)MINMICROS, (int32_t)MAXMICROS), MINMICROS, MAXMICROS, 0, 180); }
 /*********************************************************************************************************************************/
 void ClearText()
 {

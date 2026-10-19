@@ -11,6 +11,8 @@ SRC = {}
 def src(rel):
     if rel not in SRC: SRC[rel] = open(os.path.join(TC, rel), encoding='utf-8', errors='replace').read()
     return SRC[rel]
+MOTOROFF = '\n'.join(l for l in open(os.path.join(TC, 'include', 'Utilities.h'), encoding='utf-8', errors='replace').read().split('\n') if l.startswith('uint16_t MotorOffMicros()') or l.startswith('uint8_t MotorOffFromMicros(int32_t us)')) + '\n'
+assert MOTOROFF.count('\n') == 2, MOTOROFF
 def lift(rel, head):
     """The function whose first line starts with `head` (column 0, Allman style): from there to the next line that is just '}'."""
     lines = src(rel).split('\n')
@@ -179,6 +181,8 @@ static bool FailSafeChannel[17], UseLog = false, TrimClicks = false, SpeakingClo
 static short int RxVoltageCorrection = 0;
 static float StopFlyingVoltsPerCell = 0;
 static uint8_t MotorChannel = 2, MotorChannelZero = 30, Drate1 = 100, Drate2 = 75, Drate3 = 50, DualRateChannels[8] = {1, 2, 4, 0, 0, 0, 0, 0}, DualRateRate[5], DualRateValue = 100, CountDownIndex = 0, MacrosBuffer[MAXMACROS][BYTESPERMACRO], RotorFlight_V = 0, ModalWaits = 0;
+static uint16_t IntoHigherRes(uint8_t LowRes) { return map(LowRes, 0, 180, MINMICROS, MAXMICROS); }
+''' + MOTOROFF + r'''   // (B129: the motor-off value's microseconds, lifted from Utilities.h)
 static bool Reading_PIDS_Now = false, Reading_PIDS_Advanced_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;
 static char WarnNow[] = "vis Warning,1", WarnOff[] = "vis Warning,0", pTrimView[] = "page TrimView", pRXSetupView[] = "page RXSetupView", pTXSetupView[] = "page TXSetupView", pFhssView[] = "page FhssView";
 static uint32_t now = 0; static uint32_t millis() { return now; }
@@ -338,9 +342,12 @@ int main() {
     // ---------------------------------------------------------------- B04: Motor off value clamped
     resetAll(); MotorChannelZero = 90; values["n0"] = (long)(uint32_t)-150; values["n1"] = 3; values["n4"] = 0; texts["t10"] = "3.5"; texts["t12"] = "40";
     ReadRXOptionsView(); CHECK(MotorChannelZero == 0 && TimerStartTime == 0 && Max_Safe_Amps == 40 && SFV == 350 && MotorChannel == 2);
-    values["n0"] = (long)(uint32_t)-100; ReadRXOptionsView(); CHECK(MotorChannelZero == 0);
-    values["n0"] = 50; ReadRXOptionsView(); CHECK(MotorChannelZero == 135);
-    values["n0"] = 200; ReadRXOptionsView(); CHECK(MotorChannelZero == 180);
+    values["n0"] = (long)(uint32_t)-67; ReadRXOptionsView(); CHECK(MotorChannelZero == 0);   // (B129: microseconds. The old units typed by habit: the low end, never full throttle)
+    values["n0"] = 50; ReadRXOptionsView(); CHECK(MotorChannelZero == 0);                    // below 500: the low end
+    values["n0"] = 1000; ReadRXOptionsView(); CHECK(MotorChannelZero == 45);
+    values["n0"] = 2000; ReadRXOptionsView(); CHECK(MotorChannelZero == 135);
+    values["n0"] = 2500; ReadRXOptionsView(); CHECK(MotorChannelZero == 180);
+    values["n0"] = 9999; ReadRXOptionsView(); CHECK(MotorChannelZero == 180);
     MotorChannelZero = 90; values["n0"] = 65535; ReadRXOptionsView(); CHECK(MotorChannelZero == 90);   // a comms error keeps the old value
     // ---------------------------------------------------------------- B24: Scan RF refused while a model is connected
     resetAll(); CurrentMode = NORMAL; CurrentView = TXSETUPVIEW; ModelMatched = true; BoundFlag = true;

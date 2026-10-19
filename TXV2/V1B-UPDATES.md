@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Motor off in microseconds (Teensy B129, 19 Oct 2026)
+
+Malcolm, on the Model options page: "Inherited from version one, the value which is usually attributed to motor off of -67
+is not in helpful units! My mistake, I think we should change this to microseconds, and I hope you agree." Agreed. The byte
+in the model file stays what it was (0 to 180 over 500 to 2500 microseconds, never moved by the model's max range, so the
+file keeps its shape and a Teensy update is not refused); the page shows and takes microseconds: -67 was 30, which is 833;
+his Havok's -83 is 667. A value typed outside 500 to 2500 lands on that end (an old -67 typed by habit gives 500, the low
+end, never full throttle). The label reads "Motor off, us (usually 833)": longer words were cut at the column's end
+(hmi/render_host showed it). RXSETUP1.TXT says the units and the default. `dev/test_motoroff/test_motoroff.py`: the
+conversions with the Teensy's rounding map, every byte round-tripped, the ends, the page as source (193 checks).
+
 ## The centre note, shorter (Teensy B127 and B128, 19 Oct 2026)
 
 Malcolm, with the box on his screen after the update ("Bank 2: Rudder is 1599 / with the stick centred. / A curve, trim or

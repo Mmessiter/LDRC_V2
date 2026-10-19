@@ -9,9 +9,10 @@ Copy trims to all banks: on, a trim change goes to every bank.|
 Off, each bank keeps its own trims.||
 MOTOR:|
 Throttle channel: the channel the motor (ESC) is on. Usually 3.|
-Motor off value: what the throttle channel is sent|
-while the motor is off or the safety is on.|
--67 is the default, and nearly always right.|
+Motor off value: what the throttle channel is sent, in|
+microseconds, while the motor is off or the safety is on.|
+833 is the default, and nearly always right (it was -67|
+in the old units). 500 is the lowest, 2500 the highest.|
 It is not reversed with the channel:|
 if you reverse the throttle, change this value to match.||
 Use motor kill switch: on, the transmitter checks the motor|

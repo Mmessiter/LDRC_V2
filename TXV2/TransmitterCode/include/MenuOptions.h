@@ -1084,7 +1084,7 @@ void RXOptionsViewStart() // model Options screen
     snprintf(Vbuf, 5, "%1.2f", StopFlyingVoltsPerCell);
     SendText(t10, Vbuf);
     
-    SendValue(Mvalue, map(MotorChannelZero, 0, 180, -100, 100)); // map to -100 to 100
+    SendValue(Mvalue, MotorOffMicros()); // B129: in microseconds (it was -100..100: -67 = 833)
     SendValue(Mchannel, MotorChannel + 1);
     SendValue(UseKill, UseMotorKill);
     SendValue(RxVCorrextion, RxVoltageCorrection);
@@ -1131,9 +1131,8 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
     SendValue(Progress, 15);
     {
         int32_t mv = (int32_t)GetValue(Mvalue); // B04: below -100 the byte wrapped round to full throttle
-        if (mv == 65535)
-            mv = map(MotorChannelZero, 0, 180, -100, 100); // (a comms error keeps the old value)
-        MotorChannelZero = map(constrain(mv, -100, 100), -100, 100, 0, 180); // map to 0 to 180
+        if (mv != 65535)                        // (a comms error keeps the old value)
+            MotorChannelZero = MotorOffFromMicros(mv); // B129: microseconds, 500 to 2500, to the byte's 0 to 180
     }
     SendValue(Progress, 30);
     RxVoltageCorrection = GetValue(RxVCorrextion);
