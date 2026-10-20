@@ -183,18 +183,24 @@ int main() {
     // 4. Add: a knob on the same channel, Pitch P gain, its values from the present value
     fcLog.clear(); AdjustAdd(); run(8);
     CHECK(AdjN == 4 && AdjAt == 3 && fields["tn0"] == "Pitch P gain" && fields["tn2"] == "Knob" && fields["tn3"] == "in any bank" && fields["tk0"] == "55" && fields["tk1"] == "55" && AdjNow == 55);
+    CHECK(fields["busy"].find("New adjustment") == 0 && fields["busy"].find("bank selector is first") != std::string::npos);   // (B137: the note after Add)
     AdjustBankTapped(); run(2); CHECK(fields["tn3"] == "in bank 1" && AdjNowBank == 1);   // (bank 1 is not the bank in use: not read)
     AdjustBankTapped(); run(6); CHECK(fields["tn3"] == "in bank 2" && AdjNow == 55);
     // the kind: a 2-position switch over a switch's travel, then 3, then 4 positions (the values evenly between the ends)
     AdjustKindTapped(); CHECK(fields["tn2"] == "Switch, 2 positions" && fields["tp0"] == "55" && fields["tp1"] == "56" && cmdValue("bar.kind") == 3 && cmdValue("bar.d0") == 988 && cmdValue("bar.d1") == 2012);
     AdjustKindTapped(); CHECK(fields["tn2"] == "Switch, 3 positions" && fields["tp2"] == "56");
-    // the picker: the wheel opens on the row's own setting (Pitch P gain: row 11 since B136 put the two selectors first); Yaw P gain chosen
-    AdjustSettingNext(); CHECK(CurrentView == ADJPICKVIEW && vals["list"] == 11);
-    vals["list"] = 19; AdjustPickOk(); CHECK(CurrentView == ADJUSTVIEW && fields["tn0"] == "Yaw P gain" && AdjRows[3].fn == 22);
-    AdjustSettingNext(); AdjustPickCancel(); CHECK(CurrentView == ADJUSTVIEW && AdjRows[3].fn == 22);
+    // the picker: a row Add made opens at the TOP of the wheel (the selectors first, B136/B137), a cancel leaves it fresh; a chosen
+    // setting opens at itself (Pitch P gain is row 11, Yaw P gain row 19 since the two selectors went first)
+    // (vals["list"] is set to a wrong row before each open, so a stale value cannot pass; run(6) lets a pick's value read finish,
+    // since the picker will not open while one is in flight)
+    vals["list"] = 5; AdjustSettingNext(); CHECK(CurrentView == ADJPICKVIEW && vals["list"] == 0);
+    AdjustPickCancel(); CHECK(CurrentView == ADJUSTVIEW && AdjRows[3].fn == 14);
+    vals["list"] = 5; AdjustSettingNext(); CHECK(vals["list"] == 0);   // still fresh after a cancel
+    vals["list"] = 19; AdjustPickOk(); CHECK(CurrentView == ADJUSTVIEW && fields["tn0"] == "Yaw P gain" && AdjRows[3].fn == 22); run(6);
+    vals["list"] = 5; AdjustSettingNext(); CHECK(CurrentView == ADJPICKVIEW && vals["list"] == 19); AdjustPickCancel(); CHECK(CurrentView == ADJUSTVIEW && AdjRows[3].fn == 22);
     // a list value the screen failed to give (65535) changes nothing (B136)
     AdjustSettingNext(); vals["list"] = 65535; AdjustPickOk(); CHECK(CurrentView == ADJUSTVIEW && fields["tn0"] == "Yaw P gain" && AdjRows[3].fn == 22);
-    AdjustSettingNext(); vals["list"] = 11; AdjustPickOk(); CHECK(fields["tn0"] == "Pitch P gain" && AdjRows[3].fn == 14); run(6);
+    vals["list"] = 5; AdjustSettingNext(); CHECK(vals["list"] == 19); vals["list"] = 11; AdjustPickOk(); CHECK(fields["tn0"] == "Pitch P gain" && AdjRows[3].fn == 14); run(6);
     // the first and last positions typed (50 and 60): the middle one is 55, evenly between; a tap on the middle zone types nothing
     fields["tp0"] = "50"; fields["tp2"] = "60"; AdjustChannelNext(); CHECK(fields["tn1"] == "Channel 11: AUX6" && fields["tp1"] == "55");   // (Add took the channel of the row showing, the nudge on AUX5)
     attrs["bar.tap"] = 1500; cmds.clear(); AdjustBarMoved();

@@ -22,6 +22,8 @@ THE SETTING AND THE BANK:|
 Tap the setting box beside 'Changes' to open the list,|
 'What it changes'.|
 The two selectors come first, then rates and PIDs.|
+A new adjustment's list opens at the top; a chosen one opens|
+at its own setting.|
 Turn the list (drag it, or tap a row) until the setting is in the|
 middle, then press 'OK'. 'Cancel' keeps the old one.|
 A new setting starts at the value it has now, if it can be read.|

@@ -186,6 +186,15 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Adjustments: a new row's list opens at the top, with a note after Add (Teensy B137, 20 Oct 2026)
+
+Malcolm, after Add on B136 or before it (his photo: "Pitch P gain", Knob, Channel 7: Bank): "bank (profile) is not anywhere to
+be seen and cannot be selected yet." The picker opened at the row's own setting - row 11, Pitch P gain, the placeholder Add
+gives - so the two selectors, eight rows above, were out of sight. Now a row Add made (AdjFreshAt, cleared once a setting is
+chosen or the row is removed) opens the list at the top; a chosen setting's list still opens at itself. After Add the note box
+says "New adjustment. Tap the setting box to choose what it changes: the bank selector is first in the list." (8 s).
+ADJUST.TXT says so; dev/test_adjust/test_adjust_page.py checks the fresh/chosen opening rows and the note.
+
 ## Adjustments: the bank and rates selectors in the picker (Teensy B136, page 68, screen 1.11.100, 20 Oct 2026)
 
 Malcolm: "On the Adjustments page, I cannot find Bank or Profile. How can I set a channel for this? ... It appears to read it

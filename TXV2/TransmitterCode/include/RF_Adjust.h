@@ -401,6 +401,7 @@ static int AdjN = 0, AdjAt = 0;
 DMAMEM static AdjLine AdjWritten[ADJ_MAX]; // the lines of the last save, to read back against
 DMAMEM static AdjLine AdjAsRead[ADJ_MAX];  // the lines as the flight controller had them: a save writes only the lines that differ (each write holds the receiver up for most of a second)
 static bool AdjHave = false, Adj_Was_Edited = false;
+static int AdjFreshAt = -1;   // B137: the row Add made whose setting has not been chosen yet - its picker opens at the TOP of the list (the selectors), not at the placeholder
 static AdjBanks AdjBk;
 enum { ADJ_IDLE = 0, ADJ_READ_RATES, ADJ_READ, ADJ_WRITE, ADJ_STORE, ADJ_VERIFY, ADJ_NOW_STATUS, ADJ_NOW_READ };
 static int AdjStep_ = ADJ_IDLE, AdjReq = 0, AdjTries = 0, AdjLineAt = 0;
@@ -1011,7 +1012,7 @@ FLASHMEM void StartAdjustView() // the menu's Adjustments ...
     }
     SendCommand((char *)"page AdjustView");
     CurrentView = ADJUSTVIEW;
-    Adj_Was_Edited = false; AdjHave = false; AdjN = 0; AdjAt = 0; AdjNowKnown = false; AdjNowRow = -1;
+    Adj_Was_Edited = false; AdjHave = false; AdjN = 0; AdjAt = 0; AdjNowKnown = false; AdjNowRow = -1; AdjFreshAt = -1;
     AdjSeenClear(); memset(AdjBankFitted, 0, sizeof(AdjBankFitted)); AdjBankWhy[0] = 0; AdjTakeNote[0] = 0; AdjMemoN = 0;
     AdjHead();
     AdjShow();
@@ -1061,7 +1062,7 @@ FLASHMEM void AdjustSettingNext() // the setting box tapped: the picker page, a 
     SendCommand((char *)"page AdjPickView");
     CurrentView = ADJPICKVIEW;
     SendText((char *)"t11", ModelName);
-    SendValue((char *)"list", AdjIdxOf(AdjRows[AdjAt].fn));
+    SendValue((char *)"list", AdjFreshAt == AdjAt ? 0 : AdjIdxOf(AdjRows[AdjAt].fn));   // (B137: a row Add made opens at the top; a chosen setting at itself)
 }
 FLASHMEM static void AdjPickLeave()
 {
@@ -1075,7 +1076,7 @@ FLASHMEM void AdjustPickOk()
     AdjPickLeave();
     if (!AdjN || fn == AdjRows[AdjAt].fn || fn < 1 || fn >= ADJ_NAMES) return;
     { AdjBanks before; AdjBankRegions(AdjRows, AdjN, before);
-      AdjRows[AdjAt].fn = fn;
+      AdjRows[AdjAt].fn = fn; if (AdjFreshAt == AdjAt) AdjFreshAt = -1;   // (B137: chosen - no longer fresh)
       for (int k = 0; k < ADJ_POS_MAX; ++k) AdjRows[AdjAt].v[k] = 0;   // (the present value seeds them, when it can be read)
       if (fn == 1 || fn == 2) { if (!AdjFitBankRow(AdjAt)) { AdjRow &r = AdjRows[AdjAt]; r.kind = AK_SWITCH; r.n = 2; r.lo = 988; r.hi = 2012; r.v[0] = 1; r.v[1] = 2; } }
       if (fn == 2 || before.have) AdjRebank(before); }
@@ -1155,8 +1156,11 @@ FLASHMEM void AdjustAdd()
     AdjRow &r = AdjRows[at];
     memset(&r, 0, sizeof(r));
     r.kind = AK_KNOB; r.fn = 14; r.ch = AdjN ? AdjRows[AdjAt].ch : 1; r.n = 2; r.lo = (int16_t)ADJ_RMIN; r.hi = (int16_t)ADJ_RMAX;
-    ++AdjN; AdjAt = at;
+    ++AdjN; AdjAt = at; AdjFreshAt = at;
     AdjEdited(); AdjShow(); AdjAskNow();
+    // B137 (Malcolm, 20 Oct, after Add: "bank (profile) is not anywhere to be seen"): say where the setting is chosen, and
+    // that the selectors head the list; the new row's picker opens at the top (AdjustSettingNext).
+    AdjBusy("New adjustment. Tap the setting box to choose what it changes: the bank selector is first in the list."); AdjMsgUntil = millis() + 8000;
 }
 FLASHMEM void AdjustRemove()
 {
@@ -1165,6 +1169,7 @@ FLASHMEM void AdjustRemove()
     if (!GetConfirmation((char *)"page AdjustView", (char *)"Remove this adjustment?")) { AdjHead(); AdjShow(); return; }
     for (int i = AdjAt; i + 1 < AdjN; ++i) { AdjRows[i] = AdjRows[i + 1]; AdjBankFitted[i] = AdjBankFitted[i + 1]; }
     --AdjN;
+    if (AdjFreshAt == AdjAt) AdjFreshAt = -1; else if (AdjFreshAt > AdjAt) --AdjFreshAt;   // (B137: the fresh row went, or moved up one)
     if (AdjAt >= AdjN) AdjAt = AdjN ? AdjN - 1 : 0;
     AdjBankRegions(AdjRows, AdjN, AdjBk);
     AdjEdited(); AdjHead(); AdjShow(); AdjAskNow();
