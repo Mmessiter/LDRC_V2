@@ -39,20 +39,30 @@ static char ChannelNames[16][11] = {{"Aileron"}, {"Elevator"}, {"Throttle"}, {"R
 static uint16_t SendBuffer[17] = {1500, 1500, 1000, 1500, 1500, 667, 1500, 1900, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 0};
 static uint32_t now = 1000;
 static uint32_t millis() { return now; }
-// ---- this transmitter's outputs per bank (B83: the bank switch is matched to them). The curve is a stub table of
-// microseconds per bank and channel; trims, subtrims and reversal are the real formulas with neutral values
+// ---- this transmitter's outputs per bank (B83: the bank switch is matched to them). The curve is flat in each bank at its
+// first point (CurvePoint, degrees: B141 - the real range, 500 to 2500 us or 945 to 2055, and the Teensy's rounding map,
+// so what the flight controller sees of a height is what the transmitter would send); trims, subtrims and reversal are
+// the real formulas with neutral values
 #define BANKS_USED 6
+#define CURVE_POINTS_MAX 9
+#define CURVE_STORE_MAX 13
+#define CURVE_UNSET 255
 static uint8_t banksN = 4; static uint8_t BanksCount() { return banksN; }
 static bool LinkRatesToBanks = false;
-#define MINMICROS 1000
-#define MAXMICROS 2000
-static inline uint16_t RangeLo() { return MINMICROS; }
-static inline uint16_t RangeHi() { return MAXMICROS; }
+#define MINMICROS 500
+#define MAXMICROS 2500
+static uint8_t MaxRangeNarrow = 0;
+static inline uint16_t RangeLo() { return MaxRangeNarrow ? 945 : MINMICROS; }
+static inline uint16_t RangeHi() { return MaxRangeNarrow ? 2055 : MAXMICROS; }
 static uint32_t ModelNumber = 1; static int modelSaves = 0; static void SaveOneModel(uint32_t) { ++modelSaves; }
-static int curveDeg[BANKS_USED + 1][16];
-static void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi) { if (b <= BANKS_USED && ch < 16 && lo == hi) curveDeg[b][ch] = lo; }
-static inline uint16_t CurveMicros(uint8_t d) { return (uint16_t)(RangeLo() + ((uint32_t)d * (RangeHi() - RangeLo()) + 90) / 180); }
+static uint8_t CurvePoint[BANKS_USED + 1][CHANNELSUSED + 1][CURVE_POINTS_MAX], CurveStore[BANKS_USED + 1][CHANNELSUSED + 1][CURVE_STORE_MAX];
+static int curveDeg[BANKS_USED + 1][16];   // (what CurveSetStraight last set flat, per bank and channel: -1 none)
+static void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi) { if (b > BANKS_USED || ch > CHANNELSUSED) return; for (int k = 0; k < CURVE_POINTS_MAX; ++k) CurvePoint[b][ch][k] = (uint8_t)(lo + ((hi - lo) * k + 2) / 4); memset(CurveStore[b][ch], CURVE_UNSET, CURVE_STORE_MAX); if (ch < 16) curveDeg[b][ch] = lo == hi ? lo : -1; }
+static inline uint16_t CurveMicros(uint8_t d) { return (uint16_t)(RangeLo() + ((uint32_t)d * (RangeHi() - RangeLo()) + 90) / 180); }   // (the Teensy's map rounds)
+static void setDeg(int b, int ch, int deg) { for (int k = 0; k < CURVE_POINTS_MAX; ++k) CurvePoint[b][ch][k] = (uint8_t)deg; }
+static void twin(int ch) { for (int b = 5; b <= 6; ++b) memcpy(CurvePoint[b][ch], CurvePoint[4][ch], CURVE_POINTS_MAX); }   // (banks 5 and 6 bank 4's, as SixBanksSet makes them)
 static uint8_t Bank = 2;
+static uint16_t usOf(int b, int ch) { return CurveMicros(CurvePoint[b][ch][0]); }   // the transmitter's output on the channel in that bank
 static uint8_t ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 static uint8_t SourceOfOutput(uint8_t out) { for (uint8_t k = 0; k < 16; ++k) if (ChannelOutPut[k] == out) return k; return out; }
 static uint8_t DualRateValue = 100;
@@ -63,8 +73,7 @@ static uint8_t SubTrims[16] = {127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
 static uint16_t ReversedChannelBITS = 0;
 static int GetTrimAmount(uint8_t) { return 0; }
 static void GetCurveDots(uint16_t, uint16_t) {}
-static uint16_t txUs[BANKS_USED + 1][16];
-static uint16_t stubInterp(uint16_t, uint16_t, uint16_t ch) { if (Bank <= BANKS_USED && ch < 16 && curveDeg[Bank][ch] >= 0) return (uint16_t)(MINMICROS + ((uint32_t)curveDeg[Bank][ch] * (MAXMICROS - MINMICROS) + 90) / 180); return txUs[Bank][ch]; }
+static uint16_t stubInterp(uint16_t, uint16_t, uint16_t ch) { return Bank <= BANKS_USED && ch <= CHANNELSUSED ? usOf(Bank, ch) : 1500; }
 uint16_t (*Interpolate[3])(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel) = {stubInterp, stubInterp, stubInterp};
 // ---- the fake screen
 static std::map<std::string, std::string> fields; static std::vector<std::string> cmds; static int boxes = 0; static std::string lastBox; static bool confirmAnswer = true; static int sounds = 0, rfStarts = 0;
@@ -118,7 +127,9 @@ static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); 
 static void dump(const char *tag) { fprintf(stderr, "[%s] t0='%s' ltn0='%s' tn0='%s' tn1='%s' tn2='%s' tn3='%s' tn8='%s' bar='%s' busy='%s' hint='%.30s' kind=%d d0=%d d1=%d mk=%d | JobsStep=%d JobAt=%d SwStep=%d AdjStep=%d SwN=%d AdjN=%d AdjAt=%d SwAt=%d edited %d/%d now %d known %d boxes %d last='%.50s'\n", tag, fields["t0"].c_str(), fields["ltn0"].c_str(), fields["tn0"].c_str(), fields["tn1"].c_str(), fields["tn2"].c_str(), fields["tn3"].c_str(), fields["tn8"].c_str(), fields["bar"].c_str(), fields["busy"].c_str(), fields["hint"].c_str(), cmdValue("bar.kind"), cmdValue("bar.d0"), cmdValue("bar.d1"), cmdValue("bar.mk"), JobsStep, JobAt, SwStep, AdjStep_, SwN, AdjN, AdjAt, SwAt, (int)Sw_Was_Edited, (int)Adj_Was_Edited, (int)AdjNow, (int)AdjNowKnown, boxes, lastBox.c_str()); }
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
-static void run(int n = 20) { for (int i = 0; i < n; ++i) { AdjustPoll(); SwitchPoll(); JobsPoll(); now += 50; } }
+static int liveCh = -1;   // a channel whose output follows its curve in the bank in use (reversed if the channel is), as CalculateAllOutputs makes it
+static void live() { if (liveCh < 0) return; uint16_t v = usOf(Bank, liveCh); if (ReversedChannelBITS & (1 << liveCh)) v = (uint16_t)(MAXMICROS - (v - MINMICROS)); SendBuffer[liveCh] = v; }
+static void run(int n = 20) { for (int i = 0; i < n; ++i) { live(); AdjustPoll(); SwitchPoll(); JobsPoll(); now += 50; } }
 static int writes(int fn) { int k = 0; for (auto &r : fcLog) if (r.fn == fn) ++k; return k; }
 static uint8_t stp(int us) { int st = (int) floorf((us - 1500) / 5.0f + 0.5f); return (uint8_t) (st < 0 ? st + 256 : st); }
 static void putLine(int i, int fn, int ena, int enaLo, int enaHi, int ch, int a1Lo, int a1Hi, int a2Lo, int a2Hi, int mn, int mx, int st) {
@@ -132,12 +143,13 @@ static int pickMode(int perm) { return JobsPickIdxOfMode((uint8_t)perm); }
 int main() {
     memset(curveDeg, -1, sizeof curveDeg);
     blankAdj(); blankModes();
-    // this transmitter: channel 6 (AUX1) carries the bank as a value, Black Thunder 2's way (13, 54, 90, 151 degrees in
-    // banks 1 to 4); every other channel sits at 1500 in every bank
-    for (int b = 0; b <= 4; ++b) for (int c = 0; c < 16; ++c) txUs[b][c] = 1500;
-    txUs[1][5] = 1072; txUs[2][5] = 1300; txUs[3][5] = 1500; txUs[4][5] = 1839;
-    const int fc1 = AdjFcUs(1072), fc2 = AdjFcUs(1300), fc3 = AdjFcUs(1500), fc4 = AdjFcUs(1839);   // 1062, 1296, 1500, 1847
-    CHECK(fc1 == 1062 && fc2 == 1296 && fc3 == 1500 && fc4 == 1847);
+    // this transmitter: channel 6 (AUX1) carries the bank as a value, Black Thunder 2's way (a height of its own in each of
+    // banks 1 to 4: 51, 72, 90 and 120 degrees = 1067, 1300, 1500, 1833 us); every other channel sits at 90 degrees (1500 us)
+    // in every bank. B141: those four are off the middle of even zones, so the first read spaces the channel (step 2)
+    for (int b = 0; b <= BANKS_USED; ++b) for (int c = 0; c <= CHANNELSUSED; ++c) setDeg(b, c, 90);
+    setDeg(1, 5, 51); setDeg(2, 5, 72); setDeg(3, 5, 90); setDeg(4, 5, 120);
+    const int fc1 = AdjFcUs(usOf(1, 5)), fc2 = AdjFcUs(1300), fc3 = AdjFcUs(1500), fc4 = AdjFcUs(usOf(4, 5));   // 1057, 1296, 1500, 1840
+    CHECK(usOf(1, 5) == 1067 && usOf(2, 5) == 1300 && usOf(4, 5) == 1833 && fc1 == 1057 && fc2 == 1296 && fc3 == 1500 && fc4 == 1840);
     Bank = 2; SendBuffer[5] = 1300;
     // the flight controller's switch jobs: ARM on AUX1 (channel 6) ON above 1500, RESCUE on AUX3 (channel 8), BLACKBOX on AUX2 (the middle)
     slot(0, 0, 0, 1500, 2125); slot(1, 53, 2, 1700, 2125); slot(3, 26, 1, 1300, 1700);
@@ -153,25 +165,31 @@ int main() {
     run(6);
     CHECK(SwHave && AdjHave && SwN == 3 && AdjN == 3 && JobsN() == 6 && JobAt == 0 && writes(111) == 1 && writes(52) == 1);
     CHECK(fields["t0"] == "Job 1 of 6" && fields["ltn0"] == "Does" && fields["tn0"] == "Arm - motor enable (ARM)" && fields["tn1"] == "Channel 6: AUX1" && fields["tn2"] == "Switch" && cmdSeen("vis tn3,0") && fields["t9"] == "USB cable");
-    dump("arm"); CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1500 && cmdValue("bar.d1") == 2125 && cmdValue("bar.mk") == 1296 && fields["tn8"] == "OFF: 1296 us" && fields["bar"] == "|ON|" && fields["hint"].find("Arm switch:") == 0);   // (channel 6 sits at 1300 here, the bank value: OFF below 1500)
+    CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1500 && cmdValue("bar.d1") == 2125 && cmdValue("bar.mk") == 1296 && fields["tn8"] == "OFF: 1296 us" && fields["bar"] == "|ON|" && fields["hint"].find("Arm switch:") == 0);   // (channel 6 sits at 1300 here, the bank value: OFF below 1500)
     // the old-form bank switch was put into Rotorflight's own form and matched to this transmitter's banks: said, Save offered
     CHECK(Adj_Was_Edited && fields["busy"] == "Press Save: 1 switch put right (old once-only form)." && cmdSeen("vis b3,1"));
     // the rescue: its switch is up (1900 us -> 1910 as the FC sees it): ON
     JobsNext(); run(2); CHECK(JobAt == 1 && SwAt == 1 && fields["t0"] == "Job 2 of 6" && fields["tn0"] == "Rescue - the safety net (RESCUE)" && fields["tn1"] == "Channel 8: AUX3" && fields["tn8"] == "ON: 1909 us" && cmdValue("bar.d0") == 1700);
     JobsNext(); run(2); CHECK(JobAt == 2 && fields["tn0"] == "Black box recording (BLACKBOX)" && fields["tn8"] == "ON: 1500 us");
-    // 2. the fourth job: the bank selector, matched (its ends bank 1's and bank 4's values)
+    // 2. the fourth job: the bank selector, matched - B141: the channel's banks were off the middle of their zones (1057, 1296,
+    // 1500, 1840 us as the flight controller sees them), so the first read set them in the middle: 988, 1330, 1670, 2012; the
+    // card is not written until Save (step 3)
     cmds.clear(); JobsNext(); run(6);
     CHECK(JobAt == 3 && AdjAt == 0 && fields["t0"] == "Job 4 of 6" && fields["ltn0"] == "Changes" && fields["tn0"] == "Bank (Profile) selector" && fields["tn1"] == "Channel 6: AUX1" && fields["tn3"] == "in any bank");
     CHECK(fields["tn2"] == "Banks 1 to 4 of this transmitter" && AdjRows[0].legacy && AdjRows[0].kind == AK_SWITCH && AdjRows[0].n == 4 && AdjBankRowRight(AdjRows[0]) && AdjRows[0].lo % 5 == 0 && AdjRows[0].hi % 5 == 0);
+    CHECK(AdjModelDirty && modelSaves == 0 && curveDeg[1][5] == 0 && curveDeg[2][5] == 75 && curveDeg[3][5] == 105 && curveDeg[4][5] == 180 && AdjFcUs(usOf(2, 5)) == 1330 && AdjFcUs(usOf(3, 5)) == 1670);
+    CHECK(strcmp(AdjBankWhy, "Channel 6 set bank by bank: 988, 1330, 1670, 2012 us, the middle of each zone (0, 75, 105, 180 degrees).") == 0);
     const int bankLo = AdjRows[0].lo, bankHi = AdjRows[0].hi;
-    fprintf(stderr, "   (the stub's banks %d, %d, %d, %d us: ends %d..%d)\n", fc1, fc2, fc3, fc4, bankLo, bankHi);
+    fprintf(stderr, "   (the stub's banks %d, %d, %d, %d us, spaced to %d, %d, %d, %d: ends %d..%d)\n", fc1, fc2, fc3, fc4, AdjFcUs(usOf(1, 5)), AdjFcUs(usOf(2, 5)), AdjFcUs(usOf(3, 5)), AdjFcUs(usOf(4, 5)), bankLo, bankHi);
+    { int vals[7]; for (int b = 1; b <= 4; ++b) vals[b] = AdjFcUs(usOf(b, 5)); vals[2] = fc2;   // (bank 2 as measured: the switch sits at 1300)
+      CHECK(AdjBankRoom(bankLo, bankHi, 4, vals, 4) >= AdjRoomWanted(bankLo, bankHi, 4)); }
     CHECK(fields["tp0"] == "1" && fields["tp1"] == "2" && fields["tp2"] == "3" && fields["tp3"] == "4");
     CHECK(cmdSeen("vis tn3,0") && cmdValue("bar.kind") == 4 && cmdValue("bar.n") == 4 && cmdValue("bar.d0") == bankLo && cmdValue("bar.d1") == bankHi && fields["bar"] == "1|2|3|4" && cmdValue("bar.mk") == fc2);
     CHECK(fields["tn8"] == "Bank 2: 1296 us");
     // the knob in bank 2 - the old zone 2 (1300..1700) became the new bank 2 - with its present value read from the PIDs (bank 2 is the bank in use)
     cmds.clear(); JobsNext(); run(6);
     CHECK(cmdSeen("vis tn3,1") && JobAt == 4 && AdjAt == 1 && fields["tn0"] == "Yaw P gain" && fields["tn1"] == "Channel 8: AUX3" && fields["tn2"] == "Knob" && fields["tn3"] == "in bank 2" && fields["tk0"] == "60" && fields["tk1"] == "120");
-    dump("knob"); CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && fields["bar"] == "|60 to 120|" && fields["tn8"] == "Knob 1909 us: 115" && AdjNowKnown && AdjNow == 95);   // (channel 8 sits at 1900: the rescue is up)
+    CHECK(cmdValue("bar.kind") == 1 && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && fields["bar"] == "|60 to 120|" && fields["tn8"] == "Knob 1909 us: 115" && AdjNowKnown && AdjNow == 95);   // (channel 8 sits at 1900: the rescue is up)
     // the nudge, a Rate shown x5; the last job: Next stays
     JobsNext(); run(6);
     CHECK(JobAt == 5 && AdjAt == 2 && fields["t0"] == "Job 6 of 6" && fields["tn0"] == "Pitch top rotation speed (Rate)" && fields["tn2"] == "Step adjustment" && fields["ts0"] == "2" && fields["ts1"] == "100" && fields["ts2"] == "500");
@@ -185,13 +203,14 @@ int main() {
       CHECK(L[0].fn == 2 && L[0].adj == 0 && L[0].ena == 0 && L[0].enaLo == 875 && L[0].enaHi == 2125 && L[0].a1Lo == bankLo && L[0].a1Hi == bankHi && L[0].min == 1 && L[0].max == 4 && L[0].stp == 0);
       CHECK(L[1].fn == 22 && L[1].ena == 0 && L[2].fn == 8 && L[3].fn == 0 && L[4].fn == 0); }
     CHECK(fields["busy"].find("Saved, and read back the same") == 0 && !AdjRows[0].legacy && AdjRows[0].lo == bankLo && AdjBankRowRight(AdjRows[0]) && AdjBankFitted[0]);
+    CHECK(modelSaves == 1 && !AdjModelDirty && curveDeg[2][5] == 75);   // (B141: the flight controller has the zones: the model, with the spaced channel, written once)
     CHECK(JobAt == 5 && fields["t0"] == "Job 6 of 6");   // (the page stayed where it was)
     // 4. edit the knob's high end (job 5), save: only its line is written; a 503 is answered again
     JobsPrevious(); run(6); CHECK(JobAt == 4 && fields["tn0"] == "Yaw P gain" && fields["tn3"] == "in bank 2");
     attrs["bar.tap"] = 1800; cmds.clear(); JobsBarMoved(); CHECK(cmds.size() >= 1 && cmds[0] == "click tk1,0");   // (the keypad opens on the high end's box)
     attrs["bar.tap"] = -1; fields["tk1"] = "130"; JobsWasEdited(); JobsPageBack(); CHECK(Adj_Was_Edited && AdjRows[1].v[1] == 130 && fields["bar"] == "|60 to 130|");
-    attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; attrs["bar.tap"] = -1; JobsBarMoved(); dump("drag"); CHECK(AdjRows[1].lo == 1100 && AdjRows[1].hi == 2000 && fields["tn8"] == "Knob 1909 us: 123");
-    fcLog.clear(); busyOnce = 1; SaveJobs(); run(30); dump("save2"); for (auto &r : fcLog) fprintf(stderr, "   fn %d %s\n", r.fn, r.data.substr(0, 20).c_str());
+    attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; attrs["bar.tap"] = -1; JobsBarMoved(); CHECK(AdjRows[1].lo == 1100 && AdjRows[1].hi == 2000 && fields["tn8"] == "Knob 1909 us: 123");
+    fcLog.clear(); busyOnce = 1; SaveJobs(); run(30);
     CHECK(writes(53) == 2 && fcLog[0].fn == 53 && fcLog[1].fn == 53 && fcLog[0].data == fcLog[1].data && fcLog[0].data.substr(0, 2) == "01");
     CHECK(writes(250) == 1 && writes(52) == 1 && !Adj_Was_Edited && adj[1 * 14 + 11] == 130 && adj[1 * 14 + 12] == 0 && adj[1 * 14 + 5] == stp(1100));
     CHECK(fields["busy"].find("Saved, and read back the same") == 0 && fields["tk1"] == "130");
@@ -305,26 +324,77 @@ int main() {
     // 17. SIX BANKS (B130/B138/B139): a bank selector added on channel 7, which tells six banks apart; the switch walks every bank;
     // then banks 5 and 6 as bank 4's twins (the channel spaced), plain and reversed
     banksN = 6; blankModes(); slot(0, 0, 0, 1500, 2125); blankAdj();
-    for (int b = 1; b <= 6; ++b) txUs[b][6] = (uint16_t)(1000 + (b - 1) * 200);
-    Bank = 2; SendBuffer[6] = txUs[2][6]; memset(curveDeg, -1, sizeof curveDeg);
+    for (int b = 1; b <= 6; ++b) setDeg(b, 6, 45 + (b - 1) * 18);   // (1000, 1200 ... 2000 us: 988, 1193 ... 2012 at the flight controller - the middle of six even zones already)
+    Bank = 2; liveCh = 6; live(); memset(curveDeg, -1, sizeof curveDeg); modelSaves = 0;
     StartJobsView(); run(8); CHECK(SwN == 1 && AdjN == 0 && JobsN() == 1);
     JobsAdd(); vals["list"] = 0; JobsPickOk(); run(8);
     CHECK(AdjN == 1 && JobAt == 1 && fields["t0"] == "Job 2 of 2" && AdjRows[0].fn == 2 && AdjRows[0].kind == AK_SWITCH && AdjRows[0].n == 6 && AdjBankFitted[0] && fields["tn2"] == "Banks 1 to 6 of this transmitter" && fields["bar"] == "1|2|3|4|5|6" && cmdValue("bar.kind") == 4 && cmdValue("bar.n") == 6);
-    CHECK(AdjRows[0].ch == 1 && fields["tn1"] == "Channel 7: AUX2");   // (the arm job showing was on AUX1: the new one on the channel after it)
-    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; SendBuffer[6] = txUs[b][6]; run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(txUs[b][6])); CHECK(fields["tn8"] == e); CHECK(cmdValue("bar.mk") == AdjFcUs(txUs[b][6])); }
-    fcLog.clear(); SaveJobs(); run(40); CHECK(writes(53) >= 1 && writes(250) == 1 && !Adj_Was_Edited);
+    CHECK(AdjRows[0].ch == 1 && fields["tn1"] == "Channel 7: AUX2" && curveDeg[2][6] == -1 && !AdjModelDirty);   // (the arm job showing was on AUX1: the new one on the channel after it; its banks already in the middle: left as they are)
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(usOf(b, 6))); CHECK(fields["tn8"] == e); CHECK(cmdValue("bar.mk") == AdjFcUs(usOf(b, 6))); }
+    fcLog.clear(); SaveJobs(); run(40); CHECK(writes(53) >= 1 && writes(250) == 1 && !Adj_Was_Edited && modelSaves == 0);
     { AdjLine L[42]; AdjParseLines(adj, 588, L); CHECK(L[0].fn == 2 && L[0].min == 1 && L[0].max == 6 && L[0].adj == 1); }
     confirmAnswer = true; JobsRemove(); run(4); CHECK(AdjN == 0 && JobsN() == 1 && JobAt == 0);
-    txUs[5][6] = txUs[6][6] = txUs[4][6]; AdjSeenClear(); modelSaves = 0; Bank = 2; SendBuffer[6] = txUs[2][6]; memset(curveDeg, -1, sizeof curveDeg);
+    twin(6); AdjSeenClear(); modelSaves = 0; Bank = 2; live(); memset(curveDeg, -1, sizeof curveDeg);
     JobsAdd(); vals["list"] = 0; JobsPickOk(); run(8);
-    CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && modelSaves == 1 && curveDeg[1][6] == 0 && curveDeg[6][6] == 180);
-    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; SendBuffer[6] = stubInterp(0, 0, 6); run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e); }
+    CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && modelSaves == 0 && AdjModelDirty && curveDeg[1][6] == 0 && curveDeg[6][6] == 180);
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e); CHECK(abs(AdjFcUs(SendBuffer[6]) - (AdjRows[0].lo + ((AdjRows[0].hi - AdjRows[0].lo) * (b - 1) + 2) / 5)) <= 8); }
+    fcLog.clear(); SaveJobs(); run(40); CHECK(writes(250) == 1 && !Adj_Was_Edited && modelSaves == 1 && !AdjModelDirty);   // (B141: the card written once the flight controller has the zones; the line itself is the one the flight controller holds)
     confirmAnswer = true; JobsRemove(); run(4); CHECK(AdjN == 0);
-    ReversedChannelBITS = (uint16_t)(1 << 6); memset(curveDeg, -1, sizeof curveDeg); AdjSeenClear(); modelSaves = 0; Bank = 2; SendBuffer[6] = 2000 - (txUs[2][6] - 1000);
+    ReversedChannelBITS = (uint16_t)(1 << 6); memset(curveDeg, -1, sizeof curveDeg); AdjSeenClear(); modelSaves = 0; Bank = 2; live();
     JobsAdd(); vals["list"] = 0; JobsPickOk(); run(8);
-    CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && modelSaves == 1 && curveDeg[1][6] == 180 && curveDeg[6][6] == 0);
-    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; SendBuffer[6] = (uint16_t)(MAXMICROS - (stubInterp(0, 0, 6) - MINMICROS)); run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e); }
+    CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && modelSaves == 0 && AdjModelDirty && curveDeg[1][6] == 180 && curveDeg[6][6] == 0 && strstr(AdjBankWhy, "degrees, reversed)."));
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e); CHECK(abs(AdjFcUs(SendBuffer[6]) - (AdjRows[0].lo + ((AdjRows[0].hi - AdjRows[0].lo) * (b - 1) + 2) / 5)) <= 8); }
+    // OK, "Save now?" answered Discard: the reversed spacing goes, the channel back as the card has it (the six saved above)
+    saveNowAnswer = 0; saveNowAsked = 0; EndJobsView();
+    CHECK(saveNowAsked == 1 && CurrentView == 47 && !AdjModelDirty && modelSaves == 0 && CurvePoint[1][6][0] == 0 && CurvePoint[2][6][0] == 63 && CurvePoint[5][6][0] == 117 && CurvePoint[6][6][0] == 180);
     ReversedChannelBITS = 0; banksN = 4;
+    // 18. B141 (Malcolm, 20 Oct 2026: "I have set channel 7 to banks, and it has been initially set to four. And this is working,
+    // but if I change to six, it does not get the channel positions into the centre of the zones"): the wide range, 500 to 2500.
+    // Four banks spaced the old way, 0, 60, 120, 180 degrees - 988, 1160, 1840, 2012 as the flight controller sees them, bank 2
+    // ONE microsecond inside its zone - and the line fitted to them: opening the page spaces the channel again, each bank in the
+    // middle of its zone, and says so; the card is written at Save, not before. Six banks (5 and 6 bank 4's twins): six middles.
+    // The old six-bank spacing on the narrow range (36 us off): spaced again. Discard on leaving: the curves go back.
+    blankModes(); slot(0, 0, 0, 1500, 2125); blankAdj(); putLine(0, 2, 0, 875, 2125, 1, 988, 2012, 1500, 1500, 1, 4, 0);
+    MaxRangeNarrow = 0; for (int b = 1; b <= 4; ++b) setDeg(b, 6, (b - 1) * 60);
+    CHECK(AdjFcUs(usOf(2, 6)) == 1160 && AdjFcUs(usOf(3, 6)) == 1840);
+    Bank = 1; live(); memset(curveDeg, -1, sizeof curveDeg); modelSaves = 0; AdjSeenClear();
+    StartJobsView(); run(8);
+    CHECK(SwN == 1 && AdjN == 1 && AdjRows[0].fn == 2 && AdjRows[0].n == 4 && AdjBankFitted[0] && Adj_Was_Edited && AdjModelDirty && modelSaves == 0);
+    CHECK(fields["busy"] == "Press Save: the bank selector now matches this transmitter's banks." && cmdSeen("vis b3,1"));
+    CHECK(curveDeg[1][6] == 0 && curveDeg[2][6] == 75 && curveDeg[3][6] == 105 && curveDeg[4][6] == 180 && strcmp(AdjBankWhy, "Channel 7 set bank by bank: 988, 1330, 1670, 2012 us, the middle of each zone (0, 75, 105, 180 degrees).") == 0);
+    JobsNext(); run(2); CHECK(JobAt == 1 && fields["tn2"] == "Banks 1 to 4 of this transmitter" && cmdValue("bar.n") == 4);
+    for (int b = 1; b <= 4; ++b) { Bank = (uint8_t)b; run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e); CHECK(abs(AdjFcUs(SendBuffer[6]) - (AdjRows[0].lo + ((AdjRows[0].hi - AdjRows[0].lo) * (b - 1) + 1) / 3)) <= 8); }
+    fcLog.clear(); SaveJobs(); run(40); CHECK(writes(53) == 1 && writes(250) == 1 && !Adj_Was_Edited && modelSaves == 1 && !AdjModelDirty);
+    // six banks on (Model options): banks 5 and 6 are bank 4's twins until the page sets them
+    banksN = 6; twin(6); Bank = 1; live(); memset(curveDeg, -1, sizeof curveDeg); modelSaves = 0; AdjSeenClear();
+    StartJobsView(); run(8); JobsNext(); run(2);
+    CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && AdjModelDirty && modelSaves == 0 && fields["tn2"] == "Banks 1 to 6 of this transmitter" && cmdValue("bar.n") == 6);
+    CHECK(curveDeg[1][6] == 0 && curveDeg[2][6] == 63 && curveDeg[3][6] == 81 && curveDeg[4][6] == 99 && curveDeg[5][6] == 117 && curveDeg[6][6] == 180);
+    CHECK(strcmp(AdjBankWhy, "Channel 7 set bank by bank: 988, 1193, 1398, 1602, 1807, 2012 us, the middle of each zone (0, 63, 81, 99, 117, 180 degrees).") == 0);
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e); CHECK(abs(AdjFcUs(SendBuffer[6]) - (AdjRows[0].lo + ((AdjRows[0].hi - AdjRows[0].lo) * (b - 1) + 2) / 5)) <= 8); }
+    fcLog.clear(); SaveJobs(); run(40); CHECK(writes(53) == 1 && !Adj_Was_Edited && modelSaves == 1 && !AdjModelDirty);
+    { AdjLine L[42]; AdjParseLines(adj, 588, L); CHECK(L[0].fn == 2 && L[0].min == 1 && L[0].max == 6 && L[0].a1Lo == AdjRows[0].lo && L[0].a1Hi == AdjRows[0].hi); }
+    // the narrow range, 945 to 2055: the old even degrees (0, 36 ... 180) are within an eighth of a zone of the middles once the
+    // line's ends are fitted (970..2030): the channel is left alone, the line re-fitted and Save asked for
+    MaxRangeNarrow = 1; for (int b = 1; b <= 6; ++b) setDeg(b, 6, (b - 1) * 36);
+    Bank = 1; live(); memset(curveDeg, -1, sizeof curveDeg); modelSaves = 0; AdjSeenClear();
+    StartJobsView(); run(8); JobsNext(); run(2);
+    CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && !AdjModelDirty && modelSaves == 0 && curveDeg[1][6] == -1 && Adj_Was_Edited && fields["busy"] == "Press Save: the bank selector now matches this transmitter's banks.");
+    fprintf(stderr, "   (narrow range, the old six: ends %d..%d, left alone)\n", AdjRows[0].lo, AdjRows[0].hi);
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; run(8); CHECK(abs(AdjFcUs(SendBuffer[6]) - (AdjRows[0].lo + ((AdjRows[0].hi - AdjRows[0].lo) * (b - 1) + 2) / 5)) <= (AdjRows[0].hi - AdjRows[0].lo) / 40); }
+    // six heights set by hand, Black Thunder 2's way (13, 54, 90, 120, 151, 170 degrees): off the middles, so spaced; then OK,
+    // "Save now?" answered Discard: the channel goes back as the card has it, nothing written
+    const int hand[7] = {0, 13, 54, 90, 120, 151, 170};
+    for (int b = 1; b <= 6; ++b) setDeg(b, 6, hand[b]);
+    Bank = 1; live(); memset(curveDeg, -1, sizeof curveDeg); modelSaves = 0; AdjSeenClear();
+    StartJobsView(); run(8); JobsNext(); run(2);
+    CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && AdjModelDirty && modelSaves == 0 && curveDeg[1][6] == 0 && curveDeg[6][6] == 180 && strncmp(AdjBankWhy, "Channel 7 set bank by bank: 988, ", 33) == 0);
+    fprintf(stderr, "   (narrow range, by hand: %s)\n", AdjBankWhy);
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; run(8); CHECK(abs(AdjFcUs(SendBuffer[6]) - (AdjRows[0].lo + ((AdjRows[0].hi - AdjRows[0].lo) * (b - 1) + 2) / 5)) <= 8); }
+    saveNowAnswer = 0; saveNowAsked = 0; EndJobsView();
+    CHECK(saveNowAsked == 1 && CurrentView == 47 && !AdjModelDirty && modelSaves == 0);
+    for (int b = 1; b <= 6; ++b) for (int k = 0; k < CURVE_POINTS_MAX; ++k) CHECK(CurvePoint[b][6][k] == hand[b]);
+    MaxRangeNarrow = 0; banksN = 4; liveCh = -1;
     printf("test_jobs: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

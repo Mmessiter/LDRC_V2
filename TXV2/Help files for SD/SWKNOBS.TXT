@@ -86,11 +86,12 @@ give each bank its own zone, with the most room to spare.|
 Flip through the banks: the line under the bar shows each bank's|
 value, and says so if Rotorflight would pick another bank.|
 When the channel does not give every bank a value of its own|
-(banks 5 and 6 start as copies of bank 4), or no travel can|
-divide its values, the transmitter sets the channel flat in|
-every bank, evenly over its travel (0, 36, 72, 108, 144 and|
-180 degrees for six; the other way round on a reversed channel),|
-and says so. Press 'Save' to write the zones to Rotorflight.|
+(banks 5 and 6 start as copies of bank 4), or a bank's value|
+sits off the middle of its zone, the transmitter sets the|
+channel flat in every bank, each in the middle of its zone as|
+Rotorflight sees it (988 to 2012 us), and says so. Press 'Save'|
+to write the zones to Rotorflight; leave without saving and|
+the channel goes back as it was.|
 Tap the kind box to match a selector again, or for why it could|
 not be matched.||
 KIND, BANK AND VALUES:|

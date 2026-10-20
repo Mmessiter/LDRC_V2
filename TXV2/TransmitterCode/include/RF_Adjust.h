@@ -127,36 +127,42 @@ FLASHMEM static int AdjZoneOf(int lo, int hi, int n, int u)
     for (int k = 0; k < nt; ++k) if (u >= t[k]) z = k + 2;
     return z;
 }
+// The room of nv rising values (vals[1..nv], bank b in position b) on a switch of nz positions over lo..hi: the least
+// distance from any value to the nearest division or edge of the reach; -1 when a value is not in its own position
+FLASHMEM static int AdjBankRoom(int lo, int hi, int nz, const int *vals, int nv)
+{
+    const int W = hi - lo;
+    if (nz < 2 || nv < 1 || nv > nz || W <= 0) return -1;
+    int margin = W / (2 * (nz - 1));
+    if (margin < 5) margin = 5;
+    int t[ADJ_POS_MAX];
+    AdjThresholds(lo, hi, nz, t);
+    int room = 100000;
+    for (int b = 1; b <= nv; ++b)
+    {
+        const int u = vals[b];
+        const int zlo = b == 1 ? lo - margin + 1 : t[b - 2], zhi = b == nz ? hi + margin - 1 : t[b - 1] - 1;   // the value must sit in [zlo, zhi]
+        if (u < zlo || u > zhi) return -1;
+        const int d = u - zlo < zhi - u ? u - zlo : zhi - u;
+        if (d < room) room = d;
+    }
+    return room;
+}
+// B141: the room a bank line should have - every bank within an eighth of a zone of its zone's middle, so three eighths of a
+// zone from the nearest division. Less, and the channel is spaced again (AdjFitBankRow).
+FLASHMEM static int AdjRoomWanted(int lo, int hi, int n) { return n > 1 ? 3 * (hi - lo) / (8 * (n - 1)) : 0; }
 // The ends lo..hi that give each of n rising values its own position, with the most room to spare: a search over every
 // travel in 5 us steps (the transmitter's banks are seldom evenly spaced: Black Thunder 2's channel 7 is 988, 1091, 1500,
-// 2012 us, which no "ends at the first and last value" can divide). False when no travel does. Room = the least distance
-// from any value to the nearest division or edge of the reach.
+// 2012 us, which no "ends at the first and last value" can divide). False when no travel does.
 FLASHMEM static bool AdjBestEnds(const int *vals, int n, int16_t &lo, int16_t &hi, int &room)
 {
     int bestLo = 0, bestHi = 0, best = -1;
     for (int W = 5 * (n - 1); W <= ADJ_RMAX - ADJ_RMIN; W += 5)
-    {
-        int margin = W / (2 * (n - 1));
-        if (margin < 5) margin = 5;
-        int t[ADJ_POS_MAX];
         for (int l = ADJ_RMIN; l + W <= ADJ_RMAX; l += 5)
         {
-            const int h = l + W;
-            const int nt = AdjThresholds(l, h, n, t);
-            int rm = 100000;
-            bool ok = true;
-            for (int b = 1; b <= n && ok; ++b)
-            {
-                const int u = vals[b];
-                const int zlo = b == 1 ? l - margin + 1 : t[b - 2], zhi = b == n ? h + margin - 1 : t[b - 1] - 1;   // the value must sit in [zlo, zhi]
-                if (u < zlo || u > zhi) { ok = false; break; }
-                const int d = u - zlo < zhi - u ? u - zlo : zhi - u;
-                if (d < rm) rm = d;
-            }
-            (void)nt;
-            if (ok && rm > best) { best = rm; bestLo = l; bestHi = h; }
+            const int rm = AdjBankRoom(l, l + W, n, vals, n);
+            if (rm > best) { best = rm; bestLo = l; bestHi = l + W; }
         }
-    }
     if (best < 0) return false;
     lo = (int16_t)bestLo; hi = (int16_t)bestHi; room = best;
     return true;
@@ -456,6 +462,7 @@ FLASHMEM static int AdjRegionOf(const AdjRow &r, int us) // which region of the 
 // already puts every bank in its own zone is left as it is.
 static int16_t AdjSeenUs[BANKS_USED + 1][CHANNELSUSED];   // the channel's output seen in each bank on this page (-1 = not yet)
 FLASHMEM static void AdjSeenClear() { for (int b = 0; b <= BANKS_USED; ++b) for (int c = 0; c < CHANNELSUSED; ++c) AdjSeenUs[b][c] = -1; }
+static uint32_t AdjSeenHoldUntil = 0;   // B141: no measuring before this (a spacing changed the curves: the output in hand is the old one)
 extern uint16_t (*Interpolate[3])(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel);
 FLASHMEM static int AdjTxBankUs(int ch0, int bank) // this transmitter's output on channel ch0 (0-based) in a bank, as the flight controller sees it; -1 if unknown
 {
@@ -485,12 +492,12 @@ FLASHMEM static int AdjBankValues(int ch0, int *vals)
 }
 // The bank line's ends for this transmitter: the travel whose even divisions give each bank its own zone with the most room
 // (AdjBestEnds), n = how many banks the channel tells apart (rising from bank 1); false, with the reason, when it cannot.
-FLASHMEM static bool AdjBankFit(int ch0, int16_t &lo, int16_t &hi, int &n, char *why, size_t len)
+FLASHMEM static bool AdjBankFit(int ch0, int16_t &lo, int16_t &hi, int &n, int &room, char *why, size_t len)
 {
     int vals[BANKS_USED + 1];
     n = AdjBankValues(ch0, vals);
+    room = 0;
     if (n < 2) { snprintf(why, len, "Channel %d has no value of its own in each bank of this transmitter (bank 1 %d us, bank 2 %d us): the flight controller cannot tell the banks apart on it.", ch0 + 1, vals[1], vals[2]); return false; }
-    int room = 0;
     if (!AdjBestEnds(vals, n, lo, hi, room))
     {
         char v[40] = ""; for (int b = 1; b <= n; ++b) { char one[10]; snprintf(one, sizeof(one), "%s%d", b > 1 ? ", " : "", vals[b]); strncat(v, one, sizeof(v) - strlen(v) - 1); }
@@ -502,42 +509,112 @@ FLASHMEM static bool AdjBankFit(int ch0, int16_t &lo, int16_t &hi, int &n, char 
     return true;
 }
 // B132 (Malcolm, 19 Oct 2026, the Adjust page after six banks: "Not sure how to extend this screen to 6"): banks 5 and 6 are bank
-// 4's twins until set, so the bank line's channel tells only four apart. A tap on the kind box offers to give the channel a
-// height of its own in each of the model's banks - flat curves, evenly over its travel (0, 36, 72, 108, 144, 180 degrees for
-// six; 0, 60, 120, 180 for four) - then the row is fitted to them: six zones for Save to write.
-FLASHMEM static int AdjSpacedDeg(int b, int n) { return n > 1 ? ((b - 1) * 180 + (n - 1) / 2) / (n - 1) : 90; }   // bank b of n: its height
-FLASHMEM static void AdjSpaceBanks(int ch0, char *note, size_t len) // the channel flat in every bank the model uses, at AdjSpacedDeg; the model saved; the note says so
+// 4's twins until set, so the bank line's channel tells only four apart: the channel is set flat in every bank the model
+// uses, then the row is fitted to the values: six zones for Save to write (B133: no question asked).
+// B141 (Malcolm, 20 Oct, six banks: "it does not get the channel positions into the centre of the zones ... If six zones are
+// displayed, then I think the software should immediately check the channel settings and put the blips in the right
+// place"): the heights were even in DEGREES (0, 36, 72, 108, 144, 180 for six), but the flight controller sees the
+// receiver's CRSF, clamped at 988 and 2012 us: on the wide range (500 to 2500 us) 36 degrees is 900 us - 988 at the flight
+// controller, the same as bank 1 - and 144 degrees 2100 us, the same as bank 6, so no travel told the six apart and the
+// row took the travel's ends with the banks landing 1, 1, 3, 4, 6, 6 (four banks worked by one microsecond: 60 degrees is
+// 1160 us against a division at 1159). Now the heights are chosen by what the flight controller SEES: bank 1 and the last
+// bank at the travel's ends (0 and 180 degrees: the clamp gives them the most room), each bank between at the height whose
+// output lands nearest the even division between those two (AdjHeightFor: the transmitter's own output arithmetic, so the
+// range, trims, reversal (B139) and routing (B31) are all in). A line whose banks sit off the middle of their zones is
+// spaced too (AdjRoomWanted), not only one that cannot tell the banks apart.
+// The card is NOT written here (it was): the channel's curves are kept (AdjUndoKeep) and the model is written once the flight
+// controller has the zones (AdjModelCommit, after Save's read-back); leaving the page without saving puts the curves back
+// (AdjModelRevert), so the transmitter and the flight controller never disagree about the banks.
+struct AdjUndoRec { uint8_t ch; uint8_t pts[BANKS_USED + 1][CURVE_POINTS_MAX]; uint8_t sto[BANKS_USED + 1][CURVE_STORE_MAX]; };
+#define ADJ_UNDO_MAX 3
+DMAMEM static AdjUndoRec AdjUndo[ADJ_UNDO_MAX];
+static int AdjUndoN = 0; static uint32_t AdjUndoModel = 0; static bool AdjModelDirty = false;   // the curves in memory differ from the card's
+FLASHMEM static void AdjUndoKeep(uint8_t ch) // the channel's curves in every bank, as they are now, once per page session
+{
+    if (AdjUndoN && AdjUndoModel != ModelNumber) AdjUndoN = 0;   // (another model loaded meanwhile: what was kept is not its)
+    for (int i = 0; i < AdjUndoN; ++i) if (AdjUndo[i].ch == ch) return;
+    if (AdjUndoN >= ADJ_UNDO_MAX) return;
+    AdjUndoRec &u = AdjUndo[AdjUndoN++];
+    u.ch = ch; AdjUndoModel = ModelNumber;
+    for (int b = 0; b <= BANKS_USED; ++b) { memcpy(u.pts[b], CurvePoint[b][ch], CURVE_POINTS_MAX); memcpy(u.sto[b], CurveStore[b][ch], CURVE_STORE_MAX); }
+}
+FLASHMEM static void AdjModelRevert() // the page left without saving: the channels it spaced back as they were
+{
+    if (AdjUndoModel == ModelNumber)
+        for (int i = 0; i < AdjUndoN; ++i)
+        {
+            const AdjUndoRec &u = AdjUndo[i];
+            for (int b = 0; b <= BANKS_USED; ++b) { memcpy(CurvePoint[b][u.ch], u.pts[b], CURVE_POINTS_MAX); memcpy(CurveStore[b][u.ch], u.sto[b], CURVE_STORE_MAX); }
+            GetCurveDots(u.ch, DualRateValue);
+        }
+    AdjUndoN = 0; AdjModelDirty = false;
+}
+FLASHMEM static void AdjModelCommit() // the flight controller has the zones: the model, with its spaced channels, to the card
+{
+    if (AdjModelDirty && AdjUndoModel == ModelNumber) SaveOneModel(ModelNumber);
+    AdjUndoN = 0; AdjModelDirty = false;
+}
+FLASHMEM static int AdjHeightUs(int ch0, uint8_t cv, int bank, int h) // the output the flight controller sees with the curve flat at h degrees in that bank (left so)
+{
+    CurveSetStraight((uint8_t)bank, cv, (uint8_t)h, (uint8_t)h);
+    return AdjTxBankUs(ch0, bank);
+}
+FLASHMEM static int AdjHeightFor(int ch0, uint8_t cv, int bank, int target, bool rev) // the height whose output lands nearest the target; the output rises with the height (falls when rev)
+{
+    int lo = 0, hi = 180;   // the first height whose output reaches the target is in lo..hi (180 when none does)
+    while (lo < hi)
+    {
+        const int mid = (lo + hi) / 2, v = AdjHeightUs(ch0, cv, bank, mid);
+        if (rev ? v <= target : v >= target) hi = mid; else lo = mid + 1;
+    }
+    int best = lo;
+    const int d = abs(AdjHeightUs(ch0, cv, bank, lo) - target);
+    if (lo > 0 && abs(AdjHeightUs(ch0, cv, bank, lo - 1) - target) < d) best = lo - 1;
+    return best;
+}
+FLASHMEM static void AdjSpaceBanks(int ch0, char *note, size_t len) // the channel flat in every bank the model uses, each in the middle of its zone as the flight controller sees it; the note says so
 {
     if (ch0 < 0 || ch0 >= CHANNELSUSED) return;
     const int n = BanksCount();
-    // B139 (Malcolm, 20 Oct, six banks on B138: "it did not automatically select the correct positions for all six places"):
-    // a REVERSED channel turns the spaced heights upside down on the wire (AdjTxBankUs applies the reversal after the
-    // curve), so the values fell from bank 1 to 6, AdjBankValues saw one bank, and the row took the travel's ends with the
-    // banks the wrong way round. Spaced the other way on a reversed channel, the output rises as the fit expects.
-    const bool rev = (ReversedChannelBITS & (1 << ch0)) != 0;
-    char degs[64] = "";
+    const uint8_t cv = SourceOfOutput((uint8_t)ch0);   // (the curve that makes this output - B31 routing)
+    AdjUndoKeep(cv);
+    AdjSeenClear();                                      // (computed from the curve below, not what was measured)
+    const int v0 = AdjHeightUs(ch0, cv, 1, 0), v180 = AdjHeightUs(ch0, cv, 1, 180);
+    const bool rev = v0 > v180;                          // (a reversed channel: the output falls as the height rises - B139)
+    const int fLo = rev ? v180 : v0, fHi = rev ? v0 : v180;
+    int hs[BANKS_USED + 1] = {0};
     for (int b = 1; b <= n; ++b)
     {
-        const uint8_t h = (uint8_t)(rev ? 180 - AdjSpacedDeg(b, n) : AdjSpacedDeg(b, n));
-        CurveSetStraight((uint8_t)b, (uint8_t)ch0, h, h);
-        char one[8]; snprintf(one, sizeof(one), "%s%d", b > 1 ? ", " : "", h); strncat(degs, one, sizeof(degs) - strlen(degs) - 1);
+        if (b == 1) hs[b] = rev ? 180 : 0;
+        else if (b == n) hs[b] = rev ? 0 : 180;
+        else hs[b] = AdjHeightFor(ch0, cv, b, fLo + ((fHi - fLo) * (b - 1) + (n - 1) / 2) / (n - 1), rev);
+        CurveSetStraight((uint8_t)b, cv, (uint8_t)hs[b], (uint8_t)hs[b]);
     }
-    GetCurveDots((uint8_t)ch0, DualRateValue);   // (the dots are a global: the bank in use's, afresh)
-    AdjSeenClear();                                 // (what was measured on this page is stale)
-    SaveOneModel(ModelNumber);
-    snprintf(note, len, "Channel %d set bank by bank: %s degrees%s.", ch0 + 1, degs, rev ? " (the channel is reversed)" : "");
+    GetCurveDots(cv, DualRateValue);   // (the dots are a global: the bank in use's, afresh)
+    AdjSeenClear();                    // (what was measured on this page is stale)
+    AdjSeenHoldUntil = millis() + 100; // (so is this loop's output, computed before the curves changed: measured again from the next pass but one)
+    AdjModelDirty = true; AdjUndoModel = ModelNumber;
+    char us[64] = "", degs[48] = "";
+    for (int b = 1; b <= n; ++b)
+    {
+        char one[10];
+        snprintf(one, sizeof(one), "%s%d", b > 1 ? ", " : "", AdjTxBankUs(ch0, b)); strncat(us, one, sizeof(us) - strlen(us) - 1);
+        snprintf(one, sizeof(one), "%s%d", b > 1 ? ", " : "", hs[b]); strncat(degs, one, sizeof(degs) - strlen(degs) - 1);
+    }
+    snprintf(note, len, "Channel %d set bank by bank: %s us, the middle of each zone (%s degrees%s).", ch0 + 1, us, degs, rev ? ", reversed" : "");
 }
 // B133: a row that MUST follow this transmitter's banks - the bank selector always, the rates selector when the rates follow the
 // banks (Model setup, Rates: "Rates follow banks"). A rates selector on a rates switch of its own is not one: left as the pilot set it.
 FLASHMEM static bool AdjBankLine(const AdjRow &r) { return r.fn == 2 || (r.fn == 1 && LinkRatesToBanks); }
-FLASHMEM static bool AdjBankRowRight(const AdjRow &r) // does the bank line as it is give every bank of this transmitter its own zone?
+FLASHMEM static bool AdjBankRowRight(const AdjRow &r) // does the bank line as it is give every bank of this transmitter its own zone (B141: near its middle)?
 {
     int vals[BANKS_USED + 1];
     const int n = AdjBankValues(r.ch + 5, vals);
     if (n < 2 || r.kind != AK_SWITCH || r.v[0] != 1) return false;
     if (AdjBankLine(r) ? (n < BanksCount() || r.n != BanksCount()) : r.n < n) return false;   // (B133: a bank line has a zone for every bank of the model, no more, no fewer)
-    for (int b = 1; b <= n; ++b) if (AdjZoneOf(r.lo, r.hi, r.n, vals[b]) != b) return false;
-    return true;
+    const int room = AdjBankRoom(r.lo, r.hi, r.n, vals, n);
+    if (room < 0) return false;
+    return !AdjBankLine(r) || room >= AdjRoomWanted(r.lo, r.hi, r.n);
 }
 static bool AdjBankFitted[ADJ_MAX];   // the row's ends are this transmitter's (no handles to drag)
 // B138: the channel is spaced (AdjSpaceBanks) at most ONCE per row and channel. Malcolm, 20 Oct 2026, a six-bank model:
@@ -566,20 +643,21 @@ FLASHMEM static bool AdjFitBankRow(int i) // a bank row's ends from this transmi
 {
     AdjRow &r = AdjRows[i];
     if (r.fn != 1 && r.fn != 2) { AdjBankFitted[i] = false; return false; }
-    int16_t lo, hi; int n;
+    int16_t lo, hi; int n, room = 0;
     bool spaced = false;
-    bool fits = AdjBankFit(r.ch + 5, lo, hi, n, AdjBankWhy, sizeof(AdjBankWhy));
+    bool fits = AdjBankFit(r.ch + 5, lo, hi, n, room, AdjBankWhy, sizeof(AdjBankWhy));
     if (!AdjBankLine(r) && !fits) { AdjBankFitted[i] = false; return false; }   // (a rates switch of its own: as before B133)
-    if (AdjBankLine(r) && (!fits || n < BanksCount()))
+    if (AdjBankLine(r) && (!fits || n < BanksCount() || room < AdjRoomWanted(lo, hi, n)))
     { // B133 (Malcolm, 19 Oct 2026: "If user chose 6 then six should just be there. If 4 then only four. Immediately ... we know exactly
       // what that channel must do ... right in the middle of the zone"): the channel does not tell every bank of the model apart (banks
-      // 5 and 6 are bank 4's twins until set), or no travel divides its values: it is set flat in every bank, evenly over its travel
+      // 5 and 6 are bank 4's twins until set), no travel divides its values, or a bank sits off the middle of its zone (B141): it is
+      // set flat in every bank, each in the middle of its zone as the flight controller sees it
         if (!AdjSpacedOnce[i])
         { // (B138: once per row and channel - see AdjSpacedOnce; a channel the spacing cannot separate takes the travel's ends below)
             AdjSpacedOnce[i] = true;
             AdjSpaceBanks(r.ch + 5, AdjBankWhy, sizeof(AdjBankWhy));
             char scratch[120];
-            fits = AdjBankFit(r.ch + 5, lo, hi, n, scratch, sizeof(scratch));
+            fits = AdjBankFit(r.ch + 5, lo, hi, n, room, scratch, sizeof(scratch));
             spaced = true;
         }
         if (!fits || n < BanksCount())
@@ -610,8 +688,9 @@ FLASHMEM static void AdjLiveBody() // the chosen channel's position, from this t
     const AdjRow &r = AdjRows[AdjAt];
     const int ch = r.ch + 6;   // 1-based channel
     const int us = (ch >= 1 && ch <= CHANNELSUSED) ? AdjFcUs(SendBuffer[ch - 1]) : -1;
-    if (Bank >= 1 && Bank <= BANKS_USED && (BoundFlag && ModelMatched))
-    { // what this transmitter sends in the bank in use, for the bank line's fit (measured beats computed)
+    if (Bank >= 1 && Bank <= BANKS_USED && (BoundFlag && ModelMatched) && (int32_t)(millis() - AdjSeenHoldUntil) >= 0)
+    { // what this transmitter sends in the bank in use, for the bank line's fit (measured beats computed; B141: not just after a
+      // spacing - the output in hand was computed before the curves changed, and a stale value would un-fit the row for a tick)
         bool fresh = false;   // (the bank channel of the row showing: a stick moving is not news)
         for (int c = 0; c < CHANNELSUSED; ++c) { const int v = AdjFcUs(SendBuffer[c]); if (AdjSeenUs[Bank][c] != v) { AdjSeenUs[Bank][c] = (int16_t)v; if (c == ch - 1) fresh = true; } }
         if (fresh && (r.fn == 1 || r.fn == 2) && AdjStep_ == ADJ_IDLE)
@@ -621,7 +700,7 @@ FLASHMEM static void AdjLiveBody() // the chosen channel's position, from this t
             if (!AdjBankFitted[AdjAt] && AdjFitBankRow(AdjAt))
             { // a bank seen for the first time shows the line as it is cannot follow this transmitter: the ends re-fitted (B133: the channel spaced if it had to be, said first)
                 AdjEdited(); AdjShow();
-                char m[200]; snprintf(m, sizeof(m), "%s%sPress Save: the bank selector now matches this transmitter's banks.", AdjBankWhy, AdjBankWhy[0] ? "\r\n" : "");
+                char m[320]; snprintf(m, sizeof(m), "%s%sPress Save: the bank selector now matches this transmitter's banks.", AdjBankWhy, AdjBankWhy[0] ? "\r\n" : "");
                 AdjBusy(m); AdjMsgUntil = millis() + 8000;
                 return;
             }
@@ -956,6 +1035,7 @@ FLASHMEM void AdjustPoll()
         bool same = nl == ADJ_MAX;
         for (int i = 0; same && i < nl; ++i) if (!AdjSameLine(L[i], AdjWritten[i])) same = false;
         AdjTakeRows(AdjImg, n);
+        AdjModelCommit();   // (B141: the flight controller has the zones: the model, with its spaced bank channel, to the card)
         Adj_Was_Edited = AdjTakeNote[0] != 0; AdjStep_ = ADJ_IDLE;
         AdjHead(); AdjShow();
         AdjBusy(AdjTakeNote[0] ? AdjTakeNote : same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
@@ -1004,6 +1084,7 @@ FLASHMEM void AdjustPoll()
 }
 FLASHMEM static void AdjReset() // B140: the page opens (StartJobsView): nothing read yet
 {
+    AdjModelRevert();   // (B141: a channel spaced on a visit the page did not leave by OK: back as the card has it)
     Adj_Was_Edited = false; AdjHave = false; AdjMissing = false; AdjN = 0; AdjAt = 0; AdjNowKnown = false; AdjNowRow = -1; AdjStep_ = ADJ_IDLE;
     AdjSeenClear(); memset(AdjBankFitted, 0, sizeof(AdjBankFitted)); memset(AdjSpacedOnce, 0, sizeof(AdjSpacedOnce)); AdjBankWhy[0] = 0; AdjTakeNote[0] = 0; AdjMemoN = 0;
 }
@@ -1059,7 +1140,7 @@ FLASHMEM void AdjustKindTapped() // Knob -> Switch 2 -> Switch 3 -> Switch 4 -> 
         if (AdjFitBankRow(AdjAt)) AdjEdited();
         if (!AdjBankFitted[AdjAt]) { MsgBox((char *)"page AdjustView", AdjBankWhy); AdjHead(); }
         AdjShow();
-        if (AdjBankFitted[AdjAt]) { char m[200]; snprintf(m, sizeof(m), "%s%s", AdjBankWhy, AdjBankWhy[0] ? "\r\nPress Save." : "Matched to this transmitter's banks"); AdjBusy(m); AdjMsgUntil = millis() + 6000; }
+        if (AdjBankFitted[AdjAt]) { char m[320]; snprintf(m, sizeof(m), "%s%s", AdjBankWhy, AdjBankWhy[0] ? "\r\nPress Save." : "Matched to this transmitter's banks"); AdjBusy(m); AdjMsgUntil = millis() + 6000; }
         return;
     }
     int32_t lo = r.v[0], hi = r.v[0];

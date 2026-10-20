@@ -191,6 +191,7 @@ FLASHMEM void EndJobsView() // OK
         if (!RfSaveFirst("page AdjustView", "The edited switches and knobs are", JobsSaveNow, EndJobsView, &JobsEditedFlag)) return;   // B102
     }
     Sw_Was_Edited = false; Adj_Was_Edited = false; AdjStep_ = ADJ_IDLE;
+    AdjModelRevert();   // (B141: Discard, or nothing to save: a bank channel spaced on this visit goes back as the card has it)
     RotorFlightStart();
 }
 FLASHMEM void JobsPageBack() // the page is back on the screen (its postinitialize prints "ldrcadj"): the values as typed, the bar again

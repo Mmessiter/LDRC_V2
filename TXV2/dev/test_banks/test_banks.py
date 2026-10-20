@@ -111,7 +111,12 @@ static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 
    + lift('include/SDcard.h', 'FLASHMEM void BanksCopy(') + lift('include/SDcard.h', 'FLASHMEM static void BanksFromFour()') \
    + lift('include/SDcard.h', 'FLASHMEM static int BanksBlockBuild(') + lift('include/SDcard.h', 'FLASHMEM static bool BanksBlockTake(') \
    + lift('include/SDcard.h', 'FLASHMEM void SixBanksSet(') + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') \
-   + 'static uint8_t DualRateValue = 100; static uint16_t ReversedChannelBITS = 0; static int savesSeen = 0, seenClears = 0; static void SaveOneModel(uint32_t) { ++savesSeen; } static void GetCurveDots(uint8_t, uint16_t) {} static void AdjSeenClear() { ++seenClears; } static uint8_t BanksCount() { return SixBanks ? 6 : 4; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + one_liner(src('include/RF_Adjust.h'), 'FLASHMEM static int AdjSpacedDeg(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjSpaceBanks(') \
+   + 'static uint8_t DualRateValue = 100; static uint16_t ReversedChannelBITS = 0; static int savesSeen = 0, seenClears = 0; static void SaveOneModel(uint32_t) { ++savesSeen; } static void GetCurveDots(uint8_t, uint16_t) {} static void AdjSeenClear() { ++seenClears; } static uint8_t BanksCount() { return SixBanks ? 6 : 4; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') \
+   + '#define MINMICROS 500\n#define MAXMICROS 2500\nstatic uint32_t millis() { return 0; }\nstatic uint8_t SourceOfOutput(uint8_t o) { return o; }\nstatic uint16_t CurveMicros(uint8_t d) { const uint32_t lo = MaxRangeNarrow ? 945 : 500, hi = MaxRangeNarrow ? 2055 : 2500; return (uint16_t)(lo + ((uint32_t)d * (hi - lo) + 90) / 180); }\n' \
+   + lift('include/RF_Adjust.h', 'FLASHMEM static int AdjFcUs(') + 'static int AdjTxBankUs(int ch0, int bank) { int v = CurveMicros(CurvePoint[bank][ch0][0]); if (ReversedChannelBITS & (1 << ch0)) v = MAXMICROS - (v - MINMICROS); return AdjFcUs((uint16_t)v); }\n' \
+   + one_liner(src('include/RF_Adjust.h'), 'static uint32_t AdjSeenHoldUntil') + one_liner(src('include/RF_Adjust.h'), 'struct AdjUndoRec') + one_liner(src('include/RF_Adjust.h'), '#define ADJ_UNDO_MAX') + one_liner(src('include/RF_Adjust.h'), 'DMAMEM static AdjUndoRec AdjUndo') + one_liner(src('include/RF_Adjust.h'), 'static int AdjUndoN') \
+   + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjUndoKeep(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjModelRevert(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjModelCommit(') \
+   + lift('include/RF_Adjust.h', 'FLASHMEM static int AdjHeightUs(') + lift('include/RF_Adjust.h', 'FLASHMEM static int AdjHeightFor(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjSpaceBanks(') \
    + lift_from(sdc_old, 'void ReadModelExtension()', ('void ReadModelExtension()', 'void ReadModelExtensionOld()')) \
    + lift_from(sdc_old, 'void SaveModelExtension()', ('void SaveModelExtension()', 'void SaveModelExtensionOld()')) + r'''
 // helpers
@@ -220,24 +225,37 @@ int main()
         SixBanksSet(false); CHECK(!SixBanks);
         (void) size;
     }
-    // ---- d. the Adjust page's spacing (B132): the bank line's channel flat in every bank, evenly over its travel
+    // ---- d. the Adjust page's spacing (B132; B141: by what the flight controller sees): the bank line's channel flat in every
+    // bank, each in the middle of its zone - on the wide range 0, 63, 81, 99, 117, 180 degrees for six (988, 1193 ... 2012 us
+    // at the flight controller), 0, 75, 105, 180 for four; the card untouched until AdjModelCommit; AdjModelRevert puts the
+    // channel back
     for (int six = 0; six < 2; ++six) {
-        randomModel(six); SixBanks = six; const int ch = 6; savesSeen = seenClears = 0;
-        char note[120]; AdjSpaceBanks(ch, note, sizeof(note));
-        CHECK(strstr(note, six ? "0, 36, 72, 108, 144, 180 degrees" : "0, 60, 120, 180 degrees") && strncmp(note, "Channel 7 set bank by bank", 26) == 0);
-        const int n = six ? 6 : 4; const int want4[] = {0, 60, 120, 180}, want6[] = {0, 36, 72, 108, 144, 180};
+        randomModel(six); SixBanks = six; MaxRangeNarrow = 0; const int ch = 6; savesSeen = seenClears = 0; AdjUndoN = 0; AdjModelDirty = false;
+        uint8_t was[BANKS_USED + 1][CURVE_POINTS_MAX]; for (int b = 0; b <= BANKS_USED; ++b) memcpy(was[b], CurvePoint[b][ch], CURVE_POINTS_MAX);
+        char note[200]; AdjSpaceBanks(ch, note, sizeof(note));
+        CHECK(strcmp(note, six ? "Channel 7 set bank by bank: 988, 1193, 1398, 1602, 1807, 2012 us, the middle of each zone (0, 63, 81, 99, 117, 180 degrees)." : "Channel 7 set bank by bank: 988, 1330, 1670, 2012 us, the middle of each zone (0, 75, 105, 180 degrees).") == 0);
+        const int n = six ? 6 : 4; const int want4[] = {0, 75, 105, 180}, want6[] = {0, 63, 81, 99, 117, 180};
         for (int b = 1; b <= n; ++b) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[b][ch][k] == (six ? want6 : want4)[b - 1]);
-        CHECK(savesSeen == 1 && seenClears == 1);
-        if (!six) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[5][ch][k] != 0 || CurvePoint[6][ch][k] != 0 || true);   // (banks 5 and 6 untouched with four: whatever they held)
+        CHECK(savesSeen == 0 && seenClears == 2 && AdjModelDirty && AdjUndoN == 1 && AdjUndo[0].ch == ch);
+        if (!six) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[5][ch][k] == was[5][k] && CurvePoint[6][ch][k] == was[6][k]);   // (banks 5 and 6 untouched with four)
         // B139: a REVERSED channel is spaced the other way round (the reversal is applied after the curve), so the wire still rises from bank 1
         ReversedChannelBITS = (uint16_t)(1 << ch); savesSeen = seenClears = 0; AdjSpaceBanks(ch, note, sizeof(note));
-        CHECK(strstr(note, six ? "180, 144, 108, 72, 36, 0 degrees (the channel is reversed)" : "180, 120, 60, 0 degrees (the channel is reversed)") != nullptr);
+        CHECK(strstr(note, six ? "(180, 117, 99, 81, 63, 0 degrees, reversed)." : "(180, 105, 75, 0 degrees, reversed).") != nullptr && strncmp(note, "Channel 7 set bank by bank: 988, ", 33) == 0);
         for (int b = 1; b <= n; ++b) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[b][ch][k] == 180 - (six ? want6 : want4)[b - 1]);
-        CHECK(savesSeen == 1 && seenClears == 1);
+        CHECK(savesSeen == 0 && seenClears == 2 && AdjUndoN == 1);   // (kept once per channel and page)
         ReversedChannelBITS = 0;
-        for (int c = 0; c < CHANNELSUSED; ++c) if (c != ch) CHECK(CurvePoint[1][c][0] == CurvePoint[1][c][0]);
+        for (int c = 0; c < CHANNELSUSED; ++c) if (c != ch) for (uint8_t k = 0; k < CurveN(c); ++k) CHECK(CurvePoint[1][c][k] == CurvePoint[1][c][k]);
+        // leaving without saving: the channel back as it was, in every bank; the card not written
+        AdjModelRevert();
+        for (int b = 0; b <= BANKS_USED; ++b) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[b][ch][k] == was[b][k]);
+        CHECK(savesSeen == 0 && !AdjModelDirty && AdjUndoN == 0);
+        // saved: the card written once, the undo forgotten
+        AdjSpaceBanks(ch, note, sizeof(note)); CHECK(AdjModelDirty); AdjModelCommit(); CHECK(savesSeen == 1 && !AdjModelDirty && AdjUndoN == 0 && CurvePoint[2][ch][0] == (six ? 63 : 75));
+        // another model loaded meanwhile: nothing of it is touched
+        AdjSpaceBanks(ch, note, sizeof(note)); ModelNumber = 2; savesSeen = 0; AdjModelRevert(); CHECK(CurvePoint[2][ch][0] == (six ? 63 : 75) && AdjUndoN == 0); ModelNumber = 1;
+        // the narrow range (945 to 2055): the middles by the same rule
+        MaxRangeNarrow = 1; AdjSpaceBanks(ch, note, sizeof(note)); CHECK(strstr(note, six ? "(0, 41, 74, 106, 139, 180 degrees)." : "(0, 63, 117, 180 degrees).") != nullptr); MaxRangeNarrow = 0; AdjModelRevert();
     }
-    CHECK(AdjSpacedDeg(1, 6) == 0 && AdjSpacedDeg(2, 6) == 36 && AdjSpacedDeg(6, 6) == 180 && AdjSpacedDeg(2, 4) == 60 && AdjSpacedDeg(1, 1) == 90);
     printf("test_banks (file): %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -370,7 +388,7 @@ check('b <= BanksCount() && found < 3' in main_cpp and '"vis BK%d,%d"' in main_c
 adj = src('include/RF_Adjust.h'); kt = adj[adj.index('FLASHMEM void AdjustKindTapped()'):]; kt = kt[:kt.index('\n}\n')]
 fit = adj[adj.index('FLASHMEM static bool AdjFitBankRow(int i)'):]; fit = fit[:fit.index('\n}\n')]
 right = adj[adj.index('FLASHMEM static bool AdjBankRowRight(const AdjRow &r)'):]; right = right[:right.index('\n}\n')]
-check('if (AdjBankLine(r) && (!fits || n < BanksCount()))' in fit and 'AdjSpaceBanks(r.ch + 5, AdjBankWhy, sizeof(AdjBankWhy));' in fit and 'if (!spaced && r.kind == AK_SWITCH && r.n == n' in fit and 'if (!AdjBankLine(r) && !fits) { AdjBankFitted[i] = false; return false; }' in fit, "B133: a bank line that cannot tell every bank apart is spaced, no question asked, then fitted; a rates switch of its own is left alone")
+check('if (AdjBankLine(r) && (!fits || n < BanksCount() || room < AdjRoomWanted(lo, hi, n)))' in fit and 'AdjSpaceBanks(r.ch + 5, AdjBankWhy, sizeof(AdjBankWhy));' in fit and 'if (!spaced && r.kind == AK_SWITCH && r.n == n' in fit and 'if (!AdjBankLine(r) && !fits) { AdjBankFitted[i] = false; return false; }' in fit, "B133: a bank line that cannot tell every bank apart is spaced, no question asked, then fitted; a rates switch of its own is left alone")
 check('AdjBankLine(r) ? (n < BanksCount() || r.n != BanksCount()) : r.n < n' in right and 'return r.fn == 2 || (r.fn == 1 && LinkRatesToBanks);' in adj, "B133: a bank line is right only with a zone for every bank of the model; the rates selector follows the banks only when the rates do")
 check('GetConfirmation((char *)"page AdjustView", ask)' not in kt and '"Banks 1 to %d of %d"' not in adj, "B132's offer and its words are gone")
 check('Press Save: the bank selector now matches this transmitter' in adj and 'AdjBankWhy[0] ? "\\r\\n" : ""' in adj, 'the live fit says what it set, then Press Save')

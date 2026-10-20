@@ -186,6 +186,39 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Bank selector: each bank in the middle of its zone, as the flight controller sees it (Teensy B141, 20 Oct 2026)
+
+Malcolm, B140 on the six-bank model: "I have set channel 7 to banks, and it has been initially set to four. And this is
+working, but if I change to six, it does not get the channel positions into the centre of the zones ... If six zones are
+displayed, then I think the software should immediately check the channel settings and put the blips in the right place."
+
+The spacing (B132) set the channel flat at heights even in DEGREES: 0, 36, 72, 108, 144, 180 for six banks. But the flight
+controller sees the receiver's CRSF, which clamps at 988 and 2012 us, and on the wide range (500 to 2500 us) 36 degrees is
+900 us - 988 at the flight controller, the same as bank 1 - and 144 degrees is 2100 us, the same as bank 6. No travel could
+tell the six apart, so the row took the travel's ends with six even zones and the banks landed in zones 1, 1, 3, 4, 6, 6:
+six zones on the screen, the blips not in their middles. (Four banks, 0, 60, 120, 180 degrees = 988, 1160, 1840, 2012 us,
+worked by ONE microsecond: bank 2's 1160 against a division at 1159.)
+
+Now the heights are chosen by what the flight controller sees (RF_Adjust.h AdjSpaceBanks, AdjHeightFor): bank 1 and the last
+bank at the travel's ends (0 and 180 degrees, the clamp giving them the most room), each bank between at the height whose
+output lands nearest the even division between those two, found with the transmitter's own output arithmetic (the model's
+range, trims, a reversed channel, a re-routed output). Wide range, six banks: 0, 63, 81, 99, 117, 180 degrees = 988, 1193,
+1398, 1602, 1807, 2012 us, each within 5 us of its zone's middle. The note says so: "Channel 7 set bank by bank: 988, 1193,
+1398, 1602, 1807, 2012 us, the middle of each zone (0, 63, 81, 99, 117, 180 degrees)."
+
+A bank line whose banks sit off the middle of their zones (more than an eighth of a zone: AdjRoomWanted, AdjBankRoom) is
+spaced too, at once, when the page reads it or a bank is first seen - not only one that cannot tell the banks apart. So a
+channel set by hand, Black Thunder 2's way, is put in the middles on the first visit, and "Press Save" asked for.
+
+The model is no longer written to the card by the spacing itself. The channel's curves are kept (AdjUndoKeep), the card is
+written once the flight controller has read back the zones (AdjModelCommit, in Save), and leaving the page without saving
+(OK, "Save now?", Discard) puts the curves back (AdjModelRevert), as does the next opening after a visit that ended some
+other way. The transmitter and the flight controller never disagree about the banks. (The output in hand in the loop pass
+that spaces a channel was computed before the curves changed: it is not measured for 100 ms, or it un-fitted the row for a
+tick.) Help SWKNOBS.TXT. Tests: dev/test_jobs/test_jobs.py (259 checks: the fake transmitter now has the real 500-2500 /
+945-2055 ranges and the Teensy's rounding map, step 18 is Malcolm's four-then-six on the wide range, the narrow range, a
+hand-set channel, Discard) and dev/test_banks/test_banks.py part d (the real CurveSetStraight, revert, commit, another model).
+
 ## Switches and knobs: one page for both of Rotorflight's tables (Teensy B140, pages 67/68, screen 1.11.101, 20 Oct 2026)
 
 Malcolm: "If selecting the channel/switch for banks selection is under switches on the app and under adjustments on the
