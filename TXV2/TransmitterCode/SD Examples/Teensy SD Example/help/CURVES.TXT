@@ -3,8 +3,12 @@ for each stick position (across). The channel is named at the top|
 right, with the bank under it.||
 TO CHANGE THE CURVE:|
 - Touch the graph above or below a point: the point moves there.|
-- For small steps, press 'Next point' until the ring is on the|
-point you want, then press '-' or '+'.|
+- For small steps, press 'Next' until the ring is on the point|
+you want, then press '-' or '+'.|
+- 'Flat': every point takes the ringed point's height, for a|
+level line (a governed throttle at full, for instance).|
+- 'Reset': the curve as new - a straight line from bottom left|
+to top right, and no expo. The shape and the points stay chosen.|
 - Choose the shape: 'Straight', 'Smooth' or 'Exponential'.|
 - Choose how many points: 'Points: 3 5 7 9' (see below).|
 - Turn on 'Copy to all banks' to copy this curve to every bank|
@@ -35,8 +39,8 @@ THE SHAPES:|
 2. Smooth: a smooth curve through the points.|
 3. Exponential: three points (the ends and the centre) joined|
 by two expo curves. Only those three points can be moved, and|
-'Next point' skips the others.|
+'Next' skips the others.|
 Set 'Expo' (-50 to +150) with the slider, or with the '-' and '+'|
 beside it for single steps. Expo 0 gives straight lines.|
-The slider is hard to stop at exactly 0, so 'Zero expo' sets 0|
+The slider is hard to stop at exactly 0, so 'Expo 0' sets 0|
 for you (and chooses 'Exponential').|

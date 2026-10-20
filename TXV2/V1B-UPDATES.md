@@ -186,6 +186,27 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The curve page: no flash, and Reset and Flat (Teensy B135, page 21, 20 Oct 2026)
+
+Malcolm: "if I move a point and it must redraw, it briefly displays the background image before redrawing. I think it should
+simply clear; which might be quicker too." It was ClearBox, from Version 1: before every redraw that followed a touch, a switch,
+the expo slider, Help or a bank change, the Teensy set the page's picture again (GraphView.pic - the screen repaints the whole
+page, the picture showing in the box), waited 50 ms, cleared the box, waited 5 ms more, and only then drew. DisplayCurve has
+always cleared the box with its own fill, in the same burst as the lines, and the screen shows a burst whole: the +, - and Next
+point buttons never flashed. Now every redraw goes that way; ClearBox is gone.
+
+"Please can we add a reset button? This button should put expo to zero and put all points onto a straight line (x=y) as though
+it had never been edited." and "add another button 'Flat'. This button should take the height of the currently selected point
+and adjust all other to the same height creating a flat horizontal line." Two buttons in the bottom row (page 21): **Flat**
+beside + (every point the ringed point's height; a governed throttle at full in one press) and **Reset** (this bank's curve as
+a new model has it: every point on the line from bottom left to top right whatever the count, nothing remembered for the other
+counts, expo 0; the shape and the count stay as chosen). Like a moved point, neither is saved until OK; with Copy to all banks
+on, OK copies the result to every bank. Numbered functions 225 and 226 (CurveResetTapped, CurveFlatTapped). Then Malcolm: "the
+buttons at the bottom should be all equal in width": seven of 103 px, 5 apart, 35 to 786 - **Next - + Flat Reset Expo 0 OK**;
+"Next point" and "Zero expo" (114 px in the buttons' font) became **Next** and **Expo 0**. CURVES.TXT and the CURVES animation
+say so (the film presses Flat, then Reset, before OK). Test: dev/test_curve_points (Reset and Flat for every count and shape;
+the row equal and in order; the help's words).
+
 ## The help and the animations catch up with the day (Teensy B134, films, 19 Oct 2026)
 
 Malcolm: "Please revise the help files and animations where today's additions call for it. Eg motor off value is no longer -67."

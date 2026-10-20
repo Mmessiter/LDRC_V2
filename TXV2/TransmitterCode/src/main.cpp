@@ -2094,6 +2094,29 @@ FLASHMEM void CurvePoints3Tapped() { CurvePointsChosen(3); }
 FLASHMEM void CurvePoints5Tapped() { CurvePointsChosen(5); }
 FLASHMEM void CurvePoints7Tapped() { CurvePointsChosen(7); }
 FLASHMEM void CurvePoints9Tapped() { CurvePointsChosen(9); }
+// B135 (Malcolm, 20 Oct 2026): two more buttons on the curve page. "Reset ... should put expo to zero and put all points onto
+// a straight line (x=y) as though it had never been edited": this bank's curve for the channel as a new model has it - every
+// point on the line from bottom left to top right (0 .. 180 degrees, whatever the count, nothing remembered for the other
+// counts), no expo; the shape and the count stay as chosen. "Flat ... should take the height of the currently selected point
+// and adjust all others to the same height creating a flat horizontal line": every point the ringed point's height (a governed
+// throttle at full, for instance). Neither is saved until OK, like a moved point; with Copy to all banks on, OK copies it.
+FLASHMEM void CurveResetTapped()
+{
+    if (ChanneltoSet < 1 || ChanneltoSet > 16)
+        return;
+    CurveSetStraight(Bank, ChanneltoSet - 1, 0, 180);
+    Exponential[Bank][ChanneltoSet - 1] = DEFAULT_EXPO;
+    DisplayCurveAndServoPos(); // (updateInterpolationTypes puts the slider and its number at 0)
+}
+FLASHMEM void CurveFlatTapped()
+{
+    if (ChanneltoSet < 1 || ChanneltoSet > 16)
+        return;
+    CheckInvisiblePoint(); // (the ring is always on a point that is shown; this makes sure)
+    const uint8_t h = CurvePoint[Bank][ChanneltoSet - 1][CurrentPoint - 1];
+    CurveSetStraight(Bank, ChanneltoSet - 1, h, h);
+    DisplayCurveAndServoPos();
+}
 // The numbers along the top of the curve page: which boxes show them (n1-n5 for 3 and 5 points - 3 uses n1, n3, n5, as an
 // exponential curve does; n1 k2 k3 n3 k5 k6 n5 for 7; m1-m9, smaller, for 9), their values in microseconds, and the Points
 // radios. One write.
@@ -2802,8 +2825,12 @@ void ReadNewSwitchFunction()
 /*********************************************************************************************************************************/
 FASTRUN void DisplayCurveAndServoPos()
 {
-    ClearBox();
-    DelayWithDog(5);
+    // B135 (Malcolm, 20 Oct 2026: "if I move a point and it must redraw, it briefly displays the background image before
+    // redrawing. I think it should simply clear; which might be quicker too"): this began by setting the page's picture
+    // again (GraphView.pic - the screen repaints the whole page, the picture showing in the box), waited 50 ms, cleared the
+    // box, waited again, and only then drew. The picture was Version 1's way of rubbing out the old curve. DisplayCurve's own
+    // fill clears the box, in the same burst as the redraw: the screen shows nothing between the two (and the +, - and Next
+    // point buttons always came this way).
     DisplayCurve(); // B117: the curve (ShowServoPos used to redraw it all for the marker; now it only moves the marker)
     for (int i = 0; i < 2; ++i)
     {
@@ -3288,7 +3315,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 225 // One more than final one
+#define LASTFUNCTION1 227 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3515,7 +3542,9 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     CurvePoints3Tapped,   // 221 (B118: the curve page's Points 3 5 7 9)
     CurvePoints5Tapped,   // 222
     CurvePoints7Tapped,   // 223
-    CurvePoints9Tapped    // 224 B113: ... 945 to 2055
+    CurvePoints9Tapped,   // 224 B113: ... 945 to 2055
+    CurveResetTapped,     // 225 B135: the curve page's Reset (a straight line from corner to corner, no expo)
+    CurveFlatTapped       // 226 B135: its Flat (every point the ringed point's height)
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4777,7 +4806,7 @@ FASTRUN void ButtonWasPressed()
             return;
         }
 
-        if (InStrng(Reset, TextIn)) // Now zeros EXPO only
+        if (InStrng(Reset, TextIn)) // Now zeros EXPO only (the curve page's "Zero expo"; B135: its Reset and Flat are CurveResetTapped / CurveFlatTapped)
         {
             Exponential[Bank][ChanneltoSet - 1] = DEFAULT_EXPO;
             InterpolationTypes[Bank][ChanneltoSet - 1] = EXPONENTIALCURVES; // expo = default

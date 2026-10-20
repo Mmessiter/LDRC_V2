@@ -44,10 +44,10 @@ old_main, old_rates = old('src/main.cpp'), old('include/DualRates.h')
 HAVE_OLD = 'ChannelMidLow[InputChannel]' in old_main and 'MinDegrees[Bank][OutputChannel]' in old_rates
 if not HAVE_OLD: print('NOTE: commit %s is not in this repository: the comparison with the old maths is skipped' % OLD_COMMIT)
 defs = src('include/1Definitions.h'); util = src('include/Utilities.h'); sdc = src('include/SDcard.h'); main = src('src/main.cpp')
-DEFS = '\n'.join(l for l in defs.split('\n') if re.match(r'#define (CURVE_POINTS_MAX|CURVE_STORE_MAX|CURVE_UNSET|STRAIGHTLINES|SMOOTHEDCURVES|EXPONENTIALCURVES|RANGE_NARROW_LO|RANGE_NARROW_HI|MINMICROS|MAXMICROS|CHANNELSUSED|TX_EXT_MAGIC|TX_EXT_MAGIC2|TX_EXT_MAGIC3|TX_EXT_MAGIC4)\b', l)) + '\n'
-assert DEFS.count('#define') == 15, DEFS
+DEFS = '\n'.join(l for l in defs.split('\n') if re.match(r'#define (CURVE_POINTS_MAX|CURVE_STORE_MAX|CURVE_UNSET|STRAIGHTLINES|SMOOTHEDCURVES|EXPONENTIALCURVES|RANGE_NARROW_LO|RANGE_NARROW_HI|MINMICROS|MAXMICROS|CHANNELSUSED|TX_EXT_MAGIC|TX_EXT_MAGIC2|TX_EXT_MAGIC3|TX_EXT_MAGIC4|DEFAULT_EXPO)\b', l)) + '\n'
+assert DEFS.count('#define') == 16, DEFS
 DEFS += '\n'.join(l for l in sdc.split('\n') if l.startswith('#define MODEL_EXT_OFFSET_B113 ') or l.startswith('#define MODEL_EXT2_')) + '\n'
-assert DEFS.count('#define') == 20, DEFS
+assert DEFS.count('#define') == 21, DEFS
 INLINES = '\n'.join(l for l in util.split('\n') if re.match(r'inline uint16_t (RangeLo|RangeHi|CurveMicros)\(', l)) + '\n'
 assert INLINES.count('inline') == 3, INLINES
 def rename(code, a, b): return code.replace(a, b, 1)
@@ -107,6 +107,7 @@ uint16_t CurveDots[CURVE_POINTS_MAX]; uint8_t CurveDotsN = 5;
 double PointsCount = 5; double xPoints[CURVE_POINTS_MAX], yPoints[CURVE_POINTS_MAX];
 uint32_t ModelNumber = 1;
 static int saves = 0, redraws = 0; static void SaveOneModel(uint32_t) { ++saves; } static void DisplayCurve() { ++redraws; } static void ClearText() {}
+static void DisplayCurveAndServoPos() { ++redraws; }   // (B135: Reset and Flat redraw this way)
 #define MAXMACROS 8
 #define MACROMOVETOPOSITION 4
 static uint8_t MacrosBuffer[MAXMACROS][8];
@@ -131,6 +132,7 @@ void CheckInvisiblePoint();
 @INVISIBLE@
 @CHOSEN@
 @MOVEUP@
+@RESETFLAT@
 @CONVERT@
 @OLD@
 // the screen's wire
@@ -378,6 +380,29 @@ int main()
         if (w.n == 7 && w.type != EXPONENTIALCURVES) { snprintf(c, sizeof(c), "k2.val=%d", CurveMicros(CurvePoint[1][0][1])); CHECK(has(stream, c) && has(stream, "vis n2,0") && has(stream, "vis k6,1")); }
         if (w.n == 9 && w.type != EXPONENTIALCURVES) { snprintf(c, sizeof(c), "m5.val=%d", CurveMicros(CurvePoint[1][0][4])); CHECK(has(stream, c) && has(stream, "vis n1,0")); }
     }
+    // B135 (Malcolm, 20 Oct 2026): Reset (every point on the line 0 .. 180, no expo) and Flat (every point the ringed point's
+    // height), for each count and shape: the shape, the count, the ring and the other banks untouched; nothing saved (OK saves)
+    for (int n : {3, 5, 7, 9}) for (int type = 0; type < 3; ++type) {
+        ChanneltoSet = 4; const int ch = 3; CurvePointCount[ch] = (uint8_t) n; Bank = 2; InterpolationTypes[2][ch] = (uint8_t) type; Exponential[2][ch] = 120;
+        for (int k = 0; k < CURVE_POINTS_MAX; ++k) CurvePoint[2][ch][k] = (uint8_t) (k < n ? rnd() % 181 : 0);
+        for (int s = 0; s < CURVE_STORE_MAX; ++s) CurveStore[2][ch][s] = (uint8_t) (rnd() % 181);
+        uint8_t other[CURVE_POINTS_MAX]; memcpy(other, CurvePoint[1][ch], CURVE_POINTS_MAX);
+        CurrentPoint = (uint8_t) (1 + rnd() % n); CheckInvisiblePoint();
+        const int h = CurvePoint[2][ch][CurrentPoint - 1], was = CurrentPoint, r0 = redraws, s0 = saves;
+        CurveFlatTapped();
+        bool flat = true; for (int k = 0; k < n; ++k) if (CurvePoint[2][ch][k] != h) flat = false;
+        CHECK(flat && CurrentPoint == was && redraws == r0 + 1 && InterpolationTypes[2][ch] == type && Exponential[2][ch] == 120 && CurveN(ch) == n);
+        for (int s = 0; s < CURVE_STORE_MAX; ++s) { bool active = false; for (int k = 0; k < n; ++k) if (CurveStorePos((uint8_t) n, (uint8_t) k) == s) active = true; CHECK(CurveStore[2][ch][s] == (active ? h : CURVE_UNSET)); }
+        CHECK(memcmp(other, CurvePoint[1][ch], CURVE_POINTS_MAX) == 0);
+        CurveResetTapped();
+        for (int k = 0; k < n; ++k) CHECK(CurvePoint[2][ch][k] == (180 * k + (n - 1) / 2) / (n - 1));
+        CHECK(CurvePoint[2][ch][0] == 0 && CurvePoint[2][ch][CurveMid(n)] == 90 && CurvePoint[2][ch][n - 1] == 180 && Exponential[2][ch] == DEFAULT_EXPO);
+        CHECK(InterpolationTypes[2][ch] == type && CurveN(ch) == n && CurrentPoint == was && redraws == r0 + 2 && saves == s0);
+        for (int s = 0; s < CURVE_STORE_MAX; ++s) { bool active = false; for (int k = 0; k < n; ++k) if (CurveStorePos((uint8_t) n, (uint8_t) k) == s) active = true; CHECK(active ? CurveStore[2][ch][s] != CURVE_UNSET : CurveStore[2][ch][s] == CURVE_UNSET); }
+        CHECK(memcmp(other, CurvePoint[1][ch], CURVE_POINTS_MAX) == 0);
+        ChanneltoSet = 0; CurveResetTapped(); CurveFlatTapped(); CHECK(redraws == r0 + 2);   // (no channel chosen: nothing)
+    }
+    ChanneltoSet = 1; Bank = 1; CurvePointCount[3] = 5;
     // the dots shown and the point stepping, for each count and shape
     for (int n : {3, 5, 7, 9}) {
         CurvePointCount[0] = (uint8_t) n;
@@ -408,6 +433,7 @@ prog = (PROGRAM.replace('@DEFS@', DEFS).replace('@MAP@', TEENSY_MAP).replace('@I
         .replace('@INVISIBLE@', lift('src/main.cpp', 'void CheckInvisiblePoint()'))
         .replace('@CHOSEN@', lift('src/main.cpp', 'FLASHMEM void CurvePointsChosen(uint8_t n)'))
         .replace('@MOVEUP@', lift('src/main.cpp', 'void MoveCurrentPointUp()'))
+        .replace('@RESETFLAT@', lift('src/main.cpp', 'FLASHMEM void CurveResetTapped()') + lift('src/main.cpp', 'FLASHMEM void CurveFlatTapped()'))
         .replace('@CONVERT@', lift('src/main.cpp', 'FLASHMEM void MaxRangeConvert(uint8_t narrow)'))
         .replace('@OLD@', OLD if HAVE_OLD else '#define NO_OLD 1\n')
         .replace('@GRAPHCMD@', lift('src/main.cpp', 'FLASHMEM static void GraphCmd('))
@@ -449,5 +475,24 @@ for fn in ('void MoveCurrentPointUp()', 'void MoveCurrentPointDown()', 'void Mov
 check('CurveStore[p][ChanneltoSet - 1][s] = CurveStore[Bank][ChanneltoSet - 1][s];' in wnc, 'Copy to all banks copies the remembered heights too')
 check('CurveStoreClear(j, i);' in sd and 'CurveStore[j][i][k * 2] = CurvePoint[j][i][k];' in sd, 'a model read: the five of old become the store')
 check('TX_EXT_MAGIC4' in sd and 'MODEL_EXT2_AT_B118' in sd, "the file: B121's block written, B118's still read")
+# ---- B135 (20 Oct 2026): no flash of the background when a point is moved; the Reset and Flat buttons
+dcs = lift('src/main.cpp', 'FASTRUN void DisplayCurveAndServoPos()')
+check('ClearBox' not in dcs and 'DelayWithDog' not in dcs and 'delay(' not in dcs and 'DisplayCurve();' in dcs, "B135: a redraw no longer sets the page's picture first, nor waits")
+check('"GraphView.pic"' not in main and '"GraphView.pic"' not in util and 'void ClearBox()' not in util, "B135: nothing but the page itself sets the curve page's picture")
+check('CurveResetTapped,     // 225' in main and 'CurveFlatTapped       // 226' in main and '#define LASTFUNCTION1 227' in main, 'B135: Reset is numbered function 225, Flat 226')
+import json
+SCREEN = os.path.join(ROOT, '..', 'ESP32-board2', 'board4', 'nextion-emulator')
+p21 = os.path.join(SCREEN, 'sd', 'hmi', 'pages', '21.json')
+if os.path.exists(p21):
+    by = {c['n']: c for c in json.load(open(p21))['comps']}
+    check(by['restart']['txt'] == 'Reset' and 'va0.val=225<<8' in by['restart']['ev']['r'] and by['flat']['txt'] == 'Flat' and 'va0.val=226<<8' in by['flat']['ev']['r'], 'B135: the page has Reset (225) and Flat (226)')
+    row = sorted((c['x'], c['x'] + c['w'], c['n']) for c in by.values() if c.get('y') == 414)
+    check(all(row[i][1] < row[i + 1][0] for i in range(len(row) - 1)) and row[0][0] >= 35 and row[-1][1] <= 786 and [r[2] for r in row] == ['b1', 'b9', 'b5', 'flat', 'restart', 'reset', 'b0'], 'B135: the bottom row in order, nothing overlapping: Next - + Flat Reset Expo 0 OK')
+    check(len(set(r[1] - r[0] for r in row)) == 1 and len(set(row[i + 1][0] - row[i][1] for i in range(len(row) - 1))) == 1, 'the seven buttons are equal in width and evenly spaced (Malcolm, 20 Oct 2026)')
+    check(by['b1']['txt'] == 'Next' and by['reset']['txt'] == 'Expo 0' and 'print "Reset"' in by['reset']['ev']['p'], "Next and Expo 0 (Next point and Zero expo were too wide for equal buttons); Expo 0 still sends the text Reset (expo 0 only)")
+else:
+    print('NOTE: the screen project is not beside this one: the page checks are skipped')
+helpf = open(os.path.join(ROOT, 'Help files for SD', 'CURVES.TXT'), encoding='utf-8').read()
+check("- 'Flat': every point takes the ringed point's height" in helpf and "- 'Reset': the curve as new" in helpf and "press 'Next' until the ring" in helpf and "'Expo 0' sets 0" in helpf and 'Next point' not in helpf and 'Zero expo' not in helpf and all(len(l) <= 71 for l in helpf.split('\n')), 'B135: CURVES.TXT says what Flat and Reset do, calls the buttons Next and Expo 0, lines no wider than 70')
 print('%d source checks, %d failed' % (checks, fails))
 sys.exit(1 if fails else 0)

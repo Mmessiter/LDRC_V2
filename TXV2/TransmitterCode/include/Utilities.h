@@ -1184,17 +1184,8 @@ void DrawLine(int x1, int y1, int x2, int y2, int c)
 
 
 /*********************************************************************************************************************************/
-
-void ClearBox()
-{
-    char cmd[80];
-    SendOtherValue((char *)"GraphView.pic", BackGroundSelection);
-    delay(50);
-    char fillcmd[] = "fill 36, 36, 360, 360,0";
-    strcpy(cmd, fillcmd);
-    SendCommand(cmd);
-}
-// *********************************************************************************************************************************/
+// (B135: ClearBox, which set the curve page's picture again before every redraw - the flash of the background in the box -
+// is gone; DisplayCurve clears the box itself.)
 void DelaySimple(uint32_t ms)
 {
     uint32_t ThisMoment = millis();
