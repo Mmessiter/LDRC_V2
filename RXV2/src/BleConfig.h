@@ -151,8 +151,9 @@ inline String  bleReqId;
 // without ids, actively misleading.
 inline volatile bool bleReplyStale = false;
 
-// outbound pump
-inline bool    blePumping  = false;
+// outbound pump. blePumping is cleared from the NimBLE task (a fresh 'Q'
+// mid-pump, a disconnect) and read by the pump in loop(): volatile (0.9.901).
+inline volatile bool blePumping = false;
 inline String  bleHeaderFrame;
 inline size_t  bleTxOffset = 0;
 
@@ -330,8 +331,14 @@ class BleReqCallbacks : public NimBLECharacteristicCallbacks {
             // we are still pumping means it gave up on that response (stall
             // timeout). Drop the stale pump immediately — otherwise its
             // leftover chunks arrive ahead of the new response and derail
-            // the app's framing.
-            if (blePumping) { blePumping = false; bleBody = ""; bleHeaderFrame = ""; }
+            // the app's framing. Only the FLAG is touched here (0.9.901):
+            // bleBody and bleHeaderFrame belong to loop(), which may be
+            // inside the pump at this very moment - clearing them from this
+            // task left it reading a body that had just become empty
+            // (length - offset wrapped, a chunk of whatever lay in the old
+            // buffer went out). The pump checks the flag between notifies
+            // and stops; bleExecuteRequest replaces both strings.
+            if (blePumping) blePumping = false;
             size_t bar = v.find('|');
             if (bar == std::string::npos) return;
             bleInboxExpected = strtoul(v.substr(1, bar - 1).c_str(), nullptr, 10);
@@ -792,6 +799,7 @@ inline void blePoll() {
     const uint32_t budgetUs = txLive ? BLE_PUMP_US_FLYING : BLE_PUMP_US;
     const uint32_t pumpT0 = micros();
     while (bleTxOffset < bleBody.length() && sentThisCall < BLE_PUMP_BUDGET) {
+        if (!blePumping) return;                                // a fresh 'Q' (or a drop) ended this reply mid-body (0.9.901)
         if ((uint32_t)(micros() - pumpT0) > budgetUs) return;   // rest next pass
         size_t n = min(chunk, bleBody.length() - bleTxOffset);
         if (!bleRespChr->notify((const uint8_t*)bleBody.c_str() + bleTxOffset, n)) {

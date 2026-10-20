@@ -1107,6 +1107,11 @@ class MainActivity : AppCompatActivity() {
                 checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                 runCatching { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 77) }   // so the "update in progress" notice can show; the service runs either way
         }
+        // Link counters at the start: a failure line then says what the link
+        // did during THIS install (5.204 - the 20 Oct failure said only
+        // "cannot be converted to JSONObject"; the detail is in Send debug data).
+        val linkAtStart = ble.counts()
+        ble.note("install started")
         try {
             otaPhase = "download"; otaMsg = "Downloading with the phone's internet…"; otaSent = 0; otaTotal = 0
             val fw = httpDownload(fwUrl)
@@ -1177,8 +1182,11 @@ class MainActivity : AppCompatActivity() {
             // Throwable, not Exception (0.9.746): an OutOfMemoryError on this
             // bare thread had no handler at all and killed the app.
             otaPhase = "error"
-            otaMsg = if (e is OutOfMemoryError) "the phone ran out of memory - close other apps and try again"
-                     else (e.message ?: e.javaClass.simpleName)
+            val link = ble.counts().since(linkAtStart)
+            otaMsg = (if (e is OutOfMemoryError) "the phone ran out of memory - close other apps and try again"
+                      else (e.message ?: e.javaClass.simpleName)) +
+                     (if (link.isNotEmpty()) " [Bluetooth: $link]" else "")
+            ble.note("install failed: " + (e.message ?: e.javaClass.simpleName))
             runCatching { bleReqSync("POST", "/api/bleota/status") }
         } finally {
             runOnUiThread {
@@ -2238,7 +2246,7 @@ class MainActivity : AppCompatActivity() {
                     "/app/debug/export" -> {
                         val sb = StringBuilder(body.ifEmpty { "(the page sent nothing)" })
                         sb.append("\n\nWHAT THE APP DID (this phone)\n")
-                        sb.append("  (the Android app keeps no link log yet \u2014 iOS does)\n")
+                        sb.append(ble.logText().ifEmpty { "  (nothing logged yet)" }).append('\n')
                         sb.append("\nPHONE\n  app ")
                           .append(packageManager.getPackageInfo(packageName, 0).versionName)
                           .append(" on Android ").append(android.os.Build.VERSION.RELEASE)

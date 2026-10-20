@@ -80,7 +80,20 @@ class Rxv2Ble(private val context: Context) {
     private val adapter: BluetoothAdapter? =
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
     private var scanner: BluetoothLeScanner? = null
-    private var gatt: BluetoothGatt? = null
+    // ONE BluetoothGatt at a time (5.204). A second connectGatt while an
+    // earlier one is still open (a direct connect by MAC that never gave up,
+    // then a tap in the list) makes two clients on one link: Android then
+    // hands EVERY notification to both, each reply arrives twice, and a
+    // header lands where a body was due. The old one is closed before a new
+    // one is made, and callbacks from any object other than this one are
+    // ignored. Read from binder threads too, hence volatile.
+    @Volatile private var gatt: BluetoothGatt? = null
+    private fun closeOldGatt(why: String) {
+        val old = gatt ?: return
+        gatt = null
+        runCatching { old.disconnect() }; runCatching { old.close() }
+        note("closed the previous link ($why)")
+    }
     private var reqChr: BluetoothGattCharacteristic? = null
     private var respChr: BluetoothGattCharacteristic? = null
     private var mtu = 23
@@ -89,7 +102,8 @@ class Rxv2Ble(private val context: Context) {
     private class Pending(val payload: ByteArray, val cb: (kotlin.Result<Response>) -> Unit,
                           val rawChunks: List<ByteArray>? = null,
                           val firstByteMs: Long = 12000,
-                          val id: Int = 0)                 // echoed by the receiver as "#id" (0.9.746)
+                          val id: Int = 0,                 // echoed by the receiver as "#id" (0.9.746)
+                          val path: String = "")           // for the link log only
     private val queue = ArrayDeque<Pending>()
     private var inFlight: Pending? = null
     // Request ids (0.9.746). The bridge had no way to tie a reply to a request:
@@ -101,14 +115,49 @@ class Rxv2Ble(private val context: Context) {
     // a receiver that knows about it echoes "#n" in the location slot, and a
     // reply whose id is not the one we are waiting for is swallowed and
     // dropped. Old receivers echo nothing, and behave exactly as before.
-    private var nextReqId = 1
-    private var rxStale = false        // swallowing a reply for a request we gave up on
-    private var rxHeader = ByteArrayOut()
-    private var rxBody = ByteArrayOut()
-    private var rxExpected = -1
-    private var rxCode = 0; private var rxType = ""; private var rxLocation = ""
-    private var rxDiscarded = 0
+    // Taken on the caller's thread (the page bridge, the install thread, the
+    // recorder all call request()) - atomic, or two callers could draw the same
+    // number and a stale reply would pass as fresh (5.204).
+    private val nextReqId = java.util.concurrent.atomic.AtomicInteger(1)
+    // Reply reassembly lives in ReplyFramer (pure Kotlin, unit-tested): a
+    // packet that parses as a header IS a header, whatever state we are in,
+    // and a reply whose id is not the one we wait for is swallowed (5.204).
+    private val framer = ReplyFramer()
     private var timeout: Runnable? = null
+
+    // ── Link log ───────────────────────────────────────────────────
+    // What the link did, oldest first, as iOS has had since 0.9.816: a failed
+    // install can then be READ (Send debug data on the Help page, or the
+    // bracket on the install's failure line) instead of guessed at. Counters
+    // since the app started; the install thread differences them.
+    private val logLines = ArrayDeque<String>()
+    private val logClock = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+    @Volatile var timeouts = 0; private set
+    @Volatile var staleReplies = 0; private set
+    @Volatile var resyncs = 0; private set
+    @Volatile var badFrames = 0; private set
+    @Volatile var drops = 0; private set
+    fun note(s: String) {
+        synchronized(logLines) {
+            logLines.addLast(logClock.format(java.util.Date()) + "  " + s)
+            while (logLines.size > 80) logLines.removeFirst()
+        }
+    }
+    fun logText(): String = synchronized(logLines) { logLines.joinToString("\n") }
+    class Counts(val timeouts: Int, val stale: Int, val resyncs: Int, val bad: Int, val drops: Int) {
+        /** "2 timeouts, 1 stale reply, 3 resyncs" for the difference against an earlier snapshot; "" when nothing happened. */
+        fun since(then: Counts): String {
+            val parts = ArrayList<String>()
+            fun add(n: Int, one: String, many: String) { if (n > 0) parts.add("$n " + (if (n == 1) one else many)) }
+            add(timeouts - then.timeouts, "timeout", "timeouts")
+            add(stale - then.stale, "stale reply", "stale replies")
+            add(resyncs - then.resyncs, "resync", "resyncs")
+            add(bad - then.bad, "bad frame", "bad frames")
+            add(drops - then.drops, "drop", "drops")
+            return parts.joinToString(", ")
+        }
+    }
+    fun counts() = Counts(timeouts, staleReplies, resyncs, badFrames, drops)
     private val txChunks = ArrayDeque<ByteArray>()   // outgoing request chunks, fed by onCharacteristicWrite
 
     private fun writeNextChunk(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
@@ -263,6 +312,8 @@ class Rxv2Ble(private val context: Context) {
         // (fastConnect) without waiting for a scan to hear an advert.
         context.getSharedPreferences("scanner", android.content.Context.MODE_PRIVATE)
             .edit().putString("lastAddr", d.device.address).putInt("lastRssi", d.rssi).apply()
+        closeOldGatt("connecting to ${d.name}")
+        note("connect ${d.name} (${d.rssi} dBm)")
         gatt = d.device.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
     }
 
@@ -284,6 +335,11 @@ class Rxv2Ble(private val context: Context) {
         lastDevice = dev
         userDisconnect = false
         state = State.Connecting(name)
+        closeOldGatt("fast connect to $name")
+        note("fast connect $name by address")
+        // Deadline as for a tap in the list: a direct connect that never
+        // reports would otherwise sit for ever (5.204).
+        armConnectWatchdog(name, lastRssi, 20_000)
         gatt = dev.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
         return true
     }
@@ -306,15 +362,16 @@ class Rxv2Ble(private val context: Context) {
     private fun tryReconnect() {
         if (userDisconnect) { state = State.Idle; return }   // the pilot chose to leave meanwhile
         val d = lastDevice ?: run { state = State.Idle; return }
-        if (System.currentTimeMillis() > reconnectUntil) { state = State.Idle; return }
+        if (System.currentTimeMillis() > reconnectUntil) { note("reconnect window closed"); state = State.Idle; return }
+        closeOldGatt("reconnecting")
+        note("reconnect attempt")
         gatt = d.connectGatt(context, false, gattCb, BluetoothDevice.TRANSPORT_LE)
     }
 
     // ── Public request API ──────────────────────────────────────────
     fun request(method: String, path: String, headers: Map<String, String>,
                 body: ByteArray?, cb: (kotlin.Result<Response>) -> Unit) {
-        val id = nextReqId
-        nextReqId = if (nextReqId >= 999_999) 1 else nextReqId + 1
+        val id = nextReqId.getAndUpdate { if (it >= 999_999) 1 else it + 1 }
         val sb = StringBuilder("$method $path\n")
         sb.append("X-Req: $id\n")
         for ((k, v) in headers) sb.append("$k: $v\n")
@@ -351,7 +408,7 @@ class Rxv2Ble(private val context: Context) {
                 // carried the "much slower" regression (2026-09-14).
                 else                                 -> 4000L
             }
-            queue.addLast(Pending(payload, cb, firstByteMs = window, id = id))
+            queue.addLast(Pending(payload, cb, firstByteMs = window, id = id, path = path))
             pump()
         }
     }
@@ -365,7 +422,7 @@ class Rxv2Ble(private val context: Context) {
     fun otaSend(chunks: List<ByteArray>, cb: (kotlin.Result<Unit>) -> Unit) {
         bg.post {
             if (state !is State.Ready) { cb(kotlin.Result.failure(Exception("Not connected"))); return@post }
-            queue.addLast(Pending(ByteArray(0), { r -> cb(r.map { }) }, rawChunks = chunks))
+            queue.addLast(Pending(ByteArray(0), { r -> cb(r.map { }) }, rawChunks = chunks, path = "ota batch"))
             pump()
         }
     }
@@ -378,7 +435,7 @@ class Rxv2Ble(private val context: Context) {
         if (state !is State.Ready) return
         val next = queue.removeFirstOrNull() ?: return
         inFlight = next
-        rxHeader = ByteArrayOut(); rxBody = ByteArrayOut(); rxExpected = -1; rxDiscarded = 0
+        framer.reset()
         txChunks.clear()
 
         next.rawChunks?.let { raw ->
@@ -441,20 +498,27 @@ class Rxv2Ble(private val context: Context) {
     private fun armTimeout(ms: Long) {
         timeout?.let { bg.removeCallbacks(it) }
         timeout = Runnable {
+            timeouts++
+            val f = inFlight
+            note("timeout: " + (f?.path ?: "?") + " #" + (f?.id ?: 0) +
+                 (if (framer.expected >= 0) " (mid-body, ${framer.expected} expected)" else " (no header)"))
             finish(kotlin.Result.failure(Exception("Receiver did not answer (timeout)")))
         }.also { bg.postDelayed(it, ms) }
     }
 
     private fun finish(result: kotlin.Result<Response>) {
         timeout?.let { bg.removeCallbacks(it) }; timeout = null
-        rxStale = false
+        framer.reset()
         val done = inFlight; inFlight = null
         done?.cb?.invoke(result)
         pump()
     }
 
+    private val events = ArrayList<ReplyFramer.Event>(4)
+
     private fun handleNotify(data: ByteArray) {
-        if (inFlight == null) {
+        val f = inFlight
+        if (f == null) {
             // Between requests: only pushed channel frames appear.
             if (data.isNotEmpty() && data[0] == 'S'.code.toByte()) {
                 val s = String(data, Charsets.UTF_8)
@@ -463,85 +527,36 @@ class Rxv2Ble(private val context: Context) {
             return
         }
         armTimeout(5000)
-        if (rxExpected < 0) {
-            rxHeader.append(data)
-            while (true) {
-                val nl = rxHeader.indexOf('\n'.code.toByte())
-                if (nl < 0) {
-                    if (rxHeader.size() + rxDiscarded > 32768)
-                        finish(kotlin.Result.failure(Exception("Bad response framing")))
-                    return
-                }
-                val line = String(rxHeader.bytes(), 0, nl, Charsets.UTF_8)
-                if (line.startsWith("S|")) {
-                    ui.post { onStreamFrame?.invoke(line) }
-                    rxHeader = rxHeader.drop(nl + 1); continue
-                }
-                if (line.startsWith("R")) {
-                    val parts = line.substring(1).split("|", limit = 4)
-                    val code = parts.getOrNull(0)?.toIntOrNull()
-                    val len = parts.getOrNull(2)?.toIntOrNull()
-                    if (parts.size >= 3 && code != null && len != null &&
-                        code in 100..599 && len >= 0) {
-                        val loc = if (parts.size > 3) parts[3] else ""
-                        // Echoed request id: a reply for a request we gave up
-                        // on is consumed and dropped, never handed to the one
-                        // now waiting (0.9.746).
-                        val rid = if (loc.startsWith("#")) loc.substring(1).toIntOrNull() else null
-                        rxStale = rid != null && rid != (inFlight?.id ?: -1)
-                        rxCode = code; rxType = parts[1]; rxExpected = len
-                        rxLocation = if (loc.startsWith("#")) "" else loc
-                        rxBody = ByteArrayOut(); rxBody.append(rxHeader.bytes(), nl + 1, rxHeader.size() - (nl + 1))
-                        rxHeader = ByteArrayOut()
-                        break
-                    }
-                }
-                rxDiscarded += nl + 1
-                rxHeader = rxHeader.drop(nl + 1)
-                if (rxDiscarded > 32768) {
-                    finish(kotlin.Result.failure(Exception("Bad response framing"))); return
-                }
+        events.clear()
+        framer.feed(data, f.id, events)
+        for (e in events) when (e) {
+            is ReplyFramer.Event.Stream -> { val s = e.line; ui.post { onStreamFrame?.invoke(s) } }
+            is ReplyFramer.Event.StaleDropped -> {
+                staleReplies++
+                note("stale reply #${e.id ?: 0} dropped while waiting for ${f.path} #${f.id}")
+                armTimeout(f.firstByteMs)   // back to waiting for ours
             }
-        } else if (rxStale && data.isNotEmpty() && data[0] == 'R'.code.toByte() && looksLikeHeader(data)) {
-            // The receiver abandoned the stale reply mid-body (our new request
-            // reached it) and this packet is the header of OURS. A header is
-            // always its own packet, so this test is safe.
-            rxStale = false
-            rxBody = ByteArrayOut(); rxExpected = -1; rxHeader = ByteArrayOut()
-            handleNotify(data)
-            return
-        } else {
-            rxBody.append(data)
-        }
-        if (rxExpected in 0..rxBody.size()) {
-            if (rxStale) {
-                // Swallowed the whole stale reply - back to waiting for ours.
-                rxStale = false
-                val all = rxBody.bytes()
-                val rest = all.copyOfRange(rxExpected, rxBody.size())
-                rxBody = ByteArrayOut(); rxExpected = -1; rxHeader = ByteArrayOut()
-                armTimeout(inFlight?.firstByteMs ?: 4000L)
-                if (rest.isNotEmpty()) handleNotify(rest)
+            is ReplyFramer.Event.Resynced -> {
+                resyncs++
+                note("resync (${e.why}) waiting for ${f.path} #${f.id}")
+            }
+            is ReplyFramer.Event.Bad -> {
+                badFrames++
+                note("bad framing (${e.why}) for ${f.path} #${f.id}")
+                finish(kotlin.Result.failure(Exception("Bad response framing")))
                 return
             }
-            val body = rxBody.bytes().copyOfRange(0, rxExpected)
-            finish(kotlin.Result.success(Response(rxCode, rxType, rxLocation, body)))
+            is ReplyFramer.Event.Done -> {
+                val r = e.reply
+                finish(kotlin.Result.success(Response(r.code, r.contentType, r.location, r.body)))
+                return
+            }
         }
-    }
-
-    /** "R<code>|<type>|<len>|<loc>\n" at the start of a packet? */
-    private fun looksLikeHeader(d: ByteArray): Boolean {
-        val nl = d.indexOf('\n'.code.toByte()); if (nl < 0) return false
-        val line = String(d, 0, nl, Charsets.UTF_8)
-        if (!line.startsWith("R")) return false
-        val parts = line.substring(1).split("|", limit = 4)
-        val code = parts.getOrNull(0)?.toIntOrNull() ?: return false
-        val len = parts.getOrNull(2)?.toIntOrNull() ?: return false
-        return parts.size >= 3 && code in 100..599 && len >= 0
     }
 
     private fun cleanup(msg: String) {
         timeout?.let { bg.removeCallbacks(it) }; timeout = null
+        framer.reset()
         inFlight?.cb?.invoke(kotlin.Result.failure(Exception(msg))); inFlight = null
         while (queue.isNotEmpty()) queue.removeFirst().cb.invoke(kotlin.Result.failure(Exception(msg)))
         reqChr = null; respChr = null
@@ -550,7 +565,15 @@ class Rxv2Ble(private val context: Context) {
     // ── GATT callbacks (binder thread → post to main) ──────────────
     private val gattCb = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            if (g !== gatt) {
+                // Not the link we hold (a closed one reporting late): never a
+                // second client on the receiver (5.204).
+                runCatching { g.disconnect() }; runCatching { g.close() }
+                note("stale link object reported state $newState (status $status) - closed")
+                return
+            }
             if (newState == BluetoothProfile.STATE_CONNECTED) {
+                note("link up (status $status)")
                 // ONE GATT op at a time on Android. Request MTU first; the
                 // fast-connection request is issued from onMtuChanged (once
                 // the MTU exchange has completed) so it isn't silently
@@ -559,8 +582,15 @@ class Rxv2Ble(private val context: Context) {
                 g.requestMtu(517)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 bg.post {
+                    // status: 8 supervision timeout (radios lost each other),
+                    // 19 the receiver ended it, 22 we ended it, 62 never
+                    // established, 133 Android's catch-all - the receiver logs
+                    // its own view of the same drop ("reason 0x..").
+                    drops++
+                    note("link down (status $status) while ${state.javaClass.simpleName}" +
+                         (inFlight?.let { ", ${it.path} #${it.id} in flight" } ?: ""))
                     cleanup("Receiver disconnected")
-                    g.close(); gatt = null
+                    g.close(); if (gatt === g) gatt = null
                     // Any unexpected drop from a live link is ridden out
                     // (0.9.746). A deliberate reboot (install / save / fly)
                     // gets 90 s. A plain drop - the receiver's radio hiccupped,
@@ -590,13 +620,16 @@ class Rxv2Ble(private val context: Context) {
             }
         }
         override fun onMtuChanged(g: BluetoothGatt, m: Int, status: Int) {
+            if (g !== gatt) return
             mtu = if (status == BluetoothGatt.GATT_SUCCESS) m else 23
+            note("MTU $mtu (status $status)")
             // Now that the MTU exchange is done, ask for the fast interval
             // (sequenced, so it isn't dropped). Then discover services.
             g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
             g.discoverServices()
         }
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+            if (g !== gatt) return
             val svc = g.getService(SERVICE) ?: run {
                 run { state = State.Failed("RXV2 service not found") }; return
             }
@@ -617,21 +650,26 @@ class Rxv2Ble(private val context: Context) {
         }
         override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic,
                                            status: Int) {
+            if (g !== gatt) return
             if (c.uuid == REQ) bg.post { writeNextChunk(g, c) }
         }
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
+            if (g !== gatt) return
             bg.post {
                 cancelConnectWatchdog()
+                note("ready: $connName (notifications on, status $status)")
                 state = State.Ready(connName)
                 pump()
             }
         }
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic,
                                              value: ByteArray) {
+            if (g !== gatt) return
             if (c.uuid == RESP) bg.post { handleNotify(value) }
         }
         @Deprecated("pre-33")
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
+            if (g !== gatt) return
             @Suppress("DEPRECATION")
             val v = c.value ?: return
             if (c.uuid == RESP) bg.post { handleNotify(v) }
@@ -639,23 +677,4 @@ class Rxv2Ble(private val context: Context) {
     }
 }
 
-// Small growable byte buffer (avoids pulling in extra deps).
-class ByteArrayOut {
-    private var buf = ByteArray(256)
-    private var len = 0
-    fun append(d: ByteArray) = append(d, 0, d.size)
-    fun append(d: ByteArray, off: Int, n: Int) {
-        ensure(len + n); System.arraycopy(d, off, buf, len, n); len += n
-    }
-    fun size() = len
-    fun bytes() = buf
-    fun indexOf(b: Byte): Int { for (i in 0 until len) if (buf[i] == b) return i; return -1 }
-    fun drop(from: Int): ByteArrayOut {
-        val out = ByteArrayOut(); if (from < len) out.append(buf, from, len - from); return out
-    }
-    private fun ensure(cap: Int) {
-        if (cap <= buf.size) return
-        var n = buf.size; while (n < cap) n *= 2
-        buf = buf.copyOf(n)
-    }
-}
+// (ByteArrayOut, the small growable byte buffer, moved to ReplyFramer.kt in 5.204.)

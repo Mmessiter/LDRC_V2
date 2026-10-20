@@ -14,8 +14,8 @@ android {
         // Bump BOTH for every release published to messiter.com — the in-app
         // update check compares versionCode against rxv2app/release/manifest.json
         // (publish with ../publish_app.sh, which reads these values).
-        versionCode = 603
-        versionName = "5.203"
+        versionCode = 604
+        versionName = "5.204"
     }
     buildTypes {
         release { isMinifyEnabled = false }
@@ -30,4 +30,6 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // app/src/test: the Bluetooth reply framer, packet by packet (ReplyFramerTest)
+    testImplementation("junit:junit:4.13.2")
 }

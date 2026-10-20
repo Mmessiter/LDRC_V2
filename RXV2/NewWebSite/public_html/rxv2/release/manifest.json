@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.901-bluetooth-reply-resync",
+      "url": "https://messiter.com/rxv2/release/v0.9.901/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.901/littlefs.bin",
+      "fs_md5": "0798e7a5d0809b0adba7f2a10ca823a7",
+      "notes": "Bluetooth update from a phone: an install no longer fails with 'cannot be converted to JSONObject'. The apps read every reply header as a header, so a reply cut short or sent twice can no longer be taken for the body of the next one; the Android app keeps one Bluetooth link only (two made every reply arrive twice) and logs what the link did (Send debug data on the Help page, and a note on a failed install); the receiver's reply pump stops cleanly when a fresh request arrives mid-reply."
+    },
+    {
       "name": "RXV2-0.9.900-rescue-channel",
       "url": "https://messiter.com/rxv2/release/v0.9.900/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.900/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.890/littlefs.bin",
       "fs_md5": "42b9a4f8ccbd52f72bd7f5083a040093",
       "notes": "Save while the keyboard is up: the floating Save bar lands in the page flow (at the foot of the page, under Reload) for as long as a box is being typed in and the keyboard covers the window, and floats again when the keyboard goes - it used to step aside, so Save was out of reach until the keyboard was dismissed (Malcolm, the Travel page). Android, whose window shrinks for its keyboard, keeps the bar floating above it."
-    },
-    {
-      "name": "RXV2-0.9.889-save-bar",
-      "url": "https://messiter.com/rxv2/release/v0.9.889/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.889/littlefs.bin",
-      "fs_md5": "db27bf1bd16c6b57b4fae48a7cd0d802",
-      "notes": "The floating Save bar comes back after typing in a box: it hides only while a box is being typed in and the keyboard covers the window, measured zoom-proof (height x scale). A page zoomed in - by a pinch, or by iOS itself on focusing a small box - read as 'covered' before, and the bar stayed hidden for good (Malcolm, the Travel page). The leftover 2026-08-06 ride-up code that re-lifted the bar on every scroll is removed."
     }
   ],
   "rotorflight": {

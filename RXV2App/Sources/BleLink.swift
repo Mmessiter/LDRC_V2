@@ -540,6 +540,26 @@ final class BleLink: NSObject, ObservableObject {
             return
         }
         armTimeout(3)   // bytes are flowing — keep the watchdog fed
+        // A header is always its own packet, and a body packet never starts
+        // with "R<code>|<type>|<len>|...\n" — so a packet that parses as a
+        // header IS a header, whatever state we are in (apps 5.210, 20 Oct
+        // 2026: Malcolm's Android install failed because a reply header had
+        // been handed to the page as the body of the status reply). Mid-body
+        // it means the receiver abandoned that reply (its body was dropped
+        // when a new request reached it) or sent the header twice: the half
+        // reply is dropped. Mid-hunt, with junk piling up (leftovers of a
+        // reply we gave up on), the junk is dropped so the header is read
+        // whole instead of lost inside the junk's line.
+        if Self.looksLikeHeader(data) {
+            if rxExpected >= 0 {
+                note("resync: a header arrived with \(rxExpected - rxBody.count) body bytes still due (\(rxStale ? "stale reply" : "ours"))")
+            } else if !rxHeader.isEmpty {
+                note("resync: \(rxHeader.count) stale bytes dropped before a header")
+                rxDiscarded += rxHeader.count
+            }
+            rxStale = false
+            rxBody = Data(); rxExpected = -1; rxHeader = Data()
+        }
         if rxExpected < 0 {
             // Hunting for the header line. After a timed-out predecessor,
             // leftover chunks of the abandoned response can arrive first —
@@ -593,20 +613,13 @@ final class BleLink: NSObject, ObservableObject {
                     return
                 }
             }
-        } else if rxStale, data.first == UInt8(ascii: "R"), Self.looksLikeHeader(data) {
-            // The receiver abandoned the stale reply mid-body (our new request
-            // reached it) and this packet is the header of OURS. A header is
-            // always its own packet, so this test is safe.
-            rxStale = false
-            rxBody = Data(); rxExpected = -1; rxHeader = Data()
-            handleNotify(data)
-            return
         } else {
             rxBody.append(data)
         }
         if rxExpected >= 0 && rxBody.count >= rxExpected {
             if rxStale {
                 // Swallowed the whole stale reply — back to waiting for ours.
+                note("stale reply dropped while waiting for #\(inFlight?.id ?? 0)")
                 rxStale = false
                 let rest = Data(rxBody.dropFirst(rxExpected))
                 rxBody = Data(); rxExpected = -1; rxHeader = Data()

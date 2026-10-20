@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.900-rescue-channel";
+constexpr const char* FW_VERSION = "RXV2-0.9.901-bluetooth-reply-resync";
 
 //*********************************************************************
 //  Auto-update manifest URLs
