@@ -186,6 +186,16 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Adjustments: a reversed bank channel spaced the wrong way (Teensy B139, 20 Oct 2026)
+
+Malcolm, B138 on the six-bank model: "that crash is fixed. And the little blips appear showing me where the channel is.
+However, it did not automatically select the correct positions for all six places." The spacing (B132) sets the channel
+flat at 0, 36, 72, 108, 144 and 180 degrees in banks 1 to 6, but the reversal is applied after the curve: on a reversed
+channel the wire falls from bank 1 to 6, the fit sees a channel that tells one bank apart, and the row takes the travel's
+ends with the banks upside down. A reversed channel is now spaced the other way (180 down to 0), so the wire rises as
+the fit expects; the note says "(the channel is reversed)". The page test's stub now honours the spacing (a bank given a
+height outputs it), and step 10 walks the six banks on a plain and on a reversed channel.
+
 ## Adjustments: the reboot with a six-bank bank selector (Teensy B138, 20 Oct 2026)
 
 Malcolm, B137 on a six-bank model ("RAW 420 TEST"): the bank selector added and shown ("Banks 1 to 6 of this transmitter"),

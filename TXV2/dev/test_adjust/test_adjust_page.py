@@ -41,7 +41,10 @@ static bool LinkRatesToBanks = false;   // (B133: the rates selector is a rates 
 static inline uint16_t RangeLo() { return MINMICROS; } // (B113: the model's max range - here the widest, as ever; tested in dev/test_channel_us)
 static inline uint16_t RangeHi() { return MAXMICROS; }
 static uint32_t ModelNumber = 1; static int modelSaves = 0; static void SaveOneModel(uint32_t) { ++modelSaves; }   // (B132: the spacing saves the model)
-static void CurveSetStraight(uint8_t, uint8_t, uint8_t, uint8_t) {}
+// B139: the spacing's flat curves are honoured - a bank and channel given a height (degrees) outputs it (MINMICROS..MAXMICROS
+// over 0..180) instead of the stub table; -1 = no height set, the table rules
+static int curveDeg[BANKS_USED + 1][16];
+static void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi) { if (b <= BANKS_USED && ch < 16 && lo == hi) curveDeg[b][ch] = lo; }
 static inline uint16_t CurveMicros(uint8_t d) { return (uint16_t)(RangeLo() + ((uint32_t)d * (RangeHi() - RangeLo()) + 90) / 180); }
 static uint8_t Bank = 2;
 static uint8_t ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
@@ -55,7 +58,7 @@ static uint16_t ReversedChannelBITS = 0;
 static int GetTrimAmount(uint8_t) { return 0; }
 static void GetCurveDots(uint16_t, uint16_t) {}
 static uint16_t txUs[BANKS_USED + 1][16];   // [bank][channel 0-based]: what the stub curve gives
-static uint16_t stubInterp(uint16_t, uint16_t, uint16_t ch) { return txUs[Bank][ch]; }
+static uint16_t stubInterp(uint16_t, uint16_t, uint16_t ch) { if (Bank <= BANKS_USED && ch < 16 && curveDeg[Bank][ch] >= 0) return (uint16_t)(MINMICROS + ((uint32_t)curveDeg[Bank][ch] * (MAXMICROS - MINMICROS) + 90) / 180); return txUs[Bank][ch]; }
 uint16_t (*Interpolate[3])(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel) = {stubInterp, stubInterp, stubInterp};
 // ---- the fake screen
 static std::map<std::string, std::string> fields; static std::vector<std::string> cmds; static int boxes = 0; static std::string lastBox; static bool confirmAnswer = true; static int sounds = 0, rfStarts = 0;
@@ -111,6 +114,7 @@ static void putLine(int i, int fn, int ena, int enaLo, int enaHi, int ch, int a1
     uint8_t *o = adj + i * 14; o[0] = fn; o[1] = ena; o[2] = stp(enaLo); o[3] = stp(enaHi); o[4] = ch; o[5] = stp(a1Lo); o[6] = stp(a1Hi); o[7] = stp(a2Lo); o[8] = stp(a2Hi); o[9] = mn & 255; o[10] = mn >> 8; o[11] = mx & 255; o[12] = mx >> 8; o[13] = st;
 }
 int main() {
+    memset(curveDeg, -1, sizeof curveDeg);   // (no heights set: the stub table rules)
     memset(adj, 0, sizeof adj); for (int i = 0; i < 42; ++i) putLine(i, 0, 0, 1500, 1500, 0, 1500, 1500, 1500, 1500, 0, 0, 0);
     // this transmitter: channel 6 (AUX1) carries the bank as a value, Black Thunder 2's way (13, 54, 90, 151 degrees in
     // banks 1 to 4); every other channel sits at 1500 in every bank
@@ -268,13 +272,32 @@ int main() {
     fcLog.clear(); SaveAdjustments(); run(40); CHECK(writes(53) >= 1 && writes(250) == 1 && !Adj_Was_Edited);
     { AdjLine L[42]; AdjParseLines(adj, 588, L); CHECK(L[0].fn == 2 && L[0].min == 1 && L[0].max == 6 && L[0].adj == 1); }
     StartAdjustView(); run(6); CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && !Adj_Was_Edited);
-    // banks 5 and 6 as bank 4's twins
+    // banks 5 and 6 as bank 4's twins: the channel is spaced (0, 36 .. 180 degrees, B132) and the six zones follow
     confirmAnswer = true; AdjustRemove(); run(4); CHECK(AdjN == 0);
     txUs[5][6] = txUs[6][6] = txUs[4][6]; AdjSeenClear(); modelSaves = 0; Bank = 2; SendBuffer[6] = txUs[2][6];
+    memset(curveDeg, -1, sizeof curveDeg);
     AdjustAdd(); run(8); AdjustSettingNext(); vals["list"] = 0; AdjustPickOk(); run(8);
     CHECK(AdjN == 1 && AdjRows[0].fn == 2 && AdjRows[0].n == 6 && AdjBankFitted[0] && modelSaves == 1 && fields["tn2"] == "Banks 1 to 6 of this transmitter");
-    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; SendBuffer[6] = txUs[b][6]; run(8); }
-    CHECK(AdjN == 1 && AdjRows[0].fn == 2 && AdjRows[0].n == 6);
+    CHECK(curveDeg[1][6] == 0 && curveDeg[2][6] == 36 && curveDeg[4][6] == 108 && curveDeg[6][6] == 180);
+    for (int b = 1; b <= 6; ++b)
+    { // the switch walks every bank: each in its own zone, as the flight controller would pick it (the real output is what the stub curve gives)
+        Bank = (uint8_t)b; SendBuffer[6] = stubInterp(0, 0, 6); run(8);
+        char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e);
+    }
+    CHECK(AdjN == 1 && AdjRows[0].fn == 2 && AdjRows[0].n == 6 && AdjBankFitted[0]);
+    // B139: the same on a REVERSED channel - the spacing runs the other way (180 .. 0 degrees), so the wire still rises from bank 1
+    confirmAnswer = true; AdjustRemove(); run(4); CHECK(AdjN == 0);
+    ReversedChannelBITS = (uint16_t)(1 << 6); memset(curveDeg, -1, sizeof curveDeg); AdjSeenClear(); modelSaves = 0; Bank = 2; SendBuffer[6] = 2000 - (txUs[2][6] - 1000);
+    AdjustAdd(); run(8); AdjustSettingNext(); vals["list"] = 0; AdjustPickOk(); run(8);
+    CHECK(AdjN == 1 && AdjRows[0].fn == 2 && AdjRows[0].n == 6 && AdjBankFitted[0] && modelSaves == 1);
+    CHECK(curveDeg[1][6] == 180 && curveDeg[2][6] == 144 && curveDeg[6][6] == 0);
+    for (int b = 1; b <= 6; ++b)
+    {
+        Bank = (uint8_t)b; SendBuffer[6] = (uint16_t)(MAXMICROS - (stubInterp(0, 0, 6) - MINMICROS)); run(8);   // (the output as reversed on the wire)
+        char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(SendBuffer[6])); CHECK(fields["tn8"] == e);
+    }
+    CHECK(AdjBankFitted[0] && fields["busy"].find("would pick") == std::string::npos);
+    ReversedChannelBITS = 0; memset(curveDeg, -1, sizeof curveDeg);
     banksN = 4;
     // 8. no USB cable: the refusal, in the receiver's words, and back to the menu
     usb = false; boxes = 0; rfStarts = 0; StartAdjustView(); run(6);

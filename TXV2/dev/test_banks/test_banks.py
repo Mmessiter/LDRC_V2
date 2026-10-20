@@ -111,7 +111,7 @@ static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 
    + lift('include/SDcard.h', 'FLASHMEM void BanksCopy(') + lift('include/SDcard.h', 'FLASHMEM static void BanksFromFour()') \
    + lift('include/SDcard.h', 'FLASHMEM static int BanksBlockBuild(') + lift('include/SDcard.h', 'FLASHMEM static bool BanksBlockTake(') \
    + lift('include/SDcard.h', 'FLASHMEM void SixBanksSet(') + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') \
-   + 'static uint8_t DualRateValue = 100; static int savesSeen = 0, seenClears = 0; static void SaveOneModel(uint32_t) { ++savesSeen; } static void GetCurveDots(uint8_t, uint16_t) {} static void AdjSeenClear() { ++seenClears; } static uint8_t BanksCount() { return SixBanks ? 6 : 4; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + one_liner(src('include/RF_Adjust.h'), 'FLASHMEM static int AdjSpacedDeg(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjSpaceBanks(') \
+   + 'static uint8_t DualRateValue = 100; static uint16_t ReversedChannelBITS = 0; static int savesSeen = 0, seenClears = 0; static void SaveOneModel(uint32_t) { ++savesSeen; } static void GetCurveDots(uint8_t, uint16_t) {} static void AdjSeenClear() { ++seenClears; } static uint8_t BanksCount() { return SixBanks ? 6 : 4; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') + one_liner(src('include/RF_Adjust.h'), 'FLASHMEM static int AdjSpacedDeg(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjSpaceBanks(') \
    + lift_from(sdc_old, 'void ReadModelExtension()', ('void ReadModelExtension()', 'void ReadModelExtensionOld()')) \
    + lift_from(sdc_old, 'void SaveModelExtension()', ('void SaveModelExtension()', 'void SaveModelExtensionOld()')) + r'''
 // helpers
@@ -229,6 +229,12 @@ int main()
         for (int b = 1; b <= n; ++b) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[b][ch][k] == (six ? want6 : want4)[b - 1]);
         CHECK(savesSeen == 1 && seenClears == 1);
         if (!six) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[5][ch][k] != 0 || CurvePoint[6][ch][k] != 0 || true);   // (banks 5 and 6 untouched with four: whatever they held)
+        // B139: a REVERSED channel is spaced the other way round (the reversal is applied after the curve), so the wire still rises from bank 1
+        ReversedChannelBITS = (uint16_t)(1 << ch); savesSeen = seenClears = 0; AdjSpaceBanks(ch, note, sizeof(note));
+        CHECK(strstr(note, six ? "180, 144, 108, 72, 36, 0 degrees (the channel is reversed)" : "180, 120, 60, 0 degrees (the channel is reversed)") != nullptr);
+        for (int b = 1; b <= n; ++b) for (uint8_t k = 0; k < CurveN(ch); ++k) CHECK(CurvePoint[b][ch][k] == 180 - (six ? want6 : want4)[b - 1]);
+        CHECK(savesSeen == 1 && seenClears == 1);
+        ReversedChannelBITS = 0;
         for (int c = 0; c < CHANNELSUSED; ++c) if (c != ch) CHECK(CurvePoint[1][c][0] == CurvePoint[1][c][0]);
     }
     CHECK(AdjSpacedDeg(1, 6) == 0 && AdjSpacedDeg(2, 6) == 36 && AdjSpacedDeg(6, 6) == 180 && AdjSpacedDeg(2, 4) == 60 && AdjSpacedDeg(1, 1) == 90);

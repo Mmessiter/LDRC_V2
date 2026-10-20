@@ -517,17 +517,22 @@ FLASHMEM static void AdjSpaceBanks(int ch0, char *note, size_t len) // the chann
 {
     if (ch0 < 0 || ch0 >= CHANNELSUSED) return;
     const int n = BanksCount();
+    // B139 (Malcolm, 20 Oct, six banks on B138: "it did not automatically select the correct positions for all six places"):
+    // a REVERSED channel turns the spaced heights upside down on the wire (AdjTxBankUs applies the reversal after the
+    // curve), so the values fell from bank 1 to 6, AdjBankValues saw one bank, and the row took the travel's ends with the
+    // banks the wrong way round. Spaced the other way on a reversed channel, the output rises as the fit expects.
+    const bool rev = (ReversedChannelBITS & (1 << ch0)) != 0;
     char degs[64] = "";
     for (int b = 1; b <= n; ++b)
     {
-        const uint8_t h = (uint8_t)AdjSpacedDeg(b, n);
+        const uint8_t h = (uint8_t)(rev ? 180 - AdjSpacedDeg(b, n) : AdjSpacedDeg(b, n));
         CurveSetStraight((uint8_t)b, (uint8_t)ch0, h, h);
         char one[8]; snprintf(one, sizeof(one), "%s%d", b > 1 ? ", " : "", h); strncat(degs, one, sizeof(degs) - strlen(degs) - 1);
     }
     GetCurveDots((uint8_t)ch0, DualRateValue);   // (the dots are a global: the bank in use's, afresh)
     AdjSeenClear();                                 // (what was measured on this page is stale)
     SaveOneModel(ModelNumber);
-    snprintf(note, len, "Channel %d set bank by bank: %s degrees.", ch0 + 1, degs);
+    snprintf(note, len, "Channel %d set bank by bank: %s degrees%s.", ch0 + 1, degs, rev ? " (the channel is reversed)" : "");
 }
 // B133: a row that MUST follow this transmitter's banks - the bank selector always, the rates selector when the rates follow the
 // banks (Model setup, Rates: "Rates follow banks"). A rates selector on a rates switch of its own is not one: left as the pilot set it.
