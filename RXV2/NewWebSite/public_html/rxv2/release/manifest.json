@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.903-switches-and-knobs",
+      "url": "https://messiter.com/rxv2/release/v0.9.903/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.903/littlefs.bin",
+      "fs_md5": "8c91752d9eebcc4acb613a0c0e753030",
+      "notes": "Switches and knobs: the Switches page and the In-flight adjustments page are one page now - the switch jobs (arm, rescue, self-level ...), the bank and rates selectors, and the knobs and switches that change a setting, each written to its own Rotorflight table out of sight. Rotorflight keeps them on two tabs (Modes and Adjustments); many found that confusing, so we combined them, as the transmitter has. The old In-flight adjustments link points there."
+    },
+    {
       "name": "RXV2-0.9.902-selectors-pointer",
       "url": "https://messiter.com/rxv2/release/v0.9.902/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.902/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.892/littlefs.bin",
       "fs_md5": "13d25a3a37153722d17a5b5b9516f855",
       "notes": "The ESC pages now recommend Hobbywing's LCD program box for a Hobbywing ESC: quick and easy, and well worth having."
-    },
-    {
-      "name": "RXV2-0.9.891-save-above-keyboard",
-      "url": "https://messiter.com/rxv2/release/v0.9.891/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.891/littlefs.bin",
-      "fs_md5": "ff6c14f1cbc5134d77674caf1d152633",
-      "notes": "Save stays in view while typing: the iPhone page now shrinks above the keyboard, so the floating Save bar sits just over it; Filters and In-flight adjustments get the floating Save bar too."
     }
   ],
   "rotorflight": {

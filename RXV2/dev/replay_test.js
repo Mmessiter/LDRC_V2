@@ -141,7 +141,7 @@ process.on('uncaughtException', e => { console.log('      (uncaught: ' + e.messa
 process.on('unhandledRejection', e => { console.log('      (unhandled: ' + (e && e.message || e) + ')'); });
 // Pages that need the model LIVE by design (they move servos, copy between
 // banks, or read something unsafe to record) - they must say so, plainly.
-const LIVE_ONLY = { 'rotorflight-copybank.html': /connect/i, 'rotorflight-easy.html': /connected/i, 'rotorflight-adjustments.html': /not in the recording/i };
+const LIVE_ONLY = { 'rotorflight-copybank.html': /connect/i, 'rotorflight-easy.html': /connected/i };   // (0.9.903: rotorflight-adjustments.html is a signpost to the Switches and knobs page)
 (async () => {
     let bad = 0;
     for (const f of pages) {

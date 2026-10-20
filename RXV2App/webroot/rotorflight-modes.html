@@ -7,9 +7,9 @@
 <meta name=apple-mobile-web-app-capable content=yes>
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
-<title>Switches &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=402">
-<script src="/app.js?v=402" defer></script>
+<title>Switches and knobs &middot; LDRC RX V2</title>
+<link rel=stylesheet href="/style.css?v=403">
+<script src="/app.js?v=403" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -52,6 +52,36 @@
          box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:none;z-index:2;-webkit-user-select:none;user-select:none}
 .pSave{width:100%;margin-top:.5em;padding:.6em;border:0;border-radius:10px;background:#4a8a5f;color:#fff;font-weight:700;cursor:pointer}
 .pRow{display:grid;grid-template-columns:1fr auto;gap:.6em;align-items:end}
+#adjSection .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
+#adjSection .banner.info{background:#c8d2dc;color:#3a5165}
+#adjSection .banner.good{background:#a8d29a;color:#2a4d1f}
+#adjSection .banner.bad{background:#dca08c;color:#5c2a1a}
+#adjSection .needUsb{background:#ffd278;color:#5c3a00;border-radius:12px;padding:1em;margin:0 0 1em;font-weight:600;text-align:center}
+#adjSection .rowCard{background:#f2f6f8;border-radius:10px;padding:.6em .7em;margin:.5em 0}
+#adjSection .rowCard .r{display:flex;flex-wrap:wrap;gap:.4em .8em;align-items:center;margin:.3em 0}
+#adjSection .rowCard label{color:#3a5165;font-size:.9em}
+#adjSection .rowCard select, #adjSection .rowCard input{font-size:.95em;padding:.25em .35em;border:1px solid #c9d3dc;border-radius:6px;max-width:100%}
+#adjSection .rowCard input[type=number]{width:4.6em}
+#adjSection .rTrack{position:relative;height:22px;background:#dfe5ea;border-radius:9px;margin:.55em 0 .1em;overflow:visible}
+#adjSection .rReg{position:absolute;top:0;bottom:0;border-radius:9px;opacity:.9;color:#fff;font-size:.72em;font-weight:700;text-align:center;line-height:22px;white-space:nowrap;overflow:hidden}
+#adjSection .rReg.c0{background:#4a90c9}
+#adjSection .rReg.c1{background:#5fa099}
+#adjSection .rReg.c2{background:#7a6a9a}
+#adjSection .rReg.dead{background:#c9d3dc;color:#5c6b75}
+#adjSection .rReg.live{outline:3px solid #2e7d32;outline-offset:-3px}
+#adjSection .rDot{position:absolute;top:-5px;width:4px;height:32px;border-radius:2px;background:#c0392b;transform:translateX(-50%);transition:left .15s linear,background .15s;pointer-events:none;z-index:3}
+#adjSection .rDot.in{background:#2e7d32}
+#adjSection .rHandle{position:absolute;top:50%;width:24px;height:24px;border-radius:50%;background:#2b568f;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-50%);cursor:grab;touch-action:pan-y;z-index:2;-webkit-user-select:none;user-select:none}
+#adjSection .rScale{display:flex;justify-content:space-between;font-size:.7em;color:#7a8b95;margin-bottom:.2em}
+#adjSection .rLive{font-size:.8em;color:#5c6b75;margin:.1em 0 .3em}
+#adjSection .rLive b{color:#2e7d32}
+#adjSection .vals{display:flex;gap:.5em;margin:.3em 0}
+#adjSection .vals div{flex:1;text-align:center}
+#adjSection .vals input{width:5em;text-align:center}
+#adjSection .vals small{display:block;color:#5c6b75;font-size:.75em}
+#adjSection .showAll{display:flex;align-items:center;gap:.5em;margin:.2em 0 .6em;font-size:.95em}
+#adjSection .showAll input{width:1.3em;height:1.3em}
+#adjSection .usbOnly:disabled{color:#2c3e50;-webkit-text-fill-color:#2c3e50;opacity:.8}
 </style>
 </head>
 <body class=hasFab data-armed-banner=strip>
@@ -59,13 +89,32 @@
 <div class=bg-photo aria-hidden=true></div>
 <div class=bg-wash  aria-hidden=true></div>
 <div class=container>
-    <h1>Switches</h1>
-    <p class=subtitle>what each transmitter switch makes the flight controller do <i>(Rotorflight: Modes)</i></p>
+    <h1>Switches and knobs</h1>
+    <p class=subtitle>what each switch or knob of the transmitter makes the flight controller do</p>
+    <div class="banner info" style="text-align:left;font-weight:500;margin:0 0 .6em">Rotorflight keeps these on two tabs of its configurator, <b>Modes</b> (the switch jobs) and <b>Adjustments</b> (the bank and rates selectors, and a knob that changes a setting). Many found that confusing &mdash; the bank selector is a switch job to most of us &mdash; so this page holds them all, and writes each to its own table out of sight. The transmitter&rsquo;s own Switches &amp; knobs page does the same.</div>
     <div id=status class="banner info">loading&hellip;</div>
     <div class="banner info" style="margin:0 0 .6em">&#127898;&#65039; <b>Transmitter ON first</b> &mdash; the red tick shows each switch live. With it off there is nothing to set against.</div>
     <div id=profRows></div>
     <div id=rows></div>
-    <button class=addBtn id=addBtn onclick="addRow()">&#10133; Add a switch action</button>
+    <button class=addBtn id=addBtn onclick="addRow()">&#10133; Add a switch job</button>
+
+    <div id=adjSection>
+    <h2 style="margin:1.2em 0 .1em">Knobs and switches that change a setting</h2>
+    <p class=subtitle style="margin-bottom:.6em">a knob or a switch changes one Rotorflight setting while you fly <i>(Rotorflight: Adjustments)</i></p>
+    <div id=a_needUsb class=needUsb style="display:none">Connect a USB cable between the flight controller&rsquo;s USB socket and the receiver&rsquo;s USB socket. The knobs and settings need the USB connection.</div>
+    <div id=a_status class="banner info" style="display:none"></div>
+    <div class=card>
+        <label class=showAll data-help="Off: only PIDs and rates, each per bank. On: every Rotorflight adjustment in every bank, over 400 entries."><input type=checkbox id=a_showAll> Show every setting (over 400 entries)</label>
+        <div id=a_rows></div>
+        <button id=a_addBtn class="btn usbOnly" type=button style="background:#4f7fa0;margin-top:.4em"><span class=ico>&#10133;</span>Add a knob or switch</button>
+    </div>
+    <div class=card>
+        <p class=sub style="margin:0">Once saved they are kept by the flight controller: they keep working with the USB unplugged.</p>
+    </div>
+    <div class=fabBar>
+        <button id=a_saveBtn class="btn usbOnly" type=button style="background:#6cab5e;margin:0"><span class=ico>&#128190;</span>Save knobs to flight controller</button>
+    </div>
+    </div>
     <div class=footer></div>
 </div>
 
@@ -196,6 +245,7 @@ async function pollRc(){
     if(document.hidden){ rcTimer=setTimeout(pollRc,800); return; }
     try{
         const b=hexToBytes(await LDRC.msp(105));
+        try{ if(window.__adjRc) window.__adjRc(b); }catch(_){}
         if(PROF.length){ let st=null; try{ st=hexToBytes(await LDRC.msp(101)); }catch(_){}
             pollProf(b, st); }
         for(let i=0;i<slots.length;i++){
@@ -407,7 +457,7 @@ function paint(){
         const s=slots[i];
         if(s.hi>s.lo) h+=rowCard(i,s);        // only ACTIVE slots get a card
     }
-    $('rows').innerHTML = h || '<div class=card><p class=muted>No switch actions assigned yet — tap <b>Add a switch action</b> below. (At minimum every model needs an <b>Arm</b> switch.)</p></div>';
+    $('rows').innerHTML = h || '<div class=card><p class=muted>No switch jobs yet — tap <b>Add a switch job</b> below. (At minimum every model needs an <b>Arm</b> switch.)</p></div>';
     // Anchor: /rotorflight-modes#rescue scrolls+highlights the rescue row.
     if(location.hash==='#rescue'){
         const el=document.querySelector('.modeCard[data-perm="53"]');
@@ -428,7 +478,7 @@ async function load(){
             slots.push({perm:b[o],aux:b[o+1],lo:stepUs(b[o+2]),hi:stepUs(b[o+3])});
         }
         paint();
-        setStatus('good','✓ Loaded — '+slots.filter(s=>s.hi>s.lo).length+' switch actions assigned');
+        setStatus('good','✓ Loaded — '+slots.filter(s=>s.hi>s.lo).length+' switch jobs');
     }catch(e){ setStatus('bad','Read failed: '+e.message); }
 }
 
@@ -449,7 +499,7 @@ async function saveRow(i){
     const m=MODES.find(x=>x.id===perm)||{};
     if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(aux+6)+', active '+lo+'–'+hi+' µs?'
         +(m.warn?'\n\n⚠ This is the ARM switch — be certain the model is safe.':''),
-        {title:'Save switch action',icon:'🎚️',yes:'Save',kind:m.warn?'warn':'go'})))return;
+        {title:'Save switch job',icon:'🎚️',yes:'Save',kind:m.warn?'warn':'go'})))return;
     $('msg'+i).textContent='writing…';
     try{
         const ok=await writeSlot(i,perm,aux,lo,hi);
@@ -459,8 +509,8 @@ async function saveRow(i){
 }
 
 async function delRow(i){
-    if(!(await LDRC.confirm('Remove this switch action? The mode will no longer be controllable from the transmitter.',
-        {title:'Remove switch action',icon:'🗑️',yes:'Remove',kind:'warn'})))return;
+    if(!(await LDRC.confirm('Remove this switch job? The flight controller will no longer do it from the transmitter.',
+        {title:'Remove switch job',icon:'🗑️',yes:'Remove',kind:'warn'})))return;
     try{
         const ok=await writeSlot(i,0,0,1500,1500);   // empty range = slot unused
         if(ok){ slots[i]={perm:0,aux:0,lo:900,hi:900}; paint(); setStatus('good','✓ Removed'); }
@@ -497,14 +547,511 @@ function addRow(){
         paint();
         const el=$('slot'+free);
         if(el){ el.classList.add('highlight'); el.scrollIntoView({behavior:'smooth',block:'center'}); }
-        setStatus('info','New action added — set the channel and range, then Save');
+        setStatus('info','New switch job added — set the channel and range, then Save');
     };
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{ load().then(()=>{ if(!LDRC.replay) pollRc(); }); });
 </script>
-<template id=helpContent><h2>Switches</h2>
-<p>This is where transmitter switches get their jobs <i>(Rotorflight calls it the Modes tab)</i>. Each row says: when <b>this channel</b> is between <b>these values</b>, do <b>this</b>.</p>
+<script>
+// ---- the knobs and settings (the In-flight adjustments page of before, as a section of this one)
+(function () {
+
+const $ = id => document.getElementById('a_' + id);   // (the ids of this section carry a_)
+const LABELS = ["(nothing)", "Rates bank switch (1 to 6)", "PID bank switch (1 to 6)", "Led profile", "Battery profile", "Pitch rate curve shape (Shape)", "Roll rate curve shape (Shape)", "Yaw rate curve shape (Shape)", "Pitch top rotation speed (Rate)", "Roll top rotation speed (Rate)", "Yaw top rotation speed (Rate)", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"];
+
+// ---------------- model (DOM-free, unit-tested with node) ----------------
+const RMIN = 875, RMAX = 2125, MAXR = 42;
+const us = b => 1500 + 5 * (b > 127 ? b - 256 : b);                 // Rotorflight: signed 5 us steps around 1500
+const step = v => { const st = Math.max(-125, Math.min(125, Math.round((v - 1500) / 5))); return st < 0 ? st + 256 : st; };
+const u16 = (b, o) => b[o] | (b[o + 1] << 8);
+const us5 = v => Math.round(v / 5) * 5;
+function parseLines(b) {                 // 42 x 14 bytes -> line objects (positions in us)
+    const L = [];
+    for (let i = 0; i < MAXR && (i + 1) * 14 <= b.length; i++) {
+        const o = i * 14;
+        L.push({ fn: b[o], ena: b[o+1], enaLo: us(b[o+2]), enaHi: us(b[o+3]), adj: b[o+4], a1Lo: us(b[o+5]), a1Hi: us(b[o+6]), a2Lo: us(b[o+7]), a2Hi: us(b[o+8]), min: u16(b, o+9), max: u16(b, o+11), stp: b[o+13] });
+    }
+    return L;
+}
+// ONE Rotorflight line per switch (0.9.879, found on the transmitter 8 Oct 2026, and in rc_adjustments.c of 4.6.0): a
+// line whose value is a single number ("set 3 when the switch is here") is applied ONCE - the line remembers the value it
+// applied and never applies it again until the flight controller reboots or saves - so a switch made of one such line per
+// position worked the first time each position was visited and then jammed (Malcolm: "the first three bank changes work,
+// after that nothing changes"). Rotorflight's own switch is one line: the travel lo..hi mapped evenly onto the values
+// first..last, rounded to whole numbers, which fires at every change. So a switch row is now that one line, and the page
+// shows where Rotorflight divides the travel; the first and last values are the pilot's, the ones between are evenly
+// spaced. Lines of the old form are gathered into a row (legacy: true) with the ends fitted to the old dividers, to be
+// saved in the new form.
+// Where Rotorflight changes value q (1..n-1) on a switch of n positions over lo..hi: the first u with
+// floor(((u - lo) * (n - 1) + floor(W / 2)) / W) == q (rc_adjustments.c, integer arithmetic)
+function switchThresholds(lo, hi, n) {
+    const W = hi - lo, t = [];
+    if (n < 2 || W <= 0) return t;
+    for (let q = 1; q < n; q++) t.push(lo + Math.ceil((q * W - Math.floor(W / 2)) / (n - 1)));
+    return t;
+}
+function switchValues(first, last, n) {  // the value at each position: the ends as given, the rest evenly between (Rotorflight rounds)
+    const out = [];
+    for (let k = 0; k < n; k++) out.push(n > 1 ? Math.round(+first + (+last - +first) * k / (n - 1)) : +first);
+    return out;
+}
+function fitEnds(t, n) {                 // the old dividers of n positions -> ends lo..hi whose even divisions come nearest
+    let lo, hi;
+    if (n <= 2) { const m = t[0]; const W = Math.min(1000, 2 * (m - RMIN), 2 * (RMAX - m)); lo = m - W / 2; hi = m + W / 2; }
+    else { const W = Math.round((t[n - 2] - t[0]) * (n - 1) / (n - 2)); lo = t[0] - Math.round(W / (2 * (n - 1))); hi = lo + W; }
+    lo = us5(Math.max(RMIN, lo)); hi = us5(Math.min(RMAX, hi));
+    if (hi < lo + 5) hi = lo + 5;
+    return [lo, hi];
+}
+// Rows the page shows: kind 'switch' (ends lo/hi, n positions, values[] the value at each), 'knob' (ends lo/hi, min..max),
+// 'nudge' (dividers t[0]=down below, t[1]=up above)
+function linesToRows(L) {
+    const rows = [], used = new Set();
+    L.forEach((l, i) => {
+        if (used.has(i) || l.fn === 0) return;
+        if (l.stp > 0) { used.add(i); rows.push({ kind: 'nudge', fn: l.fn, ch: l.adj, t: [l.a1Hi, l.a2Lo], min: l.min, max: l.max, stp: l.stp, ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi }); return; }
+        const selfEna = l.ena === l.adj && l.enaLo === l.a1Lo && l.enaHi === l.a1Hi;   // enabled by its own position = no condition
+        const cond = selfEna || (l.enaLo <= RMIN && l.enaHi >= RMAX) ? null : { ena: l.ena, enaLo: l.enaLo, enaHi: l.enaHi };
+        if (l.min === l.max) {
+            // the old form: gather every line with the same setting, switch and condition that is also a fixed value
+            const same = m => m.fn === l.fn && m.adj === l.adj && m.stp === 0 && m.min === m.max &&
+                              ((m.ena === m.adj && m.enaLo === m.a1Lo && m.enaHi === m.a1Hi) === selfEna) &&
+                              (selfEna || (m.ena === l.ena && m.enaLo === l.enaLo && m.enaHi === l.enaHi));
+            const grp = L.map((m, j) => ({ m, j })).filter(x => !used.has(x.j) && same(x.m));
+            grp.sort((a, b) => a.m.a1Lo - b.m.a1Lo);
+            grp.forEach(x => used.add(x.j));
+            if (grp.length === 1) { rows.push({ kind: 'knob', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, min: l.min, max: l.max, cond }); return; }   // one fixed value: kept as it is
+            const t = grp.slice(1).map(x => x.m.a1Lo), vals = grp.map(x => x.m.min), n = grp.length;
+            const [lo, hi] = fitEnds(t, n);
+            const old = {}; regions(t).forEach(([a, b], k) => { old[vals[k]] = [a, b]; });
+            rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, lo, hi, n, values: switchValues(vals[0], vals[n - 1], n), cond, legacy: true, oldRegions: old });
+            return;
+        }
+        used.add(i);
+        const n = l.max - l.min + 1;
+        if (n >= 2 && n <= 6) { rows.push({ kind: 'switch', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, n, values: switchValues(l.min, l.max, n), cond }); return; }
+        rows.push({ kind: 'knob', fn: l.fn, ch: l.adj, lo: l.a1Lo, hi: l.a1Hi, min: l.min, max: l.max, cond });
+    });
+    // a bank line of the old form divided the channel differently: the rows held in a bank move to its new divisions
+    const b = rows.find(r => r.fn === 2 && r.kind === 'switch' && r.legacy);
+    if (b) {
+        const br = bankRegions(rows);
+        rows.forEach(r => {
+            const c = r.kind === 'nudge' ? { ena: r.ena, enaLo: r.enaLo, enaHi: r.enaHi } : r.cond;   // (a nudge keeps its enable as its own fields)
+            if (r === b || !c || c.ena !== b.ch) return;
+            for (const v of Object.keys(b.oldRegions)) { const [lo, hi] = b.oldRegions[v]; if (Math.abs(lo - c.enaLo) <= 5 && Math.abs(hi - c.enaHi) <= 5) {
+                const nc = bankToCond(+v, br); if (!nc) break;
+                if (r.kind === 'nudge') { r.ena = nc.ena; r.enaLo = nc.enaLo; r.enaHi = nc.enaHi; } else r.cond = nc;
+                break; } }
+        });
+    }
+    rows.forEach(r => { delete r.oldRegions; });
+    return rows;
+}
+function regions(t) {                    // dividers -> [lo,hi) regions across the whole bar
+    const edges = [RMIN, ...t, RMAX], r = [];
+    for (let i = 0; i + 1 < edges.length; i++) r.push([edges[i], edges[i + 1]]);
+    return r;
+}
+function rowsToLines(rows) {             // -> array of 42 line objects (fn 0 = unused)
+    const L = [];
+    const blank = () => ({ fn: 0, ena: 0, enaLo: 1500, enaHi: 1500, adj: 0, a1Lo: 1500, a1Hi: 1500, a2Lo: 1500, a2Hi: 1500, min: 0, max: 0, stp: 0 });   // Rotorflight's own empty line
+    for (const r of rows) {
+        if (!r.fn) continue;
+        if (r.kind === 'switch' || r.kind === 'knob') {
+            const e = r.cond ? r.cond : { ena: r.ch, enaLo: RMIN, enaHi: RMAX };
+            const mn = r.kind === 'switch' ? r.values[0] : r.min, mx = r.kind === 'switch' ? r.values[r.values.length - 1] : r.max;
+            if (mn === undefined || mn === null || mn === '' || mx === undefined || mx === null || mx === '') continue;
+            L.push({ fn: r.fn, ena: e.ena, enaLo: e.enaLo, enaHi: e.enaHi, adj: r.ch, a1Lo: r.lo, a1Hi: r.hi, a2Lo: 1500, a2Hi: 1500, min: +mn, max: +mx, stp: 0 });
+        } else {
+            L.push({ fn: r.fn, ena: r.ena ?? r.ch, enaLo: r.enaLo ?? RMIN, enaHi: r.enaHi ?? RMAX, adj: r.ch, a1Lo: RMIN, a1Hi: r.t[0], a2Lo: r.t[1], a2Hi: RMAX, min: +r.min, max: +r.max, stp: Math.max(1, +r.stp) });
+        }
+    }
+    while (L.length < MAXR) L.push(blank());
+    return L.slice(0, MAXR);
+}
+// Which channel range means "bank N"? Read it off the PID-bank line (fn 2): lo..hi maps to the first..last value
+// linearly (Rotorflight rounds), so value v holds where round(min + (u-lo)*n/(hi-lo)) == v
+function bankRegions(rows) {
+    const b = rows.find(r => r.fn === 2 && r.kind !== 'nudge'); if (!b) return null;
+    const mn = b.kind === 'switch' ? +b.values[0] : +b.min, mx = b.kind === 'switch' ? +b.values[b.values.length - 1] : +b.max;
+    const n = mx - mn; if (n <= 0) return null;
+    const out = {};
+    for (let v = mn; v <= mx; v++) {
+        const f0 = (v - 0.5 - mn) / n, f1 = (v + 0.5 - mn) / n;
+        const lo = Math.max(b.lo, Math.round((b.lo + f0 * (b.hi - b.lo)) / 5) * 5), hi = Math.min(b.hi, Math.round((b.lo + f1 * (b.hi - b.lo)) / 5) * 5);
+        if (v >= 1 && v <= LDRC.BANKS_MAX) out[v] = [v === mn ? RMIN : lo, v === mx ? RMAX : hi];
+    }
+    return { ch: b.ch, regions: out };
+}
+function condToBank(cond, br) {           // a stored condition -> bank number, or 0 for 'any'/'other'
+    if (!cond || !br || cond.ena !== br.ch) return 0;
+    for (const v of Object.keys(br.regions)) { const [lo, hi] = br.regions[v]; if (Math.abs(lo - cond.enaLo) <= 5 && Math.abs(hi - cond.enaHi) <= 5) return +v; }
+    return -1;                             // some other range on the bank channel
+}
+function bankToCond(v, br) { if (!v || !br || !br.regions[v]) return null; const [lo, hi] = br.regions[v]; return { ena: br.ch, enaLo: lo, enaHi: hi }; }
+// What stops a set of rows being saved: the words, or null
+function rowsProblem(rows, labels) {
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]; if (!r.fn) continue;
+        const name = (labels && labels[r.fn]) || ('adjustment ' + (i + 1));
+        if (r.kind === 'switch') {
+            const a = r.values[0], z = r.values[r.values.length - 1];
+            if (a === '' || a === undefined || a === null || z === '' || z === undefined || z === null) return name + ': give the first and last positions a value';
+            if (+z <= +a) return name + ': the last position’s value must be above the first’s (Rotorflight counts low to high; reverse the channel on the transmitter if your switch goes the other way)';
+        } else if (r.kind === 'knob') {
+            if (+r.max <= +r.min) return name + ': the value at the right end must be above the one at the left (Rotorflight counts low to high; reverse the channel on the transmitter if your knob goes the other way)';
+        }
+    }
+    return null;
+}
+function encodeLine(i, l) {
+    const b = new Uint8Array(15);
+    b[0] = i; b[1] = l.fn; b[2] = l.ena; b[3] = step(l.enaLo); b[4] = step(l.enaHi); b[5] = l.adj;
+    b[6] = step(l.a1Lo); b[7] = step(l.a1Hi); b[8] = step(l.a2Lo); b[9] = step(l.a2Hi);
+    b[10] = l.min & 255; b[11] = l.min >> 8; b[12] = l.max & 255; b[13] = l.max >> 8; b[14] = l.stp;
+    return b;
+}
+
+// ---------------- page ----------------
+let rows = [], gateOk = false;
+function setStatus(kind, msg) { const b = $('status'); b.style.display = msg ? '' : 'none'; if (!msg) return; b.className = 'banner ' + kind; b.textContent = msg; }
+const hexToBytes = h => { const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
+const bytesToHex = b => Array.from(b, x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
+const pct = u => Math.max(0, Math.min(100, (u - RMIN) / (RMAX - RMIN) * 100));
+// The last set read over USB is kept per model (Malcolm 2026-09-11: "when the USB cable is gone, remember what
+// was set so we can show it but not change it"). Shown greyed when the cable is out; the live marker still works.
+let cacheAt = '';
+const cacheKey = () => 'adj.cache:' + ((LDRC.state && LDRC.state.info && LDRC.state.info.name) || '');
+function cacheStore(hex) { try { localStorage.setItem(cacheKey(), JSON.stringify({ hex, scale: RATE_SCALE, at: Date.now() })); } catch (e) {} }
+function cacheLoad() {
+    try {
+        const c = JSON.parse(localStorage.getItem(cacheKey()) || 'null'); if (!c || !c.hex) return false;
+        RATE_SCALE = c.scale || 5;
+        rows = scaleRows(linesToRows(parseLines(hexToBytes(c.hex))), 1);
+        const d = new Date(c.at); const today = new Date().toDateString() === d.toDateString();
+        cacheAt = (today ? '' : d.toLocaleDateString() + ' ') + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return true;
+    } catch (e) { return false; }
+}
+async function usbGate() {
+    const s = await LDRC.fetchState();
+    gateOk = !!(s && s.usb && s.usb.device);            // a flight controller on the USB socket - dongle or receiver (0.9.639)
+    const g = $('needUsb'); if (g) g.style.display = gateOk ? 'none' : '';
+    if (g && !gateOk && s) g.textContent = s.sim ? 'Simulator mode is using the USB socket. Turn the simulator off (Setup) to reach the flight controller over USB.'
+        : (s.usb && !s.usb.host && !s.dongle) ? 'The receiver is not using its USB socket. Restart the receiver, then connect a USB cable between the flight controller\u2019s USB socket and this receiver\u2019s.'
+        : 'Connect a USB cable between the flight controller\u2019s USB socket and the ' + (s.dongle ? 'dongle' : 'receiver') + '\u2019s USB socket. The knobs and settings need the USB connection.';
+    if (g && !gateOk && cacheAt) g.textContent = 'Showing the settings read over USB at ' + cacheAt + ' - to change them, ' + g.textContent.replace(' The knobs and settings need the USB connection.', '').replace(/^Connect/, 'connect');
+    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.8'; });
+    return gateOk ? s : null;
+}
+function chanSel(id, v) {
+    let h = '<select id=' + id + ' class=usbOnly>';
+    for (let a = 0; a < 13; a++) h += '<option value=' + a + (v === a ? ' selected' : '') + '>AUX' + (a + 1) + ' (channel ' + (a + 6) + ')</option>';
+    return h + '</select>';
+}
+// The whole choice in one list: 'Yaw P gain in bank 1' ... grouped by bank, then 'in the bank in use'.
+// value = fn + ':' + bank (0 = the bank in use, -1 = a condition set elsewhere, kept as it is)
+const BASIC = new Set([5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]);   // rates + PIDs
+let showAll = false; try { showAll = localStorage.getItem('adj.showAll') === '1'; } catch (e) {}
+function fnSel(id, r, br) {
+    const cur = (r.fn === 1 || r.fn === 2) ? 0 : condToBank(r.cond, br);
+    const fns = []; for (let fn = 3; fn < LABELS.length; fn++) if (showAll || BASIC.has(fn) || fn === r.fn) fns.push(fn);
+    const opt = (fn, bank, text) => '<option value="' + fn + ':' + bank + '"' + (r.fn === fn && cur === bank ? ' selected' : '') + '>' + text + '</option>';
+    let h = '<select id=' + id + ' class=usbOnly>';
+    // The bank and rates selectors are made on the Switches page, not here (Malcolm, 20 Oct 2026, looking for "Bank" in
+    // this list on the iPhone after the transmitter's list gained them): said at the top of the list, where he looked.
+    h += '<option disabled>Bank (Profile) and Rates selectors: on the Switches page</option>';
+    if (cur === -1) h += opt(r.fn, -1, LABELS[r.fn] + ' with a condition set elsewhere');
+    // Every bank Rotorflight can have, not the four this page used to offer
+    // (0.9.742) - a switch section set to bank 5 had no entry at all.
+    const banks = br ? Array.from({length: LDRC.BANKS_MAX}, (_, i) => i + 1).filter(v => br.regions[v]) : [];
+    banks.forEach(v => { h += '<optgroup label="In bank ' + v + '">'; fns.forEach(fn => h += opt(fn, v, LABELS[fn] + ' in bank ' + v)); h += '</optgroup>'; });
+    if (showAll || !banks.length) { h += '<optgroup label="In the bank in use">'; fns.forEach(fn => h += opt(fn, 0, LABELS[fn] + ' in the bank in use')); h += '</optgroup>'; }
+    else if (cur === 0 && r.fn > 2) h += opt(r.fn, 0, LABELS[r.fn] + ' in the bank in use');
+    return h + '</select>';
+}
+function regionNames(r) {
+    if (r.kind === 'nudge') return ['down', '', 'up'];
+    if (r.kind === 'knob') return ['', 'knob', ''];
+    const vals = switchRowValues(r);
+    return vals.map((v, k) => 'position ' + (k + 1) + (v === '' || v === undefined || v === null ? '' : ' = ' + v));
+}
+function drawBar(i) {
+    const r = rows[i], tr = $('tr' + i); if (!tr) return;
+    let regs, dividers;
+    if (r.kind === 'knob') { regs = [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]]; dividers = [r.lo, r.hi]; }
+    else if (r.kind === 'switch') { regs = regions(switchThresholds(r.lo, r.hi, r.n)); dividers = [r.lo, r.hi]; }
+    else { regs = regions(r.t); dividers = r.t; }
+    const names = regionNames(r);
+    let h = '';
+    regs.forEach(([lo, hi], k) => {
+        const dead = (r.kind === 'knob' && k !== 1) || (r.kind === 'nudge' && k === 1);
+        h += '<div class="rReg ' + (dead ? 'dead' : 'c' + (k % 3)) + '" data-k=' + k + ' style="left:' + pct(lo) + '%;width:' + Math.max(0, pct(hi) - pct(lo)) + '%">' + (names[k] || '') + '</div>';
+    });
+    h += '<div class=rDot id=a_dot' + i + ' style="display:none"></div>';
+    dividers.forEach((d, k) => { h += '<div class=rHandle data-d=' + k + ' style="left:' + pct(d) + '%"></div>'; });
+    tr.innerHTML = h;
+    if (r.kind !== 'nudge') tr.querySelectorAll('.rHandle').forEach(hd => wireHandle(i, hd)); else tr.querySelectorAll('.rHandle').forEach(hd => hd.style.opacity = '.4');
+}
+function wireHandle(i, h) {
+    const track = $('tr' + i);
+    h.addEventListener('pointerdown', e => {
+        if (!gateOk) return;
+        e.preventDefault(); h.setPointerCapture(e.pointerId);
+        const k = +h.dataset.d;
+        const move = ev => {
+            const rc = track.getBoundingClientRect();
+            let u = RMIN + (ev.clientX - rc.left) / rc.width * (RMAX - RMIN);
+            u = Math.max(RMIN + 5, Math.min(RMAX - 5, Math.round(u / 5) * 5));
+            const r = rows[i];
+            if (r.kind === 'knob' || r.kind === 'switch') { if (k === 0) r.lo = Math.min(u, r.hi - 5); else r.hi = Math.max(u, r.lo + 5); }
+            else { const lo = k > 0 ? r.t[k - 1] + 5 : RMIN + 5, hi = k + 1 < r.t.length ? r.t[k + 1] - 5 : RMAX - 5; r.t[k] = Math.max(lo, Math.min(hi, u)); }
+            markDirty();
+            // move the regions and this handle without a full repaint (keeps the capture)
+            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : r.kind === 'switch' ? regions(switchThresholds(r.lo, r.hi, r.n)) : regions(r.t);
+            track.querySelectorAll('.rReg').forEach((el, j) => { const [lo2, hi2] = regs[j]; el.style.left = pct(lo2) + '%'; el.style.width = Math.max(0, pct(hi2) - pct(lo2)) + '%'; });
+            h.style.left = pct(r.kind !== 'nudge' ? (k === 0 ? r.lo : r.hi) : r.t[k]) + '%';
+        };
+        const up = () => { try { h.releasePointerCapture(e.pointerId); } catch (_) {} h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up); };
+        h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+    });
+}
+// The value each position of a switch row gets: the first and last as typed, the rest evenly between (Rotorflight's own spacing)
+function switchRowValues(r) {
+    const n = r.n || r.values.length, a = r.values[0], z = r.values[n - 1];
+    if (a === '' || a === undefined || a === null || z === '' || z === undefined || z === null) return r.values.slice(0, n);
+    return switchValues(+a, +z, n);
+}
+// Sensible starting values for the positions: banks count 1, 2, 3; anything else spreads the old knob range
+function prefill(r, n, old, lo, hi) {
+    const isBank = r.fn === 1 || r.fn === 2;
+    const out = [];
+    for (let k = 0; k < n; k++) {
+        const prev = old && old[k] !== undefined && old[k] !== '' ? old[k] : undefined;
+        if (prev !== undefined) { out.push(prev); continue; }
+        if (isBank) out.push(String(k + 1));
+        else if (lo !== undefined && hi !== undefined && n > 1) out.push(String(Math.round(+lo + (+hi - +lo) * k / (n - 1))));
+        else out.push('');
+    }
+    return out;
+}
+// Where each setting's current value can be read: [MSP fn, byte offset, bytes, bank side]. Verified against
+// Rotorflight 4.6 msp.c write order and the getters in rc_rates.c / pid.c / rescue.c / governor.c / setpoint.c.
+function valueSource(fn) {
+    const A = k => [1, 0, 2][k];                                        // adjustment order pitch, roll, yaw -> axis roll 0, pitch 1, yaw 2
+    if (fn >= 5 && fn <= 13) { const k = (fn - 5) % 3, sub = fn <= 7 ? 2 : fn <= 10 ? 0 : 1; return [111, 1 + A(k) * 6 + sub, 1, 'rate']; }
+    if (fn >= 14 && fn <= 25) { const g = (fn - 14) / 4 | 0, t = (fn - 14) % 4; return [112, (A(g) * 4 + t) * 2, 2, 'pid']; }
+    const P = o => [94, o, 1, 'pid'], RS = o => [146, o, 2, 'pid'], GV = (o, n) => [148, o, n || 1, 'pid'], RT = o => [111, o, 1, 'rate'], PW = w => [112, w * 2, 2, 'pid'];
+    return ({
+        26: P(20), 27: P(21), 28: P(23), 29: P(24), 32: P(27),
+        33: P(11), 34: P(10), 35: P(12), 36: P(14), 37: P(13), 38: P(15),
+        39: RS(10), 40: RS(12), 41: RS(14), 42: RS(16), 43: RS(18), 44: RS(20),
+        45: P(28), 46: P(30), 47: P(31),
+        48: GV(2), 49: GV(3), 50: GV(4), 51: GV(5), 52: GV(6), 53: GV(7), 54: GV(10), 55: GV(11),
+        56: PW(13), 57: PW(12), 58: PW(14), 59: PW(16), 60: PW(15),
+        61: P(33), 62: P(34), 63: P(35), 66: P(41), 67: P(42),
+        68: RT(27), 69: RT(25), 70: RT(29), 71: RT(31), 72: RT(33), 73: RT(34), 74: RT(35), 75: P(22),
+        78: GV(12), 79: GV(13), 80: GV(0, 2), 81: GV(9),
+    })[fn] || null;
+}
+// The setting's current value in the line's bank, in page units; null when the page cannot read it.
+// Reads the bank in use from MSP 101 (byte 23 PID bank, 25 rates bank), selects the wanted bank only
+// if it differs, reads, and always puts the bank in use back.
+async function currentValue(r) {
+    const src = valueSource(r.fn); if (!src) return null;
+    const [fn, off, n, side] = src;
+    const want = condToBank(r.cond, bankRegions(rows));                // 1..6, 0 = the bank in use, -1 = other condition
+    const st = hexToBytes(await LDRC.msp(101));
+    const cur = side === 'pid' ? st[23] : st[25];
+    const idx = want >= 1 ? want - 1 : cur;
+    if (idx !== cur) {                                                   // another bank: never switch banks under a live transmitter (0.9.654)
+        const st2 = LDRC.state, lp = st2 && st2.rf && st2.rf.last_pkt_ms;
+        if (typeof lp === 'number' && lp >= 0 && lp < 3000) return null;   // the boxes stay blank; flip the bank switch to that bank and choose again
+    }
+    const sel = b => LDRC.msp(210, ((side === 'rate' ? 0x80 : 0) | b).toString(16).padStart(2, '0'));
+    let raw;
+    try {
+        if (idx !== cur) await sel(idx);
+        const b = hexToBytes(await LDRC.msp(fn));
+        if (b.length < off + n) return null;
+        raw = n === 2 ? u16(b, off) : b[off];
+    } finally { if (idx !== cur) await sel(cur); }
+    return Math.round(raw * fnScale(r.fn) * 1000) / 1000;
+}
+// Fill the line's value boxes with the current value: every box when force, else only the empty ones. True = something changed.
+async function fillCurrent(i, force) {
+    const r = rows[i]; if (!r || r.kind === 'nudge') return false;
+    let v; try { v = await currentValue(r); } catch (e) { return false; }
+    if (v === null || v === undefined || rows[i] !== r) return false;
+    let changed = false;
+    if (r.kind === 'switch') { const a = r.values[0], z = r.values[r.n - 1]; const fa = force || a === '' || a === undefined || a === null, fz = force || z === '' || z === undefined || z === null;
+        if (fa) { changed = changed || String(a) !== String(v); r.values[0] = String(v); } if (fz) { changed = changed || String(z) !== String(v); r.values[r.n - 1] = String(v); } r.values = switchRowValues(r); }
+    else if (r.kind === 'knob') { if (force || !+r.min) { changed = changed || +r.min !== v; r.min = v; } if (force || !+r.max) { changed = changed || +r.max !== v; r.max = v; } }
+    return changed;
+}
+// Unsaved edits show on the Save button (0.9.646); Remove saves by itself.
+let dirty = false;
+function markDirty() { if (dirty) return; dirty = true; const b = $('saveBtn'); if (b) { b.innerHTML = '<span class=ico>&#128190;</span>Save to flight controller &mdash; unsaved changes'; b.style.background = '#d9822b'; } }
+function markClean() { dirty = false; const b = $('saveBtn'); if (b) { b.innerHTML = '<span class=ico>&#128190;</span>Save to flight controller'; b.style.background = '#6cab5e'; } }
+function paint() {
+    const R = $('rows'); R.innerHTML = '';
+    rows.forEach((r, i) => {
+        if (r.fn === 1 || r.fn === 2) return;           // the bank switch lines belong to the Switches page (kept as they are)
+        const d = document.createElement('div'); d.className = 'rowCard';
+        const kindSel = r.kind === 'nudge'
+            ? '<select id=a_kind' + i + ' disabled><option>a step adjustment from the configurator (kept as it is)</option></select>'
+            : '<select id=a_kind' + i + ' class=usbOnly><option value=knob' + (r.kind === 'knob' ? ' selected' : '') + '>Knob</option><option value=switch' + (r.kind === 'switch' ? ' selected' : '') + '>Switch</option></select>';
+        let h = '<div class=r><label data-help="The Rotorflight setting this line changes, and the bank it changes it in. Yaw P gain in bank 1 works only while your bank switch has bank 1 in use; another line can serve bank 3 with values that suit it. Banks need a PID bank line on this page.">What it changes</label>' + fnSel('a_fn' + i, r, bankRegions(rows)) + '</div>' +
+                '<div class=r><label data-help="Knob: continuous adjustment within a range. Switch: choosing between settings, two to six positions, evenly spaced between the first and last values. The help button explains both.">Control</label>' + kindSel + '<label>on</label>' + chanSel('a_ch' + i, r.ch) + '</div>';
+        if (r.kind === 'switch') h += '<div class=r><label data-help="How many positions the switch has. Rotorflight divides the travel between the ends evenly.">Positions</label><select id=a_npos' + i + ' class=usbOnly>' + [2, 3, 4, 5, 6].map(n => '<option value=' + n + (r.n === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></div>';
+        h += '<div class=rScale><span>875</span><span>1500</span><span>2125</span></div><div class=rTrack id=a_tr' + i + '></div><div class=rLive id=a_lv' + i + '>&nbsp;</div>';
+        if (r.kind === 'switch') {
+            const vals = switchRowValues(r);
+            h += '<div class=vals>' + vals.map((v, k) => { const end = k === 0 || k === r.n - 1;
+                return '<div><input id=a_v' + i + '_' + k + ' class=usbOnly type=number min=0 max=65535 value="' + (v ?? '') + '"' + (end ? '' : ' disabled') + '><small>position ' + (k + 1) + (end ? '' : ' (between)') + '</small></div>'; }).join('') + '</div>';
+        } else if (r.kind === 'knob') {
+            h += '<div class=r><label data-help="The value at the left end of the zone and at the right end.">Sets the value from</label><input id=a_min' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.min + '><label>to</label><input id=a_max' + i + ' class=usbOnly type=number min=0 max=65535 value=' + r.max + '></div>';
+        } else {
+            h += '<div class=r><label>Step ' + r.stp + ', between ' + r.min + ' and ' + r.max + ' (change this one in the configurator)</label></div>';
+        }
+        h += '<div class=r><button type=button class="usbOnly" data-clear=' + i + ' style="margin-left:auto;background:#dca08c;border:0;border-radius:8px;padding:.3em .7em">Remove</button></div>';
+        d.innerHTML = h; R.appendChild(d);
+        drawBar(i);
+        $('fn' + i).onchange = async () => { collect(); await fillCurrent(i, true); paint(); };
+        if (r.kind !== 'nudge') $('kind' + i).onchange = () => { collect(); const r2 = rows[i]; const k = $('kind' + i).value;
+            if (k === 'switch') { r2.kind = 'switch'; r2.n = r2.n && r2.n >= 2 ? r2.n : 2; r2.lo = r2.lo ?? 988; r2.hi = r2.hi ?? 2012; if (r2.lo < RMIN || r2.hi > RMAX || r2.hi <= r2.lo) { r2.lo = 988; r2.hi = 2012; } r2.values = prefill(r2, r2.n, r2.values, r2.min, r2.max); }
+            else if (k === 'knob') { r2.kind = 'knob'; r2.lo = r2.lo ?? RMIN; r2.hi = r2.hi ?? RMAX; r2.min = r2.min ?? (r2.values ? +r2.values[0] || 0 : 0); r2.max = r2.max ?? (r2.values ? +r2.values[r2.values.length - 1] || 0 : 0); }
+            paint(); fillCurrent(i, false).then(c => { if (c) paint(); }); };
+        const np = $('npos' + i); if (np) np.onchange = () => { collect(); const r2 = rows[i]; const n = +np.value;
+            if (n !== r2.n) { const a = r2.values[0], z = r2.values[r2.n - 1]; r2.n = n; r2.values = prefill(r2, n, [a, ...new Array(Math.max(0, n - 2)).fill(undefined), z]); }
+            paint(); fillCurrent(i, false).then(c => { if (c) paint(); }); };
+        if (r.kind === 'switch') for (let k = 0; k < r.n; k++) { const el = $('v' + i + '_' + k); if (el) el.oninput = () => { rows[i].values[k] = el.value; const vals = switchRowValues(rows[i]); for (let j = 1; j + 1 < rows[i].n; j++) { const m = $('v' + i + '_' + j); if (m) m.value = vals[j] ?? ''; } drawBar(i); }; }
+    });
+    if (!rows.length) R.innerHTML = '<p class=sub>No adjustments yet.</p>';
+    R.querySelectorAll('button[data-clear]').forEach(b => b.onclick = async () => {
+        collect(); const i = +b.dataset.clear; const r = rows[i];
+        const what = (r && r.fn && LABELS[r.fn]) ? LABELS[r.fn] : 'this adjustment';
+        if (!(await LDRC.confirm('Remove ' + what + ' from the flight controller? It is saved straight away.', { title: 'Remove and save', icon: '\uD83D\uDDD1\uFE0F', yes: 'Remove and save', kind: 'danger' }))) return;
+        rows.splice(i, 1); paint();
+        if (!(await save())) { const why = $('status').textContent; await load(); setStatus('bad', 'Not removed. ' + why); }   // the flight controller still has it: show the truth (0.9.654)
+    });
+    document.querySelectorAll('.usbOnly').forEach(el => { el.disabled = !gateOk; el.style.opacity = gateOk ? '' : '.8'; });
+}
+function collect() {
+    rows.forEach((r, i) => {
+        const g = id => document.getElementById('a_' + id + i);
+        if (!g('fn')) return;
+        const [fnS, bankS] = g('fn').value.split(':'); r.fn = +fnS; r.ch = +g('ch').value;
+        if (r.fn === 1 || r.fn === 2) r.cond = null;
+        else if (bankS !== '-1') r.cond = bankToCond(+bankS, bankRegions(rows));
+        if (r.kind === 'switch') { const vals = []; for (let k = 0; k < r.n; k++) { const el = $('v' + i + '_' + k); vals.push(el && (k === 0 || k === r.n - 1) ? el.value : (r.values[k] ?? '')); } r.values = switchRowValues({ n: r.n, values: vals }); }
+        else if (r.kind === 'knob') { r.min = +g('min').value; r.max = +g('max').value; }
+        else { /* a configurator step line: untouched */ }
+    });
+}
+function paintRc(b) {   // the channel positions from the switches' own MSP 105 poll (one poll a page)
+    try {
+        rows.forEach((r, i) => {
+            const dot = $('dot' + i), tr = $('tr' + i); if (!dot || !tr) return;
+            const chIdx = r.ch + 5;
+            if (b.length < (chIdx + 1) * 2) { dot.style.display = 'none'; return; }
+            const u = u16(b, chIdx * 2);
+            dot.style.display = ''; dot.style.left = pct(u) + '%';
+            const regs = r.kind === 'knob' ? [[RMIN, r.lo], [r.lo, r.hi], [r.hi, RMAX]] : r.kind === 'switch' ? regions(switchThresholds(r.lo, r.hi, r.n)) : regions(r.t);
+            let inK = -1; regs.forEach(([lo, hi], k) => { if (u >= lo && u < hi) inK = k; });
+            tr.querySelectorAll('.rReg').forEach(el => el.classList.toggle('live', +el.dataset.k === inK));
+            const names = regionNames(r);
+            const live = inK < 0 ? '' : (r.kind === 'switch' ? '<b>' + (names[inK] || 'position ' + (inK + 1)) + '</b>' : (names[inK] ? '<b>' + names[inK] + '</b>' : 'nothing'));
+            const lv = $('lv' + i); if (lv) lv.innerHTML = 'now ' + u + ' &micro;s: ' + live;
+            dot.classList.toggle('in', inK >= 0 && !(r.kind === 'knob' && inK !== 1) && !(r.kind === 'nudge' && inK === 1));
+        });
+    } catch (e) {}
+}
+window.__adjRc = paintRc;
+let RATE_SCALE = 5;                                      // Rotorflight rates type: Rate on the Rates page = stored x5; older types x10
+const fnScale = fn => (fn >= 8 && fn <= 10) ? RATE_SCALE : 1;
+function scaleRows(rows, k) {                            // k = 1: raw -> page units; k = -1: page -> raw
+    return rows.map(r => {
+        const sc = fnScale(r.fn); if (sc === 1) return r;
+        const f = v => (v === '' || v === undefined || v === null) ? v : Math.round(+v * (k > 0 ? sc : 1 / sc) * 1000) / 1000;
+        const o = Object.assign({}, r);
+        if (r.kind === 'switch') o.values = r.values.map(f); else { o.min = f(r.min); o.max = f(r.max); }
+        return o;
+    });
+}
+async function load() {
+    if (!(await usbGate())) { if (cacheLoad()) { await usbGate(); } paint(); return; }   // no cable: the last USB read, greyed
+    setStatus('info', 'Reading…');
+    try {
+        try { const t = hexToBytes((await LDRC.msp(111)).trim()); RATE_SCALE = t[0] === 6 ? 5 : 10; } catch (e) { RATE_SCALE = 5; }
+        const r = await fetch('/api/msp?fn=52', { cache: 'no-store' });
+        if (!r.ok) { setStatus('bad', LDRC.replay ? 'Adjustments are not in the recording \u2014 they need the model connected.' : await r.text()); return; }
+        const hex = (await r.text()).trim();
+        // a line cannot say how many positions a switch has: a switch shown until now (50, 55, 60 over 988..2012, say) comes back
+        // from the flight controller as the same line and is shown as that switch again, not as a knob 50 to 60
+        const memo = rows.filter(r => r.kind === 'switch' && r.n >= 2 && r.values[0] !== '' && r.values[r.n - 1] !== '').map(r => ({ fn: r.fn, ch: r.ch, lo: us5(r.lo), hi: us5(r.hi), first: +r.values[0], last: +r.values[r.n - 1], n: r.n }));
+        rows = scaleRows(linesToRows(parseLines(hexToBytes(hex))), 1);
+        rows.forEach(r => {
+            if (r.kind !== 'knob') return;
+            const m = memo.find(m => m.fn === r.fn && m.ch === r.ch && m.lo === r.lo && m.hi === r.hi && m.first === r.min && m.last === r.max);
+            if (m) { r.kind = 'switch'; r.n = m.n; r.values = switchValues(r.min, r.max, m.n); delete r.min; delete r.max; }
+        });
+        cacheStore(hex); cacheAt = '';
+        setStatus('', ''); paint(); markClean();
+        const old = rows.filter(r => r.legacy).length;
+        if (old) { markDirty(); setStatus('bad', old + (old === 1 ? ' switch was' : ' switches were') + ' in a form Rotorflight applies only once per power-up (made by this page before 9 October 2026). Converted to Rotorflight\u2019s own form: check the positions and save.'); }
+    } catch (e) { setStatus('bad', 'no answer'); }
+}
+async function save() {
+    if (!(await usbGate())) return false;
+    collect();
+    const problem = rowsProblem(rows, LABELS);
+    if (problem) { setStatus('bad', problem); return false; }
+    const L = rowsToLines(scaleRows(rows, -1));
+    if (rows.some(r => r.fn) && L.filter(l => l.fn).length === 0) { setStatus('bad', 'Give each position a value first'); return false; }
+    setStatus('info', 'Writing…');
+    // 43 writes in a row: with the transmitter on, its own Rotorflight traffic can
+    // make the receiver answer 503 (busy with a transmitter edit) or 504 (no answer
+    // in time) to one of them - retry those a few times before giving up (0.9.644).
+    const put = async (q) => {
+        let r, t = '';
+        for (let n = 0; n < 6; n++) {
+            r = await fetch(q, { cache: 'no-store' });
+            if (r.ok) return null;
+            t = await r.text();
+            if (r.status !== 503 && r.status !== 504) break;
+            await new Promise(rs => setTimeout(rs, 500 + 300 * n));
+        }
+        return t || ('HTTP ' + r.status);
+    };
+    for (let i = 0; i < L.length; i++) {
+        setStatus('info', 'Writing line ' + (i + 1) + ' of ' + L.length + '\u2026');
+        const err = await put('/api/msp?fn=53&data=' + bytesToHex(encodeLine(i, L[i])));
+        if (err) { setStatus('bad', 'Line ' + (i + 1) + ': ' + err); return false; }
+    }
+    const err = await put('/api/msp?fn=250');
+    if (err) { setStatus('bad', 'Not saved: ' + err); return false; }
+    setStatus('good', '✓ Saved');
+    await load();
+    return true;
+}
+document.addEventListener('DOMContentLoaded', async () => {
+    { const sa = $('showAll'); sa.checked = showAll; sa.onchange = () => { showAll = sa.checked; try { localStorage.setItem('adj.showAll', showAll ? '1' : '0'); } catch (e) {} collect(); paint(); }; }
+    $('addBtn').onclick = async () => { collect(); const br = bankRegions(rows); rows.push({ kind: 'switch', fn: 14, ch: 1, lo: 988, hi: 2012, n: 2, values: ['', ''], cond: br ? bankToCond(1, br) : null }); paint(); markDirty(); if (await fillCurrent(rows.length - 1, true)) paint(); };
+    $('saveBtn').onclick = save;
+    $('rows').addEventListener('input', markDirty); $('rows').addEventListener('change', markDirty);
+    await load();
+    setInterval(usbGate, 4000);
+});
+
+})();
+</script>
+<template id=helpContent><h2>Switches and knobs</h2>
+<p><b>Rotorflight keeps these on two tabs</b>, Modes (the switch jobs) and Adjustments (the selectors, and the knobs that change a setting). They are on one page here to keep it simple; each is written to its own table.</p>
+<h3>Switch jobs</h3>
+<p>This is where transmitter switches get their jobs <i>(Rotorflight: the Modes tab)</i>. Each row says: when <b>this channel</b> is between <b>these values</b>, do <b>this</b>.</p>
 <ul>
 <li><b>Arm</b> is the big one — the motor can only run while its switch is in range. Every model needs one.</li>
 <li><b>Rescue</b> — the safety-net switch; the Rescue page shows its settings.</li>
@@ -515,6 +1062,29 @@ document.addEventListener('DOMContentLoaded', ()=>{ load().then(()=>{ if(!LDRC.r
 <li>Find a switch by flicking it and watching the red line on this page&rsquo;s own bar. <b>View channels</b> numbers channels as your transmitter sends them &mdash; not the flight controller&rsquo;s numbering, once the channel order is set on the Transmitter channels page.</li>
 </ul>
 <p>Every switch-action <b>Save</b> writes the slot, stores it, reads it back and confirms the bytes match. The <b>Bank</b> and <b>Rates</b> selectors cannot be read back &mdash; Rotorflight 4.6 will not send its adjustments list over the receiver link &mdash; so check those by flipping the switch and watching the flight-controller line. Be especially careful with <b>Arm</b> — change it with the model unpowered.</p>
+
+<h2>Knobs and switches that change a setting</h2>
+<p>A knob or a switch on your transmitter changes one setting while you fly.</p>
+<h3>Setting one up</h3>
+<ol>
+<li><b>What it changes</b>: the setting and the bank, e.g. Yaw P gain in bank 1. The boxes fill with the current value in that bank. With the transmitter on they fill only for the bank in use: flip the bank switch to another bank to fill for it. Change one or two to the values you want to try, and leave the first box as it is so a flick of the switch takes you back to it.</li>
+<li><b>Control</b>: Knob or Switch, and the channel it is on.</li>
+<li><b>Save to flight controller</b>. The button says when there are unsaved changes. Remove saves by itself.</li>
+</ol>
+<h3>Switch</h3>
+<p>Two or more positions. Give the first and last positions their values; Rotorflight spaces the positions evenly between them, and the page shows the value each position gets. Drag the round ends to the switch&rsquo;s first and last positions (a switch normally spans 988 to 2012). Move the switch: the red line follows it and the lit region is the position it is in.</p>
+<p>Rotorflight keeps a switch as one line: its travel mapped onto the values. A line that sets one fixed value is applied only once, the first time the switch reaches it, and never again until the flight controller restarts &mdash; so this page never writes that form. Rows found in that form (made by this page before 9 October 2026) are converted when the page opens: save to keep them working.</p>
+<h3>Knob</h3>
+<p>Turning it slides the setting between the two values. Drag the round ends to where the knob starts and stops changing it. The right end&rsquo;s value must be above the left end&rsquo;s: Rotorflight counts low to high.</p>
+<h3>Banks</h3>
+<p>A line for bank 1 works only while your bank switch (the Bank card at the top of this page) has bank 1 in use. Another line can serve bank 3 with values that suit it.</p>
+<p>The list offers PIDs and rates. <b>Show every setting</b> adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
+<h3>Numbers</h3>
+<p>Rate, Shape and expo use the same numbers as the Rates page. AUX1 is channel 6 on a helicopter.</p>
+<h3>USB</h3>
+<p>Setting up needs the USB cable from the dongle or receiver to the flight controller, not a laptop. Rotorflight 4.6 cannot send its adjustments list over the receiver link &mdash; the reply is too big for its own buffer and it overwrites its telemetry setup &mdash; so the cable is the only safe way to read them. Afterwards the adjustments work with the cable unplugged. Without the cable this part of the page shows what it last read over USB, greyed; the switch marker still moves.</p>
+<h3>From the configurator</h3>
+<p>A step adjustment made in the configurator is shown but kept as it is. Change it there.</p>
 </template>
 </body>
 </html>

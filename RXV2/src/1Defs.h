@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.902-selectors-pointer";
+constexpr const char* FW_VERSION = "RXV2-0.9.903-switches-and-knobs";
 
 //*********************************************************************
 //  Auto-update manifest URLs
