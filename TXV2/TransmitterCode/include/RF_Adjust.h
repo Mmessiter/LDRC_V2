@@ -542,6 +542,13 @@ FLASHMEM static bool AdjBankRowRight(const AdjRow &r) // does the bank line as i
     return true;
 }
 static bool AdjBankFitted[ADJ_MAX];   // the row's ends are this transmitter's (no handles to drag)
+// B138: the channel is spaced (AdjSpaceBanks) at most ONCE per row and channel. Malcolm, 20 Oct 2026, a six-bank model:
+// "when I moved the switch, it crashed. The transmitter rebooted ... this time ... without my having to move the switch
+// first." A channel the spacing could not separate (its ends clamped together, or a curve the spacing does not reach)
+// was spaced again at every 300 ms tick: each spacing cleared what had been measured, so the next tick found the bank
+// "fresh" again, fitted, showed (AdjShow calls AdjLive, which fitted and showed ...) until the stack was gone. Found by
+// dev/test_adjust/test_adjust_page.py step 10 under the address sanitizer: a stack overflow in AdjBankFit.
+static bool AdjSpacedOnce[ADJ_MAX];
 static char AdjBankWhy[200];           // what the last fit of the row showing said
 // The rows held in a bank follow the bank line when it changes: their conditions re-made from the new divisions
 FLASHMEM static void AdjRebank(const AdjBanks &before)
@@ -563,19 +570,24 @@ FLASHMEM static bool AdjFitBankRow(int i) // a bank row's ends from this transmi
     if (r.fn != 1 && r.fn != 2) { AdjBankFitted[i] = false; return false; }
     int16_t lo, hi; int n;
     bool spaced = false;
-    const bool fits = AdjBankFit(r.ch + 5, lo, hi, n, AdjBankWhy, sizeof(AdjBankWhy));
+    bool fits = AdjBankFit(r.ch + 5, lo, hi, n, AdjBankWhy, sizeof(AdjBankWhy));
     if (!AdjBankLine(r) && !fits) { AdjBankFitted[i] = false; return false; }   // (a rates switch of its own: as before B133)
     if (AdjBankLine(r) && (!fits || n < BanksCount()))
     { // B133 (Malcolm, 19 Oct 2026: "If user chose 6 then six should just be there. If 4 then only four. Immediately ... we know exactly
       // what that channel must do ... right in the middle of the zone"): the channel does not tell every bank of the model apart (banks
       // 5 and 6 are bank 4's twins until set), or no travel divides its values: it is set flat in every bank, evenly over its travel
-        AdjSpaceBanks(r.ch + 5, AdjBankWhy, sizeof(AdjBankWhy));
-        char scratch[120];
-        if (!AdjBankFit(r.ch + 5, lo, hi, n, scratch, sizeof(scratch)) || n < BanksCount())
-        { // (cannot happen with evenly spaced values; the travel's ends, all the same)
+        if (!AdjSpacedOnce[i])
+        { // (B138: once per row and channel - see AdjSpacedOnce; a channel the spacing cannot separate takes the travel's ends below)
+            AdjSpacedOnce[i] = true;
+            AdjSpaceBanks(r.ch + 5, AdjBankWhy, sizeof(AdjBankWhy));
+            char scratch[120];
+            fits = AdjBankFit(r.ch + 5, lo, hi, n, scratch, sizeof(scratch));
+            spaced = true;
+        }
+        if (!fits || n < BanksCount())
+        { // (the travel's ends, all the same: with evenly spaced values only when the channel's ends are squashed together)
             lo = (int16_t)AdjFcUs(CurveMicros(0)); hi = (int16_t)AdjFcUs(CurveMicros(180)); n = BanksCount();
         }
-        spaced = true;
     }
     AdjBankFitted[i] = true;
     if (!spaced && r.kind == AK_SWITCH && r.n == n && r.lo == lo && r.hi == hi && r.v[0] == 1 && r.v[n - 1] == n) return false;
@@ -589,7 +601,12 @@ static void AdjGather();
 static void AdjEdited();
 static void AdjShow();
 static int AdjLiveCh = -1, AdjLiveUs = -1;   // what the marker and the line last showed (AdjShow forgets them: the row may have changed)
-FLASHMEM static void AdjLive() // the chosen channel's position, from this transmitter's own output: the bar's marker and the line under it
+// B138: never inside itself. AdjLive re-fits a bank row and shows the page (AdjShow), and AdjShow ends by calling AdjLive: with
+// the guard the inner call returns at once and the marker follows at the next tick, 300 ms on.
+static bool AdjInLive = false;
+FLASHMEM static void AdjLiveBody();
+FLASHMEM static void AdjLive() { if (AdjInLive) return; AdjInLive = true; AdjLiveBody(); AdjInLive = false; }
+FLASHMEM static void AdjLiveBody() // the chosen channel's position, from this transmitter's own output: the bar's marker and the line under it
 {
     if (!AdjN) { if (AdjLiveCh != -1) { AdjLiveCh = -1; AdjText("tn8", ""); } return; }
     const AdjRow &r = AdjRows[AdjAt];
@@ -825,6 +842,7 @@ FLASHMEM static void AdjTakeRows(const uint8_t *b, int n) // the 52 image -> row
     for (int i = 0; i < AdjN; ++i)
     {
         AdjRow &r = AdjRows[i];
+        AdjSpacedOnce[i] = false;   // (B138: read afresh - each row may be spaced once)
         if (r.fn != 1 && r.fn != 2) { AdjBankFitted[i] = false; continue; }
         if (AdjBankRowRight(r)) { AdjBankFitted[i] = true; continue; }   // every bank has its own zone: left as it is
         if (AdjFitBankRow(i)) refit = true;
@@ -1092,6 +1110,7 @@ FLASHMEM static void AdjChannel(int dir)
     if (ch < 0) ch = CHANNELSUSED - 6;
     if (ch > CHANNELSUSED - 6) ch = 0;
     AdjRows[AdjAt].ch = (uint8_t)ch;
+    AdjSpacedOnce[AdjAt] = false;   // (B138: another channel may be spaced once)
     if (AdjRows[AdjAt].fn == 1 || AdjRows[AdjAt].fn == 2) AdjFitBankRow(AdjAt);
     AdjEdited(); AdjShow();
 }
@@ -1104,6 +1123,7 @@ FLASHMEM void AdjustKindTapped() // Knob -> Switch 2 -> Switch 3 -> Switch 4 -> 
     AdjRow &r = AdjRows[AdjAt];
     if (r.fn == 1 || r.fn == 2)
     { // a bank switch: matched to this transmitter's banks again (B133: the channel spaced if it has to be - said); what could not be matched is said
+        AdjSpacedOnce[AdjAt] = false;   // (B138: a deliberate re-match may space the channel again)
         if (AdjFitBankRow(AdjAt)) AdjEdited();
         if (!AdjBankFitted[AdjAt]) { MsgBox((char *)"page AdjustView", AdjBankWhy); AdjHead(); }
         AdjShow();
@@ -1151,23 +1171,22 @@ FLASHMEM void AdjustAdd()
     AdjGather();
     if (AdjN >= ADJ_MAX || AdjLinesUsed(-1) >= ADJ_MAX) { MsgBox((char *)"page AdjustView", (char *)"No room: Rotorflight holds 42 adjustments."); AdjHead(); AdjShow(); return; }
     const int at = AdjN ? AdjAt + 1 : 0;
-    for (int i = AdjN; i > at; --i) { AdjRows[i] = AdjRows[i - 1]; AdjBankFitted[i] = AdjBankFitted[i - 1]; }
-    AdjBankFitted[at] = false;
+    for (int i = AdjN; i > at; --i) { AdjRows[i] = AdjRows[i - 1]; AdjBankFitted[i] = AdjBankFitted[i - 1]; AdjSpacedOnce[i] = AdjSpacedOnce[i - 1]; }
+    AdjBankFitted[at] = false; AdjSpacedOnce[at] = false;
     AdjRow &r = AdjRows[at];
     memset(&r, 0, sizeof(r));
     r.kind = AK_KNOB; r.fn = 14; r.ch = AdjN ? AdjRows[AdjAt].ch : 1; r.n = 2; r.lo = (int16_t)ADJ_RMIN; r.hi = (int16_t)ADJ_RMAX;
     ++AdjN; AdjAt = at; AdjFreshAt = at;
     AdjEdited(); AdjShow(); AdjAskNow();
-    // B137 (Malcolm, 20 Oct, after Add: "bank (profile) is not anywhere to be seen"): say where the setting is chosen, and
-    // that the selectors head the list; the new row's picker opens at the top (AdjustSettingNext).
-    AdjBusy("New adjustment. Tap the setting box to choose what it changes: the bank selector is first in the list."); AdjMsgUntil = millis() + 8000;
+    // B137 (Malcolm, 20 Oct, after Add: "bank (profile) is not anywhere to be seen"): the new row's picker opens at the top
+    // (AdjustSettingNext). B137's note here ("New adjustment. Tap the setting box ...") went in B138: "entirely superfluous".
 }
 FLASHMEM void AdjustRemove()
 {
     if (!AdjN) return;
     AdjGather();
     if (!GetConfirmation((char *)"page AdjustView", (char *)"Remove this adjustment?")) { AdjHead(); AdjShow(); return; }
-    for (int i = AdjAt; i + 1 < AdjN; ++i) { AdjRows[i] = AdjRows[i + 1]; AdjBankFitted[i] = AdjBankFitted[i + 1]; }
+    for (int i = AdjAt; i + 1 < AdjN; ++i) { AdjRows[i] = AdjRows[i + 1]; AdjBankFitted[i] = AdjBankFitted[i + 1]; AdjSpacedOnce[i] = AdjSpacedOnce[i + 1]; }
     --AdjN;
     if (AdjFreshAt == AdjAt) AdjFreshAt = -1; else if (AdjFreshAt > AdjAt) --AdjFreshAt;   // (B137: the fresh row went, or moved up one)
     if (AdjAt >= AdjN) AdjAt = AdjN ? AdjN - 1 : 0;

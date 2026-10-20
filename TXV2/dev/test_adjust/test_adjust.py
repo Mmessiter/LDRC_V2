@@ -204,6 +204,7 @@ for hex, e in zip(vectors, expected):
     lines.append('%s|%s|%s|%s|%d' % (hex, e['back'], ';'.join(rows), br, 1 if e['problem'] else 0))
 vec = os.path.join(d, 'vectors.txt'); open(vec, 'w').write('\n'.join(lines) + '\n')
 cpp = os.path.join(d, 't.cpp'); open(cpp, 'w').write(prog)
-r = subprocess.run(['clang++', '-std=c++14', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-o', os.path.join(d, 't'), cpp], capture_output=True, text=True)
+# The sanitizers (20 Oct 2026, the six-bank reboot found by the page test's): an overrun or an undefined shift fails here
+r = subprocess.run(['clang++', '-std=c++14', '-g', '-fsanitize=address,undefined', '-fno-omit-frame-pointer', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-o', os.path.join(d, 't'), cpp], capture_output=True, text=True)
 if r.returncode: print(r.stderr[:4000]); sys.exit(1)
 sys.exit(subprocess.run([os.path.join(d, 't'), vec]).returncode)

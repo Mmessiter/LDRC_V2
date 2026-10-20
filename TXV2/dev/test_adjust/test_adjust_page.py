@@ -33,8 +33,8 @@ static uint32_t now = 1000;
 static uint32_t millis() { return now; }
 // ---- this transmitter's outputs per bank (B83: the bank switch is matched to them). The curve is a stub table of
 // microseconds per bank and channel; trims, subtrims and reversal are the real formulas with neutral values
-#define BANKS_USED 4
-static uint8_t BanksCount() { return 4; }   // (B130: four banks here)
+#define BANKS_USED 6   // (as the transmitter: B130 - six banks, banks 5 and 6 only when the model's 'Six banks' is on)
+static uint8_t banksN = 4; static uint8_t BanksCount() { return banksN; }   // (B130: four banks here until step 10, which turns on six)
 static bool LinkRatesToBanks = false;   // (B133: the rates selector is a rates switch of its own here)
 #define MINMICROS 1000
 #define MAXMICROS 2000
@@ -47,14 +47,14 @@ static uint8_t Bank = 2;
 static uint8_t ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 static uint8_t SourceOfOutput(uint8_t out) { for (uint8_t k = 0; k < 16; ++k) if (ChannelOutPut[k] == out) return k; return out; }   // (B31: main.cpp's - the channel routed to an output)
 static uint8_t DualRateValue = 100;
-static uint8_t InterpolationTypes[5][17] = {{0}};
+static uint8_t InterpolationTypes[BANKS_USED + 1][17] = {{0}};
 static uint16_t InputsBuffer[17] = {0};
 static uint8_t InPutStick[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 static uint8_t SubTrims[16] = {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
 static uint16_t ReversedChannelBITS = 0;
 static int GetTrimAmount(uint8_t) { return 0; }
 static void GetCurveDots(uint16_t, uint16_t) {}
-static uint16_t txUs[5][16];   // [bank][channel 0-based]: what the stub curve gives
+static uint16_t txUs[BANKS_USED + 1][16];   // [bank][channel 0-based]: what the stub curve gives
 static uint16_t stubInterp(uint16_t, uint16_t, uint16_t ch) { return txUs[Bank][ch]; }
 uint16_t (*Interpolate[3])(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel) = {stubInterp, stubInterp, stubInterp};
 // ---- the fake screen
@@ -183,7 +183,7 @@ int main() {
     // 4. Add: a knob on the same channel, Pitch P gain, its values from the present value
     fcLog.clear(); AdjustAdd(); run(8);
     CHECK(AdjN == 4 && AdjAt == 3 && fields["tn0"] == "Pitch P gain" && fields["tn2"] == "Knob" && fields["tn3"] == "in any bank" && fields["tk0"] == "55" && fields["tk1"] == "55" && AdjNow == 55);
-    CHECK(fields["busy"].find("New adjustment") == 0 && fields["busy"].find("bank selector is first") != std::string::npos);   // (B137: the note after Add)
+    CHECK(fields["busy"].find("New adjustment") != 0);   // (B137's note after Add went in B138: Malcolm found it superfluous)
     AdjustBankTapped(); run(2); CHECK(fields["tn3"] == "in bank 1" && AdjNowBank == 1);   // (bank 1 is not the bank in use: not read)
     AdjustBankTapped(); run(6); CHECK(fields["tn3"] == "in bank 2" && AdjNow == 55);
     // the kind: a 2-position switch over a switch's travel, then 3, then 4 positions (the values evenly between the ends)
@@ -250,6 +250,32 @@ int main() {
     { int k = 0; for (int i = 0; i < AdjN; ++i) if (AdjRows[i].fn == 2) ++k; CHECK(k == 1 && AdjRows[0].lo == 1000 && AdjRows[0].hi == 1850); }
     fcLog.clear(); SaveAdjustments(); run(40);
     { AdjLine L[42]; AdjParseLines(adj, 588, L); int k = 0; for (int i = 0; i < 42; ++i) if (L[i].fn == 2) ++k; CHECK(k == 1 && L[30].fn == 0 && writes(53) >= 1); }
+    // 10. SIX BANKS (B130). Malcolm, 20 Oct 2026, a six-bank model: a bank selector added on the transmitter, then "when I moved
+    // the switch, it crashed. The transmitter rebooted ... this time the transmitter rebooted without my having to move the
+    // switch first." Channel 7 (AUX2, the row's default) tells six banks apart; the row is made, the switch walks every bank,
+    // the line is saved; then banks 5 and 6 as bank 4's twins: the channel is spaced (the stub's curve does not change, so the
+    // travel's ends serve) and the switch walks every bank again. Built with the sanitizers: an overrun anywhere fails here.
+    banksN = 6; usb = true; BoundFlag = true; ModelMatched = true; confirmAnswer = true; saveNowAnswer = 0;
+    for (int b = 1; b <= 6; ++b) txUs[b][6] = (uint16_t)(1000 + (b - 1) * 200);   // 1000, 1200 .. 2000 us
+    Bank = 2; SendBuffer[6] = txUs[2][6]; AdjSeenClear();
+    memset(adj, 0, sizeof adj); for (int i = 0; i < 42; ++i) putLine(i, 0, 0, 1500, 1500, 0, 1500, 1500, 1500, 1500, 0, 0, 0);
+    StartAdjustView(); run(6); CHECK(AdjN == 0 && CurrentView == ADJUSTVIEW);
+    AdjustAdd(); run(8); CHECK(AdjN == 1 && AdjAt == 0 && fields["tn1"] == "Channel 7: AUX2");
+    AdjustSettingNext(); CHECK(CurrentView == ADJPICKVIEW && vals["list"] == 0);
+    vals["list"] = 0; AdjustPickOk(); run(8);
+    CHECK(AdjRows[0].fn == 2 && AdjRows[0].kind == AK_SWITCH && AdjRows[0].n == 6 && AdjBankFitted[0] && fields["tn2"] == "Banks 1 to 6 of this transmitter" && fields["bar"] == "1|2|3|4|5|6" && cmdValue("bar.kind") == 4 && cmdValue("bar.n") == 6);
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; SendBuffer[6] = txUs[b][6]; run(8); char e[40]; snprintf(e, sizeof e, "Bank %d: %d us", b, AdjFcUs(txUs[b][6])); CHECK(fields["tn8"] == e); CHECK(cmdValue("bar.mk") == AdjFcUs(txUs[b][6])); }
+    fcLog.clear(); SaveAdjustments(); run(40); CHECK(writes(53) >= 1 && writes(250) == 1 && !Adj_Was_Edited);
+    { AdjLine L[42]; AdjParseLines(adj, 588, L); CHECK(L[0].fn == 2 && L[0].min == 1 && L[0].max == 6 && L[0].adj == 1); }
+    StartAdjustView(); run(6); CHECK(AdjN == 1 && AdjRows[0].n == 6 && AdjBankFitted[0] && !Adj_Was_Edited);
+    // banks 5 and 6 as bank 4's twins
+    confirmAnswer = true; AdjustRemove(); run(4); CHECK(AdjN == 0);
+    txUs[5][6] = txUs[6][6] = txUs[4][6]; AdjSeenClear(); modelSaves = 0; Bank = 2; SendBuffer[6] = txUs[2][6];
+    AdjustAdd(); run(8); AdjustSettingNext(); vals["list"] = 0; AdjustPickOk(); run(8);
+    CHECK(AdjN == 1 && AdjRows[0].fn == 2 && AdjRows[0].n == 6 && AdjBankFitted[0] && modelSaves == 1 && fields["tn2"] == "Banks 1 to 6 of this transmitter");
+    for (int b = 1; b <= 6; ++b) { Bank = (uint8_t)b; SendBuffer[6] = txUs[b][6]; run(8); }
+    CHECK(AdjN == 1 && AdjRows[0].fn == 2 && AdjRows[0].n == 6);
+    banksN = 4;
     // 8. no USB cable: the refusal, in the receiver's words, and back to the menu
     usb = false; boxes = 0; rfStarts = 0; StartAdjustView(); run(6);
     CHECK(boxes == 1 && rfStarts == 1 && lastBox.find("In-flight adjustments need the USB cable") == 0 && lastBox.find("Plug the flight controller's USB") != std::string::npos && CurrentView == 47);
@@ -261,6 +287,8 @@ int main() {
 '''
 d = tempfile.mkdtemp(); cpp = os.path.join(d, 't.cpp'); open(cpp, 'w').write(prog)
 import atexit, shutil as _sh; atexit.register(_sh.rmtree, d, True)   # (17 Oct 2026: 1,800 left behind filled the Mac's disk)
-r = subprocess.run(['clang++', '-std=c++14', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-o', os.path.join(d, 't'), cpp], capture_output=True, text=True)
+# The sanitizers (20 Oct 2026, the six-bank reboot): an array overrun or an undefined shift fails the test instead of
+# corrupting the transmitter's stack
+r = subprocess.run(['clang++', '-std=c++14', '-g', '-fsanitize=address,undefined', '-fno-omit-frame-pointer', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-o', os.path.join(d, 't'), cpp], capture_output=True, text=True)
 if r.returncode: print(r.stderr[:4000]); sys.exit(1)
 sys.exit(subprocess.run([os.path.join(d, 't')]).returncode)

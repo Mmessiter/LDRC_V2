@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Adjustments: the reboot with a six-bank bank selector (Teensy B138, 20 Oct 2026)
+
+Malcolm, B137 on a six-bank model ("RAW 420 TEST"): the bank selector added and shown ("Banks 1 to 6 of this transmitter"),
+no marker on the bar, then "when I moved the switch, it crashed. The transmitter rebooted. I tried this a second time, and
+this time the transmitter rebooted without my having to move the switch first." The page test, given six banks and built
+with the address sanitizer (dev/test_adjust/test_adjust_page.py step 10, new), found a stack overflow: a channel the
+spacing (B132) could not separate was spaced again at every 300 ms tick - each spacing cleared what had been measured, so
+the next tick found the bank "fresh" again, fitted, showed, and AdjShow ends by calling AdjLive, which fitted and showed
+... until the stack was gone. Two guards: a row is spaced at most once per channel choice (AdjSpacedOnce; the travel's
+ends serve when that is not enough, as before), and AdjLive never runs inside itself (the marker follows at the next
+tick). B137's note after Add is gone ("entirely superfluous"). Both tests now build with the sanitizers.
+
 ## Adjustments: a new row's list opens at the top, with a note after Add (Teensy B137, 20 Oct 2026)
 
 Malcolm, after Add on B136 or before it (his photo: "Pitch P gain", Knob, Channel 7: Bank): "bank (profile) is not anywhere to
