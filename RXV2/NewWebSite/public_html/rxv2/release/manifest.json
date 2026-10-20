@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.902-selectors-pointer",
+      "url": "https://messiter.com/rxv2/release/v0.9.902/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.902/littlefs.bin",
+      "fs_md5": "843727538c4c5a76ee66349c61859e46",
+      "notes": "Adjustments: the setting list now says at its top that the Bank (Profile) and Rates selectors are made on the Switches page (they were there all along, but not in this list, where Malcolm looked for them)."
+    },
+    {
       "name": "RXV2-0.9.901-bluetooth-reply-resync",
       "url": "https://messiter.com/rxv2/release/v0.9.901/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.901/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.891/littlefs.bin",
       "fs_md5": "ff6c14f1cbc5134d77674caf1d152633",
       "notes": "Save stays in view while typing: the iPhone page now shrinks above the keyboard, so the floating Save bar sits just over it; Filters and In-flight adjustments get the floating Save bar too."
-    },
-    {
-      "name": "RXV2-0.9.890-save-lands",
-      "url": "https://messiter.com/rxv2/release/v0.9.890/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.890/littlefs.bin",
-      "fs_md5": "42b9a4f8ccbd52f72bd7f5083a040093",
-      "notes": "Save while the keyboard is up: the floating Save bar lands in the page flow (at the foot of the page, under Reload) for as long as a box is being typed in and the keyboard covers the window, and floats again when the keyboard goes - it used to step aside, so Save was out of reach until the keyboard was dismissed (Malcolm, the Travel page). Android, whose window shrinks for its keyboard, keeps the bar floating above it."
     }
   ],
   "rotorflight": {

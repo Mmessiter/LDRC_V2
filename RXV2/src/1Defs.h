@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.901-bluetooth-reply-resync";
+constexpr const char* FW_VERSION = "RXV2-0.9.902-selectors-pointer";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>In-flight adjustments &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=401">
-<script src="/app.js?v=401" defer></script>
+<link rel=stylesheet href="/style.css?v=402">
+<script src="/app.js?v=402" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -290,6 +290,9 @@ function fnSel(id, r, br) {
     const fns = []; for (let fn = 3; fn < LABELS.length; fn++) if (showAll || BASIC.has(fn) || fn === r.fn) fns.push(fn);
     const opt = (fn, bank, text) => '<option value="' + fn + ':' + bank + '"' + (r.fn === fn && cur === bank ? ' selected' : '') + '>' + text + '</option>';
     let h = '<select id=' + id + ' class=usbOnly>';
+    // The bank and rates selectors are made on the Switches page, not here (Malcolm, 20 Oct 2026, looking for "Bank" in
+    // this list on the iPhone after the transmitter's list gained them): said at the top of the list, where he looked.
+    h += '<option disabled>Bank (Profile) and Rates selectors: on the Switches page</option>';
     if (cur === -1) h += opt(r.fn, -1, LABELS[r.fn] + ' with a condition set elsewhere');
     // Every bank Rotorflight can have, not the four this page used to offer
     // (0.9.742) - a switch section set to bank 5 had no entry at all.
