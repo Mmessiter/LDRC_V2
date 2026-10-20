@@ -186,6 +186,18 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## The curve page's crumbs outside the box (screen 1.11.99, 20 Oct 2026)
+
+Malcolm, with B135 on ("That's very good!!"): "When the screen has redrawn and some edge points have moved, sometimes they leave
+behind little white marks on the background colour outside the box." The dots sit ON the box's edges (x 35 and 395; y 39 and
+391) and the chosen point's ring is 10 px across, so up to 10 px of them lie on the cards round the box. The Teensy's clear is
+the box's inside only, and the screen's incremental clear (1.11.82: undo what was drawn since the last identical fill) erased
+inside the box only - Version 1's whole-page repaint before every redraw (ClearBox, gone in B135) used to hide this. Now, when
+the same clear comes again, every drawing that reached past the box has its outside pixels put back to what the page shows
+there (the topmost solid card at that pixel, else the page's picture: src/main.cpp repairOutside), before the inside is
+erased; a page drawn whole forgets its drawings (nothing to repair). Test: hmi/test_crumbs (the scenario 21_crumbs rendered
+with the screen's own code: eight crumb pixels white before, their card's colour after, no white left on the cards).
+
 ## The curve page: no flash, and Reset and Flat (Teensy B135, page 21, 20 Oct 2026)
 
 Malcolm: "if I move a point and it must redraw, it briefly displays the background image before redrawing. I think it should

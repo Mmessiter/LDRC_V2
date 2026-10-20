@@ -1,0 +1,28 @@
+# 21_crumbs (screen 1.11.99, 20 Oct 2026): the curve page's dots and rings sit on the box's edges, so up to 10 px of them lie
+# on the cards around the box. The next clear (the same fill again) must put those pixels back (Malcolm: "little white marks
+# on the background colour outside the box"). hmi/test_crumbs checks the two shots.
+Screen_Background=8
+@model 1
+page GraphView
+fill 36,36,360,360,0
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+cirs 35,391,4,65535
+cirs 395,39,4,65535
+cirs 35,391,10,65535
+cirs 35,391,8,65504
+cirs 35,391,6,65504
+cirs 35,391,7,0
+cirs 395,39,10,65535
+@shot 21_crumbs_before
+fill 36,36,360,360,0
+draw 35,35,395,395,65504
+line 35,217,395,217,63488
+line 215,35,215,395,63488
+cirs 215,215,4,65535
+cirs 215,215,10,65535
+cirs 215,215,8,65504
+cirs 215,215,6,65504
+cirs 215,215,7,0
+@shot 21_crumbs_after

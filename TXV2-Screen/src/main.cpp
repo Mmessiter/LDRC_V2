@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.98"
+#define SCREEN_VERSION "1.11.99"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1153,7 +1153,7 @@ static void drawPage() {
     else if (page.bgMode == 1) gfx->fillScreen(page.bgColor);
     /* bgMode 0: leave the screen as it is and draw over it */
     for (auto &c : page.comps) drawComp(c);
-    fillMemo.valid = false;
+    fillMemo.valid = false; fillMemo.ops.clear(); fillMemo.colour = -1;   // (1.11.99: a page drawn whole has no crumbs to repair)
     dirtyN = 0; present(0, 0, W, H); lastPresentMs = millis();   // the whole page in one move, now
 }
 // Nextion z-order: components paint in id order, so whatever was drawn AFTER a repainted one sits on
@@ -1495,6 +1495,40 @@ static void damage(int x, int y, int w, int h) {             // components under
     for (auto &c : page.comps) if (c.x < x + w && c.x + c.w > x && c.y < y + h && c.y + c.h > y) c.damaged = true;
 }
 static void drewArea(int x, int y, int w, int h) { dirty(x, y, w, h); memoOp(0, x, y, w, h, x, y, w, h); damage(x, y, w, h); }
+// (1.11.99) The curve page's dots and rings sit ON the box's edges, so up to 10 px of them lie outside the box, on the cards
+// around it. The clear (the fill) never reaches those pixels, and once the point had moved they stayed as white crumbs
+// (Malcolm, 20 Oct 2026: "some edge points have moved, sometimes they leave behind little white marks on the background
+// colour outside the box"; Version 1 hid them by repainting the whole page before every redraw, B135 stopped that). When the
+// same clear comes again, every op that reached past the box has its outside pixels put back to what the page shows there:
+// the topmost solid card (a text or number box with a background of its own) at that pixel, else the page's picture.
+static void repairOutside(int x, int y, int w, int h) {
+    if (x < 0) { w += x; x = 0; } if (y < 0) { h += y; y = 0; }
+    if (x + w > W) w = W - x; if (y + h > H) h = H - y;
+    if (w <= 0 || h <= 0) return;
+    std::vector<const Comp *> cards;
+    for (auto &c : page.comps)
+        if (c.vis && c.sta == 1 && (c.type == "text" || c.type == "number") && c.x < x + w && c.x + c.w > x && c.y < y + h && c.y + c.h > y) cards.push_back(&c);
+    gfx->startWrite();
+    for (int yy = y; yy < y + h; ++yy)
+        for (int xx = x; xx < x + w; ++xx) {
+            const Comp *top = nullptr;
+            for (auto *c : cards) if (xx >= c->x && xx < c->x + c->w && yy >= c->y && yy < c->y + c->h) top = c;   // (drawn later = on top)
+            gfx->writePixel(xx, yy, top ? (uint16_t) top->bco : (page.bgMode != 1 && bgBuf) ? bgBuf[yy * W + xx] : (uint16_t) page.bgColor);
+        }
+    gfx->endWrite();
+    dirty(x, y, w, h); damage(x, y, w, h);
+}
+static void repairOutsideOp(const DrawOp &op) {                  // the parts of an op's box that lie outside the memo's box
+    int bx, by, bw, bh;
+    if (op.kind == 1) { bx = min(op.a, op.c) - 1; by = min(op.b, op.d) - 1; bw = abs(op.c - op.a) + 3; bh = abs(op.d - op.b) + 3; }   // (eraseLine's 3x3 brush)
+    else { bx = op.a; by = op.b; bw = op.c; bh = op.d; }
+    const int mx0 = fillMemo.x, my0 = fillMemo.y, mx1 = fillMemo.x + fillMemo.w, my1 = fillMemo.y + fillMemo.h;
+    if (bx < mx0) repairOutside(bx, by, min(bw, mx0 - bx), bh);                            // left of the box
+    if (bx + bw > mx1) repairOutside(max(bx, mx1), by, bx + bw - max(bx, mx1), bh);        // right of it
+    const int ix = max(bx, mx0), iw = min(bx + bw, mx1) - ix;                              // above and below, between those
+    if (iw > 0 && by < my0) repairOutside(ix, by, iw, min(bh, my0 - by));
+    if (iw > 0 && by + bh > my1) repairOutside(ix, max(by, my1), iw, by + bh - max(by, my1));
+}
 static int colourOf(const std::string &t) {
     static const struct { const char *n; int v; } names[] = { { "RED", 63488 }, { "BLUE", 31 }, { "GRAY", 33840 }, { "BLACK", 0 }, { "WHITE", 65535 }, { "GREEN", 2016 }, { "BROWN", 48192 }, { "YELLOW", 65504 } };
     for (auto &e : names) if (t == e.n) return e.v;
@@ -1525,7 +1559,9 @@ static bool drawVerb(const std::string &cmd) {
     }
     else if (verb == "fill" && n >= 5) {
         const int x = I(0), y = I(1), w = I(2), h = I(3), col = colourOf(a[4]);
-        if (fillMemo.valid && x == fillMemo.x && y == fillMemo.y && w == fillMemo.w && h == fillMemo.h && col == fillMemo.colour) {
+        const bool same = x == fillMemo.x && y == fillMemo.y && w == fillMemo.w && h == fillMemo.h && col == fillMemo.colour;
+        if (same) for (auto &op : fillMemo.ops) repairOutsideOp(op);   // (1.11.99) what reached past the box since the last clear: its crumbs on the cards go too
+        if (fillMemo.valid && same) {
             for (auto &op : fillMemo.ops) { if (op.kind == 1) eraseLine(op.a, op.b, op.c, op.d); else eraseArea(op.a, op.b, op.c, op.d); }
             fillMemo.ops.clear(); perfFillInc++;
         } else {
@@ -1542,7 +1578,7 @@ static bool drawVerb(const std::string &cmd) {
     }
     else if (verb == "cirs" && n >= 4) { gfx->fillCircle(I(0), I(1), I(2), colourOf(a[3])); drewArea(I(0) - I(2) - 1, I(1) - I(2) - 1, 2 * I(2) + 3, 2 * I(2) + 3); }
     else if (verb == "cir" && n >= 4) { gfx->drawCircle(I(0), I(1), I(2), colourOf(a[3])); drewArea(I(0) - I(2) - 1, I(1) - I(2) - 1, 2 * I(2) + 3, 2 * I(2) + 3); }
-    else if (verb == "cls" && n >= 1) { gfx->fillScreen(colourOf(a[0])); fillMemo.valid = false; dirty(0, 0, W, H); damage(0, 0, W, H); }
+    else if (verb == "cls" && n >= 1) { gfx->fillScreen(colourOf(a[0])); fillMemo.valid = false; fillMemo.ops.clear(); fillMemo.colour = -1; dirty(0, 0, W, H); damage(0, 0, W, H); }
     else if (verb == "pic" && n >= 3 && sdOk) {
         char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", I(2));
         File f = SD.open(path);
