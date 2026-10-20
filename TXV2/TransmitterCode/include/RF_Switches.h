@@ -16,6 +16,10 @@
 #include "1Definitions.h"
 #ifndef RF_SWITCHES_H
 #define RF_SWITCHES_H
+// B140: this engine's rows are shown on the one page of RF_Jobs.h (Switches and knobs), which also keeps the head and the
+// title; the page names here are that page's (AdjustView). SwitchPoll runs its MSP state machine; the page's JobsPoll
+// sequences it with the adjustments' and ticks the live marker.
+static void JobsTitle(); static void JobsHead(); static void JobsShow();
 
 static const int SW_SLOTS = 20;
 struct SwSlot { uint8_t perm, aux; int16_t lo, hi; };
@@ -72,12 +76,7 @@ FLASHMEM static void SwBusy(const char *msg)
     if (msg && *msg) SendText((char *)"busy", (char *)msg);
 }
 FLASHMEM static void SwText(const char *name, const char *t) { SendText((char *)name, (char *)t); }
-FLASHMEM static void SwHead()
-{
-    SendText((char *)"t11", ModelName);
-    SendText((char *)"t9", (char *)"Bluetooth");
-    SendCommand((char *)(Sw_Was_Edited ? "vis b3,1" : "vis b3,0"));
-}
+FLASHMEM static void SwHead() { JobsHead(); }   // (B140: the page's head - the model, the link, Save if either table was edited)
 FLASHMEM static void SwList() // the slots in use, in slot order
 {
     SwN = 0;
@@ -105,19 +104,13 @@ FLASHMEM static void SwLive() // the switch's position now, from this transmitte
     else snprintf(b, sizeof(b), "%s: %d us", (us >= s.lo && us <= s.hi) ? "ON" : "OFF", us);
     SwText("tn8", b);
 }
-FLASHMEM static void SwShow()
+FLASHMEM static void SwShow() // the switch job at SwAt on the page: "Does [job] / Switch on [channel]", the bar's one ON zone
 {
     char b[64];
-    if (SwN) snprintf(b, sizeof(b), "Switch action %d of %d", SwAt + 1, SwN); else snprintf(b, sizeof(b), "No switch actions yet");   // (the phone app's words, 15 Oct)
-    SwText("t0", b);
-    if (!SwN)
-    {
-        SwText("tn0", (char *)"(none yet: press Add)"); SwText("tn1", (char *)""); SwText("tn8", (char *)"");
-        SendCommand((char *)"bar.n=1"); SendCommand((char *)"bar.kind=0"); SendCommand((char *)"bar.mk=-1"); SwText("bar", (char *)"");
-        SwText("hint", (char *)"");
-        return;
-    }
+    if (!SwN) { JobsShow(); return; }   // (B140: no switch jobs left - the page shows what there is)
+    JobsTitle();
     const SwSlot &s = SwNow[SwShown[SwAt]];
+    SwText("ltn0", (char *)"Does"); SwText("tn2", (char *)"Switch"); SendCommand((char *)"vis tn3,0"); SwText("tn3", (char *)"");   // (B140: the page's row, as the adjustments draw theirs)
     SwText("tn0", SwModeName(s.perm));
     const int ch = s.aux + 6;
     snprintf(b, sizeof(b), "Channel %d: %s", ch, (ch >= 1 && ch <= CHANNELSUSED) ? ChannelNames[ch - 1] : "?");
@@ -140,9 +133,9 @@ FLASHMEM static void SwFail(const char *what, bool leave)
     SwStep = SW_IDLE;
     SwBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)(leave ? "page RFView" : "page SwitchView"), msg);
+    MsgBox((char *)(leave ? "page RFView" : "page AdjustView"), msg);
     if (leave) { RotorFlightStart(); return; }
-    SwHead(); SwShow();
+    JobsHead(); JobsShow();
 }
 FLASHMEM static bool SwTake(const uint8_t *b, int n) // the 34 image -> the slots
 {
@@ -167,15 +160,11 @@ FLASHMEM static void SwWriteNext() // the next slot that differs from what the f
     SwBusy(m);
     SwReq = MspAsk(35, d, 5); SwStep = SW_WRITE;
 }
-FLASHMEM void SwitchPoll()
+FLASHMEM void SwitchPoll() // the MSP state machine (B140: on the Switches and knobs page; the live marker is JobsPoll's)
 {
-    if (CurrentView != SWITCHVIEW) { SwStep = SW_IDLE; SwMsgUntil = 0; return; }
+    if (CurrentView != ADJUSTVIEW) { SwStep = SW_IDLE; SwMsgUntil = 0; return; }
     if (SwMsgUntil && (int32_t)(millis() - SwMsgUntil) >= 0) { SwMsgUntil = 0; SwBusy(""); }
-    if (SwStep == SW_IDLE)
-    {
-        if ((int32_t)(millis() - SwLiveMs) >= 300) { SwLiveMs = millis(); SwLive(); }
-        return;
-    }
+    if (SwStep == SW_IDLE) return;
     if (!PipeReplyReady(SwReq))
     {
         if (!PipeReplyLate()) return;
@@ -195,7 +184,7 @@ FLASHMEM void SwitchPoll()
         if (!SwTake(b, n)) { snprintf(PipeRepBody, sizeof(PipeRepBody), "only %d bytes came (Rotorflight sends 80)", n); SwFail("Could not read the switches", true); return; }
         SwHave = true; Sw_Was_Edited = false; SwStep = SW_IDLE; SwArmFrom = 0;
         if (SwArmFollow()) Sw_Was_Edited = true;   // B97: the arm action on this model's arming channel, as an edit for Save
-        SwBusy(""); SwHead(); SwShow();
+        SwBusy("");   // (B140: JobsPoll shows the page and reads the adjustments next)
         return;
     }
     case SW_WRITE:
@@ -222,11 +211,9 @@ FLASHMEM void SwitchPoll()
         bool same = true;
         for (int i = 0; i < SW_SLOTS; ++i) if (!SwSame(want[i], SwNow[i])) same = false;
         Sw_Was_Edited = false; SwStep = SW_IDLE; SwArmFrom = 0;
-        SwHead(); SwShow();
-        SwBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller changed some of it.");
-        SwMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
-        RfSavedThenLeave(SWITCHVIEW);   // B102: OK's "Save now?" closes the page once saved
+        if (!same) { SwBusy("Saved, but the flight controller changed some of it."); SwMsgUntil = millis() + 4000; }
+        // (B140: JobsPoll goes on to the adjustments' save, or says "Saved" and closes the page if OK's "Save now?" asked for it)
         return;
     }
     default:
@@ -234,31 +221,7 @@ FLASHMEM void SwitchPoll()
         return;
     }
 }
-FLASHMEM void StartSwitchView() // the menu's Switches ...
-{
-    char why[120];
-    if (RfNeedsModel(why, sizeof(why)) || ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
-    {
-        PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page RFView", why);
-        return;
-    }
-    SendCommand((char *)"page SwitchView");
-    CurrentView = SWITCHVIEW;
-    Sw_Was_Edited = false; SwHave = false; SwN = 0; SwAt = 0; SwArmFrom = 0;
-    SwHead();
-    SwShow();
-    SwRead_();
-}
-FLASHMEM void SaveSwitchActions();
-FLASHMEM static void SwSaveNow() { SwHead(); SwShow(); SaveSwitchActions(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
-FLASHMEM void EndSwitchView() // OK
-{
-    if (SwStep != SW_IDLE) return;
-    if (Sw_Was_Edited && !RfSaveFirst("page SwitchView", "The edited switches are", SwSaveNow, EndSwitchView, &Sw_Was_Edited)) return;   // B102
-    Sw_Was_Edited = false;
-    RotorFlightStart();
-}
+// (B140: the page is opened, saved and closed by RF_Jobs.h - StartJobsView reads the switches first, SaveJobs writes them first)
 FLASHMEM static bool SwArmOk(const SwSlot &s, char *why, size_t n) // the arm action and this transmitter's safety switch agree
 {
     if (s.perm != 0) return true;
@@ -273,28 +236,18 @@ FLASHMEM void SaveSwitchActions() // (SaveSwitches is the transmitter's own swit
 {
     if (!SwHave || SwStep != SW_IDLE) return;
     char why[140];
-    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page SwitchView", why); SwHead(); SwShow(); return; }
+    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page AdjustView", why); JobsHead(); JobsShow(); return; }
     bool haveArm = false;
     for (int i = 0; i < SW_SLOTS; ++i)
     {
         if (!SwUsed(SwNow[i])) continue;
         if (SwNow[i].perm == 0) haveArm = true;
-        if (!SwArmOk(SwNow[i], why, sizeof(why))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page SwitchView", why); SwHead(); SwShow(); return; }
+        if (!SwArmOk(SwNow[i], why, sizeof(why))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page AdjustView", why); JobsHead(); JobsShow(); return; }
     }
-    if (!haveArm) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page SwitchView", (char *)"Rotorflight needs an arm switch: add\r\n'Arm - motor enable' on this model's\r\narming channel first."); SwHead(); SwShow(); return; }
+    if (!haveArm) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page AdjustView", (char *)"Rotorflight needs an arm switch: add\r\n'Arm - motor enable' on this model's\r\narming channel first."); JobsHead(); JobsShow(); return; }
     SwWriteAt = 0; SwTries = 0;
     SwWriteNext();
 }
-FLASHMEM static void SwMove(int to)
-{
-    if (!SwN) return;
-    if (to < 0) to = 0;
-    if (to >= SwN) to = SwN - 1;
-    SwAt = to;
-    SwShow();
-}
-FLASHMEM void SwitchPrevious() { SwMove(SwAt - 1); }
-FLASHMEM void SwitchNext() { SwMove(SwAt + 1); }
 FLASHMEM void SwitchChannelTapped() // the next channel; the arm action keeps the arming channel
 {
     if (!SwN) return;
@@ -302,66 +255,57 @@ FLASHMEM void SwitchChannelTapped() // the next channel; the arm action keeps th
     if (s.perm == 0 && SwArmChannel())
     {
         if (SwArmFollow()) { SwEdited(); SwShow(); return; }   // B97: moved to this model's arming channel (Settings changed since the read)
-        MsgBox((char *)"page SwitchView", (char *)"The arm switch stays on this model's\r\narming channel (Settings)."); SwHead(); SwShow(); return;
+        MsgBox((char *)"page AdjustView", (char *)"The arm switch stays on this model's\r\narming channel (Settings)."); JobsHead(); JobsShow(); return;
     }
     int ch = s.aux + 1;
     if (ch > CHANNELSUSED - 6) ch = 0;
     s.aux = (uint8_t)ch;
     SwEdited(); SwShow();
 }
-FLASHMEM static void SwOpenPicker(uint8_t perm)
+// B140: the job chosen in the page's picker (RF_Jobs.h). A new job (isNew) takes the first free slot: ON in the upper third of
+// channel chAux (an AUX index: the page passes the channel after the one showing, or the one a knob held); the arm job its
+// arming channel. The row showing changes its job - the arm switch never (Rotorflight needs it). False: refused, said.
+FLASHMEM static bool SwPickApply(uint8_t perm, bool isNew, int chAux)
 {
-    SendCommand((char *)"page SwitchPickView");
-    CurrentView = SWITCHPICKVIEW;
-    SendText((char *)"t11", ModelName);
-    SendValue((char *)"list", SwModeIdx(perm));
-}
-FLASHMEM void SwitchModeTapped() { if (!SwN) return; SwPickPerm = 0; SwOpenPicker(SwNow[SwShown[SwAt]].perm); }
-FLASHMEM static void SwPickLeave()
-{
-    SendCommand((char *)"page SwitchView");
-    CurrentView = SWITCHVIEW;
-    SwHead(); SwShow();
-}
-FLASHMEM void SwitchPickOk()
-{
-    const int idx = (int)GetValue((char *)"list");
-    const uint8_t perm = (idx >= 0 && idx < SW_MODES) ? SwModes[idx].id : 0;
-    if (SwPickPerm == 1)
-    { // a new action, in the first free slot: ON in the upper third of a channel after the one showing
+    if (isNew)
+    {
         int freeSlot = -1;
         for (int i = 0; i < SW_SLOTS; ++i) if (!SwUsed(SwNow[i])) { freeSlot = i; break; }
-        SwPickLeave();
-        if (freeSlot < 0) { MsgBox((char *)"page SwitchView", (char *)"All 20 of Rotorflight's switch slots\r\nare in use."); SwHead(); SwShow(); return; }
+        if (freeSlot < 0) { MsgBox((char *)"page AdjustView", (char *)"All 20 of Rotorflight's switch slots\r\nare in use."); JobsHead(); JobsShow(); return false; }
         SwSlot &s = SwNow[freeSlot];
         s.perm = perm;
         const int ac = SwArmChannel();
-        s.aux = perm == 0 && ac ? (uint8_t)(ac - 6) : SwN ? (uint8_t)((SwNow[SwShown[SwAt]].aux + 1) % (CHANNELSUSED - 5)) : 1;
+        s.aux = perm == 0 && ac ? (uint8_t)(ac - 6) : (uint8_t)(chAux >= 0 && chAux <= CHANNELSUSED - 6 ? chAux : 1);
         s.lo = perm == 0 ? 1500 : 1700; s.hi = 2125;
         SwList();
         for (int i = 0; i < SwN; ++i) if (SwShown[i] == freeSlot) SwAt = i;
-        SwEdited(); SwShow();
-        return;
+        SwEdited();
+        return true;
     }
-    SwPickLeave();
-    if (!SwN) return;
+    if (!SwN) return false;
     SwSlot &s = SwNow[SwShown[SwAt]];
-    if (perm == s.perm) return;
-    if (s.perm == 0) { MsgBox((char *)"page SwitchView", (char *)"The arm switch stays: Rotorflight needs it.\r\nAdd another action instead."); SwHead(); SwShow(); return; }
+    if (perm == s.perm) return true;
+    if (s.perm == 0) { MsgBox((char *)"page AdjustView", (char *)"The arm switch stays: Rotorflight needs it.\r\nAdd another job instead."); JobsHead(); JobsShow(); return false; }
     s.perm = perm;
-    SwEdited(); SwShow();
+    SwEdited();
+    return true;
 }
-FLASHMEM void SwitchPickCancel() { SwPickLeave(); }
-FLASHMEM void SwitchAdd() { if (!SwHave) return; SwPickPerm = 1; SwOpenPicker(53); }
+FLASHMEM static void SwDropAt(int at) // the switch job at row 'at' goes (an empty zone = the slot unused); the arm switch never
+{
+    if (at < 0 || at >= SwN) return;
+    SwSlot &s = SwNow[SwShown[at]];
+    if (s.perm == 0) return;
+    s.perm = 0; s.aux = 0; s.lo = 1500; s.hi = 1500;
+    SwList();
+    SwEdited();
+}
 FLASHMEM void SwitchRemove()
 {
     if (!SwN) return;
     SwSlot &s = SwNow[SwShown[SwAt]];
-    if (s.perm == 0) { MsgBox((char *)"page SwitchView", (char *)"The arm switch cannot be removed:\r\nRotorflight needs one."); SwHead(); SwShow(); return; }
-    if (!GetConfirmation((char *)"page SwitchView", (char *)"Remove this switch action?")) { SwHead(); SwShow(); return; }
-    s.perm = 0; s.aux = 0; s.lo = 1500; s.hi = 1500;   // (an empty zone = the slot unused)
-    SwList();
-    SwEdited(); SwHead(); SwShow();
+    if (s.perm == 0) { MsgBox((char *)"page AdjustView", (char *)"The arm switch cannot be removed:\r\nRotorflight needs one."); JobsHead(); JobsShow(); return; }
+    if (!GetConfirmation((char *)"page AdjustView", (char *)"Remove this switch job?")) { JobsHead(); JobsShow(); return; }
+    SwDropAt(SwAt);
 }
 FLASHMEM void SwitchBarMoved() // the blobs dragged: the zone's ends as the screen has them
 {

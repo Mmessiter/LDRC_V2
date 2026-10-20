@@ -55,7 +55,7 @@ TRAVEL3: Rotorflight: Travel extents, tail
 TRAVEL4: Rotorflight: Bench measure
 FILTERS: Rotorflight: Filters
 FILTERS2: Rotorflight: Filters, expert mode
-ADJUST: Rotorflight: Adjustments
+SWKNOBS: Rotorflight: Switches and knobs
 COPYBANK: Rotorflight: Copy a bank
 BATTERY: Rotorflight: Battery
 BLACKBOX: Rotorflight: Black box

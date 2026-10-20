@@ -7,7 +7,7 @@ bank regions and each row's bank must agree. Then the transmitter's own rules: t
 import json, os, random, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HDR = os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Adjust.h')
-PAGE = os.path.expanduser('~/Documents/GitHub/LDRC_V2_ALL/RXV2/data/rotorflight-adjustments.html')
+PAGE = os.path.expanduser('~/Documents/GitHub/LDRC_V2_ALL/RXV2/data/rotorflight-modes.html')   # (0.9.903: the adjustments' model lives in the Switches and knobs page)
 html = open(PAGE).read()
 a = html.index('// ---------------- model'); b = html.index('// ---------------- page')
 jsmodel = html[a:b]

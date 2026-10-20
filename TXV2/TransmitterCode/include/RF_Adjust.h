@@ -25,6 +25,11 @@
 #include "1Definitions.h"
 #ifndef RF_ADJUST_H
 #define RF_ADJUST_H
+// B140: this engine's rows are shown on the one page of RF_Jobs.h (Switches and knobs), after the switch jobs of
+// RF_Switches.h; the page keeps the head and the title, opens, saves and closes; AdjustPoll runs the MSP state machine
+// and JobsPoll sequences it with the switches' and ticks the live marker.
+static void JobsTitle(); static void JobsHead(); static void JobsShow();
+static bool AdjMissing = false;   // the adjustments could not be read (no USB cable: Rotorflight will not send them over the receiver's lead) - the page shows the switch jobs only
 
 static const int ADJ_MAX = 42;
 static const int ADJ_RMIN = 875, ADJ_RMAX = 2125;
@@ -401,7 +406,6 @@ static int AdjN = 0, AdjAt = 0;
 DMAMEM static AdjLine AdjWritten[ADJ_MAX]; // the lines of the last save, to read back against
 DMAMEM static AdjLine AdjAsRead[ADJ_MAX];  // the lines as the flight controller had them: a save writes only the lines that differ (each write holds the receiver up for most of a second)
 static bool AdjHave = false, Adj_Was_Edited = false;
-static int AdjFreshAt = -1;   // B137: the row Add made whose setting has not been chosen yet - its picker opens at the TOP of the list (the selectors), not at the placeholder
 static AdjBanks AdjBk;
 enum { ADJ_IDLE = 0, ADJ_READ_RATES, ADJ_READ, ADJ_WRITE, ADJ_STORE, ADJ_VERIFY, ADJ_NOW_STATUS, ADJ_NOW_READ };
 static int AdjStep_ = ADJ_IDLE, AdjReq = 0, AdjTries = 0, AdjLineAt = 0;
@@ -419,19 +423,8 @@ FLASHMEM static void AdjBusy(const char *msg)
 static void AdjText(const char *name, const char *t) { SendText((char *)name, (char *)t); }
 static void AdjNum(const char *name, long v) { char b[16]; snprintf(b, sizeof(b), "%ld", v); SendText((char *)name, b); }
 static void AdjVis(const char *name, bool on) { char c[24]; snprintf(c, sizeof(c), "vis %s,%d", name, on ? 1 : 0); SendCommand(c); }
-FLASHMEM static void AdjHead()
-{
-    SendText((char *)"t11", ModelName);
-    SendText((char *)"t9", (char *)"USB cable");
-    SendCommand((char *)(Adj_Was_Edited ? "vis b3,1" : "vis b3,0"));
-}
-FLASHMEM static void AdjTitle()
-{
-    char b[48];
-    if (AdjN) snprintf(b, sizeof(b), "Adjustment %d of %d", AdjAt + 1, AdjN);
-    else snprintf(b, sizeof(b), "No adjustments yet");
-    SendText((char *)"t0", b);
-}
+FLASHMEM static void AdjHead() { JobsHead(); }     // (B140: the page's head - the model, the link, Save if either table was edited)
+FLASHMEM static void AdjTitle() { JobsTitle(); }   // (B140: "Job 3 of 12" over both tables)
 FLASHMEM static int AdjLinesUsed(int exceptRow) // how many of the 42 lines the rows would take (one each, B83)
 {
     int k = 0;
@@ -661,16 +654,11 @@ FLASHMEM static void AdjShowNow() {}   // (B75: the setting's present value is n
 FLASHMEM static void AdjShow()
 {
     AdjBankRegions(AdjRows, AdjN, AdjBk);   // (the bank line may just have been edited)
+    if (!AdjN) { JobsShow(); return; }      // (B140: no adjustments left - the page shows what there is)
     AdjTitle();
-    if (!AdjN)
-    {
-        AdjText("tn0", (char *)"(none yet: press Add)"); AdjText("tn3", (char *)""); AdjText("tn2", (char *)""); AdjText("tn1", (char *)"");
-        AdjText("tn8", (char *)"");
-        SendCommand((char *)"bar.n=1"); SendCommand((char *)"bar.kind=0"); SendCommand((char *)"bar.mk=-1"); AdjText("bar", (char *)"");
-        return;
-    }
     const AdjRow &r = AdjRows[AdjAt];
     char b[48];
+    AdjText("ltn0", (char *)"Changes");     // (B140: a switch job's row says Does)
     AdjText("tn0", AdjNames[r.fn < ADJ_NAMES ? r.fn : 0]);
     const int bank = AdjCondToBank(r, AdjBk);
     if (bank > 0) snprintf(b, sizeof(b), "in bank %d", bank); else snprintf(b, sizeof(b), "%s", bank < 0 ? "set elsewhere" : "in any bank");
@@ -772,13 +760,7 @@ FLASHMEM static void AdjGather() // the typed values of the row showing
 }
 // The page is back on the screen - from the keypad, from a question, or just opened (its postinitialize prints "ldrcadj"):
 // the values as typed, and the bar drawn again from them
-FLASHMEM void AdjustPageBack()
-{
-    if (CurrentView != ADJUSTVIEW || !AdjHave) return;
-    AdjGather();
-    AdjHead();
-    AdjShow();
-}
+// (B140: the page back on the screen is JobsPageBack's)
 static void AdjEdited() { Adj_Was_Edited = true; SendCommand((char *)"vis b3,1"); }
 FLASHMEM static void AdjFail(const char *what, bool leave)
 {
@@ -917,16 +899,13 @@ FLASHMEM void AdjustPoll()
 {
     if (CurrentView != ADJUSTVIEW) { AdjStep_ = ADJ_IDLE; AdjMsgUntil = 0; return; }
     if (AdjMsgUntil && (int32_t)(millis() - AdjMsgUntil) >= 0) { AdjMsgUntil = 0; AdjBusy(""); }
-    if (AdjStep_ == ADJ_IDLE)
-    {
-        if ((int32_t)(millis() - AdjLiveMs) >= 300) { AdjLiveMs = millis(); AdjLive(); }
-        return;
-    }
+    if (AdjStep_ == ADJ_IDLE) return;   // (B140: the live marker is JobsPoll's)
     if (!PipeReplyReady(AdjReq))
     {
         if (!PipeReplyLate()) return;
         if (AdjStep_ == ADJ_NOW_STATUS || AdjStep_ == ADJ_NOW_READ) { AdjStep_ = ADJ_IDLE; return; }   // (the present value: a nicety, not a failure)
-        AdjFail("No answer", AdjStep_ == ADJ_READ || AdjStep_ == ADJ_READ_RATES);
+        if (AdjStep_ == ADJ_READ || AdjStep_ == ADJ_READ_RATES) { AdjStep_ = ADJ_IDLE; AdjHave = false; AdjMissing = true; AdjBusy(""); return; }   // (B140: the switch jobs stand; the page says so)
+        AdjFail("No answer", false);
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -944,14 +923,14 @@ FLASHMEM void AdjustPoll()
     case ADJ_READ:
     {
         if (again) { ++AdjTries; AdjReq = MspAsk(52, nullptr, 0); return; }
-        if (!ok) { AdjFail("In-flight adjustments need the USB cable", true); return; }   // (the receiver's own words follow: the message box shows 180 characters)
+        // B140: no USB cable (Rotorflight will not send the adjustments over the receiver's lead), or a short answer: not a
+        // failure of the page - the switch jobs stand, and JobsPoll says the selectors and knobs need the cable
+        if (!ok) { AdjStep_ = ADJ_IDLE; AdjHave = false; AdjMissing = true; AdjBusy(""); return; }
         const int n = PipeReplyBytes(AdjImg, sizeof(AdjImg));
-        if (n < 14) { snprintf(PipeRepBody, sizeof(PipeRepBody), "only %d bytes came (Rotorflight sends 588)", n); AdjFail("Could not read the adjustments", true); return; }
+        if (n < 14) { AdjStep_ = ADJ_IDLE; AdjHave = false; AdjMissing = true; AdjBusy(""); return; }
         AdjTakeRows(AdjImg, n);
-        AdjHave = true; Adj_Was_Edited = AdjTakeNote[0] != 0; AdjStep_ = ADJ_IDLE;
-        AdjBusy(""); AdjHead(); AdjShow();
-        if (AdjTakeNote[0]) { AdjBusy(AdjTakeNote); AdjMsgUntil = millis() + 8000; }
-        AdjAskNow();
+        AdjHave = true; AdjMissing = false; Adj_Was_Edited = AdjTakeNote[0] != 0; AdjStep_ = ADJ_IDLE;
+        AdjBusy("");   // (JobsPoll shows the page, says AdjTakeNote, and asks the present value of the row showing)
         return;
     }
     case ADJ_WRITE:
@@ -982,7 +961,7 @@ FLASHMEM void AdjustPoll()
         AdjBusy(AdjTakeNote[0] ? AdjTakeNote : same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         AdjMsgUntil = millis() + 4000;
         PlaySound(BEEPCOMPLETE);
-        if (!Adj_Was_Edited) RfSavedThenLeave(ADJUSTVIEW); else RfLeaveAfterSave = false;   // B102 (a note asks for another Save: the page stays)
+        if (Adj_Was_Edited) RfLeaveAfterSave = false;   // B102 (a note asks for another Save: the page stays); B140: JobsPoll closes the page once both tables are saved
         return;
     }
     case ADJ_NOW_STATUS:
@@ -1023,37 +1002,12 @@ FLASHMEM void AdjustPoll()
         return;
     }
 }
-FLASHMEM void StartAdjustView() // the menu's Adjustments ...
+FLASHMEM static void AdjReset() // B140: the page opens (StartJobsView): nothing read yet
 {
-    char why[120];
-    if (!(BoundFlag && ModelMatched) && !BakOffline()) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page RFView", (char *)"In-flight adjustments need the model\r\nconnected, with the USB cable from the\r\nreceiver to the flight controller - or a\r\nbackup made with the cable in."); return; }
-    if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
-    {
-        PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page RFView", why);
-        return;
-    }
-    SendCommand((char *)"page AdjustView");
-    CurrentView = ADJUSTVIEW;
-    Adj_Was_Edited = false; AdjHave = false; AdjN = 0; AdjAt = 0; AdjNowKnown = false; AdjNowRow = -1; AdjFreshAt = -1;
-    AdjSeenClear(); memset(AdjBankFitted, 0, sizeof(AdjBankFitted)); AdjBankWhy[0] = 0; AdjTakeNote[0] = 0; AdjMemoN = 0;
-    AdjHead();
-    AdjShow();
-    AdjRead();
+    Adj_Was_Edited = false; AdjHave = false; AdjMissing = false; AdjN = 0; AdjAt = 0; AdjNowKnown = false; AdjNowRow = -1; AdjStep_ = ADJ_IDLE;
+    AdjSeenClear(); memset(AdjBankFitted, 0, sizeof(AdjBankFitted)); memset(AdjSpacedOnce, 0, sizeof(AdjSpacedOnce)); AdjBankWhy[0] = 0; AdjTakeNote[0] = 0; AdjMemoN = 0;
 }
 void SaveAdjustments();
-FLASHMEM static void AdjSaveNow() { AdjHead(); AdjShow(); SaveAdjustments(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
-FLASHMEM void EndAdjustView() // OK
-{
-    if (AdjStep_ != ADJ_IDLE && AdjStep_ != ADJ_NOW_STATUS && AdjStep_ != ADJ_NOW_READ) return;   // (a save runs: wait for it)
-    if (Adj_Was_Edited)
-    {
-        AdjGather();
-        if (!RfSaveFirst("page AdjustView", "The edited adjustments are", AdjSaveNow, EndAdjustView, &Adj_Was_Edited)) return;   // B102
-    }
-    AdjStep_ = ADJ_IDLE; Adj_Was_Edited = false;
-    RotorFlightStart();
-}
 FLASHMEM void AdjustWasEdited() { AdjEdited(); }
 FLASHMEM void SaveAdjustments()
 {
@@ -1066,47 +1020,20 @@ FLASHMEM void SaveAdjustments()
     AdjLineAt = 0; AdjTries = 0;
     AdjWriteLine();
 }
-FLASHMEM static void AdjMove(int to)
+// B140: the setting chosen in the page's picker (RF_Jobs.h) for the row at AdjAt: a selector is fitted to this transmitter's
+// banks (B133), any other setting starts from its present value, when it can be read (AdjAskNow)
+FLASHMEM static void AdjPickApply(uint8_t fn)
 {
-    if (!AdjN) return;
-    AdjGather();
-    if (to < 0) to = 0;
-    if (to >= AdjN) to = AdjN - 1;
-    AdjAt = to;
-    AdjShow();
-    AdjAskNow();
-}
-FLASHMEM void AdjustPrevious() { AdjMove(AdjAt - 1); }
-FLASHMEM void AdjustNext() { AdjMove(AdjAt + 1); }
-FLASHMEM void AdjustSettingNext() // the setting box tapped: the picker page, a wheel of every setting, the row's own selected
-{
-    if (!AdjN || AdjStep_ != ADJ_IDLE) return;
-    AdjGather();
-    SendCommand((char *)"page AdjPickView");
-    CurrentView = ADJPICKVIEW;
-    SendText((char *)"t11", ModelName);
-    SendValue((char *)"list", AdjFreshAt == AdjAt ? 0 : AdjIdxOf(AdjRows[AdjAt].fn));   // (B137: a row Add made opens at the top; a chosen setting at itself)
-}
-FLASHMEM static void AdjPickLeave()
-{
-    SendCommand((char *)"page AdjustView");
-    CurrentView = ADJUSTVIEW;
-    AdjHead(); AdjShow();
-}
-FLASHMEM void AdjustPickOk()
-{
-    const uint8_t fn = AdjFnAt((int)GetValue((char *)"list"));
-    AdjPickLeave();
     if (!AdjN || fn == AdjRows[AdjAt].fn || fn < 1 || fn >= ADJ_NAMES) return;
     { AdjBanks before; AdjBankRegions(AdjRows, AdjN, before);
-      AdjRows[AdjAt].fn = fn; if (AdjFreshAt == AdjAt) AdjFreshAt = -1;   // (B137: chosen - no longer fresh)
+      AdjRows[AdjAt].fn = fn;
       for (int k = 0; k < ADJ_POS_MAX; ++k) AdjRows[AdjAt].v[k] = 0;   // (the present value seeds them, when it can be read)
+      AdjSpacedOnce[AdjAt] = false;
       if (fn == 1 || fn == 2) { if (!AdjFitBankRow(AdjAt)) { AdjRow &r = AdjRows[AdjAt]; r.kind = AK_SWITCH; r.n = 2; r.lo = 988; r.hi = 2012; r.v[0] = 1; r.v[1] = 2; } }
+      else if (AdjRows[AdjAt].kind == AK_SWITCH && AdjRows[AdjAt].v[0] == 1 && AdjBankFitted[AdjAt]) { AdjRow &r = AdjRows[AdjAt]; r.kind = AK_KNOB; r.n = 2; r.lo = (int16_t)ADJ_RMIN; r.hi = (int16_t)ADJ_RMAX; AdjBankFitted[AdjAt] = false; }   // (a selector becoming a setting: a knob over the travel)
       if (fn == 2 || before.have) AdjRebank(before); }
     AdjEdited(); AdjShow(); AdjAskNow();
 }
-FLASHMEM void AdjustPickCancel() { AdjPickLeave(); }
-FLASHMEM void AdjustSettingPrev() { AdjustSettingNext(); }   // (B75: both codes open the picker)
 FLASHMEM static void AdjChannel(int dir)
 {
     if (!AdjN) return;
@@ -1156,7 +1083,7 @@ FLASHMEM void AdjustBankTapped() // Any -> 1 -> 2 ... -> Any, among the banks th
     AdjRow &r = AdjRows[AdjAt];
     if (!AdjBk.have)
     {
-        MsgBox((char *)"page AdjustView", (char *)"No bank selector is set up: choose the\r\n'Bank (Profile)' channel on the phone\r\napp's Transmitter channels page first.\r\nUntil then every adjustment holds in\r\nevery bank.");
+        MsgBox((char *)"page AdjustView", (char *)"No bank selector is set up: press Add\r\nand choose 'Bank (Profile) selector'\r\nfirst. Until then every adjustment holds\r\nin every bank.");
         AdjHead(); AdjShow(); return;
     }
     int bank = AdjCondToBank(r, AdjBk);
@@ -1170,33 +1097,39 @@ FLASHMEM void AdjustBankTapped() // Any -> 1 -> 2 ... -> Any, among the banks th
     if (r.kind == AK_NUDGE && !r.cond) { r.cond = true; r.ena = r.ch; r.enaLo = (int16_t)ADJ_RMIN; r.enaHi = (int16_t)ADJ_RMAX; }
     AdjEdited(); AdjShow(); AdjAskNow();
 }
-FLASHMEM void AdjustAdd()
+// B140: a new row for the setting fn chosen in the page's picker (Add), after the row showing, a Knob on channel chAux (the row
+// showing's) over the whole travel; a selector is fitted to this transmitter's banks, any other setting starts from its present
+// value. False: no room, and the message box said so.
+FLASHMEM static bool AdjAddWith(uint8_t fn, int chAux)
 {
-    if (!AdjHave) return;
+    if (!AdjHave || fn < 1 || fn >= ADJ_NAMES) return false;
     AdjGather();
-    if (AdjN >= ADJ_MAX || AdjLinesUsed(-1) >= ADJ_MAX) { MsgBox((char *)"page AdjustView", (char *)"No room: Rotorflight holds 42 adjustments."); AdjHead(); AdjShow(); return; }
+    if (AdjN >= ADJ_MAX || AdjLinesUsed(-1) >= ADJ_MAX) { MsgBox((char *)"page AdjustView", (char *)"No room: Rotorflight holds 42 adjustments."); JobsHead(); JobsShow(); return false; }
     const int at = AdjN ? AdjAt + 1 : 0;
     for (int i = AdjN; i > at; --i) { AdjRows[i] = AdjRows[i - 1]; AdjBankFitted[i] = AdjBankFitted[i - 1]; AdjSpacedOnce[i] = AdjSpacedOnce[i - 1]; }
     AdjBankFitted[at] = false; AdjSpacedOnce[at] = false;
     AdjRow &r = AdjRows[at];
     memset(&r, 0, sizeof(r));
-    r.kind = AK_KNOB; r.fn = 14; r.ch = AdjN ? AdjRows[AdjAt].ch : 1; r.n = 2; r.lo = (int16_t)ADJ_RMIN; r.hi = (int16_t)ADJ_RMAX;
-    ++AdjN; AdjAt = at; AdjFreshAt = at;
-    AdjEdited(); AdjShow(); AdjAskNow();
-    // B137 (Malcolm, 20 Oct, after Add: "bank (profile) is not anywhere to be seen"): the new row's picker opens at the top
-    // (AdjustSettingNext). B137's note here ("New adjustment. Tap the setting box ...") went in B138: "entirely superfluous".
+    r.kind = AK_KNOB; r.fn = 0; r.ch = (uint8_t)(chAux >= 0 && chAux <= CHANNELSUSED - 6 ? chAux : 1); r.n = 2; r.lo = (int16_t)ADJ_RMIN; r.hi = (int16_t)ADJ_RMAX;
+    ++AdjN; AdjAt = at;
+    AdjPickApply(fn);
+    return true;
+}
+FLASHMEM static void AdjDropAt(int at) // the adjustment at row 'at' goes
+{
+    if (at < 0 || at >= AdjN) return;
+    for (int i = at; i + 1 < AdjN; ++i) { AdjRows[i] = AdjRows[i + 1]; AdjBankFitted[i] = AdjBankFitted[i + 1]; AdjSpacedOnce[i] = AdjSpacedOnce[i + 1]; }
+    --AdjN;
+    if (AdjAt >= AdjN) AdjAt = AdjN ? AdjN - 1 : 0;
+    AdjBankRegions(AdjRows, AdjN, AdjBk);
+    AdjEdited();
 }
 FLASHMEM void AdjustRemove()
 {
     if (!AdjN) return;
     AdjGather();
     if (!GetConfirmation((char *)"page AdjustView", (char *)"Remove this adjustment?")) { AdjHead(); AdjShow(); return; }
-    for (int i = AdjAt; i + 1 < AdjN; ++i) { AdjRows[i] = AdjRows[i + 1]; AdjBankFitted[i] = AdjBankFitted[i + 1]; AdjSpacedOnce[i] = AdjSpacedOnce[i + 1]; }
-    --AdjN;
-    if (AdjFreshAt == AdjAt) AdjFreshAt = -1; else if (AdjFreshAt > AdjAt) --AdjFreshAt;   // (B137: the fresh row went, or moved up one)
-    if (AdjAt >= AdjN) AdjAt = AdjN ? AdjN - 1 : 0;
-    AdjBankRegions(AdjRows, AdjN, AdjBk);
-    AdjEdited(); AdjHead(); AdjShow(); AdjAskNow();
+    AdjDropAt(AdjAt);   // (B140: the page shows what is left - JobsRemove)
 }
 
 #endif

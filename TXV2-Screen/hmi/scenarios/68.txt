@@ -1,8 +1,8 @@
-# AdjPickView (page 68), the setting an adjustment changes: AdjustSettingNext (TXV1B RF_Adjust.h:1011-1018) writes t11 and
+# AdjPickView (page 68), what a job does (B140: the selectors, the switch jobs, then the settings - list row 74 = Pitch P gain was 48 before the switch jobs went in): AdjustSettingNext (TXV1B RF_Adjust.h:1011-1018) writes t11 and
 # list only (t9 keeps the page's "USB cable").
 Screen_Background=8
 @model 1
 page AdjPickView
 t11.txt="Black Thunder 2"
-list.val=48
+list.val=74
 @shot 68_open

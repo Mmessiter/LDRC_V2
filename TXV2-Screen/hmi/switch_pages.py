@@ -12,12 +12,7 @@ import adjust_pages as ap   # (the header/finish helpers; importing it re-makes 
 comp, PALE = rp.comp, rp.PALE
 # codes (the main board's NumberedFunctions1): 133 open, 134 OK, 135 save, 136 the action (the picker), 137 the channel,
 # 138 previous, 139 next, 140 add, 141 remove, 142 the bar's blobs dragged, 143 picker OK, 144 picker cancel
-MODES = ["Arm - motor enable (ARM)", "Rescue - the safety net (RESCUE)", "Self-level (ANGLE)", "Self-level, blended (HORIZON)",
-    "Altitude hold (ALTHOLD)", "Acro trainer (TRAINER)", "GPS rescue (GPS RESCUE)", "Failsafe test (FAILSAFE)",
-    "Beeper on (BEEPER)", "Beeper mute (BEEPER MUTE)", "Black box recording (BLACKBOX)", "Black box erase (BLACKBOX ERASE)",
-    "Pre-arm safety (PREARM)", "Lock the model - anti-tamper (PARALYZE)", "Governor fallback (GOVERNOR FALLBACK)",
-    "Governor suspend (GOVERNOR SUSPEND)", "Governor bypass (GOVERNOR BYPASS)", "Calibrate (CALIB)", "Telemetry on/off (TELEMETRY)",
-    "Stick commands off (STICK COMMANDS DISABLE)", "User switch 1 (USER1)", "User switch 2 (USER2)", "User switch 3 (USER3)", "User switch 4 (USER4)"]
+MODES = ap.MODES   # (B140: one list, in adjust_pages.py - the one page's picker lists these after the two selectors; pages 69 and 70 are no longer reached)
 
 comps = []; i = [1]; add = ap.header('SwitchView', 'Switch 1 of 1', 'SWITCHES.TXT', comps, i, link='Bluetooth', help_title='Switches', name_w=ap.NAME_W)
 shade = PALE[0]   # (fix, 11 Oct: the adjustments page's shade - the twin pages' 'Changes' / 'Does' and 'on' read as one family)

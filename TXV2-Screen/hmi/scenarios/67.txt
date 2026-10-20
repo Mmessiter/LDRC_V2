@@ -1,4 +1,4 @@
-# AdjustView (page 67), the in-flight adjustments (B75-B86): StartAdjustView (TXV1B RF_Adjust.h:958) -> AdjHead (:419),
+# AdjustView (page 67), Switches and knobs (B140: one page for the switch jobs and the settings; these shots are settings rows, ltn0 "Changes"), before it the in-flight adjustments (B75-B86): StartAdjustView (TXV1B RF_Adjust.h:958) -> AdjHead (:419),
 # AdjShow (:596-650: the empty branch at :600 leaves the hint), AdjRead's busy (:830); AdjLive the marker and tn8 (:550-593);
 # AdjTakeNote / the bank re-match note in the busy box (:567, :789-791, :886).
 Screen_Background=8
@@ -7,7 +7,7 @@ page AdjustView
 t11.txt="Black Thunder 2"
 t9.txt="USB cable"
 vis b3,0
-t0.txt="No adjustments yet"
+t0.txt="No jobs yet"
 tn0.txt="(none yet: press Add)"
 tn3.txt=""
 tn2.txt=""
@@ -23,8 +23,9 @@ busy.txt="Reading the adjustments (USB cable) ..."
 vis busy,0
 @shot 67_none
 # a bank switch matched to this transmitter's banks (kind 4, no handles)
-t0.txt="Adjustment 1 of 6"
+t0.txt="Job 1 of 6"
 tn0.txt="Bank (Profile) selector"
+ltn0.txt="Changes"
 tn3.txt="in any bank"
 vis tn3,0
 tn2.txt="Banks 1 to 4 of this transmitter"
@@ -39,8 +40,9 @@ bar.mk=1091
 tn8.txt="Bank 2: 1091 us"
 @shot 67_bank
 # a three-position switch in bank 2
-t0.txt="Adjustment 3 of 10"
+t0.txt="Job 3 of 10"
 tn0.txt="Governor tail torque assist gain"
+ltn0.txt="Changes"
 vis tn3,1
 tn3.txt="in bank 2"
 tn2.txt="Switch, 3 positions"
@@ -56,8 +58,9 @@ tn8.txt="Position 2: 1500 us"
 vis b3,1
 @shot 67_switch
 # a knob, the widest title (276 px at font 0)
-t0.txt="Adjustment 12 of 42"
+t0.txt="Job 12 of 42"
 tn0.txt="Pitch P gain"
+ltn0.txt="Changes"
 tn3.txt="in any bank"
 tn2.txt="Knob"
 tn1.txt="Channel 9: AUX4"
@@ -71,8 +74,9 @@ bar.mk=1500
 tn8.txt="Knob 1500 us: 60"
 @shot 67_knob
 # step up / down
-t0.txt="Adjustment 13 of 14"
+t0.txt="Job 13 of 14"
 tn0.txt="Yaw collective feedforward"
+ltn0.txt="Changes"
 tn3.txt="in bank 4"
 tn2.txt="Step adjustment"
 tn1.txt="Channel 16: AUX11"
@@ -86,8 +90,9 @@ bar.mk=1500
 tn8.txt="Holding: 1500 us"
 @shot 67_step
 # a bank switch that cannot follow (kind 3), the longest live line (b[64])
-t0.txt="Adjustment 1 of 6"
+t0.txt="Job 1 of 6"
 tn0.txt="Bank (Profile) selector"
+ltn0.txt="Changes"
 vis tn3,0
 tn2.txt="Switch, 4 positions"
 tn1.txt="Channel 7: AUX2"

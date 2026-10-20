@@ -1,8 +1,7 @@
-What the switches do. Two pages open this help:|
-'Switches' on 'Transmitter setup' gives each of the eight switches|
-its job: read THE TRANSMITTER'S SWITCHES, just below.|
-'Switches ...' on the Rotorflight menu sets what a switch makes|
-the flight controller do: read ROTORFLIGHT SWITCHES, further on.||
+What the switches do: 'Switches' on 'Transmitter setup' gives|
+each of the eight switches its job.|
+(What a switch makes the flight controller do - arm, rescue, the|
+bank - is 'Switches & knobs' on the Rotorflight menu: its own help.)||
 THE TRANSMITTER'S SWITCHES:|
 Any of the eight switches can do any job. Touch a switch's number|
 or its job to choose the job.|
@@ -28,50 +27,3 @@ the instructor at once.|
 The jobs belong to the transmitter, not the model: they stay the|
 same whichever model is loaded.|
 'OK' keeps them and goes back to 'Transmitter setup'.||
-ROTORFLIGHT SWITCHES:|
-On the Rotorflight menu, 'Switches ...' sets what each switch|
-makes the flight controller do: arm, rescue, self-level, the|
-beeper, the black box and more, as on the phone app's|
-'Switches' page (the Configurator's Modes tab).|
-It needs the safety on. With the model connected, it also needs|
-a Version 2 receiver with Bluetooth.|
-With no model, it uses the model's backup on the card, if there|
-is one. A 'Save' then changes the backup, and the change is|
-offered to the model when it next connects.||
-THE PAGE:|
-'<' and '>' beside the title step through the switch actions.|
-Tap the box beside 'Does' to choose another action. Drag the|
-list until it is in the middle, then press 'OK'. 'Cancel'|
-keeps the old one.|
-Tap the box beside 'on' for the next channel, 6 to 16|
-(after 16 it goes back to 6). Channel 6 is AUX 1 in Rotorflight.|
-'Add' makes a new action: choose it from the list. It|
-goes on the channel after the one showing, ON in the upper|
-third of the travel.|
-Rotorflight holds up to 20 switch actions.|
-'Remove' takes away the action showing, after a question.||
-THE BAR:|
-The bar is the channel's travel, 875 to 2125 microseconds (us).|
-The green zone is where the action is ON.|
-Drag the round ends to set the zone.|
-The marker line (white, edged in black) is where the switch is|
-now: this transmitter's output, as the flight controller sees|
-it (988 to 2012 us).|
-The line under the bar says ON or OFF.||
-THE ARM SWITCH:|
-The arm switch is this transmitter's safety switch. With a|
-Rotorflight model, the safety drives the arming channel (set|
-in 'Settings ...').|
-So the arm action is kept on that channel: if the flight|
-controller had it elsewhere, the page moves it there and says|
-so; 'Save' writes it. Change the channel in 'Settings ...'.|
-It cannot be swapped for another action, or removed.|
-'Save' refuses an ON zone that reaches 988 us: the model would|
-arm with the safety on.|
-It also refuses one that stops short of 2012 us (safety off would|
-not arm), and a set with no arm action.||
-SAVE AND OK:|
-'Save' appears once something is changed. It writes the actions|
-that changed, stores them, and reads them all back to check.|
-'OK' leaves. With a change not saved it asks 'Save now?':|
-'Save' saves, then leaves; 'Discard' leaves without saving.|

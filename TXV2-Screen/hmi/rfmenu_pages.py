@@ -72,10 +72,11 @@ add(comps, comp(by['va0']))
 BUTTONS = [  # (name, words, code) in the order they sit, three to a row: the pages with values to edit first, the settings last
     ('Easy', 'Easy tuning ...', 205), ('Pid', 'PIDs ...', 18), ('b1', 'Rates ...', 22),
     ('b2', 'Governor ...', 50), ('Rescue', 'Rescue ...', 64), ('Servos', 'Servos ...', 73),
-    ('Travel', 'Travel extents ...', 83), ('Filters', 'Filters ...', 92), ('Adjust', 'Adjustments ...', 116),
-    ('Switches', 'Switches ...', 133), ('CopyBank', 'Copy a bank ...', 145), ('Battery', 'Battery ...', 155),
-    ('Blackbox', 'Black box ...', 161), ('Setup', 'Settings ...', 81), ('Cli', 'Command line ...', 'ldrc cli'),
-]   # (screen 1.11.42, Malcolm 10 Oct: "Command line" in the grid - the screen's own page, the word never reaches the main
+    ('Travel', 'Travel extents ...', 83), ('Filters', 'Filters ...', 92), ('Adjust', 'Switches & knobs ...', 116),
+    ('CopyBank', 'Copy a bank ...', 145), ('Battery', 'Battery ...', 155), ('Blackbox', 'Black box ...', 161),
+    ('Setup', 'Settings ...', 81), ('Cli', 'Command line ...', 'ldrc cli'),
+]   # (B140, 20 Oct: 'Adjustments ...' and 'Switches ...' became one page, 'Switches & knobs ...' - fourteen buttons)
+    # (screen 1.11.42, Malcolm 10 Oct: "Command line" in the grid - the screen's own page, the word never reaches the main
     # board; Backup / Restore at the island's foot, far left, opposite OK)
     # (B104, 16 Oct 2026, Malcolm: "the sliders ... most useful at the field": Easy tuning first; Calibrate, set once for a
     # model, moved to the settings page beside First-time basics - so the grid keeps its fifteen)

@@ -166,6 +166,7 @@
 #include "RF_Filters.h" // B58: the gyro filters, over the pipe
 #include "RF_Adjust.h" // B72: the in-flight adjustments, over the pipe with the USB cable
 #include "RF_Switches.h" // B77: the switches (modes), over the pipe
+#include "RF_Jobs.h" // B140: Switches and knobs - the one page over both
 #include "RF_CopyBank.h" // B78: copy a bank, over the pipe
 #include "RF_FcSetup.h" // B88: battery, black box, calibrate, and why it will not arm, over the pipe
 #include "RF_Basics.h" // B99: the model basics (swashplate type, rotor direction, tail type, motor protocol, ESC brand, poles, gear ratios), over the pipe; B100: the ports
@@ -3434,35 +3435,35 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     WriteEdits,              // 113 Write edits
     DiscardEdits,            // 114 Forget edits
     EndBackupView,           // 115 OK
-    StartAdjustView,         // 116 B72: the menu's Adjustments ...
-    EndAdjustView,           // 117 OK
-    SaveAdjustments,         // 118 Save
-    AdjustWasEdited,         // 119 a number typed
-    AdjustSettingNext,       // 120 Setting >
-    AdjustSettingPrev,       // 121 Setting <
-    AdjustChannelNext,       // 122 Channel >
-    AdjustChannelPrev,       // 123 Channel <
-    AdjustKindTapped,        // 124 Kind
-    AdjustBankTapped,        // 125 In bank
-    AdjustPrevious,          // 126 < Prev
-    AdjustNext,              // 127 Next >
-    AdjustAdd,               // 128 Add
-    AdjustRemove,            // 129 Remove
-    AdjustBarMoved,          // 130 B74: the bar touched (a zone tapped, a handle dragged)
-    AdjustPickOk,            // 131 B75: the picker's OK
-    AdjustPickCancel,        // 132 Cancel
-    StartSwitchView,         // 133 B77: the menu's Switches ...
-    EndSwitchView,           // 134 OK
-    SaveSwitchActions,       // 135 Save
-    SwitchModeTapped,        // 136 the action (the picker)
-    SwitchChannelTapped,     // 137 the channel
-    SwitchPrevious,          // 138 <
-    SwitchNext,              // 139 >
-    SwitchAdd,               // 140 Add
-    SwitchRemove,            // 141 Remove
-    SwitchBarMoved,          // 142 the bar's blobs dragged
-    SwitchPickOk,            // 143 the picker's OK
-    SwitchPickCancel,        // 144 Cancel
+    StartJobsView,           // 116 B140: the menu's Switches & knobs ... (was B72 Adjustments)
+    EndJobsView,             // 117 OK
+    SaveJobs,                // 118 Save: the switch jobs, then the selectors and knobs
+    JobsWasEdited,           // 119 a number typed
+    JobsSettingTapped,       // 120 the job box: the picker
+    JobsSettingTapped,       // 121 (both codes open the picker)
+    JobsChannelTapped,       // 122 the channel box
+    JobsChannelTapped,       // 123 (as 122)
+    JobsKindTapped,          // 124 the kind box
+    JobsBankTapped,          // 125 the bank box
+    JobsPrevious,            // 126 < Prev
+    JobsNext,                // 127 Next >
+    JobsAdd,                 // 128 Add: the picker first
+    JobsRemove,              // 129 Remove
+    JobsBarMoved,            // 130 the bar touched
+    JobsPickOk,              // 131 the picker's OK
+    JobsPickCancel,          // 132 Cancel
+    StartJobsView,           // 133 (B77 Switches: the page is gone - its codes open the one page)
+    EndJobsView,             // 134 (was Switches OK)
+    SaveJobs,                // 135 (was Switches Save)
+    JobsSettingTapped,       // 136 (was the action picker)
+    JobsChannelTapped,       // 137 (was the switches' channel)
+    JobsPrevious,            // 138 (was <)
+    JobsNext,                // 139 (was >)
+    JobsAdd,                 // 140 (was Switches Add)
+    JobsRemove,              // 141 (was Switches Remove)
+    JobsBarMoved,            // 142 (was the blobs dragged)
+    JobsPickOk,              // 143 (was the action picker's OK)
+    JobsPickCancel,          // 144 (was its Cancel)
     StartCopyBankView,       // 145 B78: the menu's Copy a bank ...
     EndCopyBankView,         // 146 OK
     CopyBankNow,             // 147 Copy bank A to bank B
@@ -4441,7 +4442,7 @@ FASTRUN void ButtonWasPressed()
         }
         if (InStrng((char *)"ldrcadj", TextIn) > 0)
         { // B75: the adjustments page is on the screen again (from the keypad, a question, or just opened): its bar drawn afresh
-            AdjustPageBack();
+            JobsPageBack();   // (B140)
             ClearText();
             return;
         }
@@ -5364,8 +5365,9 @@ void FASTRUN ManageTransmitter()
     BasicsPoll();      // B99: the model basics pages
     EscCalPoll();      // B100: the ESC throttle calibration page (the hold renewed)
     FilterPoll();      // B58: the filters page
-    AdjustPoll();      // B72: the adjustments page
-    SwitchPoll();      // B77: the switches page
+    AdjustPoll();      // B72: the adjustments' MSP state machine (on the Switches and knobs page, B140)
+    SwitchPoll();      // B77: the switches'
+    JobsPoll();        // B140: the page itself - the read and save sequence, the live marker
     CopyBankPoll();    // B78: a bank being copied
     BatteryPoll();     // B88: the battery page
     BlackboxPoll();    // B88: the black box page

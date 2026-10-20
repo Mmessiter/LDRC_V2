@@ -186,6 +186,28 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Switches and knobs: one page for both of Rotorflight's tables (Teensy B140, pages 67/68, screen 1.11.101, 20 Oct 2026)
+
+Malcolm: "If selecting the channel/switch for banks selection is under switches on the app and under adjustments on the
+transmitter, many will find this confusing, including me! Do we need these two categories? Perhaps they can be combined
+into one?" - and of "Switches and knobs": "I like your suggestion ... Let's do it." Rotorflight keeps these on two tabs of
+its configurator, Modes (arm, rescue, self-level, the beeper, the black box: MSP 34/35) and Adjustments (the bank and
+rates selectors, and a knob or switch that changes a setting: MSP 52/53), and the two pages followed the tabs.
+
+Now ONE page on the Rotorflight menu, 'Switches & knobs ...' (page 67 and its picker 68; pages 69 and 70 are no longer
+reached). RF_Jobs.h walks both engines as one list - the switch jobs first, in slot order, then the selectors and knobs -
+and routes each touch to the engine of the row showing; the engines keep their tables and their MSP state machines.
+The row reads "Does [Rescue] / Switch on [Channel 8: AUX3]" or "Changes [Pitch P gain] [in bank 1] / Knob on [Channel 7]";
+the title counts the jobs ("Job 3 of 12"). One picker, "What it does": the two selectors, then the switch jobs, then the
+settings. Add opens the picker first, then makes the row on the channel after the one showing. A job can change kind
+through the picker (the old row goes, the new one keeps its channel; the arm switch never). One Save writes the switch
+jobs that changed, then the selectors and knobs that changed, stores and reads back each, and says "Saved" once; OK's
+"Save now?" saves both and leaves. Opening reads the switches over the pipe as ever, then the adjustments, which need
+the USB cable: without it the page shows the switch jobs, says so, and will not add a selector or a knob. The help is
+SWKNOBS.TXT (with the note Malcolm asked for: Rotorflight separates them, we combined them to keep it simple); the
+transmitter's own SWITCHES.TXT lost its Rotorflight sections; the ADJUST film became SWKNOBS. dev/test_jobs/test_jobs.py
+(141 checks under the sanitizers) replaces test_adjust_page.py and test_switches.py, whose scenarios it carries.
+
 ## Adjustments: a reversed bank channel spaced the wrong way (Teensy B139, 20 Oct 2026)
 
 Malcolm, B138 on the six-bank model: "that crash is fixed. And the little blips appear showing me where the channel is.

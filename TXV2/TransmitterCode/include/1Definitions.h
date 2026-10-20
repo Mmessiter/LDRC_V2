@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B139 20/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B140 20/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1005,38 +1005,37 @@ void FilterLpf2EnableTapped();
 void FilterDynCutoffTapped();
 void FilterNotch1Tapped();
 void FilterNotch2Tapped();
-void AdjustPoll();                            // B72: RF_Adjust.h, the in-flight adjustments
-void StartAdjustView();
-void EndAdjustView();
+void AdjustPoll();                            // B72: RF_Adjust.h, the adjustments' MSP state machine (shown on the Switches and knobs page, B140)
 void SaveAdjustments();
 void AdjustWasEdited();
-void AdjustSettingNext();
-void AdjustSettingPrev();
 void AdjustChannelNext();
 void AdjustChannelPrev();
 void AdjustKindTapped();
 void AdjustBankTapped();
-void AdjustPrevious();
-void AdjustNext();
-void AdjustAdd();
 void AdjustRemove();
 void AdjustBarMoved();                        // B74: the bar touched
-void AdjustPickOk();                          // B75: the setting picker
-void AdjustPickCancel();
-void AdjustPageBack();
-void SwitchPoll();                            // B77: RF_Switches.h
-void StartSwitchView();
-void EndSwitchView();
+void SwitchPoll();                            // B77: RF_Switches.h, the switches' MSP state machine
 void SaveSwitchActions();
-void SwitchModeTapped();
 void SwitchChannelTapped();
-void SwitchPrevious();
-void SwitchNext();
-void SwitchAdd();
 void SwitchRemove();
 void SwitchBarMoved();
-void SwitchPickOk();
-void SwitchPickCancel();
+void JobsPoll();                              // B140: RF_Jobs.h, the Switches and knobs page over both
+void StartJobsView();
+void EndJobsView();
+void SaveJobs();
+void JobsWasEdited();
+void JobsSettingTapped();
+void JobsChannelTapped();
+void JobsKindTapped();
+void JobsBankTapped();
+void JobsPrevious();
+void JobsNext();
+void JobsAdd();
+void JobsRemove();
+void JobsBarMoved();
+void JobsPickOk();
+void JobsPickCancel();
+void JobsPageBack();
 void CopyBankPoll();                          // B78: RF_CopyBank.h
 void StartCopyBankView();
 void EndCopyBankView();

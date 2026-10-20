@@ -1,0 +1,122 @@
+Switches and knobs: what each switch or knob of this transmitter|
+makes the flight controller do, all on one page.|
+A switch job turns something on: arm, rescue, self-level, the|
+beeper, the black box and more.|
+A selector picks the bank, or the rates, by its position.|
+A knob or a switch can change a setting in flight: a gain,|
+a rate, the governor and more.||
+ROTORFLIGHT'S TWO TABS:|
+Rotorflight keeps these on two tabs of its configurator, 'Modes'|
+(the switch jobs) and 'Adjustments' (the selectors and knobs),|
+and the phone app once did the same. Many found that confusing:|
+the bank selector is a switch job to most of us. So this page|
+holds them all. It writes each to its own table, out of sight.||
+WHAT IT NEEDS:|
+The model connected, with the safety on, and a Version 2|
+receiver with Bluetooth. With no model, the page uses the|
+model's backup on the card, if there is one: a 'Save' then|
+changes the backup, offered to the model when it next connects.|
+The switch jobs come over the receiver's lead. The selectors and|
+knobs also need the USB-C cable from the receiver to the flight|
+controller ('USB cable' at the top left): Rotorflight will not|
+send them over the lead. Without the cable the page shows the|
+switch jobs, says so, and will not add a selector or a knob.||
+THE PAGE:|
+One job at a time. '<' and '>' beside the title step through them:|
+the switch jobs first, then the selectors and knobs.|
+A switch job reads 'Does [the job]' and 'Switch on [channel]'.|
+A selector or a knob reads 'Changes [the setting]', the bank it|
+works in, and 'Knob on [channel]' (or 'Switch, 3 positions',|
+'Step adjustment', 'Banks 1 to 6 of this transmitter').|
+Tap the job box to choose another job from the list.|
+Tap the channel box for the next channel, 6 to 16 (after 16 it|
+goes back to 6). Channel 6 is AUX 1 in Rotorflight.|
+'Add' opens the list first: choose what the new job does, then|
+press 'OK'. It goes on the channel after the one showing.|
+'Remove' takes away the job showing, after a question.|
+Rotorflight holds 20 switch jobs and 42 adjustments.||
+THE LIST ('What it does'):|
+The two selectors come first, then the switch jobs, then the|
+settings: rates and PIDs, then the rest.|
+Turn the list (drag it, or tap a row) until the job is in the|
+middle, then press 'OK'. 'Cancel' keeps the old one.|
+A switch job can become a setting, and a setting a switch job:|
+the old row goes and the new one takes its channel.||
+THE BAR:|
+The bar is the channel's travel, 875 to 2125 microseconds (us).|
+A real switch spans about 988 to 2012.|
+The marker line (white, edged in black) is where the channel is|
+now: this transmitter's output, as the flight controller sees|
+it. The line under the bar says what that gives.|
+Switch job: the green zone is where the job is ON. Drag the|
+round ends to set it. The line says ON or OFF.|
+Selector: one zone per bank. Nothing to drag: the ends are matched|
+to this transmitter's banks (below).|
+Knob: tap the left half of its zone for the low end value, or|
+the right half for the high end value. Drag the round ends to|
+set its travel.|
+Switch with positions: tap the first or last zone to type its|
+value. The zones between are spaced evenly, each showing its|
+value. Drag the round ends to the switch's two end positions.|
+Step adjustment: tap an outer zone to type the step. Tap the|
+grey middle zone's left half for the lowest value, or its right|
+half for the highest.||
+THE ARM SWITCH:|
+The arm switch is this transmitter's safety switch. With a|
+Rotorflight model, the safety drives the arming channel (set|
+in 'Settings ...').|
+So the arm job is kept on that channel: if the flight controller|
+had it elsewhere, the page moves it there and says so; 'Save'|
+writes it. Change the channel in 'Settings ...'.|
+It cannot be swapped for another job, or removed.|
+'Save' refuses an ON zone that reaches 988 us: the model would|
+arm with the safety on. It also refuses one that stops short of|
+2012 us (safety off would not arm), and a set with no arm job.||
+THE SELECTORS:|
+A 'Bank (Profile) selector' tells Rotorflight which bank the|
+switch has chosen; a 'Rates selector' does the same for the|
+rates. Without a bank selector, every adjustment works in every|
+bank.|
+A selector is matched to this transmitter's banks, so there is|
+nothing to drag. Its kind box says, for example, 'Banks 1 to 4|
+of this transmitter' (1 to 6 with 'Six banks').|
+Each bank sends its own value on the bank channel, rising from|
+bank 1. The transmitter picks the travel whose even divisions|
+give each bank its own zone, with the most room to spare.|
+Flip through the banks: the line under the bar shows each bank's|
+value, and says so if Rotorflight would pick another bank.|
+When the channel does not give every bank a value of its own|
+(banks 5 and 6 start as copies of bank 4), or no travel can|
+divide its values, the transmitter sets the channel flat in|
+every bank, evenly over its travel (0, 36, 72, 108, 144 and|
+180 degrees for six; the other way round on a reversed channel),|
+and says so. Press 'Save' to write the zones to Rotorflight.|
+Tap the kind box to match a selector again, or for why it could|
+not be matched.||
+KIND, BANK AND VALUES:|
+Tap the kind box of a setting to step to the next kind:|
+Knob: the travel between the round ends sets the value, from the|
+low end value to the high end value.|
+Switch, 2, 3 or 4 positions: each position sets its own value.|
+Step adjustment: a three-position switch. Up adds the step,|
+down takes it away, and the centre holds. The value stays|
+between the lowest and the highest value.|
+The bank box says when a setting works: tap it for 'in bank 1',|
+'in bank 2' and so on, then 'in any bank'. It needs a bank|
+selector. 'set elsewhere': its condition was made some other|
+way, kept as it is until you tap the box.|
+A new setting starts at the value it has now, if it can be read.|
+A rate (top rotation speed) is in degrees per second, as on the|
+Rates page.||
+SAVE AND OK:|
+'Save' appears once something is changed. It writes the switch|
+jobs that changed, then the selectors and knobs that changed,|
+stores them, and reads them back to check.|
+A note that starts 'Press Save:' means the page has put something|
+right: a bank selector that did not follow this transmitter's|
+banks; an extra bank selector line (it would fight the first);|
+a switch in the old form, one line per position, which|
+Rotorflight applies only once per power-up.|
+'OK' leaves. With unsaved changes it asks 'Save now?':|
+'Save' saves them, and the page closes once saved;|
+'Discard' leaves without saving.|

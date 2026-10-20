@@ -19,6 +19,18 @@ comp, PALE = rp.comp, rp.PALE
 NAMES = ["(nothing)", "Rates bank switch (1 to 6)", "PID bank switch (1 to 6)", "Led profile", "Battery profile", "Pitch rate curve shape (Shape)", "Roll rate curve shape (Shape)", "Yaw rate curve shape (Shape)", "Pitch top rotation speed (Rate)", "Roll top rotation speed (Rate)", "Yaw top rotation speed (Rate)", "Pitch expo", "Roll expo", "Yaw expo", "Pitch P gain", "Pitch I gain", "Pitch D gain", "Pitch F gain", "Roll P gain", "Roll I gain", "Roll D gain", "Roll F gain", "Yaw P gain", "Yaw I gain", "Yaw D gain", "Yaw F gain", "Yaw clockwise gain", "Yaw anticlockwise gain", "Yaw cyclic feedforward", "Yaw collective feedforward", "Yaw collective dynamic", "Yaw collective decay", "Pitch collective feedforward", "Pitch gyro cutoff", "Roll gyro cutoff", "Yaw gyro cutoff", "Pitch d-term cutoff", "Roll d-term cutoff", "Yaw d-term cutoff", "Rescue climb collective", "Rescue hover collective", "Rescue hover altitude", "Rescue altitude P gain", "Rescue altitude I gain", "Rescue altitude D gain", "Angle level gain", "Horizon level gain", "Acro trainer gain", "Governor gain", "Governor P gain", "Governor I gain", "Governor D gain", "Governor F gain", "Governor tail torque assist gain", "Governor cyclic feedforward", "Governor collective feedforward", "Pitch B gain", "Roll B gain", "Yaw B gain", "Pitch O gain", "Roll O gain", "Cross coupling gain", "Cross coupling ratio", "Cross coupling cutoff", "Level trim pitch", "Level trim roll", "Inertia precomp gain", "Inertia precomp cutoff", "Pitch setpoint boost gain", "Roll setpoint boost gain", "Yaw setpoint boost gain", "Collective setpoint boost gain", "Yaw dynamic ceiling gain", "Yaw dynamic deadband gain", "Yaw dynamic deadband filter", "Yaw precomp cutoff", "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"]
 NAMES[1], NAMES[2] = 'Rates selector', 'Bank (Profile) selector'   # the phone app's Switches page words, as the main board names them (15 Oct)
 ORDER = [2, 1] + list(range(5, 26)) + [3, 4] + list(range(26, 82))   # the main board's AdjOrder: the two selectors first (B136, 20 Oct), then rates and PIDs (RF_Adjust.h must agree)
+# B140, SWITCHES AND KNOBS (Malcolm, 20 Oct: the bank selector under Switches on the app and under Adjustments here was
+# confusing; "Do we need these two categories? Perhaps they can be combined into one?"): page 67 is the one page for every
+# job a channel does, and its picker lists everything - the two selectors, then the switch jobs (the configurator's Modes,
+# RF_Switches.h SwModes, the same order), then the settings (RF_Jobs.h JobsPickAt must agree). Pages 69 and 70 are no
+# longer reached from the menu.
+MODES = ["Arm - motor enable (ARM)", "Rescue - the safety net (RESCUE)", "Self-level (ANGLE)", "Self-level, blended (HORIZON)",
+    "Altitude hold (ALTHOLD)", "Acro trainer (TRAINER)", "GPS rescue (GPS RESCUE)", "Failsafe test (FAILSAFE)",
+    "Beeper on (BEEPER)", "Beeper mute (BEEPER MUTE)", "Black box recording (BLACKBOX)", "Black box erase (BLACKBOX ERASE)",
+    "Pre-arm safety (PREARM)", "Lock the model - anti-tamper (PARALYZE)", "Governor fallback (GOVERNOR FALLBACK)",
+    "Governor suspend (GOVERNOR SUSPEND)", "Governor bypass (GOVERNOR BYPASS)", "Calibrate (CALIB)", "Telemetry on/off (TELEMETRY)",
+    "Stick commands off (STICK COMMANDS DISABLE)", "User switch 1 (USER1)", "User switch 2 (USER2)", "User switch 3 (USER3)", "User switch 4 (USER4)"]
+JOBS = [NAMES[2], NAMES[1]] + MODES + [NAMES[f] for f in ORDER[2:]]
 
 # Polish (10 Oct, Malcolm: "make the screens look more beautiful, well designed and easy to use ... Don't change the logic"):
 # link = the header's word for how the page reaches the model, as the main board writes it there (the switches' pages
@@ -65,7 +77,7 @@ def finish(pid, name, comps, extra_pre=''):
     json.dump(idx, open(os.path.join(rp.PAGES, '..', 'index.json'), 'w'), indent=1)
 
 # ---- page 67: the adjustment
-comps = []; i = [1]; add = header('AdjustView', 'Adjustment 1 of 1', 'ADJUST.TXT', comps, i, help_title='Adjustments', name_w=NAME_W)
+comps = []; i = [1]; add = header('AdjustView', 'Job 1 of 1', 'SWKNOBS.TXT', comps, i, help_title='Switches and knobs', name_w=NAME_W)   # (B140: one page for both tables)
 shade = PALE[0]
 def label(nm, x, y, w, txt, h=36, pale=True):
     l = comp(rp.LABEL_L, n=nm, x=x, y=y, w=w, h=h, txt=txt, g='g')
@@ -85,7 +97,7 @@ arrows(add, 126, 127)
 W = 680; isl = rp.island(W, 236, [('b5', 'Add', 128), ('b6', 'Remove', 129), ('b3', 'Save', 118), ('b1', 'OK', 117)])
 comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
 X, Y = isl['x0'], isl['y0']
-label('ltn0', X, Y, 140, 'Changes'); tapbox('tn0', X + 146, Y, 380, 120); tapbox('tn3', X + 532, Y, 148, 125, maxl=16)
+label('ltn0', X, Y, 140, 'Does'); tapbox('tn0', X + 146, Y, 380, 120); tapbox('tn3', X + 532, Y, 148, 125, maxl=16)   # (B140: the main board writes 'Does' for a switch job, 'Changes' for a setting)
 tapbox('tn2', X, Y + 46, 360, 124, maxl=24); label('lon', X + 366, Y + 46, 44, 'on', pale=False); tapbox('tn1', X + 416, Y + 46, 264, 122, maxl=24)   # (B76: no 'Control' label - the line reads as a sentence)
 bar = {'n': 'bar', 't': 'rangebar', 'g': 'g', 'x': X, 'y': Y + 100, 'w': W, 'h': 60, 'font': 2, 'txt': '', 'val': 0,
        'c': {'pco': 65535, 'bco': rp.CARD['c']['bco'], 'borderc': 0, 'pco2': 65535, 'bco2': 0},
@@ -101,7 +113,7 @@ add(note_box(X, Y, W))
 finish(67, 'AdjustView', comps)
 
 # ---- page 68: the picker
-comps = []; i = [1]; add = header('AdjPickView', 'What it changes', 'ADJUST.TXT', comps, i)
+comps = []; i = [1]; add = header('AdjPickView', 'What it does', 'SWKNOBS.TXT', comps, i)   # (B140: every job, switch or setting)
 proto = None
 for pg in (46,):
     for c in json.load(open(os.path.join(rp.PAGES, '%d.json' % pg)))['comps']:
@@ -109,7 +121,7 @@ for pg in (46,):
 LW, LH = 460, 7 * 37 + 6   # (B91: the wheel on an island: as wide as the longest setting needs, seven whole rows)
 isl = rp.island(LW, LH, [('b1', 'Cancel', 132), ('b3', 'OK', 131)])
 comps[1].update(x=isl['card'][0], y=isl['card'][1], w=isl['card'][2], h=isl['card'][3])
-wheel = comp(proto, n='list', x=isl['x0'], y=isl['y0'], w=LW, h=LH, txt='', val=0, opt=[NAMES[f] for f in ORDER]); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}
+wheel = comp(proto, n='list', x=isl['x0'], y=isl['y0'], w=LW, h=LH, txt='', val=0, opt=JOBS); wheel['a'] = dict(wheel['a'], hig=37); wheel['ev'] = {}   # (B140: JOBS, not the settings alone)
 add(wheel)
 for (nm, txt, x, y, w, code) in isl['btn']:
     b = comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = ev(code); add(b)

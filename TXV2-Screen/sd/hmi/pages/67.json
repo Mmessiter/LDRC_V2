@@ -35,7 +35,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "Adjustment 1 of 1",
+   "txt": "Job 1 of 1",
    "a": {
     "style": 0,
     "key": 255,
@@ -172,7 +172,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:ADJUST.TXT\"\nLogView.t0.txt=\"Adjustments help\"\nLogView.return.txt=\"AdjustView\""
+    "r": "print \"HelpView:SWKNOBS.TXT\"\nLogView.t0.txt=\"Switches and knobs help\"\nLogView.return.txt=\"AdjustView\""
    }
   },
   {
@@ -255,7 +255,7 @@
     "borderc": 0,
     "bco": 65497
    },
-   "txt": "Changes",
+   "txt": "Does",
    "a": {
     "style": 0,
     "key": 255,

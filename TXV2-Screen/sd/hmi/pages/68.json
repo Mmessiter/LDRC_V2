@@ -34,7 +34,7 @@
     "borderc": 0,
     "bco": 2214
    },
-   "txt": "What it changes",
+   "txt": "What it does",
    "a": {
     "style": 0,
     "key": 255,
@@ -171,7 +171,7 @@
     "isbr": 0
    },
    "ev": {
-    "r": "print \"HelpView:ADJUST.TXT\"\nLogView.t0.txt=\"What it changes help\"\nLogView.return.txt=\"AdjPickView\""
+    "r": "print \"HelpView:SWKNOBS.TXT\"\nLogView.t0.txt=\"What it does help\"\nLogView.return.txt=\"AdjPickView\""
    }
   },
   {
@@ -197,6 +197,30 @@
    "opt": [
     "Bank (Profile) selector",
     "Rates selector",
+    "Arm - motor enable (ARM)",
+    "Rescue - the safety net (RESCUE)",
+    "Self-level (ANGLE)",
+    "Self-level, blended (HORIZON)",
+    "Altitude hold (ALTHOLD)",
+    "Acro trainer (TRAINER)",
+    "GPS rescue (GPS RESCUE)",
+    "Failsafe test (FAILSAFE)",
+    "Beeper on (BEEPER)",
+    "Beeper mute (BEEPER MUTE)",
+    "Black box recording (BLACKBOX)",
+    "Black box erase (BLACKBOX ERASE)",
+    "Pre-arm safety (PREARM)",
+    "Lock the model - anti-tamper (PARALYZE)",
+    "Governor fallback (GOVERNOR FALLBACK)",
+    "Governor suspend (GOVERNOR SUSPEND)",
+    "Governor bypass (GOVERNOR BYPASS)",
+    "Calibrate (CALIB)",
+    "Telemetry on/off (TELEMETRY)",
+    "Stick commands off (STICK COMMANDS DISABLE)",
+    "User switch 1 (USER1)",
+    "User switch 2 (USER2)",
+    "User switch 3 (USER3)",
+    "User switch 4 (USER4)",
     "Pitch rate curve shape (Shape)",
     "Roll rate curve shape (Shape)",
     "Yaw rate curve shape (Shape)",
