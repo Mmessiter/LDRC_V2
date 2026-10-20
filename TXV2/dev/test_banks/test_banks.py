@@ -403,7 +403,7 @@ if os.path.exists(SCREEN):
     pg = json.load(open(os.path.join(SCREEN, 'sd', 'hmi', 'pages', '20.json'))); by = {c['n']: c for c in pg['comps']}
     check(all(k in by for k in ('BK5', 'BK6', 't5', 't6', 't7')) and all(len(by['BK%d' % k]['opt']) == 38 for k in range(1, 7)) and by['BK1']['opt'][34] == 'Bank 5' and by['b1']['ev']['r'].endswith('BK6.val=35'), 'page 20: six boxes, 38 names, the presets set six')
     pg9 = json.load(open(os.path.join(SCREEN, 'sd', 'hmi', 'pages', '9.json'))); by9 = {c['n']: c for c in pg9['comps']}
-    check('c3' in by9 and by9['c3']['t'] == 'switch' and by9['l_t5']['txt'] == 'Six banks', 'page 9: the Six banks switch')
+    check('c3' in by9 and by9['c3']['t'] == 'switch' and by9['l_t5']['txt'] == 'Six banks (off: four)', 'page 9: the Six banks switch (B142: says what off means)')
     for i in (105, 106, 107, 108):
         check(os.path.getsize(os.path.join(SCREEN, 'sd', 'hmi', 'audio', '%d.wav' % i)) > 20000, 'clip %d on the card' % i)
     res = json.load(open(os.path.join(SCREEN, 'hmi', 'resources.json')))

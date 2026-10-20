@@ -186,6 +186,13 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Model options: "Six banks (off: four)" (Teensy B142, page 9, 21 Oct 2026)
+
+Malcolm, B141 confirmed working ("it now works perfectly"): "where we have the switch, which allows six banks to be switched
+on and off, we should make it clear that when off, it's four banks. It doesn't say that yet." The switch's label on Model
+options (page 9, l_t5) now reads "Six banks (off: four)"; the box starts further left to hold it. The Teensy only carries
+the version.
+
 ## Bank selector: each bank in the middle of its zone, as the flight controller sees it (Teensy B141, 20 Oct 2026)
 
 Malcolm, B140 on the six-bank model: "I have set channel 7 to banks, and it has been initially set to four. And this is

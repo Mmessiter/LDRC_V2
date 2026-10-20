@@ -849,9 +849,9 @@
    "i": 31,
    "t": "text",
    "g": "l",
-   "x": 452,
+   "x": 424,
    "y": 352,
-   "w": 230,
+   "w": 258,
    "h": 28,
    "font": 2,
    "sta": 1,
@@ -860,7 +860,7 @@
     "borderc": 0,
     "bco": 4426
    },
-   "txt": "Six banks",
+   "txt": "Six banks (off: four)",
    "a": {
     "style": 0,
     "key": 255,
@@ -868,7 +868,7 @@
     "xcen": 0,
     "ycen": 1,
     "pw": 0,
-    "txt_maxl": 20,
+    "txt_maxl": 24,
     "isbr": 0
    }
   },
