@@ -153,9 +153,10 @@ int main(int argc, char **argv) {
         }
         line = strtok(nullptr, "\n");
     }
-    // the Setting order: rates and PIDs first, then the rest, wrapping both ways
+    // the Setting order (B136): the two selectors first, then rates and PIDs, then the rest; a value the screen failed to give is nothing
     vi = 0;
-    CHECK(AdjFnAt(0) == 5 && AdjFnAt(20) == 25 && AdjFnAt(21) == 3 && AdjFnAt(22) == 4 && AdjFnAt(23) == 26 && AdjFnAt(78) == 81 && AdjIdxOf(14) == 9 && AdjIdxOf(22) == 17 && AdjIdxOf(3) == 21 && AdjIdxOf(81) == 78, "the picker's order: rates and PIDs first, then the rest");
+    CHECK(AdjFnAt(0) == 2 && AdjFnAt(1) == 1 && AdjFnAt(2) == 5 && AdjFnAt(22) == 25 && AdjFnAt(23) == 3 && AdjFnAt(24) == 4 && AdjFnAt(25) == 26 && AdjFnAt(80) == 81 && AdjIdxOf(2) == 0 && AdjIdxOf(1) == 1 && AdjIdxOf(14) == 11 && AdjIdxOf(22) == 19 && AdjIdxOf(3) == 23 && AdjIdxOf(81) == 80, "the picker's order: the selectors, then rates and PIDs, then the rest");
+    CHECK(AdjFnAt(81) == 0 && AdjFnAt(-1) == 0 && AdjFnAt(65535) == 0, "a list value the screen failed to give (65535) is nothing, so the row is left alone");
     CHECK(AdjStep(1500) == 0 && AdjStep(1505) == 1 && AdjStep(1495) == 255 && AdjStep(875) == 131 && AdjStep(2125) == 125 && AdjStep(1502) == 0 && AdjStep(1503) == 1 && AdjStep(1497) == 255 && AdjStep(1498) == 0, "the step rounding");
     CHECK(AdjUs(131) == 875 && AdjUs(125) == 2125 && AdjUs(0) == 1500, "steps to microseconds");
     // Rotorflight's even divisions (rc_adjustments.c): 4 banks over 988..2012 change at 1159, 1500 and 1841; Black Thunder 2's

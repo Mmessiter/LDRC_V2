@@ -21,7 +21,7 @@ THE PAGE:|
 THE SETTING AND THE BANK:|
 Tap the setting box beside 'Changes' to open the list,|
 'What it changes'.|
-Rates and PIDs come first.|
+The two selectors come first, then rates and PIDs.|
 Turn the list (drag it, or tap a row) until the setting is in the|
 middle, then press 'OK'. 'Cancel' keeps the old one.|
 A new setting starts at the value it has now, if it can be read.|
@@ -34,9 +34,11 @@ It is kept as it is until you tap the box.|
 The bank box needs a 'Bank (Profile) selector' adjustment:|
 it tells Rotorflight which bank the switch has chosen.|
 Without one, every adjustment works in every bank.|
-The list here does not offer one. If the model has none,|
-choose its 'Bank (Profile)' channel on the phone app's|
-'Transmitter channels' page.|
+If the model has none, press 'Add', tap the setting box and|
+choose 'Bank (Profile) selector' at the top of the list, then|
+set its channel: the transmitter matches it to its own banks.|
+'Rates selector' is made the same way, for a rates switch.|
+(The phone app's 'Switches' page can make them too.)|
 A bank selector is the bank itself, so it has no bank box.||
 KIND AND CHANNEL:|
 Tap the box under 'Changes' to step to the next kind:|

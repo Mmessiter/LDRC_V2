@@ -51,17 +51,19 @@ static const char *const AdjNames[ADJ_NAMES] PROGMEM = {
     "Governor idle throttle", "Governor auto throttle", "Governor max throttle", "Governor min throttle", "Governor headspeed", "Governor yaw feedforward"};
 // The order the Setting steps through: rates and PIDs first (the phone page's BASIC set), then the rest
 static const uint8_t ADJ_FIRST = 5, ADJ_LAST_BASIC = 25;
-// The order the picker page lists them in (hmi/adjust_pages.py ORDER must agree): 5..25, then 3, 4, 26..81
+// The order the picker page lists them in (hmi/adjust_pages.py ORDER must agree): the two selectors (2, 1), then 5..25,
+// then 3, 4, 26..81. B136 (Malcolm, 20 Oct: "I cannot find Bank or Profile ... I can't set it from nothing, yet"): the
+// selectors were left to the phone app's Switches page; a row can now be made one here (AdjustPickOk fits it, B133).
 FLASHMEM static const uint8_t *AdjOrder(int &n)
 {
     static uint8_t seq[ADJ_NAMES];
     static int cnt = 0;
-    if (!cnt) { for (int f = ADJ_FIRST; f <= ADJ_LAST_BASIC; ++f) seq[cnt++] = (uint8_t)f; seq[cnt++] = 3; seq[cnt++] = 4; for (int f = ADJ_LAST_BASIC + 1; f < ADJ_NAMES; ++f) seq[cnt++] = (uint8_t)f; }
+    if (!cnt) { seq[cnt++] = 2; seq[cnt++] = 1; for (int f = ADJ_FIRST; f <= ADJ_LAST_BASIC; ++f) seq[cnt++] = (uint8_t)f; seq[cnt++] = 3; seq[cnt++] = 4; for (int f = ADJ_LAST_BASIC + 1; f < ADJ_NAMES; ++f) seq[cnt++] = (uint8_t)f; }
     n = cnt;
     return seq;
 }
 FLASHMEM static int AdjIdxOf(uint8_t fn) { int n; const uint8_t *seq = AdjOrder(n); for (int i = 0; i < n; ++i) if (seq[i] == fn) return i; return 0; }
-FLASHMEM static uint8_t AdjFnAt(int idx) { int n; const uint8_t *seq = AdjOrder(n); return (idx >= 0 && idx < n) ? seq[idx] : seq[0]; }
+FLASHMEM static uint8_t AdjFnAt(int idx) { int n; const uint8_t *seq = AdjOrder(n); return (idx >= 0 && idx < n) ? seq[idx] : 0; }   // (B136: a value the screen failed to give (65535) is nothing, not the first row)
 
 struct AdjLine { uint8_t fn, ena, adj, stp; int16_t enaLo, enaHi, a1Lo, a1Hi, a2Lo, a2Hi; uint16_t min, max; };
 enum { AK_SWITCH = 0, AK_KNOB = 1, AK_NUDGE = 2 };

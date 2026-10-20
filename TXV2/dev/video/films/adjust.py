@@ -18,7 +18,7 @@ f.line('title', 'Adjustments. Turn a knob in flight, and a Rotorflight setting c
 f.line('page', 'This is the Adjustments page. Each adjustment is one setting, worked by one channel: a knob or a switch on this transmitter.')
 f.line('usb', "It needs the U S B C cable, from the receiver to the flight controller. Rotorflight can't send adjustments over the receiver's lead.")
 f.line('step', 'The arrows beside the title step through your adjustments.')
-f.line('setting', 'Tap the box beside Changes to choose the setting. Rates and P I Ds come first in the list.')
+f.line('setting', 'Tap the box beside Changes to choose the setting. The bank and rates selectors come first in the list, then rates and P I Ds.')
 f.line('kind', "Below it, the kind: a knob, a switch, or a step adjustment. And beside that, the channel it's on.")
 f.line('add', 'Add makes a new one. Remove deletes the one showing, after a question.')
 f.line('tune', "Here's a great use: tuning in the air. Put a gain on a knob, and you can try a whole range of values in one flight.")

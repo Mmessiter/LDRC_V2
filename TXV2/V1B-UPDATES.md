@@ -186,6 +186,17 @@ could not resume.
 **How to use it:** model on, safety on, a few minutes on the front page with the sticks moving and the switches (bank,
 motor) flipped as in flight; model off; `teensy_ota.py perf`. Then move the worst job to the screen, measure again.
 
+## Adjustments: the bank and rates selectors in the picker (Teensy B136, page 68, screen 1.11.100, 20 Oct 2026)
+
+Malcolm: "On the Adjustments page, I cannot find Bank or Profile. How can I set a channel for this? ... It appears to read it
+correctly, if set elsewhere, but I can't set it from nothing, yet." True: the setting picker (page 68, "What it changes")
+listed every Rotorflight adjustment but the two selectors, and the help sent you to the phone app's Switches page to make
+one. B133 had already taught AdjustPickOk to fit a row picked as a selector to this transmitter's banks; only the list
+left them out. Now 'Bank (Profile) selector' and 'Rates selector' are the first two rows of the list (RF_Adjust.h AdjOrder,
+hmi/adjust_pages.py ORDER, page 68's wheel): Add, tap the setting box, choose one, set its channel - the ends are matched
+to the banks as before. A list value the screen fails to give (65535) now changes nothing (it used to pick the first row).
+ADJUST.TXT and the ADJUST film say so; dev/test_adjust pins the order.
+
 ## The curve page's crumbs outside the box (screen 1.11.99, 20 Oct 2026)
 
 Malcolm, with B135 on ("That's very good!!"): "When the screen has redrawn and some edge points have moved, sometimes they leave

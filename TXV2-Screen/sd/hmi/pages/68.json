@@ -195,6 +195,8 @@
    "txt": "",
    "val": 0,
    "opt": [
+    "Bank (Profile) selector",
+    "Rates selector",
     "Pitch rate curve shape (Shape)",
     "Roll rate curve shape (Shape)",
     "Yaw rate curve shape (Shape)",

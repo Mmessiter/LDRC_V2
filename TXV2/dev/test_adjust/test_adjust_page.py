@@ -188,11 +188,13 @@ int main() {
     // the kind: a 2-position switch over a switch's travel, then 3, then 4 positions (the values evenly between the ends)
     AdjustKindTapped(); CHECK(fields["tn2"] == "Switch, 2 positions" && fields["tp0"] == "55" && fields["tp1"] == "56" && cmdValue("bar.kind") == 3 && cmdValue("bar.d0") == 988 && cmdValue("bar.d1") == 2012);
     AdjustKindTapped(); CHECK(fields["tn2"] == "Switch, 3 positions" && fields["tp2"] == "56");
-    // the picker: Pitch P gain is first in its wheel; Yaw P gain chosen
-    AdjustSettingNext(); CHECK(CurrentView == ADJPICKVIEW && vals["list"] == 9);
-    vals["list"] = 17; AdjustPickOk(); CHECK(CurrentView == ADJUSTVIEW && fields["tn0"] == "Yaw P gain" && AdjRows[3].fn == 22);
+    // the picker: the wheel opens on the row's own setting (Pitch P gain: row 11 since B136 put the two selectors first); Yaw P gain chosen
+    AdjustSettingNext(); CHECK(CurrentView == ADJPICKVIEW && vals["list"] == 11);
+    vals["list"] = 19; AdjustPickOk(); CHECK(CurrentView == ADJUSTVIEW && fields["tn0"] == "Yaw P gain" && AdjRows[3].fn == 22);
     AdjustSettingNext(); AdjustPickCancel(); CHECK(CurrentView == ADJUSTVIEW && AdjRows[3].fn == 22);
-    AdjustSettingNext(); vals["list"] = 9; AdjustPickOk(); CHECK(fields["tn0"] == "Pitch P gain" && AdjRows[3].fn == 14); run(6);
+    // a list value the screen failed to give (65535) changes nothing (B136)
+    AdjustSettingNext(); vals["list"] = 65535; AdjustPickOk(); CHECK(CurrentView == ADJUSTVIEW && fields["tn0"] == "Yaw P gain" && AdjRows[3].fn == 22);
+    AdjustSettingNext(); vals["list"] = 11; AdjustPickOk(); CHECK(fields["tn0"] == "Pitch P gain" && AdjRows[3].fn == 14); run(6);
     // the first and last positions typed (50 and 60): the middle one is 55, evenly between; a tap on the middle zone types nothing
     fields["tp0"] = "50"; fields["tp2"] = "60"; AdjustChannelNext(); CHECK(fields["tn1"] == "Channel 11: AUX6" && fields["tp1"] == "55");   // (Add took the channel of the row showing, the nudge on AUX5)
     attrs["bar.tap"] = 1500; cmds.clear(); AdjustBarMoved();
