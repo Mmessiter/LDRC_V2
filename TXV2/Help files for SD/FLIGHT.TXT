@@ -46,8 +46,8 @@ There you choose what each box shows, the box sizes and the box|
 themes, for each of the six screens.|
 For the time of day, give a box the 'Clock'.|||ROUND DIALS:|
 Any box with a number can be a round dial instead: a needle|
-over a scale, with the number small below. The Clock gets|
-hands; the Timer a minute hand and a seconds hand.|
+over a scale, and no digits. The Clock gets hands; the Timer|
+a minute hand and a seconds hand.|
 In the box's chooser, press 'Round dial: no' to make it 'yes'.|
 A scale grows to hold the biggest value seen, and stays.|
 A box too small for a dial keeps its digits: give it a bigger|

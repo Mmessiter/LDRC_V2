@@ -52,8 +52,8 @@ themes; a theme other boxes already wear carries their numbers.|
 A Motor box takes the safety's colours, as the original front|
 screen's Motor box does, whatever its theme.||ROUND DIALS:|
 In a box's chooser, 'Round dial: no' / 'yes' shows that box's|
-number as a needle over a round scale, the number small below|
-(the Clock and the Timer get hands). Timer, Batteries, Link,|
+number as a needle over a round scale, with no digits (the|
+Clock and the Timer get hands). Timer, Batteries, Link,|
 Frame rate, Head speed, ESC temperature, Current, Capacity|
 used and Clock can be dials. A scale grows to hold the biggest|
 value seen. A box too small for a dial keeps its digits: give|

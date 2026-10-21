@@ -115,7 +115,7 @@ struct FlightLayoutDef { const char *key, *name; uint8_t cols, rows, count; Flig
 static const int FLIGHT_LAYOUT_COUNT = 12, FLIGHT_DEFAULT_LAYOUT = 3;   // (six equal boxes, as before)
 extern const FlightLayoutDef FLIGHT_LAYOUTS[FLIGHT_LAYOUT_COUNT];
 int flightLayoutByKey(const std::string &key);         // -1 if not known
-std::vector<FlightRect> flightLayout(int layout, const FlightRect &area, int gap = 6);
+std::vector<FlightRect> flightLayout(int layout, const FlightRect &area, int gap = 0);   // (gap 6 until 1.11.103: Malcolm 21 Oct, "remove the tiny gap" - the boxes touch)
 
 // The boxes' colours. Malcolm, 10-04: "When clicking a box to define its contents, can we also pick a colour for that
 // box?" ... "I'd like to use some brighter options" ... and (screen 1.7.6): "I had thought the option to define the colours
