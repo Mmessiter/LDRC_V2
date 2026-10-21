@@ -42,6 +42,24 @@ const char *flightPartName(int item, int part);        // part 0 the upper, 1 th
 const char *flightPartShort(int item, int part);       // the same in a part's one-row form: "RX", "TX"
 const char *flightPartReference(int item, int part);   // the widest value a part can be expected to show ("88.88", "OFF")
 const char *flightPartUnit(int item, int part);
+// (1.11.102, Malcolm 21 Oct 2026: "optionally allow some or even all of the numeric displays to be analogue in a round
+// dial for those who like things to look traditional") A box's number as a round dial: a needle over a scale, the number
+// small below the pivot. The clock gets hands on a full face, the timer a minute hand and a seconds hand. A box can be a
+// dial when its thing is a number: not words, not a picture, not the bars, not AMS and trims.
+bool flightItemCanDial(int item);
+enum FlightDialKind : uint8_t { FD_NONE = 0, FD_GAUGE, FD_CLOCK, FD_TIMER };
+struct FlightDial {
+    uint8_t kind = FD_NONE;                            // FD_NONE: no dial for this (no number, or a thing that has none)
+    float lo = 0, hi = 1, major = 1, value = 0;        // a gauge: its scale, the numbered ticks every major, the needle at value
+    uint8_t decimals = 0;                              // the scale's numbers ("3.5")
+    // a clock: value = minutes since midnight; a timer: value = seconds. The hands come from those.
+};
+// The dial for a thing's value. high: the highest value this thing has shown so far (flightDialTop of it): a scale grows to
+// hold it and keeps that size - a scale that shrank back would swing under the needle. part: 0, or 1 for the lower part.
+FlightDial flightDialOf(int item, int part, const struct FlightValue &v, float high);
+// The smallest round top of the scale that holds value: 3000 for a head speed of 2150, 4000 for 3400 (0 for a thing whose
+// scale never grows: the link's per cent, a cell's volts)
+float flightDialTop(int item, float value);
 
 // The front page as the main board last wrote it. A box it shows only when it has news (the head speed, the current)
 // counts only while it is shown.
@@ -67,6 +85,9 @@ struct FlightValue {
     // short word on the name's line, at its right ("62 %"; under the name in a part's one-row form)
     bool twoPart = false; std::string label2, big2, unit2, small2; FlightState state2 = FS_NORMAL; std::string tag, tag2;
     int8_t level = -1, level2 = -1;                    // (1.11.97) a battery's per cent for the picture beside its name, -1 none
+    // (1.11.102) the number itself, for a dial: the head speed, a cell's volts (num2 the lower part's), the timer's seconds,
+    // the clock's minutes since midnight. hasNum: there is one (a "--" has none)
+    float num = 0, num2 = 0; bool hasNum = false, hasNum2 = false;
 };
 FlightValue flightValue(int item, FlightSource &src);
 // A warning the front page shows, for the flight screen's strip whatever its boxes: "Battery LOW", or no link in flight.
@@ -119,10 +140,14 @@ struct FlightConfig {
     // Each box's theme: 0 the screens' (it follows the Themes page), k the Themes page's theme k (its panel colour and its
     // text colour). Amber and red still take over a box whose value needs a look.
     uint8_t boxTheme[FLIGHT_MAX_BOXES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    // (1.11.102) Each box as a round dial (1) or digits (0): its number as a needle over a scale (flightItemCanDial things only;
+    // a box whose thing has no dial keeps its digits, and so does one too small for a dial)
+    uint8_t boxDial[FLIGHT_MAX_BOXES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     int boxes() const { return FLIGHT_LAYOUTS[layout < FLIGHT_LAYOUT_COUNT ? layout : FLIGHT_DEFAULT_LAYOUT].count; }
-    // "f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah,amps,txbat,bank b:,9,,10,,,,, m:1" - b: (each box's theme) only with
-    // themes, m: (the choice of the moment) only with one (tokens at the end: a screen before 1.7.4 reads the rest and leaves
-    // them); 1.7.6-1.8.3's "b:9.5" (panel . text colour) and 1.7.4's and 1.7.5's c: are still read
+    // "f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah,amps,txbat,bank b:,9,,10,,,,, d:,,1 m:1" - b: (each box's theme) only with
+    // themes, d: (the boxes that are dials, 1.11.102) only with one, m: (the choice of the moment) only with one (tokens at the
+    // end: a screen before 1.7.4 reads the rest and leaves them; one before 1.11.102 leaves d:); 1.7.6-1.8.3's "b:9.5" (panel .
+    // text colour) and 1.7.4's and 1.7.5's c: are still read
     std::string save() const;
     bool load(const std::string &s);                   // false (and the defaults kept) if it is not one of ours; screens 1.6.0-1.7.0 wrote "f1 w1 b6 s1 ..."
     bool operator==(const FlightConfig &o) const;
@@ -142,7 +167,8 @@ static const int FLIGHT_NUMBER_FONT = 1, FLIGHT_UNIT_FONT = 0, FLIGHT_MAX_SCALE 
 // own: drawn in face and ink (a theme of its own), else in the screens' theme
 struct FlightTile { int id = 0; FlightRect r; int item = FL_NONE; FlightValue v; bool pressed = false; uint32_t serial = 0; uint8_t textFont = 2; int16_t scale = 16;
                     uint8_t colour = 0; bool own = false; uint16_t face = 0, ink = 0;
-                    int16_t scale2 = 16; };                 // (1.11.70) a box of two parts: scale its upper part's number, scale2 its lower's
+                    int16_t scale2 = 16;                    // (1.11.70) a box of two parts: scale its upper part's number, scale2 its lower's
+                    bool dial = false; FlightDial meter, meter2; };   // (1.11.102) a round dial, and what it shows (meter2: the lower part's)
 // A box of two parts (1.11.70): two boxes in one, 6 px apart, the upper the taller. A part has its name above its number
 // (24 px letters; 28 in a big part), its tag at the right of the name, its small line below where it is 130 px tall - or,
 // where that gives the bigger number, a short name on the left (its tag under it if there is room) and the number beside
@@ -216,7 +242,8 @@ private:
     int chooser = -1;                                  // the box whose choice is being made, -1 none, CHOOSE_SIZES the box sizes
     int colourFor = -1;                                // the box whose theme is being chosen (its own page), -1 none
     static const int CHOOSE_SIZES = -2;
-    void paint(FlightTile &t, int box) const;          // a box in its theme
+    void paint(FlightTile &t, int box) const;          // a box in its theme, and as a dial if chosen so (1.11.102)
+    void meter(FlightTile &t);                         // (1.11.102) a dial box's dial, from its value (the scale grown if need be)
     int pressedId = -1;                                // the button or box the finger came down on (setup)
     bool down = false, slidOff = false;                // the finger is down; it has left what it came down on (no action then)
     // A very long press on a box of the flight screen (1.10.2, Malcolm: "a long press on a box allows that box to be
@@ -236,6 +263,7 @@ private:
     int idAt(int x, int y) const;
     FlightConfig before;                               // the settings when the page opened
     FlightConfig slots[FLIGHT_SLOTS]; int slotNo = 0;  // the definitions not in use (slots[slotNo] is stale: cfg is that one)
+    float dialHigh[FL_ITEMS] = { 0 };                  // (1.11.102) each thing's dial scale, as big as it has had to grow (not kept: as it came at switch-on)
     FlightScene sc;
     void build(FlightSource &src, FlightFonts *fonts);
     void releaseOn(int id);

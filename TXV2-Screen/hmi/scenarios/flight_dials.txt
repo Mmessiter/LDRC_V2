@@ -1,0 +1,68 @@
+# Round dials (screen 1.11.102, Malcolm 21 Oct 2026: "optionally allow some or even all of the numeric displays to be
+# analogue in a round dial for those who like things to look traditional"). Each number as a gauge, the clock and the timer
+# with hands; in every size of box (a box too small keeps its digits); a dial in a warning colour; the chooser's button.
+Screen_Background=21
+@model 1
+page FrontView
+ModelName.txt="RAW 420 MCM"
+t4.txt="Bank 2"
+Hours.val=0
+Mins.val=4
+Secs.val=7
+RXBV.txt="22.80V (3.80V per cell)"
+JRX.val=62
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
+vis Quality,1
+Quality.val=97
+vis rpm,1
+rpm.txt="RPM: 2150"
+vis Warning,1
+Warning.txt="ESC: 52.3"
+vis StillConnected,1
+StillConnected.txt="Amps: 42.4"
+vis wb,1
+wb.txt="mAh: 1345"
+bt0.txt="Motor is OFF"
+DateTime.txt="21 Oct. 2026 21:40:07"
+ams.txt="AMS is on"
+trall.txt="Trims: all banks"
+@flying 0
+@theme navy
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1
+@shot fdials_grid6
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:,,1,,1
+@shot fdials_grid6_mixed
+@flight f2 w1 grid9 s1 timer,batts,rpm,link,esc,mah,amps,clock,bank d:1,1,1,1,1,1,1,1
+@shot fdials_grid9
+@flight f2 w1 grid4 s1 rpm,batts,clock,timer d:1,1,1,1
+@shot fdials_grid4
+@flight f2 w1 big4 s1 rpm,timer,clock,link,esc d:1,1,1,1,1
+@shot fdials_big4
+@flight f2 w1 one s1 rpm d:1
+@shot fdials_one_rpm
+@flight f2 w1 two s1 clock,batts d:1,1
+@shot fdials_two
+@flight f2 w1 wide3 s1 rpm,esc,amps,mah d:1,1,1,1
+@shot fdials_wide3
+@theme white
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1
+@shot fdials_white
+@theme navy
+Warning.txt="ESC: 86"
+Quality.val=60
+JRX.val=15
+rpm.txt="RPM: 3400"
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah b:,,4,,,7 d:1,1,1,1,1,1
+@shot fdials_warn_grown
+@flightsetup f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1
+@shot fdials_setup
+@flightsetup f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1 @box 3
+@shot fdials_chooser
+@flight f2 w1 one s1 batts d:1
+@shot fdials_batts_one
+@flight f2 w1 big2 s1 batts,rpm,clock d:1,1,1
+@shot fdials_batts_big2
+@model 0
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1
+@shot fdials_nomodel

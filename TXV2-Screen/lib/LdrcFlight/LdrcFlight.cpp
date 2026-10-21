@@ -36,6 +36,35 @@ const char *flightItemKey(int item) { return item > 0 && item < FL_ITEMS ? ITEMS
 const char *flightItemReference(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].ref : ""; }
 const char *flightItemUnit(int item) { return item > 0 && item < FL_ITEMS ? ITEMS[item].unit : ""; }
 bool flightItemIsWords(int item) { return item == FL_BANK || item == FL_RATE || item == FL_MODEL || item == FL_MOTOR; }
+// ------------------------------------------------------------------ the dials (1.11.102)
+bool flightItemCanDial(int item) {
+    return item == FL_TIMER || item == FL_BATTS || item == FL_LINK || item == FL_FPS || item == FL_RPM || item == FL_ESC || item == FL_AMPS || item == FL_MAH || item == FL_CLOCK;
+}
+// A gauge's scale as it starts (lo to hi, numbered every major), and the step its top grows by when a value goes beyond it
+// (0: it never grows). The numbers are round ones a pilot expects: a head speed to 3000, a temperature to 120, a cell from
+// 3.0 to 4.5 V (a high-voltage cell is 4.35 full).
+static const struct { int item; float lo, hi, major, grow; uint8_t decimals; } SCALES[] = {
+    { FL_RPM, 0, 3000, 1000, 1000, 0 }, { FL_ESC, 0, 120, 30, 30, 0 }, { FL_LINK, 0, 100, 25, 0, 0 }, { FL_FPS, 0, 200, 50, 100, 0 },
+    { FL_AMPS, 0, 100, 25, 50, 0 }, { FL_MAH, 0, 5000, 1000, 1000, 0 }, { FL_BATTS, 3.0f, 4.5f, 0.5f, 0, 1 } };
+static int scaleIndex(int item) { for (int i = 0; i < (int) (sizeof(SCALES) / sizeof(SCALES[0])); ++i) if (SCALES[i].item == item) return i; return -1; }
+float flightDialTop(int item, float value) {
+    const int i = scaleIndex(item);
+    if (i < 0 || SCALES[i].grow <= 0 || !(value > SCALES[i].hi)) return 0;
+    return SCALES[i].hi + std::ceil((value - SCALES[i].hi) / SCALES[i].grow) * SCALES[i].grow;
+}
+FlightDial flightDialOf(int item, int part, const FlightValue &v, float high) {
+    FlightDial d;
+    const bool has = part ? v.hasNum2 : v.hasNum; const float num = part ? v.num2 : v.num;
+    if (!flightItemCanDial(item) || !has) return d;
+    d.value = num;
+    if (item == FL_CLOCK) { d.kind = FD_CLOCK; d.lo = 0; d.hi = 12 * 60; d.major = 60; return d; }   // (the hands: hours round the face)
+    if (item == FL_TIMER) { d.kind = FD_TIMER; d.lo = 0; d.hi = 60; d.major = 5; return d; }           // (seconds round the face)
+    const int i = scaleIndex(item); if (i < 0) return d;
+    d.kind = FD_GAUGE; d.lo = SCALES[i].lo; d.hi = SCALES[i].hi; d.major = SCALES[i].major; d.decimals = SCALES[i].decimals;
+    if (high > d.hi) d.hi = high;                                 // (grown to hold what it has shown)
+    while (d.hi > d.lo && (d.hi - d.lo) / d.major > 6.5f) d.major *= 2;   // (never more than seven numbers round the scale)
+    return d;
+}
 int flightItemByKey(const std::string &key) {
     for (int i = 0; i < FL_ITEMS; ++i) if (key == ITEMS[i].key) return i;
     if (key == "rxbat" || key == "txbat") return FL_BATTS;     // (before 1.11.70: a box for each battery)
@@ -83,29 +112,32 @@ FlightValue flightValue(int item, FlightSource &src) {
     float a = 0;
     switch (item) {
     case FL_NONE: v.label = ""; v.state = FS_EMPTY; break;
-    case FL_TIMER:
-        v.big = flightTimer(src.number("Hours", 0), src.number("Mins", 0), src.number("Secs", 0));
+    case FL_TIMER: {
+        const long hh = src.number("Hours", 0), mm = src.number("Mins", 0), ss = src.number("Secs", 0);
+        v.big = flightTimer(hh, mm, ss);
+        if (v.big != "--") { v.num = (float) (hh * 3600 + mm * 60 + ss); v.hasNum = true; }
         break;
+    }
     case FL_BATTS: {                                   // (1.11.70) the flight battery above, the transmitter's below: two parts of one box
         v.twoPart = true; v.label = flightPartName(item, 0); v.label2 = flightPartName(item, 1);
         // each as the boxes of one battery were: the cell big, the whole pack below, named (1.10.9, Malcolm 10-06: "make the
         // PER CELL voltage big, and the total voltage smaller"). The small line says "total" so it cannot be read as the
         // cell (10-04: "per cell  7.82 V" below a big number had read as if the total were per cell).
         // The percentage is the part's tag, at the right of its name (or under it), so it is there in every size of box.
-        auto battery = [&](bool rx, std::string &big, std::string &unit, std::string &small, std::string &tag, FlightState &state, int8_t &level) {
+        auto battery = [&](bool rx, std::string &big, std::string &unit, std::string &small, std::string &tag, FlightState &state, int8_t &level, float &num, bool &hasNum) {
             float t = 0, c = 0;
             if (rx && !linked) { big = "--"; tag = noModel(); state = FS_STALE; return; }
             if (!flightBattery(src.text(rx ? "RXBV" : "TXBV"), t, c)) { big = "--"; state = FS_STALE; return; }
             const long pct = src.number(rx ? "JRX" : "JTX", -1);
-            big = fmt("%.2f", c); unit = "V";
+            big = fmt("%.2f", c); unit = "V"; num = c; hasNum = true;
             small = fmt("%.2f V total", t);
             if (pct >= 0 && pct <= 100) tag = fmt("%.0f %%", (double) pct);
             level = pct >= 0 && pct <= 100 ? (int8_t) pct : -1;   // (1.11.97) for the battery picture beside the name
             state = pct >= 0 && pct <= 20 ? FS_ALARM : pct >= 0 && pct <= 40 ? FS_WARN : FS_NORMAL;
             // (the front page's "Battery LOW" is for either battery: it turns the strip red, not this box)
         };
-        battery(true, v.big, v.unit, v.small, v.tag, v.state, v.level);
-        battery(false, v.big2, v.unit2, v.small2, v.tag2, v.state2, v.level2);
+        battery(true, v.big, v.unit, v.small, v.tag, v.state, v.level, v.num, v.hasNum);
+        battery(false, v.big2, v.unit2, v.small2, v.tag2, v.state2, v.level2, v.num2, v.hasNum2);
         break;
     }
     case FL_AMSTRIM: {                                 // (1.11.70) AMS above, the trims below, as the main board words them on the front page
@@ -127,7 +159,7 @@ FlightValue flightValue(int item, FlightSource &src) {
         const long q = src.number("Quality", -1);
         if (!linked) { if (src.flying()) { v.big = "LOST"; v.state = FS_ALARM; } else unknown("no model"); break; }
         if (q < 0 || q > 100) { unknown(nullptr); break; }
-        v.big = fmt("%.0f", (double) q); v.unit = "%";
+        v.big = fmt("%.0f", (double) q); v.unit = "%"; v.num = (float) q; v.hasNum = true;
         v.state = q < 50 ? FS_ALARM : q < 75 ? FS_WARN : FS_NORMAL;
         break;
     }
@@ -135,29 +167,29 @@ FlightValue flightValue(int item, FlightSource &src) {
         if (!linked) { unknown(noModel()); break; }
         const long p = src.number("pps", -1);
         if (p < 0 || p > 9999) { unknown(nullptr); break; }
-        v.big = std::to_string(p); v.unit = "fps";
+        v.big = std::to_string(p); v.unit = "fps"; v.num = (float) p; v.hasNum = true;
         break;
     }
     case FL_RPM:
         if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("rpm"), "RPM:", a)) { unknown(nullptr); break; }   // (its words tell: the box is hidden at each page load until the main board shows it again)
-        v.big = fmt("%.0f", a); v.unit = "RPM";
+        v.big = fmt("%.0f", a); v.unit = "RPM"; v.num = a; v.hasNum = true;
         break;
     case FL_ESC:
         if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("Warning"), "ESC:", a)) { unknown(nullptr); break; }   // (the same box says "Battery LOW" on other models: the words tell)
-        v.big = fmt("%.0f", a); v.unit = "\xB0" "C";             // (the screen's fonts are ISO 8859-1: B0 is the degree sign)
+        v.big = fmt("%.0f", a); v.unit = "\xB0" "C"; v.num = a; v.hasNum = true;   // (the screen's fonts are ISO 8859-1: B0 is the degree sign)
         v.state = a >= 95 ? FS_ALARM : a >= 80 ? FS_WARN : FS_NORMAL;
         break;
     case FL_AMPS:
         if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("StillConnected"), "Amps:", a)) { unknown(nullptr); break; }   // ("Turning off... 5" in the same box is not a current)
-        v.big = fmt("%.1f", a); v.unit = "A";
+        v.big = fmt("%.1f", a); v.unit = "A"; v.num = a; v.hasNum = true;
         break;
     case FL_MAH:
         if (!linked) { unknown(noModel()); break; }
         if (!flightNumberAfter(src.text("wb"), "mAh:", a)) { unknown(nullptr); break; }   // (nor is the buddy's news)
-        v.big = fmt("%.0f", a); v.unit = "mAh";
+        v.big = fmt("%.0f", a); v.unit = "mAh"; v.num = a; v.hasNum = true;
         break;
     case FL_BANK: { const std::string t = src.text("t4"); if (t.empty() || t == "Bank") unknown(nullptr); else v.big = t; break; }
     case FL_RATE: { const std::string t = src.text("rate"); if (!src.shown("rate") || t.empty() || t == "Rate") unknown(nullptr); else v.big = t; break; }   // ("Rate": the page's own word, before the main board wrote any)
@@ -178,7 +210,13 @@ FlightValue flightValue(int item, FlightSource &src) {
         }
         break;
     }
-    case FL_CLOCK: { const std::string t = flightClock(src.text("DateTime")); if (t.empty()) unknown(nullptr); else v.big = t; break; }
+    case FL_CLOCK: {
+        const std::string t = flightClock(src.text("DateTime")); if (t.empty()) { unknown(nullptr); break; }
+        v.big = t;
+        int hh = 0, mm = 0;                                        // (the hands: minutes since midnight)
+        if (sscanf(t.c_str(), "%d:%d", &hh, &mm) == 2 && hh >= 0 && hh < 24 && mm >= 0 && mm < 60) { v.num = (float) (hh * 60 + mm); v.hasNum = true; }
+        break;
+    }
     case FL_MODEL: { const std::string t = src.text("ModelName"); if (t.empty() || t == "Model name") unknown(nullptr); else v.big = t; break; }
     case FL_IMAGE: {                                   // the front page's picture (the main board names it at every visit: exp0.path), and nothing else:
         v.image = src.text("exp0");                     // no name above it (1.9.11, Malcolm: "I only want the image ... we can have a bigger image")
@@ -226,6 +264,11 @@ std::string FlightConfig::save() const {
     if (themed) {                                      // (a token of its own at the end: a screen before 1.7.4 reads the rest and leaves it)
         s += " b:";
         for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) { if (i) s += ","; if (boxTheme[i]) s += std::to_string((int) boxTheme[i]); }
+    }
+    bool dials = false; for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) dials = dials || boxDial[i];
+    if (dials) {                                       // (1.11.102: the boxes that are dials; a screen before it leaves the token)
+        s += " d:";
+        for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) { if (i) s += ","; if (boxDial[i]) s += "1"; }
     }
     if (manual == FM_ORIGINAL || manual == FM_DEFINED) s += manual == FM_ORIGINAL ? " m:1" : " m:2";   // (the choice of the moment: back after a switch-off)
     return s;
@@ -275,12 +318,13 @@ bool FlightConfig::load(const std::string &s) {
         const int f = atoi(t.c_str());
         c.boxTheme[k] = (uint8_t) (f >= 1 && f <= THEME_COUNT ? f : 0);
     });
+    eachToken(s, " d:", FLIGHT_MAX_BOXES, [&](int k, const std::string &t) { c.boxDial[k] = t == "1" ? 1 : 0; });   // (1.11.102) "1": a dial
     { const size_t m = s.find(" m:"); if (m != std::string::npos) { const int v = atoi(s.c_str() + m + 3); if (v == FM_ORIGINAL || v == FM_DEFINED) c.manual = (uint8_t) v; } }
     *this = c; return true;
 }
 bool FlightConfig::operator==(const FlightConfig &o) const {
     if (when != o.when || layout != o.layout || stayOn != o.stayOn || manual != o.manual) return false;
-    for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) if (items[i] != o.items[i] || boxTheme[i] != o.boxTheme[i]) return false;
+    for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) if (items[i] != o.items[i] || boxTheme[i] != o.boxTheme[i] || boxDial[i] != o.boxDial[i]) return false;
     return true;
 }
 
@@ -423,7 +467,7 @@ bool FlightScreen::takeFrontPress(std::string &comp) { if (frontPress.empty()) r
 static uint32_t hashOf(const std::string &s, uint32_t h) { for (unsigned char c : s) h = (h ^ c) * 16777619u; return h; }
 static const int ID_BOXES = 101, ID_STAY = 102, ID_OK = 103, ID_BACK = 104, ID_ITEM = 200, ID_LAYOUT = 300;
 static const int ID_TXSETUP = 110, ID_ORIGINAL = 111, ID_MODELSETUP = 112, ID_HELP = 113;
-static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_FACE = 500, ID_SLOT = 600;
+static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_DIAL = 123, ID_FACE = 500, ID_SLOT = 600;
 static const int SLOT_Y = 414, SLOT_H = 56, SLOT_W = 180;
 static FlightRect slot(int i) { return FlightRect(14 + i * 197, SLOT_Y, SLOT_W, SLOT_H); }
 
@@ -507,6 +551,9 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         // (the bottom row on the grid's first and last columns: x 14 and 596, 189 wide)
         FlightButton bt; bt.id = ID_BACK; bt.r = FlightRect(x0 + 3 * (w + gap), SLOT_Y, w, SLOT_H); bt.text = "OK"; sc.buttons.push_back(bt);   // (OK at the bottom right, as on every page)
         bt.id = ID_COLOUR; bt.r = FlightRect(x0, SLOT_Y, w, SLOT_H); bt.text = "Theme"; sc.buttons.push_back(bt);   // (its theme: a page of its own)
+        if (flightItemCanDial(cfg.items[chooser])) {         // (1.11.102) a number: as a round dial, or as digits - the button says which it is now
+            bt.id = ID_DIAL; bt.r = FlightRect(x0 + (w + gap), SLOT_Y, w, SLOT_H); bt.text = cfg.boxDial[chooser] ? "Round dial: yes" : "Round dial: no"; sc.buttons.push_back(bt);
+        }
     }
     for (auto &b : sc.buttons) {
         b.pressed = b.id == pressedId && !slidOff && !b.label;
@@ -515,7 +562,9 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
     }
     flightSizeTiles(sc.tiles, fonts);
     for (auto &t : sc.tiles) {
+        meter(t);                                                 // (1.11.102) a dial box: its dial
         uint32_t h = hashOf(t.v.label, 2166136261u); h = hashOf(t.v.big, h); h = hashOf(t.v.unit, h); h = hashOf(t.v.small, h); h = hashOf(t.v.image, h);
+        if (t.dial) { h = (h ^ 0x5D1A1u ^ (uint32_t) t.meter.hi) * 16777619u; h = (h ^ (uint32_t) t.meter2.hi) * 16777619u; }   // (a dial, and its scale as grown)
         if (t.v.twoPart) { h = hashOf(t.v.label2, h); h = hashOf(t.v.big2, h); h = hashOf(t.v.unit2, h); h = hashOf(t.v.small2, h); h = hashOf(t.v.tag, h); h = hashOf(t.v.tag2, h); h = (h ^ (uint32_t) t.v.state2) * 16777619u; }
         for (uint8_t b : t.v.bars) h = (h ^ b) * 16777619u;
         if (t.own) h = ((h ^ t.face) * 16777619u) ^ t.ink;
@@ -588,10 +637,21 @@ FlightScreen::FlightScreen() {
 }
 void FlightScreen::paint(FlightTile &t, int box) const {   // its theme's two colours, else the screens' (drawn by the screen)
     if (box < 0 || box >= FLIGHT_MAX_BOXES) return;
+    t.dial = cfg.boxDial[box] && flightItemCanDial(t.item);   // (1.11.102) a round dial, where its thing can be one
     const int f = cfg.boxTheme[box];
     t.colour = (uint8_t) f;
     if (!f || f > THEME_COUNT) return;
     t.own = true; t.face = palPanels[f - 1]; t.ink = palInks[f - 1];
+}
+// (1.11.102) A dial box's dial from its value. A gauge's scale grows to hold the biggest value its thing has shown since
+// switch-on, and keeps that size: the needle of a scale that shrank back would swing while the pilot watched.
+void FlightScreen::meter(FlightTile &t) {
+    if (!t.dial || t.item <= 0 || t.item >= FL_ITEMS) { t.meter = FlightDial(); t.meter2 = FlightDial(); return; }
+    float &high = dialHigh[t.item];
+    if (t.v.hasNum) { const float top = flightDialTop(t.item, t.v.num); if (top > high) high = top; }
+    if (t.v.hasNum2) { const float top = flightDialTop(t.item, t.v.num2); if (top > high) high = top; }
+    t.meter = flightDialOf(t.item, 0, t.v, high);
+    t.meter2 = t.v.twoPart ? flightDialOf(t.item, 1, t.v, high) : FlightDial();
 }
 void FlightScreen::releaseOn(int id) {
     if (!setup) return;
@@ -610,6 +670,7 @@ void FlightScreen::releaseOn(int id) {
         if (id == ID_BACK) chooser = -1;
         else if (id >= ID_ITEM && id < ID_ITEM + FL_ITEMS) { cfg.items[chooser] = (uint8_t) (id - ID_ITEM); chooser = -1; }
         else if (id == ID_COLOUR) { colourFor = chooser; chooser = -1; }   // its theme, on a page of its own
+        else if (id == ID_DIAL && flightItemCanDial(cfg.items[chooser])) cfg.boxDial[chooser] = cfg.boxDial[chooser] ? 0 : 1;   // (1.11.102) a dial, or digits again: the page stays
         return;
     }
     if (id >= 0 && id < cfg.boxes()) { chooser = id; return; }       // (what the boxes beyond the layout's show is kept, for a bigger layout)
