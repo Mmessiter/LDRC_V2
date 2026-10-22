@@ -40,6 +40,17 @@ bool flightItemIsWords(int item) { return item == FL_BANK || item == FL_RATE || 
 bool flightItemCanDial(int item) {
     return item == FL_TIMER || item == FL_BATTS || item == FL_LINK || item == FL_FPS || item == FL_RPM || item == FL_ESC || item == FL_AMPS || item == FL_MAH || item == FL_CLOCK;
 }
+// (1.11.105) The things whose danger line only the pilot knows (a head speed, a current, a capacity, a frame rate): the red
+// zone page's starting value, its two steps and its most. The batteries, the link and the ESC temperature have their own.
+bool flightItemTakesLimit(int item) { return item == FL_RPM || item == FL_AMPS || item == FL_MAH || item == FL_FPS; }
+void flightLimitSteps(int item, int &start, int &small, int &big, int &top) {
+    switch (item) {
+    case FL_RPM: start = 2000; small = 100; big = 500; top = 9000; break;
+    case FL_AMPS: start = 50; small = 5; big = 25; top = 500; break;
+    case FL_MAH: start = 3000; small = 100; big = 500; top = 9900; break;
+    default: start = 100; small = 5; big = 25; top = 500; break;      // (the frame rate: red below)
+    }
+}
 // A gauge's scale as it starts (lo to hi, numbered every major), and the step its top grows by when a value goes beyond it
 // (0: it never grows). The numbers are round ones a pilot expects: a head speed to 3000, a temperature to 120, a cell from
 // 3.0 to 4.5 V (a high-voltage cell is 4.35 full).
@@ -52,7 +63,7 @@ float flightDialTop(int item, float value) {
     if (i < 0 || SCALES[i].grow <= 0 || !(value > SCALES[i].hi)) return 0;
     return SCALES[i].hi + std::ceil((value - SCALES[i].hi) / SCALES[i].grow) * SCALES[i].grow;
 }
-FlightDial flightDialOf(int item, int part, const FlightValue &v, float high) {
+FlightDial flightDialOf(int item, int part, const FlightValue &v, float high, float limit) {
     FlightDial d;
     const bool has = part ? v.hasNum2 : v.hasNum; const float num = part ? v.num2 : v.num;
     if (!flightItemCanDial(item)) return d;
@@ -61,8 +72,19 @@ FlightDial flightDialOf(int item, int part, const FlightValue &v, float high) {
     if (item == FL_TIMER) { d.kind = FD_TIMER; d.lo = 0; d.hi = 60; d.major = 5; return d; }           // (seconds round the face)
     const int i = scaleIndex(item); if (i < 0) return d;
     d.kind = FD_GAUGE; d.lo = SCALES[i].lo; d.hi = SCALES[i].hi; d.major = SCALES[i].major; d.decimals = SCALES[i].decimals;
+    const bool life = item == FL_BATTS && part == 1 && v.lifeTx;
+    if (life) { d.lo = 2.8f; d.hi = 3.6f; d.major = 0.2f; }       // (1.11.105) a LiFePO4 transmitter battery: its own scale
     if (high > d.hi) d.hi = high;                                 // (grown to hold what it has shown)
+    const bool ownLimit = limit > 0 && flightItemTakesLimit(item);
+    if (ownLimit && item != FL_FPS && limit > d.hi) { const float top = flightDialTop(item, limit); if (top > d.hi) d.hi = top; }   // (the red zone in view: the scale grown to it)
     while (d.hi > d.lo && (d.hi - d.lo) / d.major > 6.5f) d.major *= 2;   // (never more than seven numbers round the scale)
+    // (1.11.105) the zones: where the box turns amber and red (flightValue's own thresholds), or the pilot's red line
+    if (item == FL_BATTS) {                                       // the main board's per cent is linear in the cell's volts (Telemetry.h): the flight battery 3.40 V (0 %) to 4.20 (100 %), the transmitter's LiPo 3.50 to 4.00, a LiFePO4 3.20 to 3.33; the box is amber at 40 %, red at 20 %
+        const float v0 = part ? (life ? 3.2f : 3.5f) : 3.4f, v100 = part ? (life ? 3.33f : 4.0f) : 4.2f;
+        d.redFrom = d.lo; d.redTo = v0 + (v100 - v0) * 0.2f; d.amberFrom = d.redTo; d.amberTo = v0 + (v100 - v0) * 0.4f;
+    } else if (item == FL_LINK) { d.redFrom = 0; d.redTo = 50; d.amberFrom = 50; d.amberTo = 75; }
+    else if (item == FL_ESC) { d.amberFrom = 80; d.amberTo = 95; d.redFrom = 95; d.redTo = d.hi; }
+    else if (ownLimit) { if (item == FL_FPS) { d.redFrom = d.lo; d.redTo = limit; } else { d.redFrom = limit; d.redTo = d.hi; } }
     return d;
 }
 int flightItemByKey(const std::string &key) {
@@ -130,6 +152,7 @@ FlightValue flightValue(int item, FlightSource &src) {
             if (!flightBattery(src.text(rx ? "RXBV" : "TXBV"), t, c)) { big = "--"; state = FS_STALE; return; }
             const long pct = src.number(rx ? "JRX" : "JTX", -1);
             big = fmt("%.2f", c); unit = "V"; num = c; hasNum = true;
+            if (!rx && pct >= 0) v.lifeTx = pct > (c - 3.5f) * 200.0f + 15.0f;   // (1.11.105) a per cent well above what a LiPo's volts would give: the main board is reading a LiFePO4 (its line 3.20 to 3.33 V)
             small = fmt("%.2f V total", t);
             if (pct >= 0 && pct <= 100) tag = fmt("%.0f %%", (double) pct);
             level = pct >= 0 && pct <= 100 ? (int8_t) pct : -1;   // (1.11.97) for the battery picture beside the name
@@ -270,6 +293,11 @@ std::string FlightConfig::save() const {
         s += " d:";
         for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) { if (i) s += ","; if (boxDial[i]) s += "1"; }
     }
+    bool zones = false; for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) zones = zones || boxZone[i];
+    if (zones) {                                       // (1.11.105: each box's own red zone; a screen before it leaves the token)
+        s += " z:";
+        for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) { if (i) s += ","; if (boxZone[i]) s += std::to_string((int) boxZone[i]); }
+    }
     if (manual == FM_ORIGINAL || manual == FM_DEFINED) s += manual == FM_ORIGINAL ? " m:1" : " m:2";   // (the choice of the moment: back after a switch-off)
     return s;
 }
@@ -319,12 +347,14 @@ bool FlightConfig::load(const std::string &s) {
         c.boxTheme[k] = (uint8_t) (f >= 1 && f <= THEME_COUNT ? f : 0);
     });
     eachToken(s, " d:", FLIGHT_MAX_BOXES, [&](int k, const std::string &t) { c.boxDial[k] = t == "1" ? 1 : 0; });   // (1.11.102) "1": a dial
+    eachToken(s, " z:", FLIGHT_MAX_BOXES, [&](int k, const std::string &t) {   // (1.11.105) "2400": the box's own red zone
+        const int z = (!t.empty() && t[0] >= '0' && t[0] <= '9') ? atoi(t.c_str()) : 0; c.boxZone[k] = (uint16_t) (z > 0 && z <= 60000 ? z : 0); });
     { const size_t m = s.find(" m:"); if (m != std::string::npos) { const int v = atoi(s.c_str() + m + 3); if (v == FM_ORIGINAL || v == FM_DEFINED) c.manual = (uint8_t) v; } }
     *this = c; return true;
 }
 bool FlightConfig::operator==(const FlightConfig &o) const {
     if (when != o.when || layout != o.layout || stayOn != o.stayOn || manual != o.manual) return false;
-    for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) if (items[i] != o.items[i] || boxTheme[i] != o.boxTheme[i] || boxDial[i] != o.boxDial[i]) return false;
+    for (int i = 0; i < FLIGHT_MAX_BOXES; ++i) if (items[i] != o.items[i] || boxTheme[i] != o.boxTheme[i] || boxDial[i] != o.boxDial[i] || boxZone[i] != o.boxZone[i]) return false;
     return true;
 }
 
@@ -447,7 +477,7 @@ void FlightScreen::poll(uint32_t now, bool onFront, bool flying, bool blocked) {
     if (shown != was && !setup) { down = false; pressedId = -1; slidOff = false; }   // a finger on the glass as it came or went was not for it
 }
 void FlightScreen::useDefined() { if (cfg.manual != FM_DEFINED) { cfg.manual = FM_DEFINED; saved = true; } }   // (kept: the same screen after a switch-off)
-void FlightScreen::openSetup() { setup = true; shown = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; quickEdit = false; before = cfg; }
+void FlightScreen::openSetup() { setup = true; shown = false; chooser = -1; colourFor = -1; zoneFor = -1; pressedId = -1; down = slidOff = false; quickEdit = false; before = cfg; }
 void FlightScreen::chooseSlot(int k) {
     if (k < 0 || k >= FLIGHT_SLOTS || k == slotNo) return;
     slots[slotNo] = cfg;                               // what was being used or edited, kept in its slot
@@ -460,7 +490,7 @@ bool FlightScreen::loadSlot(int k, const std::string &s) {
     if (k == slotNo) return cfg.load(s);
     return slots[k].load(s);
 }
-void FlightScreen::closeSetup() { setup = false; chooser = -1; colourFor = -1; pressedId = -1; down = slidOff = false; quickEdit = false; if (!(cfg == before)) saved = true; }
+void FlightScreen::closeSetup() { setup = false; chooser = -1; colourFor = -1; zoneFor = -1; pressedId = -1; down = slidOff = false; quickEdit = false; if (!(cfg == before)) saved = true; }
 bool FlightScreen::takeSaved() { const bool s = saved; saved = false; return s; }
 bool FlightScreen::takeFrontPress(std::string &comp) { if (frontPress.empty()) return false; comp = frontPress; frontPress.clear(); return true; }
 
@@ -468,6 +498,7 @@ static uint32_t hashOf(const std::string &s, uint32_t h) { for (unsigned char c 
 static const int ID_BOXES = 101, ID_STAY = 102, ID_OK = 103, ID_BACK = 104, ID_ITEM = 200, ID_LAYOUT = 300;
 static const int ID_TXSETUP = 110, ID_ORIGINAL = 111, ID_MODELSETUP = 112, ID_HELP = 113;
 static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_DIAL = 123, ID_FACE = 500, ID_SLOT = 600;
+static const int ID_ZONE = 124, ID_ZONE_DOWN2 = 125, ID_ZONE_DOWN = 126, ID_ZONE_UP = 127, ID_ZONE_UP2 = 128, ID_ZONE_NONE = 129, ID_ZONE_DONE = 130, ID_ZONE_VALUE = 131;   // (1.11.105) the red zone page
 static const int SLOT_Y = 414, SLOT_H = 56, SLOT_W = 180;
 static FlightRect slot(int i) { return FlightRect(14 + i * 197, SLOT_Y, SLOT_W, SLOT_H); }
 
@@ -492,6 +523,21 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         const int tabW = 38, tabGap = 4, tabsX = help.r.x - 6 - (FLIGHT_SLOTS * tabW + (FLIGHT_SLOTS - 1) * tabGap);   // (1.10.5: as big as the setup page's, Malcolm: "a bit too small")
         for (int k = 0; k < FLIGHT_SLOTS; ++k) { FlightButton tb; tb.id = ID_SLOT + k; tb.r = FlightRect(tabsX + k * (tabW + tabGap), 4, tabW, 42); tb.text = std::to_string(k + 1); tb.chosen = k == slotNo; sc.buttons.push_back(tb); }   // (38 x 42: the setup page's)
         sc.stripRight = tabsX - 6;
+    } else if (zoneFor >= 0) {                            // (1.11.105) a box's red zone: the limit big, steps either way, the box at the right as it will look
+        sc.layout = 6000 + zoneFor; sc.title = "Defined front screen";
+        const int item = cfg.items[zoneFor]; int start, small, big, top; flightLimitSteps(item, start, small, big, top);
+        char b[80]; snprintf(b, sizeof(b), item == FL_FPS ? "Box %d: the red zone ends at" : "Box %d: the red zone starts at", zoneFor + 1); sc.hint = b;
+        FlightTile t; t.id = 0; t.r = FlightRect(528, 100, 258, 260); t.item = item; paint(t, zoneFor); t.dial = true; t.v = flightValue(t.item, src); sc.tiles.push_back(t);   // (as the theme page: the box at the right, as a dial whatever was chosen)
+        const int z = cfg.boxZone[zoneFor];
+        FlightButton bt; bt.id = ID_ZONE_VALUE; bt.label = true; bt.centred = true; bt.font = 1; bt.r = FlightRect(14, 150, 486, 80);
+        bt.text = z ? std::to_string(z) + " " + flightItemUnit(item) : "None"; sc.buttons.push_back(bt);
+        static const struct { int id, sign, bigStep; } STEPS[] = { { ID_ZONE_DOWN2, -1, 1 }, { ID_ZONE_DOWN, -1, 0 }, { ID_ZONE_UP, 1, 0 }, { ID_ZONE_UP2, 1, 1 } };
+        for (int k = 0; k < 4; ++k) {
+            FlightButton sb; sb.id = STEPS[k].id; sb.r = FlightRect(14 + k * 124, 262, 114, 70);
+            snprintf(b, sizeof(b), "%s%d", STEPS[k].sign < 0 ? "-" : "+", STEPS[k].bigStep ? big : small); sb.text = b; sc.buttons.push_back(sb);
+        }
+        bt = FlightButton(); bt.id = ID_ZONE_NONE; bt.r = slot(0); bt.text = "None"; sc.buttons.push_back(bt);   // (no red zone)
+        bt.id = ID_ZONE_DONE; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);          // (OK at the bottom right, as on every page)
     } else if (colourFor >= 0) {                          // a box's theme: the Themes page's twelve, the box as it will look
         sc.layout = 5000 + colourFor; sc.title = "Defined front screen";
         char b[64]; snprintf(b, sizeof(b), "Choose a theme for box %d.", colourFor + 1); sc.hint = b;
@@ -554,6 +600,10 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         if (flightItemCanDial(cfg.items[chooser])) {         // (1.11.102) a number: as a round dial, or as digits - the button says which it is now
             bt.id = ID_DIAL; bt.r = FlightRect(x0 + (w + gap), SLOT_Y, w, SLOT_H); bt.text = cfg.boxDial[chooser] ? "Round dial: yes" : "Round dial: no"; sc.buttons.push_back(bt);
         }
+        if (flightItemTakesLimit(cfg.items[chooser])) {      // (1.11.105) a thing with no danger line of its own: the pilot's red zone, a page of its own (the third slot)
+            bt.id = ID_ZONE; bt.r = FlightRect(x0 + 2 * (w + gap), SLOT_Y, w, SLOT_H);
+            bt.text = cfg.boxZone[chooser] ? "Red zone: " + std::to_string((int) cfg.boxZone[chooser]) : "Red zone: none"; sc.buttons.push_back(bt);
+        }
     }
     for (auto &b : sc.buttons) {
         b.pressed = b.id == pressedId && !slidOff && !b.label;
@@ -564,7 +614,8 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
     for (auto &t : sc.tiles) {
         meter(t);                                                 // (1.11.102) a dial box: its dial
         uint32_t h = hashOf(t.v.label, 2166136261u); h = hashOf(t.v.big, h); h = hashOf(t.v.unit, h); h = hashOf(t.v.small, h); h = hashOf(t.v.image, h);
-        if (t.dial) { h = (h ^ 0x5D1A1u ^ (uint32_t) t.meter.hi) * 16777619u; h = (h ^ (uint32_t) t.meter2.hi) * 16777619u; }   // (a dial, and its scale as grown)
+        if (t.dial) { h = (h ^ 0x5D1A1u ^ (uint32_t) t.meter.hi) * 16777619u; h = (h ^ (uint32_t) t.meter2.hi) * 16777619u;   // (a dial, and its scale as grown)
+                      h = (h ^ (uint32_t) t.meter.redFrom ^ ((uint32_t) (t.meter2.lo * 100) << 16)) * 16777619u; }   // (1.11.105: its red zone, a LiFePO4 scale)
         if (t.v.twoPart) { h = hashOf(t.v.label2, h); h = hashOf(t.v.big2, h); h = hashOf(t.v.unit2, h); h = hashOf(t.v.small2, h); h = hashOf(t.v.tag, h); h = hashOf(t.v.tag2, h); h = (h ^ (uint32_t) t.v.state2) * 16777619u; }
         for (uint8_t b : t.v.bars) h = (h ^ b) * 16777619u;
         if (t.own) h = ((h ^ t.face) * 16777619u) ^ t.ink;
@@ -582,7 +633,7 @@ int FlightScreen::idAt(int x, int y) const {
             if (r.has(x, y)) id = b.id;
         } else if (b.r.has(x, y)) id = b.id;
     }
-    if (setup && chooser == -1 && colourFor < 0) for (auto &t : sc.tiles) if (t.r.has(x, y)) id = t.id;
+    if (setup && chooser == -1 && colourFor < 0 && zoneFor < 0) for (auto &t : sc.tiles) if (t.r.has(x, y)) id = t.id;
     return id;
 }
 void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
@@ -637,6 +688,7 @@ FlightScreen::FlightScreen() {
 }
 void FlightScreen::paint(FlightTile &t, int box) const {   // its theme's two colours, else the screens' (drawn by the screen)
     if (box < 0 || box >= FLIGHT_MAX_BOXES) return;
+    t.box = (int8_t) box;
     t.dial = cfg.boxDial[box] && flightItemCanDial(t.item);   // (1.11.102) a round dial, where its thing can be one
     const int f = cfg.boxTheme[box];
     t.colour = (uint8_t) f;
@@ -650,8 +702,9 @@ void FlightScreen::meter(FlightTile &t) {
     float &high = dialHigh[t.item];
     if (t.v.hasNum) { const float top = flightDialTop(t.item, t.v.num); if (top > high) high = top; }
     if (t.v.hasNum2) { const float top = flightDialTop(t.item, t.v.num2); if (top > high) high = top; }
-    t.meter = flightDialOf(t.item, 0, t.v, high);
-    t.meter2 = t.v.twoPart ? flightDialOf(t.item, 1, t.v, high) : FlightDial();
+    const float limit = t.box >= 0 && t.box < FLIGHT_MAX_BOXES ? (float) cfg.boxZone[t.box] : 0;   // (1.11.105) the box's own red zone
+    t.meter = flightDialOf(t.item, 0, t.v, high, limit);
+    t.meter2 = t.v.twoPart ? flightDialOf(t.item, 1, t.v, high, limit) : FlightDial();
 }
 void FlightScreen::releaseOn(int id) {
     if (!setup) return;
@@ -659,6 +712,18 @@ void FlightScreen::releaseOn(int id) {
         if (id == ID_BACK) chooser = -1;
         else if (id >= ID_LAYOUT && id < ID_LAYOUT + FLIGHT_LAYOUT_COUNT) { cfg.layout = (uint8_t) (id - ID_LAYOUT); chooser = -1; }
         return;
+    }
+    if (zoneFor >= 0) {                                // (1.11.105) a box's red zone: kept at once; OK back to the setup page
+        const int item = cfg.items[zoneFor]; int start, small, big, top; flightLimitSteps(item, start, small, big, top);
+        int z = cfg.boxZone[zoneFor];
+        if (id == ID_ZONE_DONE) { zoneFor = -1; return; }
+        if (id == ID_ZONE_NONE) z = 0;
+        else if (id == ID_ZONE_DOWN2 || id == ID_ZONE_DOWN || id == ID_ZONE_UP || id == ID_ZONE_UP2) {
+            const int step = (id == ID_ZONE_DOWN2 || id == ID_ZONE_UP2) ? big : small, dir = (id == ID_ZONE_DOWN2 || id == ID_ZONE_DOWN) ? -1 : 1;
+            if (!z) z = start; else { z += dir * step; z -= z % small; }   // (from none, either way: the starting value)
+            if (z < small) z = 0; if (z > top) z = top;
+        } else return;
+        cfg.boxZone[zoneFor] = (uint16_t) z; return;
     }
     if (colourFor >= 0) {                              // a box's theme: kept at once (the screens' own theme: the box follows them)
         if (id >= ID_FACE && id < ID_FACE + THEME_COUNT) { const int k = id - ID_FACE; cfg.boxTheme[colourFor] = (uint8_t) (palPanels[k] == themeFace && palInks[k] == themeInk ? 0 : k + 1); }
@@ -671,6 +736,7 @@ void FlightScreen::releaseOn(int id) {
         else if (id >= ID_ITEM && id < ID_ITEM + FL_ITEMS) { cfg.items[chooser] = (uint8_t) (id - ID_ITEM); chooser = -1; }
         else if (id == ID_COLOUR) { colourFor = chooser; chooser = -1; }   // its theme, on a page of its own
         else if (id == ID_DIAL && flightItemCanDial(cfg.items[chooser])) cfg.boxDial[chooser] = cfg.boxDial[chooser] ? 0 : 1;   // (1.11.102) a dial, or digits again: the page stays
+        else if (id == ID_ZONE && flightItemTakesLimit(cfg.items[chooser])) { zoneFor = chooser; chooser = -1; }   // (1.11.105) its red zone, on a page of its own
         return;
     }
     if (id >= 0 && id < cfg.boxes()) { chooser = id; return; }       // (what the boxes beyond the layout's show is kept, for a bigger layout)

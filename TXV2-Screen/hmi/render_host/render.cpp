@@ -39,6 +39,7 @@ static bool sdOk = true;
 static void flightShot(const std::string &arg, bool setup) {
     std::string cfg = arg; int box = -1; bool sizes = false, colourPage = false; int cf = 0, ci = 0;
     const size_t cz = cfg.find(" @boxcolour"); if (cz != std::string::npos) { colourPage = true; sscanf(cfg.c_str() + cz + 11, "%d %d", &cf, &ci); cfg = cfg.substr(0, cz); }
+    bool zonePage = false; const size_t zq = cfg.find(" @boxzone"); if (zq != std::string::npos) { zonePage = true; cfg = cfg.substr(0, zq); }   // (1.11.105) "@box N @boxzone": the box's red zone page
     const size_t z = cfg.find(" @sizes"); if (z != std::string::npos) { sizes = true; cfg = cfg.substr(0, z); }
     const size_t b = cfg.find(" @box ");
     if (b != std::string::npos) { box = atoi(cfg.c_str() + b + 6) - 1; cfg = cfg.substr(0, b); }
@@ -55,6 +56,7 @@ static void flightShot(const std::string &arg, bool setup) {
             if (cf > 0) tapId([](const ldrc::FlightButton &bt, int k) { return bt.swatch == k; }, cf);
             (void) ci;
         }
+        if (zonePage) tapId([](const ldrc::FlightButton &bt, int) { return bt.text.rfind("Red zone", 0) == 0; }, 0);
         if (sizes) for (auto &bt : fs.scene(src).buttons) if (bt.text == "Box sizes") { fs.touch(true, bt.r.x + 5, bt.r.y + 5, 1000); fs.touch(false, 0, 0, 1200); break; }
     } else fs.poll(0, true, true, false);
     flightDrawAll(fs.scene(src, &flightFonts));

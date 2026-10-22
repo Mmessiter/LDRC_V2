@@ -54,11 +54,17 @@ struct FlightDial {
     float lo = 0, hi = 1, major = 1, value = 0;        // a gauge: its scale, the numbered ticks every major, the needle at value
     bool has = false;                                  // (1.11.104) a number to point at; without one the face is drawn with no needle and "--" in its window
     uint8_t decimals = 0;                              // the scale's numbers ("3.5")
+    // (1.11.105) the zones on the scale, from..to (none where from == to): amber where the box would turn amber, red where
+    // red - the batteries', the link's and the ESC temperature's from the thresholds the boxes use; a head speed's, current's,
+    // capacity's or frame rate's red from the pilot's own limit (FlightConfig::boxZone)
+    float amberFrom = 0, amberTo = 0, redFrom = 0, redTo = 0;
     // a clock: value = minutes since midnight; a timer: value = seconds. The hands come from those.
 };
 // The dial for a thing's value. high: the highest value this thing has shown so far (flightDialTop of it): a scale grows to
 // hold it and keeps that size - a scale that shrank back would swing under the needle. part: 0, or 1 for the lower part.
-FlightDial flightDialOf(int item, int part, const struct FlightValue &v, float high);
+FlightDial flightDialOf(int item, int part, const struct FlightValue &v, float high, float limit = 0);   // limit: the pilot's own red line (1.11.105), 0 none
+bool flightItemTakesLimit(int item);                   // (1.11.105) a thing with no danger line of its own: the pilot sets where its red zone starts (ends, for the frame rate)
+void flightLimitSteps(int item, int &start, int &small, int &big, int &top);   // the red zone page's starting value, its two step sizes and its most
 // The smallest round top of the scale that holds value: 3000 for a head speed of 2150, 4000 for 3400 (0 for a thing whose
 // scale never grows: the link's per cent, a cell's volts)
 float flightDialTop(int item, float value);
@@ -90,6 +96,7 @@ struct FlightValue {
     // (1.11.102) the number itself, for a dial: the head speed, a cell's volts (num2 the lower part's), the timer's seconds,
     // the clock's minutes since midnight. hasNum: there is one (a "--" has none)
     float num = 0, num2 = 0; bool hasNum = false, hasNum2 = false;
+    bool lifeTx = false;                               // (1.11.105) the transmitter's battery is LiFePO4 (its per cent, from the main board, is well above a LiPo's at these volts): its own scale and zones
 };
 FlightValue flightValue(int item, FlightSource &src);
 // A warning the front page shows, for the flight screen's strip whatever its boxes: "Battery LOW", or no link in flight.
@@ -145,6 +152,8 @@ struct FlightConfig {
     // (1.11.102) Each box as a round dial (1) or digits (0): its number as a needle over a scale (flightItemCanDial things only;
     // a box whose thing has no dial keeps its digits, and so does one too small for a dial)
     uint8_t boxDial[FLIGHT_MAX_BOXES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    // (1.11.105) Each box's own red zone (0 none): where a head speed's, current's or capacity's red starts, a frame rate's ends
+    uint16_t boxZone[FLIGHT_MAX_BOXES] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     int boxes() const { return FLIGHT_LAYOUTS[layout < FLIGHT_LAYOUT_COUNT ? layout : FLIGHT_DEFAULT_LAYOUT].count; }
     // "f2 w1 grid6 s1 timer,rxbat,rpm,link,esc,mah,amps,txbat,bank b:,9,,10,,,,, d:,,1 m:1" - b: (each box's theme) only with
     // themes, d: (the boxes that are dials, 1.11.102) only with one, m: (the choice of the moment) only with one (tokens at the
@@ -170,7 +179,8 @@ static const int FLIGHT_NUMBER_FONT = 1, FLIGHT_UNIT_FONT = 0, FLIGHT_MAX_SCALE 
 struct FlightTile { int id = 0; FlightRect r; int item = FL_NONE; FlightValue v; bool pressed = false; uint32_t serial = 0; uint8_t textFont = 2; int16_t scale = 16;
                     uint8_t colour = 0; bool own = false; uint16_t face = 0, ink = 0;
                     int16_t scale2 = 16;                    // (1.11.70) a box of two parts: scale its upper part's number, scale2 its lower's
-                    bool dial = false; FlightDial meter, meter2; };   // (1.11.102) a round dial, and what it shows (meter2: the lower part's)
+                    bool dial = false; FlightDial meter, meter2;      // (1.11.102) a round dial, and what it shows (meter2: the lower part's)
+                    int8_t box = -1; };                     // (1.11.105) which box of the definition it is, -1 none: its own red zone
 // A box of two parts (1.11.70): two boxes in one, 6 px apart, the upper the taller. A part has its name above its number
 // (24 px letters; 28 in a big part), its tag at the right of the name, its small line below where it is 130 px tall - or,
 // where that gives the bigger number, a short name on the left (its tag under it if there is room) and the number beside
@@ -184,6 +194,7 @@ inline int flightGlyphW(int nameH) { return flightGlyphH(nameH) * 9 / 4; }
 // label: words on the page, not a button.
 struct FlightButton { int id = 0; FlightRect r; std::string text; bool chosen = false, pressed = false; uint32_t serial = 0; int8_t layout = -1;
                       uint8_t swatch = 0; uint16_t face = 0, ink = 0; bool label = false;
+                      uint8_t font = 0; bool centred = false;   // (1.11.105) a label's letters (0: the usual 28 px; 1: the big 64 px) and centred in its room (the red zone page's number)
                       uint8_t usedBy = 0;                   // (the chooser) this thing is already shown by box usedBy (1-9): marked, so it is not chosen twice by mistake
                       std::string usedBoxes; };             // (a box's theme page) the other boxes that wear this theme, "2 5": marked the same way (1.9.14)
 void flightSizeTiles(std::vector<FlightTile> &tiles, FlightFonts *fonts);
@@ -243,6 +254,7 @@ private:
     std::string frontPress;                            // the front page's button to press for the pilot ("b0", "b1"), "" none
     int chooser = -1;                                  // the box whose choice is being made, -1 none, CHOOSE_SIZES the box sizes
     int colourFor = -1;                                // the box whose theme is being chosen (its own page), -1 none
+    int zoneFor = -1;                                  // (1.11.105) the box whose red zone is being set (its own page), -1 none
     static const int CHOOSE_SIZES = -2;
     void paint(FlightTile &t, int box) const;          // a box in its theme, and as a dial if chosen so (1.11.102)
     void meter(FlightTile &t);                         // (1.11.102) a dial box's dial, from its value (the scale grown if need be)

@@ -52,3 +52,7 @@ In the box's chooser, press 'Round dial: no' to make it 'yes'.|
 A scale grows to hold the biggest value seen, and stays.|
 A box too small for a dial keeps its digits: give it a bigger|
 box. Batteries show two dials side by side.|
+Batteries, Link and ESC temperature show amber and red zones|
+where the box would turn amber or red. Head speed, Current,|
+Capacity used and Frame rate take a red zone of your own:|
+press 'Red zone' in the box's chooser.|

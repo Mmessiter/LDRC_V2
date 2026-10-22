@@ -220,6 +220,12 @@ static bool flGauge(const ldrc::FlightRect &a, const ldrc::FlightDial &d, const 
     flInstrumentColours(g, boxFace, ink, state);
     flBezel(g);
     const float a0 = flDialAngle(d, d.lo), a1 = flDialAngle(d, d.hi), tickR = g.R - g.bz - 2;
+    const bool lightFace = ldrc::themeIsLight(g.face);
+    auto band = [&](float from, float to, uint16_t col) {           // (1.11.105) a zone on the scale, under the ticks: amber where the box would turn amber, red where red (pale on a light face)
+        const float f0 = max(from, d.lo), f1 = min(to, d.hi); if (!(f1 > f0)) return;
+        flArc(g.cx, g.cy, tickR, flDialAngle(d, f0), flDialAngle(d, f1), g.majorLen, lightFace ? ldrc::themeBlend(col, g.face, 45) : col);
+    };
+    band(d.amberFrom, d.amberTo, FL_AMBER); band(d.redFrom, d.redTo, FL_RED);
     flArc(g.cx, g.cy, tickR - g.majorLen - 1, a0, a1, 1, g.soft);    // the ring the ticks stand on
     const int majors = max(1, (int) lroundf((d.hi - d.lo) / d.major)), majorW = max(3, g.R / 25), minorW = max(1, g.R / 60);
     const bool endsOnly = g.R < 58;                                   // (a small gauge: its two ends numbered, nothing else - the numerals would touch)
@@ -390,7 +396,6 @@ static void flTwoPartBox(const ldrc::FlightTile &t, bool setup) {
     const FlightRect &r = t.r; const FlightValue &v = t.v;
     const bool own = t.own;
     const uint16_t face = own ? t.face : FL_FACE, ink = own ? t.ink : FL_INK;
-    const uint16_t edge = own ? ldrc::themeBlend(ink, face, 30) : FL_EDGE;
     FlightRect up, low; flightSplit(r, up, low);
     const int mid = up.y + up.h + (low.y - up.y - up.h) / 2;     // the line between the two items: the middle of the gap
     gfx->fillRect(r.x, r.y, r.w, r.h, flPartFace(t, FS_NORMAL, face));
@@ -404,9 +409,9 @@ static void flTwoPartBox(const ldrc::FlightTile &t, bool setup) {
     }
     if (look)                                                     // (as a box: a thick white frame with the colour)
         for (int k = 0; k < 4; ++k) gfx->drawRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, 0xFFFF);
-    else {
-        gfx->drawRect(r.x, r.y, r.w, r.h, setup ? FL_SOFT : edge);
-        gfx->drawFastHLine(r.x + 1, mid, r.w - 2, setup ? FL_SOFT : edge);   // (a colour change is the line when a half needs a look)
+    else if (setup) {                                             // (1.11.105: no frame or line in flight - Malcolm, "remove the fine line that separates one box from the next"; the setup page keeps quiet ones, its boxes are things to touch)
+        gfx->drawRect(r.x, r.y, r.w, r.h, FL_SOFT);
+        gfx->drawFastHLine(r.x + 1, mid, r.w - 2, FL_SOFT);
     }
 }
 // (1.11.97, Malcolm 19 Oct: "in the box that shows receiver and transmitter voltage, please, could we have the little picture
@@ -477,9 +482,8 @@ static bool flTwoDialBox(const ldrc::FlightTile &t, bool setup) {
     const FlightRect halves[2] = { FlightRect(r.x, r.y, halfW, r.h), FlightRect(r.x + halfW, r.y, r.w - halfW, r.h) };
     FlightRect areas[2];
     for (int k = 0; k < 2; ++k) { const FlightRect &h = halves[k]; areas[k] = FlightRect(h.x + (h.w - dw) / 2, r.y + 3, dw, r.h - 6); if (!flDialFits(areas[k])) return false; }
-    const bool own = t.own;                                           // the face: as the stacked box's, the line between the halves upright
+    const bool own = t.own;                                           // the face: as the stacked box's, the line between the halves upright (on the setup page)
     const uint16_t face = own ? t.face : FL_FACE, ink = own ? t.ink : FL_INK;
-    const uint16_t edge = own ? ldrc::themeBlend(ink, face, 30) : FL_EDGE;
     const int mid = r.x + halfW;
     gfx->fillRect(r.x, r.y, r.w, r.h, flPartFace(t, FS_NORMAL, face));
     const FlightState st[2] = { v.state, v.state2 };
@@ -491,7 +495,7 @@ static bool flTwoDialBox(const ldrc::FlightTile &t, bool setup) {
         if (k == 0) gfx->fillRect(r.x, r.y, mid - r.x, r.h, c); else gfx->fillRect(mid, r.y, r.x + r.w - mid, r.h, c);
     }
     if (look) for (int k = 0; k < 4; ++k) gfx->drawRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, 0xFFFF);
-    else { gfx->drawRect(r.x, r.y, r.w, r.h, setup ? FL_SOFT : edge); gfx->drawFastVLine(mid, r.y + 1, r.h - 2, setup ? FL_SOFT : edge); }
+    else if (setup) { gfx->drawRect(r.x, r.y, r.w, r.h, FL_SOFT); gfx->drawFastVLine(mid, r.y + 1, r.h - 2, FL_SOFT); }
     for (int k = 0; k < 2; ++k) {                                     // each half: its instrument, its words on the face
         const FlightRect &h = halves[k]; const FlightState state = st[k];
         const uint16_t pface = flPartFace(t, state, face);
@@ -537,16 +541,13 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
     // blend of the two, the outline a little of the text in the box colour
     const bool own = t.own;
     uint16_t face = own ? t.face : FL_FACE, ink = own ? t.ink : FL_INK, soft = own ? ldrc::themeBlend(t.ink, t.face, 72) : FL_SOFT;
-    const uint16_t edge = own ? ldrc::themeBlend(t.ink, t.face, 30) : FL_EDGE;
     if (v.state == FS_WARN) { face = FL_AMBER; ink = 0x0000; soft = 0x0000; }
     else if (v.state == FS_ALARM) { face = FL_RED; ink = 0xFFFF; soft = 0xFFFF; }
     if (t.pressed) face = shade(face, ldrc::themeIsLight(face) ? -20 : -30);
-    gfx->fillRect(r.x, r.y, r.w, r.h, face);                      // (1.11.103: square, the boxes touching; each has its own thin frame)
+    gfx->fillRect(r.x, r.y, r.w, r.h, face);                      // (1.11.103: square, the boxes touching; 1.11.105: no frame in flight - Malcolm, "remove the fine line that separates one box from the next")
     if (v.state == FS_WARN || v.state == FS_ALARM)               // a thick white frame as well as the colour: a red or yellow theme's boxes are almost amber and red themselves
         for (int k = 0; k < 4; ++k) gfx->drawRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, 0xFFFF);
-    if (v.state == FS_NORMAL || v.state == FS_GOOD || v.state == FS_STALE) {
-        gfx->drawRect(r.x, r.y, r.w, r.h, setup ? FL_SOFT : edge);
-    }
+    else if (setup) gfx->drawRect(r.x, r.y, r.w, r.h, FL_SOFT);   // (the setup page: a quiet frame, its boxes are things to touch)
     // (green for "ON" and grey for "--" on a dark box; on a light one - its own theme's or the screens' - its own text colour and its quieter one)
     const bool lightFace = ldrc::themeIsLight(face);
     const uint16_t dim = own || lightFace ? soft : FL_DIM;
@@ -597,9 +598,10 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
 }
 
 static void flightDrawButton(const ldrc::FlightButton &b) {
-    if (b.label) {                                                // words on the page (a box's colour page: "Box colour", "Text colour")
+    if (b.label) {                                                // words on the page (a box's colour page: "Box colour", "Text colour"; the red zone page's number, big and centred)
+        const int font = b.font ? b.font : 6;
         gfx->fillRect(b.r.x, b.r.y, b.r.w, b.r.h, FL_GROUND);
-        flText(b.r.x, b.r.y + (b.r.h - fontHeight(6)) / 2, 6, FL_ON_GROUND, b.text);
+        flText(b.centred ? b.r.x + (b.r.w - textWidth(font, b.text)) / 2 : b.r.x, b.r.y + (b.r.h - fontHeight(font)) / 2, font, font == 1 ? 0xFFFF : FL_ON_GROUND, b.text);
         return;
     }
     uint16_t face = b.chosen ? FL_CHOSEN : b.usedBy ? shade(FL_BUTTON, -18) : FL_BUTTON;   // (a thing another box shows: a shade darker, and badged below)

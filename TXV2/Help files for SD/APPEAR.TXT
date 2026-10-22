@@ -57,7 +57,10 @@ Clock and the Timer get hands). Timer, Batteries, Link,|
 Frame rate, Head speed, ESC temperature, Current, Capacity|
 used and Clock can be dials. A scale grows to hold the biggest|
 value seen. A box too small for a dial keeps its digits: give|
-it a bigger box.||
+it a bigger box. Dials carry amber and red zones where the|
+box would turn amber or red; for Head speed, Current, Capacity|
+used and Frame rate, 'Red zone' in the chooser sets where the|
+red starts.||
 BOX SIZES:|
 'Box sizes' offers twelve layouts, from one big box to nine small|
 ones. The numbers grow with their boxes.|

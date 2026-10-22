@@ -63,6 +63,20 @@ rpm.txt="RPM: 3400"
 @shot fdials_batts_one
 @flight f2 w1 big2 s1 batts,rpm,clock d:1,1,1
 @shot fdials_batts_big2
+@flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1 z:,,2400,,,4000
+@shot fdials_zones
+@flight f2 w1 big4 s1 rpm,batts,link,esc,amps d:1,1,1,1,1 z:2400,,,,80
+@shot fdials_zones_big4
+@flightsetup f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1 z:,,2400 @box 3 @boxzone
+@shot fdials_zonepage
+@flightsetup f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1 @box 3
+@shot fdials_chooser_zone
+TXBV.txt="6.60V (3.30V per cell)"
+JTX.val=77
+@flight f2 w1 two s1 batts,clock d:1,1
+@shot fdials_life
+TXBV.txt="8.10V (4.05V per cell)"
+JTX.val=85
 @model 0
 @flight f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah d:1,1,1,1,1,1
 @shot fdials_nomodel
