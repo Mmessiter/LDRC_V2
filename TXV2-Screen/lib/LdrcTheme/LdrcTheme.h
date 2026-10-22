@@ -110,12 +110,13 @@ public:
     bool isOpen() const { return openNow; }
     bool editing() const { return edit; }
     bool takeClosed(bool &kept);                       // true once after it has closed (kept: with OK)
+    bool takeHelp();                                   // (1.11.108) true once after Help (either page): the main board's help page (THEMES.TXT), this page again after it
     const Theme &chosen() const { return pick; }
     void touch(bool pressed, int x, int y, uint32_t now);   // at every pass while it is open: a lift counts after 80 ms with no samples
     void cancelTouch() { down = false; pressedId = -1; slidOff = false; slideHave = false; slidePend = -1; }   // (B59) a corner held: the finger is forgotten, its lift presses nothing
     const ColoursScene &scene();
 private:
-    bool openNow = false, closed = false, keptIt = false, edit = false;
+    bool openNow = false, closed = false, keptIt = false, edit = false, helpAsk = false;
     Theme pick, before;                                // the theme being chosen (and the colours being made); (Edit themes) as they were when it opened
     int editKind = 0, editIndex = 0; ThemeHsv editHsv = { 0, 0, 100 };   // Edit themes: which theme, its panel (0) or its text colour (1), and the colour being made
     int pressedId = -1; bool down = false, slidOff = false; uint32_t lastSeen = 0;

@@ -181,7 +181,7 @@ uint16_t themeColour(const Theme &t, int field, int role) {
 }
 
 // ------------------------------------------------------------------ the Themes page
-static const int ID_THEME = 300, ID_CANCEL = 104, ID_OK = 103, ID_EDIT = 105, ID_DEFAULTS = 106, ID_KIND_PANEL = 107, ID_KIND_INK = 108, ID_SLIDE = 130, ID_PREVIEW = 140;
+static const int ID_THEME = 300, ID_CANCEL = 104, ID_OK = 103, ID_EDIT = 105, ID_DEFAULTS = 106, ID_KIND_PANEL = 107, ID_KIND_INK = 108, ID_HELP = 109, ID_SLIDE = 130, ID_PREVIEW = 140;
 static ThemeRect slot(int i) { return ThemeRect(14 + i * 197, 414, 180, 56); }   // the pages' button places (Back ... OK)
 static uint32_t hashOf(const std::string &s, uint32_t h) { for (unsigned char c : s) h = (h ^ c) * 16777619u; return h; }
 // The themes go by number, not name (Malcolm, 10-04: "if I define green to be blue instead, the name will look a bit
@@ -190,6 +190,7 @@ static uint32_t hashOf(const std::string &s, uint32_t h) { for (unsigned char c 
 void ColoursPage::open(const Theme &inUse) { openNow = true; closed = false; keptIt = false; edit = false; pick = inUse; pressedId = -1; down = slidOff = false; }
 void ColoursPage::close(bool keep) { if (!openNow) return; openNow = false; closed = true; keptIt = keep; edit = false; pressedId = -1; down = slidOff = false; }
 bool ColoursPage::takeClosed(bool &kept) { if (!closed) return false; closed = false; kept = keptIt; return true; }
+bool ColoursPage::takeHelp() { const bool h = helpAsk; helpAsk = false; return h; }
 
 void ColoursPage::build() {
     // (Edit themes is drawn in the colours it opened with: the work shows in the sample and the swatches, the page shows
@@ -205,6 +206,7 @@ void ColoursPage::build() {
         }
         b.id = ID_CANCEL; b.r = slot(0); b.text = "Cancel"; sc.tiles.push_back(b);
         b.id = ID_EDIT; b.r = slot(1); b.text = "Edit themes ..."; sc.tiles.push_back(b);   // (it opens a page: " ...")
+        b.id = ID_HELP; b.r = slot(2); b.text = "Help"; sc.tiles.push_back(b);           // (1.11.108) its help page, and the film
         b.id = ID_OK; b.r = slot(3); b.text = "OK"; sc.tiles.push_back(b);
     } else {                                            // Edit themes: either colour of any of the twelve made from any colour
         sc.layout = 7000u + (uint32_t) editKind * 100u + (uint32_t) editIndex;
@@ -225,6 +227,7 @@ void ColoursPage::build() {
         for (int k = 0; k < 3; ++k) { ThemeTile s; s.id = ID_SLIDE + k; s.r = ThemeRect(400, 262 + k * 46, 282, 40); s.slider = (uint8_t) (k + 1); s.hsv = editHsv; sc.tiles.push_back(s); }
         b.id = ID_CANCEL; b.r = slot(0); b.text = "Cancel"; sc.tiles.push_back(b);
         b.id = ID_DEFAULTS; b.r = slot(1); b.text = "Defaults"; sc.tiles.push_back(b);
+        b.id = ID_HELP; b.r = slot(2); b.text = "Help"; sc.tiles.push_back(b);           // (1.11.108)
         b.id = ID_OK; b.r = slot(3); b.text = "OK"; sc.tiles.push_back(b);
     }
     for (auto &t : sc.tiles) {
@@ -289,8 +292,10 @@ void ColoursPage::releaseOn(int id) {
         else if (id == ID_CANCEL) close(false);
         else if (id == ID_OK) close(true);
         else if (id == ID_EDIT) { edit = true; before = pick; editKind = 0; editIndex = pick.no; editPick(); }   // (the screens' theme first)
+        else if (id == ID_HELP) helpAsk = true;        // (1.11.108) the screen opens the main board's help page; this page goes as the main board leaves (nothing kept), and comes back after
         return;
     }
+    if (id == ID_HELP) { helpAsk = true; return; }
     if (id >= ID_THEME && id < ID_THEME + THEME_COUNT) { editIndex = id - ID_THEME; editPick(); }
     else if (id == ID_KIND_PANEL) { editKind = 0; editPick(); }
     else if (id == ID_KIND_INK) { editKind = 1; editPick(); }

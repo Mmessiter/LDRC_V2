@@ -12,6 +12,7 @@ static ScreenFront flightSrc;
 static uint32_t flightTouchedAt = 0;
 static bool flightSaveWanted = false; static uint32_t flightSaveAt = 0;
 static std::string flightSetupOver;                             // the page the setup page was opened over: it goes when the main board leaves it
+static std::string flightHelpReturn; static uint32_t flightHelpAt = 0;   // (1.11.108) its Help pressed: the page to come back over, once the main board is on it again
 
 static bool flightUp() { return topOn && (topWho == FLIGHT_WHO || topWho == FLIGHT_SETUP_WHO); }
 // The six definitions (1.10.0): "flight" is slot 1 (as the one definition of 1.6.0-1.9.15 was kept, so an update keeps
@@ -62,6 +63,10 @@ static void flightTouch(bool pressed, int x, int y, uint32_t now) {
     const bool setupBefore = flight.setupOpen();
     flight.touch(pressed, x, y, now);
     if (!setupBefore && flight.setupOpen()) { flightSetupOver = page.name; flightTouchedAt = now; }   // opened by a long press on a box (1.10.2): over the page that is there
+    if (flight.takeHelp() && page.name == flightSetupOver && !teensyLink.running()) {   // (1.11.108) the setup page's Help: the main board's help page (its Films there); this page again when the main board is back
+        runScript("print \"HelpView:DESIGN.TXT\"\nLogView.t0.txt=\"Defined front screens help\"\nLogView.return.txt=\"" + flightSetupOver + "\"", "");
+        flightHelpReturn = flightSetupOver; flightHelpAt = now;
+    }
     std::string comp;
     if (flight.takeFrontPress(comp) && page.name == "FrontView" && !teensyLink.running()) {   // "Transmitter setup", "Model setup": the front page's own button, pressed for the pilot
         if (comp == "help") runScript("print \"HelpView:FLIGHT.TXT\"\nLogView.t0.txt=\"Defined front screen help\"\nLogView.return.txt=\"FrontView\"", "");   // (as the front page's Help asks for FRONT.TXT)
@@ -217,4 +222,10 @@ static void flightPoll() {
     if (!who) flightDrawWaits = false;                          // (a drawing that was waiting and is no longer wanted)
     wasWho = who;
 }
-static void flightPageLoaded() { if (page.name == "FrontView" || flight.setupOpen() || flightUp()) flightPoll(); }
+static void flightPageLoaded() {
+    if (!flightHelpReturn.empty()) {                            // (1.11.108) back from the setup page's help: the setup page again, over the page it was over
+        if (page.name == flightHelpReturn) { flightHelpReturn.clear(); if (millis() - flightHelpAt < 300000) flightRequested = true; }
+        else if (page.name != "LogView" && page.name != "BlankView") flightHelpReturn.clear();   // (the main board went on somewhere else: not back here by surprise later)
+    }
+    if (page.name == "FrontView" || flight.setupOpen() || flightUp() || flightRequested) flightPoll();
+}

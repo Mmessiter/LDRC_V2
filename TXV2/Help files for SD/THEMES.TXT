@@ -1,0 +1,25 @@
+Twelve themes: each a panel colour with its own text colour.|
+Touch one: the page shows it at once, framed in yellow.|
+'OK' makes it the screens' theme.|
+'Cancel' leaves things as they were.|
+Some things keep their own colours: buttons, the white boxes you|
+type into, and red and green words.|
+The themes go by number, 1 to 12, not by name: a name might not|
+match a colour you made.||
+A box on your own front screen can wear a theme of its own:|
+press 'Theme' in the box's chooser ('Defined front screens').||
+EDIT THEMES:|
+'Edit themes' changes either colour of any theme to any colour:|
+1. Touch a theme.|
+2. Press 'Panel colour' or 'Text colour'.|
+3. Slide the three bars: Colour, Strength (grey to vivid)|
+and Light (black to bright).|
+The sample shows the theme as it will look.|
+'Defaults' puts all twelve back as they came.|
+'OK' takes you back to Themes. Press 'OK' there as well, to keep|
+the new colours. 'Cancel', on either page, forgets them.||
+'Help' opens this page; its 'Films' button plays the animation.|
+Coming back from Help, the Themes page opens again, with the|
+screens' theme as it was: touch your theme again.||
+While the safety is off, this page closes, and will not open.|
+(With no safety switch: while the motor is on.)|

@@ -4,12 +4,16 @@
 # FRONT.ldf) from its "Animation" button, or the one a "<HELP>=<NAME>" line gives it. (Up to 96; a title up to 40
 # characters.) The problems and their animations are listed in problems.txt (1.11.94: "Fix problems").
 FRONT: The front page
+FLIGHT: Your own front screen
 TXSETUP: Transmitter setup
 CALIB: Calibrating the sticks
 OPTIONS: System, and binding
 SWITCHES: Switches
 ONESWICH: A switch's job
 AUDIO: Sounds and brightness
+APPEAR: Appearance
+THEMES: Themes
+DESIGN: Your own front screen: the design page
 LIPO: Batteries
 BUDDY: Wireless buddy
 PONG: Pong

@@ -499,6 +499,7 @@ static const int ID_BOXES = 101, ID_STAY = 102, ID_OK = 103, ID_BACK = 104, ID_I
 static const int ID_TXSETUP = 110, ID_ORIGINAL = 111, ID_MODELSETUP = 112, ID_HELP = 113;
 static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_DIAL = 123, ID_FACE = 500, ID_SLOT = 600;
 static const int ID_ZONE = 124, ID_ZONE_DOWN2 = 125, ID_ZONE_DOWN = 126, ID_ZONE_UP = 127, ID_ZONE_UP2 = 128, ID_ZONE_NONE = 129, ID_ZONE_DONE = 130, ID_ZONE_VALUE = 131;   // (1.11.105) the red zone page
+static const int ID_SETUP_HELP = 132;                   // (1.11.108) the setup page's own Help
 static const int SLOT_Y = 414, SLOT_H = 56, SLOT_W = 180;
 static FlightRect slot(int i) { return FlightRect(14 + i * 197, SLOT_Y, SLOT_W, SLOT_H); }
 
@@ -568,12 +569,14 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
                                                  if (t.item == FL_NONE) { t.v.label = "Nothing"; t.v.state = FS_EMPTY; } sc.tiles.push_back(t); }
         // (1.9.8: no "When" button any more - the front page's own buttons choose the screen, and the choice stays.
         // 1.9.9, Malcolm: "The three remaining buttons now look as if there's one just missing! I think they should be
-        // evenly spaced and perhaps a little larger": three across the width, as the front screens' own row is.)
-        const int bw = (FLIGHT_W - 12 - 2 * 19) / 3;
-        auto third = [&](int i) { return FlightRect(6 + i * (bw + 19), SLOT_Y, bw, SLOT_H); };
-        FlightButton bt; bt.id = ID_BOXES; bt.r = third(0); bt.text = "Box sizes"; sc.buttons.push_back(bt);
-        bt.id = ID_STAY; bt.r = third(1); bt.text = cfg.stayOn ? "Stays lit: yes" : "Stays lit: no"; sc.buttons.push_back(bt);
-        bt.id = ID_OK; bt.r = third(2); bt.text = "OK"; sc.buttons.push_back(bt);
+        // evenly spaced and perhaps a little larger": across the width, as the front screens' own row is. 1.11.108: four,
+        // with Help - Malcolm, 22 Oct: the design page "needs help buttons, help text and animations".)
+        const int gap = 18, bw = (FLIGHT_W - 12 - 3 * gap) / 4;   // (183 wide: the row from 6 to 792, as the three were)
+        auto quarter = [&](int i) { return FlightRect(6 + i * (bw + gap), SLOT_Y, bw, SLOT_H); };
+        FlightButton bt; bt.id = ID_BOXES; bt.r = quarter(0); bt.text = "Box sizes"; sc.buttons.push_back(bt);
+        bt.id = ID_STAY; bt.r = quarter(1); bt.text = cfg.stayOn ? "Stays lit: yes" : "Stays lit: no"; sc.buttons.push_back(bt);
+        bt.id = ID_SETUP_HELP; bt.r = quarter(2); bt.text = "Help"; sc.buttons.push_back(bt);
+        bt.id = ID_OK; bt.r = quarter(3); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == CHOOSE_SIZES) {                       // the box sizes: each choice drawn as its boxes
         sc.layout = 4000; sc.title = "Defined front screen"; sc.hint = "Choose the box sizes. Box 1 is the biggest.";
         const int cols = 4, gap = 10, x0 = 14, y0 = 92, w = (FLIGHT_W - 2 * x0 - (cols - 1) * gap) / cols, h = (312 - 2 * gap) / 3;
@@ -743,7 +746,9 @@ void FlightScreen::releaseOn(int id) {
     if (id >= ID_SLOT && id < ID_SLOT + FLIGHT_SLOTS) { chooseSlot(id - ID_SLOT); return; }   // another definition, from now on
     if (id == ID_BOXES) chooser = CHOOSE_SIZES;
     else if (id == ID_STAY) cfg.stayOn = !cfg.stayOn;
+    else if (id == ID_SETUP_HELP) helpAsk = true;                  // (1.11.108) the screen opens the main board's help page; this page goes as the main board leaves, and comes back after
     else if (id == ID_OK) closeSetup();
 }
+bool FlightScreen::takeHelp() { const bool h = helpAsk; helpAsk = false; return h; }
 
 }  // namespace ldrc

@@ -11,6 +11,7 @@ static ldrc::ColoursPage colours;
 static std::string coloursOver;                                 // the page it was opened over: it goes when the main board leaves it
 static uint32_t coloursTouchedAt = 0;
 static bool themeSaveWanted = false; static uint32_t themeSaveAt = 0;
+static std::string coloursHelpReturn; static uint32_t coloursHelpAt = 0;   // (1.11.108) Help pressed: the page to come back over, once the main board is on it again
 
 static bool coloursUp() { return topOn && topWho == COLOURS_WHO; }
 static void themeLoad() {
@@ -26,6 +27,10 @@ static void coloursTouch(bool pressed, int x, int y, uint32_t now) {
         return;
     }
     colours.touch(pressed, x, y, now);
+    if (colours.takeHelp() && page.name == coloursOver && !teensyLink.running()) {   // (1.11.108) Help: the main board's help page (its Films there); this page again when the main board is back
+        runScript("print \"HelpView:THEMES.TXT\"\nLogView.t0.txt=\"Themes help\"\nLogView.return.txt=\"" + coloursOver + "\"", "");
+        coloursHelpReturn = coloursOver; coloursHelpAt = now;
+    }
 }
 // The colours chosen: the page underneath in them at once (its components were coloured when it was loaded).
 static void themeRepaint() {
@@ -85,7 +90,13 @@ static void coloursPoll() {
     }
     wasUp = up;
 }
-static void coloursPageLoaded() { if (colours.isOpen() || coloursUp()) coloursPoll(); }
+static void coloursPageLoaded() {
+    if (!coloursHelpReturn.empty()) {                           // (1.11.108) back from the Themes page's help: the page again, over the page it was over
+        if (page.name == coloursHelpReturn) { coloursHelpReturn.clear(); if (millis() - coloursHelpAt < 300000) coloursRequested = true; }
+        else if (page.name != "LogView" && page.name != "BlankView") coloursHelpReturn.clear();   // (the main board went on somewhere else)
+    }
+    if (colours.isOpen() || coloursUp() || coloursRequested) coloursPoll();
+}
 
 // ------------------------------------------------------------------ the Appearance page (layer 8)
 // Opened by "ldrc appearance" (Transmitter setup). Its buttons open the main board's background picture page (its own
