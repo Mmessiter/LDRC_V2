@@ -305,17 +305,14 @@ static void flRaised(const ldrc::FlightRect &r, uint16_t face, bool down) {     
 }
 
 // Channel bars, eight to a column: each grows from the centre line, the normal travel (1000 to 2000 us: 25 to 75 of the
-// front page's 0 to 100) reaching the side; the channel's number beside it where the rows are tall enough.
-static void flBars(const ldrc::FlightRect &a, const std::vector<uint8_t> &bars, size_t from, int firstChannel, uint16_t track, uint16_t fill, uint16_t ink) {
+// front page's 0 to 100) reaching the side. No channel numbers (1.11.107: Malcolm, "simpler without and easy enough to count").
+static void flBars(const ldrc::FlightRect &a, const std::vector<uint8_t> &bars, size_t from, uint16_t track, uint16_t fill, uint16_t ink) {
     const int rows = 8, rowH = a.h / rows, barH = max(3, rowH - (rowH >= 12 ? 5 : 2));
     const int y0 = a.y + (a.h - rows * rowH) / 2;                 // (the eight rows centred in the room given)
-    const bool numbers = rowH >= 18;
-    const int numFont = rowH >= 30 ? 2 : 4;                       // (in a big box the numbers in the 24 px letters of every other word, not the 16 px ones)
-    const int numW = numbers ? (numFont == 2 ? 34 : 28) : 0, tx = a.x + numW, tw = a.w - numW, cx = tx + tw / 2, half = tw / 2;
+    const int cx = a.x + a.w / 2, half = a.w / 2;
     for (int i = 0; i < rows && from + i < bars.size(); ++i) {
         const int y = y0 + i * rowH + (rowH - barH) / 2;
-        if (numbers) { char n[4]; snprintf(n, sizeof(n), "%d", firstChannel + i); flText(a.x, y0 + i * rowH + (rowH - fontHeight(numFont)) / 2, numFont, ink, n); }
-        gfx->fillRect(tx, y, tw, barH, track);
+        gfx->fillRect(a.x, y, a.w, barH, track);
         float d = ((int) bars[from + i] - 50) / 25.0f; if (d > 1) d = 1; if (d < -1) d = -1;
         const int len = (int) (d * half);
         if (len > 0) gfx->fillRect(cx, y, len, barH, fill); else if (len < 0) gfx->fillRect(cx + len, y, -len, barH, fill);
@@ -568,11 +565,11 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
         // (1.11.106) no name line: the bars have the whole box (Malcolm, 22 Oct: "they do not need the declaration of channels
         // 1 to 16, et cetera, because this is self-evident, and this would allow a little more space for the bars")
         const int top = r.y + 8, h = r.h - 16;
-        if (v.bars.size() <= 8) flBars(FlightRect(r.x + pad, top, r.w - 2 * pad, h), v.bars, 0, 1, FL_STRIP, FL_ACCENT, soft);
+        if (v.bars.size() <= 8) flBars(FlightRect(r.x + pad, top, r.w - 2 * pad, h), v.bars, 0, FL_STRIP, FL_ACCENT, soft);
         else {
             const int colW = (r.w - 2 * pad - 14) / 2;
-            flBars(FlightRect(r.x + pad, top, colW, h), v.bars, 0, 1, FL_STRIP, FL_ACCENT, soft);
-            flBars(FlightRect(r.x + pad + colW + 14, top, colW, h), v.bars, 8, 9, FL_STRIP, FL_ACCENT, soft);
+            flBars(FlightRect(r.x + pad, top, colW, h), v.bars, 0, FL_STRIP, FL_ACCENT, soft);
+            flBars(FlightRect(r.x + pad + colW + 14, top, colW, h), v.bars, 8, FL_STRIP, FL_ACCENT, soft);
         }
         flUnclip();
         return;
