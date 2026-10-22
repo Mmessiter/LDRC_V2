@@ -64,7 +64,8 @@ static void flNumber(const ldrc::FlightRect &a, const std::string &big, const st
 // dial (1.11.103, Malcolm: "Where a round dial imparts the needed information, there's no need to put the nominal digits
 // there as well. Just the dial and its name"): a gauge is drawn as big as its arc allows - one and a half radii tall, not
 // two. Lines, circles and triangles only: the Mac renders it with the same code (hmi/render_host).
-static const int FL_DIAL_MIN_R = 46;                              // (smaller than this a dial cannot be read: the box keeps its digits)
+static const int FL_DIAL_MIN_R = 52;                              // (smaller than this an instrument cannot be read: the box keeps its digits)
+static void flBatteryBeside(const ldrc::FlightTile &t, int part, int x, int y, int nameH, int room, uint16_t edge, uint16_t fill);   // (below: the little battery, drawn on a face too)
 static const float FL_PI = 3.14159265f, FL_SWEEP = 120.0f;        // a gauge's scale: from 120 degrees before the top to 120 after (eight o'clock to four)
 static float flDialAngle(const ldrc::FlightDial &d, float v) {   // where a gauge's scale puts a value: from the top, clockwise
     float f = d.hi > d.lo ? (v - d.lo) / (d.hi - d.lo) : 0; if (f < 0) f = 0; if (f > 1) f = 1;
@@ -93,82 +94,200 @@ static void flHand(int cx, int cy, float a, float len, float tail, int w, uint16
     gfx->fillTriangle(tx, ty, cx + px, cy + py, cx - px, cy - py, col);
     if (tail > 0) gfx->fillTriangle(bx, by, cx + px, cy + py, cx - px, cy - py, col);
 }
-static int flDialLabelFont(int R) { return R >= 100 ? 2 : 4; }   // the scale's numbers: 24 px on a big dial, else 16 (a small gauge numbers only its two ends)
-static void flDialLabel(int cx, int cy, float r, float a, int font, uint16_t col, const std::string &s) {   // a scale's number, its middle this far out on the radius
-    int x, y; flPolar(cx, cy, r, a, x, y);
-    flText(x - textWidth(font, s) / 2, y - fontHeight(font) / 2, font, col, s);
+static void flTextBold(int x, int y, int font, uint16_t col, const std::string &s) {   // the letters again a pixel over: bold, as an instrument's numerals are (fonts 0 and 1 are bold already)
+    flText(x, y, font, col, s); if (font != 0 && font != 1) flText(x + 1, y, font, col, s);
 }
-// Words where a dial would be, when there is nothing to point at ("--"): the plain 24- or 16-pixel letters, centred
-static void flDialWords(int cx, int yTop, int yBot, int maxW, const std::string &s, uint16_t ink) {
-    const int h = yBot - yTop; if (h < 12 || maxW < 20) return;
-    for (int font = 2; font <= 4; font += 2) {
-        const int w = textWidth(font, s); if (w > maxW || fontHeight(font) > h + 4) continue;   // (a 16 px line may hang 4 px over: the letters' own space)
-        flText(cx - w / 2, yTop + (h - fontHeight(font)) / 2, font, ink, s);
-        return;
+// A bar along a radius, w pixels wide (a tick); one wide, a line
+static void flRadialBar(int cx, int cy, float a, float r1, float r2, int w, uint16_t col) {
+    int x1, y1, x2, y2; flPolar(cx, cy, r1, a, x1, y1); flPolar(cx, cy, r2, a, x2, y2);
+    if (w <= 1) { gfx->drawLine(x1, y1, x2, y2, col); return; }
+    const float ax = cosf(a) * w / 2.0f, ay = sinf(a) * w / 2.0f;    // (half the width, across the radius)
+    const int p1x = (int) lroundf(x1 + ax), p1y = (int) lroundf(y1 + ay), p2x = (int) lroundf(x1 - ax), p2y = (int) lroundf(y1 - ay);
+    const int p3x = (int) lroundf(x2 - ax), p3y = (int) lroundf(y2 - ay), p4x = (int) lroundf(x2 + ax), p4y = (int) lroundf(y2 + ay);
+    gfx->fillTriangle(p1x, p1y, p2x, p2y, p3x, p3y, col); gfx->fillTriangle(p1x, p1y, p3x, p3y, p4x, p4y, col);
+}
+// A watch hand: a long diamond, widest a third of the way out, pointed at both ends, a short tail behind the pivot
+static void flDauphine(int cx, int cy, float a, float len, float tail, int w, uint16_t col) {
+    int tx, ty, bx, by, mx, my; flPolar(cx, cy, len, a, tx, ty); flPolar(cx, cy, -tail, a, bx, by); flPolar(cx, cy, len * 0.3f, a, mx, my);
+    const int px = (int) lroundf(cosf(a) * w / 2.0f), py = (int) lroundf(sinf(a) * w / 2.0f);
+    gfx->fillTriangle(tx, ty, mx + px, my + py, mx - px, my - py, col);
+    gfx->fillTriangle(bx, by, mx + px, my + py, mx - px, my - py, col);
+}
+// The instrument (1.11.104, Malcolm: "a bit more bold ... more 'real' - like a speedometer on a classic car or an expensive
+// watch"): a chrome bezel lit from the upper left, a black face on a dark theme (its own colour on a light one, or when it
+// warns), bold ticks and numerals, a needle with a halo and a hub cap, the name in a window above the six, the unit (and
+// the LDRC mark on a big face) under the twelve. It fills its box: the box's name line goes, the face carries the name.
+struct FlInstrument {
+    int cx = 0, cy = 0, R = 0, bz = 0, majorLen = 0, minorLen = 0, labelFont = 4, lh = 16, hubR = 6; float labelR = 0;
+    uint16_t face = 0, ink = 0, soft = 0, light = 0, dark = 0;    // the face and its markings; the bezel's chrome and its edges
+};
+static bool flInstrumentIn(const ldrc::FlightRect &a, FlInstrument &g) {   // false: no room for one (the digits go there instead)
+    g.R = min(a.w, a.h) / 2 - 2; if (g.R < FL_DIAL_MIN_R) return false;
+    g.cx = a.x + a.w / 2; g.cy = a.y + a.h / 2;
+    g.bz = max(5, g.R / 14); g.majorLen = max(10, g.R / 7); g.minorLen = max(6, g.majorLen * 11 / 20); g.hubR = max(6, g.R / 8);
+    g.labelFont = g.R >= 150 ? 0 : g.R >= 80 ? 2 : 4; g.lh = fontHeight(g.labelFont);   // the numerals: 32 px bold, 24 px, or the 16 px typewriter ones on a small face
+    g.labelR = g.R - g.bz - 2 - g.majorLen - 4 - g.lh / 2.0f;    // (just inside the ticks)
+    return true;
+}
+static void flInstrumentColours(FlInstrument &g, uint16_t boxFace, uint16_t ink, ldrc::FlightState state) {
+    const bool warn = state == ldrc::FS_WARN || state == ldrc::FS_ALARM;
+    g.face = warn || ldrc::themeIsLight(boxFace) ? boxFace : ldrc::themeBlend(boxFace, 0x0000, 30);   // (a warning: the whole box says so)
+    g.ink = ink; g.soft = ldrc::themeBlend(ink, g.face, 72);
+    const bool lightFace = ldrc::themeIsLight(g.face);
+    g.light = lightFace ? 0x8C71 : 0xC618; g.dark = lightFace ? 0x2104 : 0x4208;   // (steel on a light face, chrome on a dark one)
+}
+static void flBezel(const FlInstrument &g) {                      // a chrome ring with dark edges, lit from the upper left; the face inside it
+    gfx->fillCircle(g.cx, g.cy, g.R, g.dark);
+    gfx->fillCircle(g.cx, g.cy, g.R - 1, g.light);
+    gfx->fillCircle(g.cx, g.cy, g.R - g.bz + 1, g.dark);
+    gfx->fillCircle(g.cx, g.cy, g.R - g.bz, g.face);
+    const int th = g.bz - 3; if (th < 1) return;
+    flArc(g.cx, g.cy, g.R - 2, -125 * FL_PI / 180, -15 * FL_PI / 180, th, shade(g.light, 45));   // the highlight, ten to eleven o'clock
+    flArc(g.cx, g.cy, g.R - 2, 55 * FL_PI / 180, 165 * FL_PI / 180, th, shade(g.light, -40));    // the shadow opposite
+}
+static void flHub(const FlInstrument &g) {                        // the cap over the pivot
+    gfx->fillCircle(g.cx, g.cy, g.hubR, g.dark);
+    gfx->drawCircle(g.cx, g.cy, g.hubR, g.light); gfx->drawCircle(g.cx, g.cy, g.hubR - 1, g.light);
+    gfx->fillCircle(g.cx, g.cy, max(2, g.hubR / 3), g.light);
+}
+// The words on a face: the box's name (its short name, or its unit, where the name is too wide), the unit, a battery's tag
+// ("62 %") with its picture, and the small line that says why there is no number ("no model")
+struct FlFaceWords { std::string name, shortName, unit, tag, note; const ldrc::FlightTile *tile = nullptr; int part = 0; uint16_t battFill = 0; };
+static const char *flFaceShort(int item) {                        // a shorter name for a small face, where there is one worth having
+    switch (item) { case ldrc::FL_ESC: return "ESC"; case ldrc::FL_AMPS: return "Amps"; case ldrc::FL_FPS: return "Frames"; default: return ""; }
+}
+// Under the twelve: the LDRC mark and/or the unit, quiet, between the numerals and the hub, in the 24 px sans letters (the
+// 16 px typewriter ones have no degree sign); the mark is the first to go when there is room for one line only
+static void flFaceTop(const FlInstrument &g, const char *mark, const std::string &unit) {
+    const int yTop = g.cy - (int) (g.labelR - g.lh / 2.0f) + 2, yBot = g.cy - g.hubR - 2, h = yBot - yTop;
+    const int font = 2, fh = fontHeight(font);
+    std::vector<std::string> lines; if (mark && *mark) lines.push_back(mark); if (!unit.empty()) lines.push_back(unit);
+    while (!lines.empty() && (int) lines.size() * fh > h + 4) lines.erase(lines.begin());
+    const int y0 = yTop + (h - (int) lines.size() * fh) / 2;
+    for (size_t i = 0; i < lines.size(); ++i) flText(g.cx - textWidth(font, lines[i]) / 2, y0 + (int) i * fh, font, g.soft, lines[i]);
+}
+// The window at the foot of the face (above the six): the name, and the tag or the note under it where two lines fit, else
+// after it on the one line if that fits; a battery's picture after the words where there is room. The name in the biggest
+// sans letters the window takes (28 px on a big face, else 24), failing those its short name, then its unit; the 16 px
+// typewriter letters only when nothing else fits. true: the unit stood in for the name (it is not then written under the
+// twelve as well)
+static bool flFaceWindow(const FlInstrument &g, const FlFaceWords &w, int yTop, int yBot, bool noValue) {
+    const int h = yBot - yTop; if (h < 14) return false;
+    const int ym = (yTop + yBot) / 2 - g.cy, inner = g.R - g.bz;
+    const int chord = 2 * (int) sqrtf(max(0.0f, (float) inner * inner - (float) ym * ym)) - 12;
+    if (chord < 20) return false;
+    const std::string second = noValue ? "--" : w.tag;            // (no number: "--" after the name; the note would not fit a face)
+    auto nameAt = [&](int f, int reserve, bool &unitUsed) -> std::string {   // the name in these letters with this much kept beside it, or its short name, or its unit ("": none fits)
+        unitUsed = false;
+        if (textWidth(f, w.name) + reserve <= chord) return w.name;
+        if (!w.shortName.empty() && textWidth(f, w.shortName) + reserve <= chord) return w.shortName;
+        if (!w.unit.empty() && textWidth(f, w.unit) + reserve <= chord) { unitUsed = true; return w.unit; }
+        return std::string();
+    };
+    const int fonts[3] = { g.R >= 150 ? 6 : 2, 2, 4 };
+    int font = 4; std::string name; bool unitForName = false;
+    for (int i = 0; i < 3 && name.empty(); ++i) {                   // the name alone, in the biggest letters that take it
+        if (i == 1 && fonts[0] == 2) continue;
+        bool u; const std::string n = nameAt(fonts[i], 0, u); if (n.empty()) continue;
+        name = n; font = fonts[i]; unitForName = u;
     }
+    if (name.empty()) name = flCut(w.name, 4, chord);
+    int sf = font == 4 ? 4 : (fontHeight(font) + fontHeight(2) <= h + 2 ? 2 : 4);
+    bool two = false, inline1 = false;
+    if (!second.empty()) {
+        if (fontHeight(font) + fontHeight(sf) <= h + 2) two = true;   // the second under the name
+        else for (int f = 2; f <= 4 && !inline1; f += 2) {           // or beside it, in the biggest letters that take the pair
+            bool u; const std::string n = nameAt(f, 10 + textWidth(f, second), u); if (n.empty()) continue;
+            name = n; font = f; sf = f; unitForName = u; inline1 = true;
+        }
+    }
+    if (font == 4) { size_t at; while ((at = name.find('\xB0')) != std::string::npos) name.erase(at, 1); }   // (no degree sign in that font)
+    const int nh = fontHeight(font), sh = fontHeight(sf);
+    const int nw = textWidth(font, name), sw = second.empty() ? 0 : textWidth(sf, second), iw = w.tile ? ldrc::flightGlyphW(nh) + 8 : 0;
+    const bool icon = iw && nw + (inline1 ? 10 + sw : 0) + iw <= chord;   // (a battery's picture last: its percent matters more)
+    const int total = nw + (inline1 ? 10 + sw : 0) + (icon ? iw : 0);
+    const int y0 = yTop + (h - nh - (two ? sh : 0)) / 2, x0 = g.cx - total / 2;
+    flText(x0, y0, font, g.ink, name);
+    int x = x0 + nw;
+    if (inline1) { flText(x + 10, y0 + nh - sh, sf, g.soft, second); x += 10 + sw; }
+    if (icon) flBatteryBeside(*w.tile, w.part, x + 8, y0, nh, iw, g.soft, w.battFill);
+    if (two) flText(g.cx - sw / 2, y0 + nh, sf, g.soft, second);
+    return unitForName;
 }
-// A gauge's radius in an area: its scale runs from eight o'clock to four, so the drawn dial is one and a half radii tall
-// (the arc's top to the scale's ends), and two wide
-static int flGaugeR(const ldrc::FlightRect &a) { return min((a.w - 4) / 2, (a.h - 4) * 2 / 3); }
-static void flTickLens(int R, int &majorLen, int &minorLen) { majorLen = max(11, R / 9); minorLen = max(6, R / 15); }   // (the ticks grow a little with the dial)
-// A gauge: the scale round the top two thirds, its numbers inside the ticks, the needle. Nothing else: the dial says it
-static bool flGauge(const ldrc::FlightRect &a, const ldrc::FlightDial &d, uint16_t ink, uint16_t soft, uint16_t needle, uint16_t face) {
-    const int R = flGaugeR(a);
-    if (R < FL_DIAL_MIN_R) return false;
-    const int cx = a.x + a.w / 2, cy = a.y + (a.h - R * 3 / 2) / 2 + R;   // (the arc's own height centred in the area: its top just under the name, its ends near the bottom)
-    const float a0 = flDialAngle(d, d.lo), a1 = flDialAngle(d, d.hi);
-    flArc(cx, cy, R, a0, a1, R >= 150 ? 4 : 3, soft);                 // the rim
-    int majorLen, minorLen; flTickLens(R, majorLen, minorLen);
-    const int majors = max(1, (int) lroundf((d.hi - d.lo) / d.major)), labelFont = flDialLabelFont(R);
-    const int lh = fontHeight(labelFont); const float labelR = R - 4 - majorLen - (labelFont == 4 ? 5 : 3) - lh / 2.0f;   // (the numbers just inside the ticks)
-    const bool endsOnly = R < 58;                                     // (a small gauge: its two ends numbered, nothing else - the numbers would touch)
+// A gauge: the scale round the top two thirds of the face, its numerals inside the ticks, the needle
+static bool flGauge(const ldrc::FlightRect &a, const ldrc::FlightDial &d, const FlFaceWords &w, uint16_t boxFace, uint16_t ink, ldrc::FlightState state, uint16_t needle) {
+    FlInstrument g; if (!flInstrumentIn(a, g)) return false;
+    flInstrumentColours(g, boxFace, ink, state);
+    flBezel(g);
+    const float a0 = flDialAngle(d, d.lo), a1 = flDialAngle(d, d.hi), tickR = g.R - g.bz - 2;
+    flArc(g.cx, g.cy, tickR - g.majorLen - 1, a0, a1, 1, g.soft);    // the ring the ticks stand on
+    const int majors = max(1, (int) lroundf((d.hi - d.lo) / d.major)), majorW = max(3, g.R / 25), minorW = max(1, g.R / 60);
+    const bool endsOnly = g.R < 58;                                   // (a small gauge: its two ends numbered, nothing else - the numerals would touch)
     char b[16]; snprintf(b, sizeof(b), d.decimals ? "%.1f" : "%.0f", (double) d.hi);
-    const bool everyOther = textWidth(labelFont, b) > (a1 - a0) * labelR / majors * 0.85f;   // (numbers wider than their room: every other one)
+    const bool everyOther = textWidth(g.labelFont, b) + 2 > (a1 - a0) * g.labelR / majors * 0.85f;   // (numerals wider than their room: every other one)
     for (int m = 0; m <= majors; ++m) {                               // the ticks: numbered every major, five between
         const float v = d.lo + m * d.major, am = flDialAngle(d, v);
-        flTick(cx, cy, am, R - 4, R - 4 - majorLen, 2, ink);
-        if (m < majors) for (int k = 1; k < 5; ++k) flTick(cx, cy, flDialAngle(d, v + d.major * k / 5), R - 4, R - 4 - minorLen, 1, soft);
-        if (endsOnly ? (m == 0 || m == majors) : (!everyOther || (majors - m) % 2 == 0)) { snprintf(b, sizeof(b), d.decimals ? "%.1f" : "%.0f", (double) v); flDialLabel(cx, cy, labelR, am, labelFont, ink, b); }   // (every other one: the top of the scale always numbered)
+        flRadialBar(g.cx, g.cy, am, tickR, tickR - g.majorLen, majorW, g.ink);
+        if (m < majors) for (int k = 1; k < 5; ++k) flRadialBar(g.cx, g.cy, flDialAngle(d, v + d.major * k / 5), tickR, tickR - g.minorLen, minorW, g.ink);
+        if (endsOnly ? (m == 0 || m == majors) : (!everyOther || (majors - m) % 2 == 0)) {   // (every other one: the top of the scale always numbered)
+            snprintf(b, sizeof(b), d.decimals ? "%.1f" : "%.0f", (double) v);
+            int x, y; flPolar(g.cx, g.cy, g.labelR, am, x, y); flTextBold(x - (textWidth(g.labelFont, b) + 1) / 2, y - g.lh / 2, g.labelFont, g.ink, b);
+        }
     }
-    flHand(cx, cy, flDialAngle(d, d.value), R - 6 - majorLen, R / 6, max(4, R / 12), needle);   // the needle (to the ticks' inner ends), its pivot
-    gfx->fillCircle(cx, cy, max(4, R / 10), ink); gfx->fillCircle(cx, cy, max(1, R / 24), face);
+    const int yTop = g.cy + (int) (g.labelR / 2 + g.lh / 2) + 3, yBot = g.cy + g.R - g.bz - 4;   // the window: under the scale's ends
+    const bool unitUsed = flFaceWindow(g, w, yTop, yBot, !d.has);
+    if (g.R >= 80) flFaceTop(g, g.R >= 120 ? "LDRC" : "", unitUsed ? std::string() : w.unit);   // (no number: "--" in the window says so; a note up here ran into the numerals)
+    if (d.has) {                                                      // the needle: to the ticks' inner ends, a halo of the face round it, a counterweight behind
+        const float len = tickR - g.majorLen - 2, am = flDialAngle(d, d.value); const int nw = max(5, g.R / 10), tail = g.R / 5;
+        flHand(g.cx, g.cy, am, len + 1, tail + 1, nw + 2, g.face);
+        flHand(g.cx, g.cy, am, len, tail, nw, needle);
+    }
+    flHub(g);
     return true;
 }
-// A clock's face (a timer's: seconds round it), 12 3 6 9 (60 15 30 45), its hands. Nothing else: the hands say it
-static bool flClockFace(const ldrc::FlightRect &a, const ldrc::FlightDial &d, bool timer, uint16_t ink, uint16_t soft, uint16_t needle, uint16_t face) {
-    const int R = min((a.w - 4) / 2, (a.h - 4) / 2);
-    if (R < FL_DIAL_MIN_R) return false;
-    const int cx = a.x + a.w / 2, cy = a.y + a.h / 2;
-    for (int k = 0; k < (R >= 150 ? 4 : 3); ++k) gfx->drawCircle(cx, cy, R - k, soft);   // the rim
-    int majorLen, minorLen; flTickLens(R, majorLen, minorLen);
-    const int labelFont = flDialLabelFont(R), lh = fontHeight(labelFont); const float labelR = R - 4 - majorLen - (labelFont == 4 ? 3 : 1) - lh / 2.0f;
-    for (int m = 0; m < 12; ++m) {                                    // the hours (a timer: every five seconds), the minutes between where there is room
+// A clock's face (a timer's: seconds round it): 12 3 6 9 (60 15 30 45), every hour on a big face; the minutes between; the hands
+static bool flClockFace(const ldrc::FlightRect &a, const ldrc::FlightDial &d, bool timer, const FlFaceWords &w, uint16_t boxFace, uint16_t ink, ldrc::FlightState state, uint16_t needle) {
+    FlInstrument g; if (!flInstrumentIn(a, g)) return false;
+    flInstrumentColours(g, boxFace, ink, state);
+    flBezel(g);
+    const float tickR = g.R - g.bz - 2;
+    gfx->drawCircle(g.cx, g.cy, (int) (tickR - g.majorLen - 1), g.soft);   // the ring the markers stand on
+    const int majorW = max(3, g.R / 22), minorW = max(1, g.R / 60);
+    const bool allNumbers = g.R >= 100, six = g.R >= 80;             // (a small face: 12 3 9 and the name where the six would be)
+    for (int m = 0; m < 12; ++m) {
         const float am = m * FL_PI / 6;
-        flTick(cx, cy, am, R - 4, R - 4 - majorLen, 2, ink);
-        if (R >= 56) for (int k = 1; k < 5; ++k) flTick(cx, cy, am + k * FL_PI / 30, R - 4, R - 4 - minorLen, 1, soft);
-        if (m % 3 == 0) flDialLabel(cx, cy, labelR, am, labelFont, ink, std::to_string(timer ? (m == 0 ? 60 : m * 5) : (m == 0 ? 12 : m)));   // 12 3 6 9; a timer 60 15 30 45
+        flRadialBar(g.cx, g.cy, am, tickR, tickR - g.majorLen, majorW, g.ink);
+        if (g.R >= 56) for (int k = 1; k < 5; ++k) flRadialBar(g.cx, g.cy, am + k * FL_PI / 30, tickR, tickR - g.minorLen, minorW, g.ink);
+        if ((allNumbers || m % 3 == 0) && (six || m != 6)) {
+            const std::string s = std::to_string(timer ? (m == 0 ? 60 : m * 5) : (m == 0 ? 12 : m));
+            int x, y; flPolar(g.cx, g.cy, g.labelR, am, x, y); flTextBold(x - (textWidth(g.labelFont, s) + 1) / 2, y - g.lh / 2, g.labelFont, g.ink, s);
+        }
     }
-    if (timer) {                                                      // a minute hand, and the seconds hand sweeping
-        const float secs = fmodf(d.value, 60.0f), mins = fmodf(d.value / 60.0f, 60.0f);
-        flHand(cx, cy, mins / 60.0f * 2 * FL_PI, R * 0.55f, R / 7.0f, max(4, R / 12), ink);
-        flHand(cx, cy, secs / 60.0f * 2 * FL_PI, R - 6.0f - majorLen, R / 5.0f, max(2, R / 30), needle);
-    } else {
-        const float mins = fmodf(d.value, 60.0f), hours = fmodf(d.value / 60.0f, 12.0f);
-        flHand(cx, cy, hours / 12.0f * 2 * FL_PI, R * 0.52f, R / 7.0f, max(5, R / 11), ink);
-        flHand(cx, cy, mins / 60.0f * 2 * FL_PI, R - 8.0f - majorLen, R / 6.0f, max(3, R / 16), ink);
+    if (g.R >= 80) flFaceTop(g, "LDRC", "");
+    flFaceWindow(g, w, g.cy + g.hubR + 4, six ? g.cy + (int) (g.labelR - g.lh / 2.0f) - 3 : g.cy + (int) (tickR - g.majorLen) - 3, !d.has);   // the window: between the hub and the six (or the ticks)
+    if (d.has) {                                                      // the hands, each with a halo of the face
+        if (timer) {                                                  // a minute hand, and the seconds hand sweeping
+            const float secs = fmodf(d.value, 60.0f), mins = fmodf(d.value / 60.0f, 60.0f), ma = mins / 60.0f * 2 * FL_PI, sa = secs / 60.0f * 2 * FL_PI;
+            const float ml = g.R * 0.55f, sl = tickR - g.majorLen - 2; const int mw = max(5, g.R / 10), sw = max(2, g.R / 30);
+            flDauphine(g.cx, g.cy, ma, ml + 1, g.R / 8.0f + 1, mw + 2, g.face); flDauphine(g.cx, g.cy, ma, ml, g.R / 8.0f, mw, g.ink);
+            flHand(g.cx, g.cy, sa, sl + 1, g.R / 5.0f + 1, sw + 2, g.face); flHand(g.cx, g.cy, sa, sl, g.R / 5.0f, sw, needle);
+        } else {                                                      // the hour hand and the minute hand
+            const float mins = fmodf(d.value, 60.0f), hours = fmodf(d.value / 60.0f, 12.0f), ha = hours / 12.0f * 2 * FL_PI, ma = mins / 60.0f * 2 * FL_PI;
+            const float hl = g.R * 0.5f, ml = tickR - g.majorLen - 3; const int hw = max(6, g.R / 9), mw = max(4, g.R / 13);
+            flDauphine(g.cx, g.cy, ha, hl + 1, g.R / 8.0f + 1, hw + 2, g.face); flDauphine(g.cx, g.cy, ha, hl, g.R / 8.0f, hw, g.ink);
+            flDauphine(g.cx, g.cy, ma, ml + 1, g.R / 7.0f + 1, mw + 2, g.face); flDauphine(g.cx, g.cy, ma, ml, g.R / 7.0f, mw, g.ink);
+        }
     }
-    gfx->fillCircle(cx, cy, max(4, R / 11), ink); gfx->fillCircle(cx, cy, max(1, R / 26), face);
+    flHub(g);
     return true;
 }
-// A box's dial in the area its number would have had. false: the area is too small for one (the digits go there instead)
-static bool flDial(const ldrc::FlightRect &a, const ldrc::FlightDial &d, uint16_t ink, uint16_t soft, uint16_t needle, uint16_t face) {
-    if (d.kind == ldrc::FD_GAUGE) return flGauge(a, d, ink, soft, needle, face);
-    if (d.kind == ldrc::FD_CLOCK || d.kind == ldrc::FD_TIMER) return flClockFace(a, d, d.kind == ldrc::FD_TIMER, ink, soft, needle, face);
+// A box's instrument in an area. false: the area is too small for one (the digits go there instead)
+static bool flDial(const ldrc::FlightRect &a, const ldrc::FlightDial &d, const FlFaceWords &w, uint16_t boxFace, uint16_t ink, ldrc::FlightState state, uint16_t needle) {
+    if (d.kind == ldrc::FD_GAUGE) return flGauge(a, d, w, boxFace, ink, state, needle);
+    if (d.kind == ldrc::FD_CLOCK || d.kind == ldrc::FD_TIMER) return flClockFace(a, d, d.kind == ldrc::FD_TIMER, w, boxFace, ink, state, needle);
     return false;
 }
-static bool flDialFits(const ldrc::FlightRect &a, const ldrc::FlightDial &d) {   // room for this dial in this area?
-    return (d.kind == ldrc::FD_GAUGE ? flGaugeR(a) : min((a.w - 4) / 2, (a.h - 4) / 2)) >= FL_DIAL_MIN_R;
-}
+static bool flDialFits(const ldrc::FlightRect &a) { FlInstrument g; return flInstrumentIn(a, g); }   // room for an instrument in this area?
 
 static void flRaised(const ldrc::FlightRect &r, uint16_t face, bool down) {             // the buttons' face and their 3D edge
     const uint16_t hi = shade(face, 60), lo = shade(face, -45);
@@ -338,7 +457,8 @@ static void flPart(const ldrc::FlightRect &p, const ldrc::FlightTile &t, int par
     if (t.dial && md.kind != FD_NONE) {
         FlightRect da = pl.number; if (!pl.row && pl.small) da.h = (int16_t) (da.h + nameH + 8);   // (no small line under a dial: its room goes to the dial)
         const uint16_t needle = (state == FS_WARN || state == FS_ALARM) ? ink : state == FS_STALE ? dim : lightFace ? ink : FL_YELLOW;   // (an old value: a dim needle, as its digits would be dim)
-        dialed = flDial(da, md, ink, soft, needle, face);
+        FlFaceWords w; w.unit = unit; w.note = small;             // (the part's name is beside the face, not on it)
+        dialed = flDialFits(da) && flDial(da, md, w, face, ink, state, needle);
     }
     if (!dialed) {
         if (!pl.row && pl.small && !small.empty()) flText(p.x + wpad, p.y + p.h - nameH - 8, pl.font, soft, flCut(small, pl.font, p.w - 2 * wpad));
@@ -347,28 +467,16 @@ static void flPart(const ldrc::FlightRect &p, const ldrc::FlightTile &t, int par
     flUnclip();
 }
 
-// (1.11.102) A box of two parts as two dials side by side (the batteries: RX on the left, TX on the right; stacked, neither
-// half would have the height for a dial). Each half: its name and tag above, its dial below; a half with no number says so
-// in words. false: no room for dials this way either (the stacked box with its digits is drawn instead)
+// (1.11.102) A box of two parts as two instruments side by side (the batteries: RX on the left, TX on the right; stacked,
+// neither half would have the height for one). Each face carries its half's name, tag and battery picture (1.11.104).
+// false: no room for two this way either (the stacked box with its digits is drawn instead)
 static bool flTwoDialBox(const ldrc::FlightTile &t, bool setup) {
     using namespace ldrc;
     const FlightRect &r = t.r; const FlightValue &v = t.v;
-    const int tf = t.textFont, nameH = fontHeight(tf), wpad = 10, halfW = r.w / 2;
+    const int halfW = r.w / 2, dw = halfW - 6;                        // (both instruments one size, whichever half is the pixel wider)
     const FlightRect halves[2] = { FlightRect(r.x, r.y, halfW, r.h), FlightRect(r.x + halfW, r.y, r.w - halfW, r.h) };
-    struct Plan { std::string name, tag; bool twoLines = false; FlightRect dial; } pl[2];
-    for (int k = 0; k < 2; ++k) {                                     // the name line: the name with its tag at the right, or the short name with it, or two lines
-        const FlightRect &h = halves[k];
-        const std::string full = k ? v.label2 : v.label, shortName = flightPartShort(t.item, k), tag = k ? v.tag2 : v.tag;
-        const int room = h.w - 2 * wpad, tw = tag.empty() ? 0 : textWidth(tf, tag);
-        Plan &p = pl[k]; p.tag = tag;
-        if (textWidth(tf, full) + (tw ? tw + 12 : 0) <= room) p.name = full;
-        else if (textWidth(tf, shortName) + (tw ? tw + 12 : 0) <= room) p.name = shortName;
-        else { p.name = flCut(full, tf, room); p.twoLines = !tag.empty(); }
-        const int top = h.y + 8 + nameH * (p.twoLines ? 2 : 1) + 4, dw = halfW - 6;   // (both dials one width, whichever half is the pixel wider: alike)
-        p.dial = FlightRect(h.x + (h.w - dw) / 2, top, dw, h.y + h.h - 8 - top);
-        const FlightDial &md = k ? t.meter2 : t.meter;
-        if (!flDialFits(p.dial, md.kind == FD_NONE ? (k ? t.meter : t.meter2) : md)) return false;   // (a half with no number yet: judged by the other's dial)
-    }
+    FlightRect areas[2];
+    for (int k = 0; k < 2; ++k) { const FlightRect &h = halves[k]; areas[k] = FlightRect(h.x + (h.w - dw) / 2, r.y + 3, dw, r.h - 6); if (!flDialFits(areas[k])) return false; }
     const bool own = t.own;                                           // the face: as the stacked box's, the line between the halves upright
     const uint16_t face = own ? t.face : FL_FACE, ink = own ? t.ink : FL_INK;
     const uint16_t edge = own ? ldrc::themeBlend(ink, face, 30) : FL_EDGE;
@@ -384,25 +492,20 @@ static bool flTwoDialBox(const ldrc::FlightTile &t, bool setup) {
     }
     if (look) for (int k = 0; k < 4; ++k) gfx->drawRect(r.x + k, r.y + k, r.w - 2 * k, r.h - 2 * k, 0xFFFF);
     else { gfx->drawRect(r.x, r.y, r.w, r.h, setup ? FL_SOFT : edge); gfx->drawFastVLine(mid, r.y + 1, r.h - 2, setup ? FL_SOFT : edge); }
-    for (int k = 0; k < 2; ++k) {                                     // each half: its words and its dial
+    for (int k = 0; k < 2; ++k) {                                     // each half: its instrument, its words on the face
         const FlightRect &h = halves[k]; const FlightState state = st[k];
         const uint16_t pface = flPartFace(t, state, face);
         uint16_t pink = ink, soft = own ? ldrc::themeBlend(t.ink, t.face, 72) : FL_SOFT;
         if (state == FS_WARN) { pink = 0x0000; soft = 0x0000; } else if (state == FS_ALARM) { pink = 0xFFFF; soft = 0xFFFF; }
         const bool lightFace = ldrc::themeIsLight(pface);
         const uint16_t dim = own || lightFace ? soft : FL_DIM;
-        const uint16_t valueInk = state == FS_STALE ? dim : state == FS_GOOD ? (lightFace ? pink : FL_GREEN) : pink;
         const uint16_t needle = (state == FS_WARN || state == FS_ALARM) ? pink : state == FS_STALE ? dim : lightFace ? pink : FL_YELLOW;
-        const uint16_t fillInk = (state == FS_WARN || state == FS_ALARM) ? pink : (lightFace ? pink : FL_GREEN);
+        FlFaceWords w; w.name = k ? v.label2 : v.label; w.shortName = flightPartShort(t.item, k); w.unit = k ? v.unit2 : v.unit;
+        if (w.unit.empty()) w.unit = flightPartUnit(t.item, k);
+        w.tag = k ? v.tag2 : v.tag; w.note = k ? v.small2 : v.small; w.tile = &t; w.part = k;
+        w.battFill = (state == FS_WARN || state == FS_ALARM) ? pink : (lightFace ? pink : FL_GREEN);
         flClip(FlightRect(h.x + 2, h.y + 2, h.w - 4, h.h - 4));
-        const Plan &p = pl[k];
-        const int tw = p.tag.empty() ? 0 : textWidth(tf, p.tag), nw = textWidth(tf, p.name);
-        flText(h.x + wpad, h.y + 8, tf, soft, p.name);
-        if (tw) flText(p.twoLines ? h.x + wpad : h.x + h.w - wpad - tw, h.y + 8 + (p.twoLines ? nameH : 0), tf, soft, p.tag);
-        flBatteryBeside(t, k, h.x + wpad + nw + 8, h.y + 8, nameH, h.w - 2 * wpad - nw - 8 - (tw && !p.twoLines ? tw + 12 : 0), soft, fillInk);
-        const FlightDial &md = k ? t.meter2 : t.meter;
-        if (md.kind != FD_NONE) flDial(p.dial, md, pink, soft, needle, pface);
-        else flDialWords(p.dial.x + p.dial.w / 2, p.dial.y, p.dial.y + p.dial.h, p.dial.w, k ? v.big2 : v.big, valueInk);   // ("--": nothing to point at)
+        flDial(areas[k], k ? t.meter2 : t.meter, w, pface, pink, state, needle);
         flUnclip();
     }
     return true;
@@ -451,6 +554,14 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
     flClip(FlightRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4));
     const int pad = FLIGHT_PAD, tf = t.textFont, labelH = fontHeight(tf), smallH = labelH;   // (room for the small line in every box: the numbers of a row line up)
     const int wpad = 10;                                          // (the words 10 px in, the number 12: "ESC temperature" whole in a 192 px box)
+    if (t.dial && t.meter.kind != FD_NONE) {                      // (1.11.102/104) a round instrument filling the box, its name on its face: no name line
+        const FlightRect ia(r.x + 3, r.y + 3, r.w - 6, r.h - 6);
+        if (flDialFits(ia)) {
+            const uint16_t needle = (v.state == FS_WARN || v.state == FS_ALARM) ? ink : v.state == FS_STALE ? dim : lightFace ? ink : FL_YELLOW;
+            FlFaceWords w; w.name = v.label; w.shortName = flFaceShort(t.item); w.unit = v.unit.empty() ? flightItemUnit(t.item) : v.unit; w.note = v.small;
+            flDial(ia, t.meter, w, face, ink, v.state, needle); flUnclip(); return;
+        }
+    }                                                             // (too small for one: the digits, as ever)
     flText(r.x + wpad, r.y + 8, tf, soft, flCut(v.label, tf, r.w - 2 * wpad));
     if (!v.image.empty()) {                                       // the model's picture instead of a number, as big as the box allows: the whole box but its edge (1.9.11)
         const int top = r.y + 5;
@@ -474,11 +585,6 @@ static void flightDrawTile(const ldrc::FlightTile &t, bool setup) {
         flUnclip();
         return;
     }
-    if (t.dial && t.meter.kind != FD_NONE) {                      // (1.11.102) a round dial in the number's place, and the small line's (its room goes to the dial)
-        const int top = r.y + 8 + labelH;
-        const uint16_t needle = (v.state == FS_WARN || v.state == FS_ALARM) ? ink : v.state == FS_STALE ? dim : lightFace ? ink : FL_YELLOW;
-        if (flDial(FlightRect(r.x + pad, top, r.w - 2 * pad, r.y + r.h - 8 - top), t.meter, ink, soft, needle, face)) { flUnclip(); return; }
-    }                                                             // (too small for a dial: the digits, as ever)
     if (!v.small.empty()) {
         std::string s = v.small;                                  // (a pack's "total" makes way before its percent - the number that turns amber - is cut)
         if (textWidth(tf, s) > r.w - 2 * wpad) { const size_t at = s.find(" total"); if (at != std::string::npos) s.erase(at, 6); }

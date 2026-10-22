@@ -35,6 +35,7 @@ const char *flightItemName(int item);                  // the chooser's words: "
 const char *flightItemKey(int item);                   // the settings' words: "batts"
 int flightItemByKey(const std::string &key);           // FL_NONE if not known
 const char *flightItemReference(int item);             // the widest value it can be expected to show ("88:88"; "" for none, the bars)
+const char *flightItemUnit(int item);                  // what follows its number ("RPM"; "" for none) - an instrument's face says it even with no number yet (1.11.104)
 const char *flightItemUnit(int item);                  // what follows its number ("V"; "" for none)
 bool flightItemIsWords(int item);                      // it shows words, not a number (the bank, the rate, the model, the motor)
 bool flightItemHasParts(int item);                     // a box of two parts, one above the other (the batteries; AMS and trims)
@@ -51,6 +52,7 @@ enum FlightDialKind : uint8_t { FD_NONE = 0, FD_GAUGE, FD_CLOCK, FD_TIMER };
 struct FlightDial {
     uint8_t kind = FD_NONE;                            // FD_NONE: no dial for this (no number, or a thing that has none)
     float lo = 0, hi = 1, major = 1, value = 0;        // a gauge: its scale, the numbered ticks every major, the needle at value
+    bool has = false;                                  // (1.11.104) a number to point at; without one the face is drawn with no needle and "--" in its window
     uint8_t decimals = 0;                              // the scale's numbers ("3.5")
     // a clock: value = minutes since midnight; a timer: value = seconds. The hands come from those.
 };

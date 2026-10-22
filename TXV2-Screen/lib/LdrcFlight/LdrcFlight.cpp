@@ -55,8 +55,8 @@ float flightDialTop(int item, float value) {
 FlightDial flightDialOf(int item, int part, const FlightValue &v, float high) {
     FlightDial d;
     const bool has = part ? v.hasNum2 : v.hasNum; const float num = part ? v.num2 : v.num;
-    if (!flightItemCanDial(item) || !has) return d;
-    d.value = num;
+    if (!flightItemCanDial(item)) return d;
+    d.has = has; d.value = has ? num : 0;                         // (1.11.104: no number yet - the scale all the same, the face drawn without a needle)
     if (item == FL_CLOCK) { d.kind = FD_CLOCK; d.lo = 0; d.hi = 12 * 60; d.major = 60; return d; }   // (the hands: hours round the face)
     if (item == FL_TIMER) { d.kind = FD_TIMER; d.lo = 0; d.hi = 60; d.major = 5; return d; }           // (seconds round the face)
     const int i = scaleIndex(item); if (i < 0) return d;
