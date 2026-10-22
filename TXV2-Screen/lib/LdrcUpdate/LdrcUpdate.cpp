@@ -1309,7 +1309,20 @@ void Updater::rxPoll() {
         // number wanted, or a phase - as the knock for the file link is repeated. A repeat of an order in hand is
         // ignored by the main board.
         if (now - rxNewsAt_ >= 700) { rxNewsAt_ = now; host_.rxOrder((int) (rxLatest_ >> 24), (int) ((rxLatest_ >> 16) & 0xFF), (int) (rxLatest_ & 0xFFF)); }
-        if (now - since_ > 15000) rxResult(false, "The transmitter did not answer", std::vector<std::string>(1, "Its firmware may be older than B11: update the transmitter first."));
+        if (now - since_ > 15000) {
+            // 1.11.110 (Malcolm, 22 Oct 2026, Mehul's RAW 420: "even though the transmitter was updated very recently"):
+            // the verdict guessed "older than B11", which no transmitter is any more. What happened there: the main
+            // board's line had stopped (B143 and before left it out after the front page's once-a-second burst, on a
+            // Rotorflight model every second: B144 owes it instead). The log says which of the two it was; the pilot is
+            // told what was done, and what to do.
+            RxNews last; const bool any = host_.rxNews(last);
+            if (!any || (int32_t) (now - last.atMs) > 3000) note("receiver update: the main board's line stopped " + num(any ? (now - last.atMs) / 1000 : 0) + " s ago");
+            else note("receiver update: the main board's line goes on, but it did not take the order");
+            std::vector<std::string> ls;
+            ls.push_back("Nothing was changed.");
+            ls.push_back("Try again. If it happens again, switch the transmitter off and on.");
+            rxResult(false, "The transmitter did not answer", ls);
+        }
         return;
     }
     if (n.phase != rxPhaseSeen_) {

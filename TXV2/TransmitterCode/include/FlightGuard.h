@@ -349,22 +349,36 @@ const char *LinkHelloExtra()
     return text;
 }
 
-// Twelve bytes, written straight to the wire. It never waits (a busy wire: next time), and unlike SendCommand() it
+// Twelve bytes, written straight to the wire. A busy wire: the next 50 ms call, and after 200 ms it is written anyway
+// (B144; it waited for ever before, and the once-a-second word could be left out every second). Unlike SendCommand() it
 // throws nothing away that may be arriving from the screen at that moment.
+// TELLSCREEN-LOGIC-BEGIN (dev/test_rxline)
 void TellScreen(bool evenIfUnchanged)
 {
     CRUMB(CRUMB_TELLSCREEN);
     static uint8_t Told = 255;
+    static bool Owed = false;    // B144: a word due (a change, or the once-a-second one) and not yet sent
+    static uint32_t OwedAt = 0;  // ... since when
     NoteModelContact();
     const uint8_t Now = ScreenStatusNow();
-    if ((Now == Told) && !evenIfUnchanged)
+    if (!Owed && (evenIfUnchanged || Now != Told))
+    {
+        Owed = true;
+        OwedAt = millis();
+    }
+    if (!Owed)
         return;
-    if (NEXTION.availableForWrite() < 16)
+    // (B144: after the front page's once-a-second burst the port's buffer is nearly full, and the once-a-second word was
+    //  left out every second - see RxUpdate.h TellScreenRx. A word waits for room, at the next 50 ms call; after 200 ms it
+    //  goes anyway: the write waits a fraction of a millisecond.)
+    if (NEXTION.availableForWrite() < 16 && millis() - OwedAt < 200)
         return;
     char b[20];
     snprintf(b, sizeof(b), "ldrcst=%u\xFF\xFF\xFF", (unsigned)Now);
     NEXTION.write((const uint8_t *)b, strlen(b));
     Told = Now;
+    Owed = false;
 }
+// TELLSCREEN-LOGIC-END
 
 #endif

@@ -256,11 +256,36 @@ void RxUpdateTick()
 
 // Once a second: "ldrcrx=phase,why,outcome,<release hex>,<wanted hex>,<seconds left of the quiet>", whenever a model
 // is connected or an update is on its way. The screen's Check for update reads the release number from this.
+// B144 (Malcolm, 22 Oct 2026, Mehul's RAW 420: "The transmitter did not answer ... older than B11"): the line came right
+// after the front page's once-a-second burst (on a Rotorflight model the ESC box: "vis Warning,1" and its text, every
+// second), which leaves the port's 64-byte buffer nearly full; the line was then left out - every second, the same way,
+// for as long as the front page showed. The screen restarts before a receiver's check and puts the front page back, so
+// two seconds after that nothing more was heard, and the order went unanswered. The bench receiver has no flight
+// controller, hence no ESC box and no burst: it never showed there. Now a line left out is OWED: the 50 ms tick sends it
+// once the port has room for it, and after 200 ms it goes anyway (the write waits well under a millisecond).
+// RXLINE-LOGIC-BEGIN (dev/test_rxline: compiled on the Mac with stubs round it)
+static bool RxLineOwed = false;
+static uint32_t RxLineOwedAt = 0;
+void TellScreenRxNow(bool evenIfBusy);
 void TellScreenRx()
+{
+    RxLineOwed = true;
+    RxLineOwedAt = millis();
+    TellScreenRxNow(false);
+}
+void TellScreenRxTick() // every 50 ms (ManageTransmitter)
+{
+    if (RxLineOwed)
+        TellScreenRxNow(millis() - RxLineOwedAt >= 200);
+}
+void TellScreenRxNow(bool evenIfBusy)
 {
     CRUMB(CRUMB_TELLSCREEN);
     if (RxUpdPhaseNow == RXUP_IDLE && !(BoundFlag && ModelMatched) && !RxReleaseCode)
+    {
+        RxLineOwed = false;
         return;
+    }
     uint32_t left = 0;
     if (RxUpdPhaseNow == RXUP_QUIET)
     {
@@ -277,12 +302,15 @@ void TellScreenRx()
     char b[64];
     snprintf(b, sizeof(b), "ldrcrx=%u,%u,%u,%lX,%lX,%lu,%u\xFF\xFF\xFF", (unsigned)RxUpdPhaseNow, (unsigned)RxUpdWhyNow,
              (unsigned)RxUpdOutcomeNow, (unsigned long)code, (unsigned long)RxUpdWantedCode, (unsigned long)left, flags);
-    // The port's outgoing buffer holds 40 bytes (Teensy 4.1 Serial: SERIAL2_TX_BUFFER_SIZE), and the line is up to
-    // 35: B11 asked for 64 free and so never sent a word (found on the bench, 30-9-2026). Only a buffer that is
-    // still busy with something else is left alone; the write itself waits a few hundred microseconds at most.
-    if (NEXTION.availableForWrite() < 8)
-        return;
-    NEXTION.write((const uint8_t *)b, strlen(b));
+    // The screen's port (Serial1) buffers 64 bytes and the line is up to 35. B11 asked for more room than the buffer had
+    // and so never sent a word (found on the bench, 30-9-2026); B13-B143 left the line out whenever fewer than 8 bytes
+    // were free, which after the front page's burst was every time (B144, above). Now: sent when it fits, else owed.
+    const int n = (int)strlen(b);
+    if (!evenIfBusy && NEXTION.availableForWrite() < n)
+        return; // (still owed: the next tick)
+    NEXTION.write((const uint8_t *)b, n);
+    RxLineOwed = false;
 }
+// RXLINE-LOGIC-END
 
 #endif

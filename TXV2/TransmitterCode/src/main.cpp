@@ -5429,6 +5429,7 @@ void FASTRUN ManageTransmitter()
         GetBank(); // Check switch positions 20 times a second
         TellScreen(false); // V1B: ... and at once when any of it changes
         RxUpdateTick();    // V1B: a receiver update through the transmitter (RxUpdate.h)
+        TellScreenRxTick(); // B144: the receiver's line, when the once-a-second one found the port busy
         if (LedIsBlinking && LedWasRed)
             RedLedOn();
         PipeModelGoneTick(); // B90: the model gone, a page's read of the receiver left unanswered: the backup file answers it
