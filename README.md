@@ -3,7 +3,7 @@
 **A free, open-source radio control system for model aircraft. You build it yourself: a 16-channel transmitter, a receiver and a phone app.**
 
 <p align="center">
-  <img src="docs/images/tx-screens-tour.png" width="900" alt="Nine screens of the Version 2 transmitter: the front page during a flight, a flight screen with big numbers, the Rotorflight menu, PIDs, the governor, an in-flight adjustment, the black box, the WiFi page and an update offer">
+  <img src="docs/images/tx-screens-tour.png" width="900" alt="Nine screens of the Version 2 transmitter: the front page during a flight, a defined front screen with round dials, the Rotorflight menu, PIDs, the governor, a knob on Switches and knobs, the black box, WiFi and an update offer">
 </p>
 <p align="center"><sub>Nine of the transmitter's screens, drawn by its own code. The numbers are sample values.</sub></p>
 
@@ -95,7 +95,7 @@ We checked the makers' own documents in October 2026. "We know of no other" mean
 <!-- TODO Malcolm: compare.md notes the Battery, Black box and Calibrate pages on the transmitter (B88) had not been tried on hardware on 10 Oct. Confirm before the site calls them proven. -->
 
 <p align="center">
-  <img src="docs/images/tx-rotorflight-six.png" width="900" alt="Six Rotorflight pages on the transmitter: the options menu with Ready to arm, PIDs, rates, the governor, an in-flight adjustment on a switch, and Rotorflight's command line">
+  <img src="docs/images/tx-rotorflight-six.png" width="900" alt="Six Rotorflight pages on the transmitter: the menu with Ready to arm, PIDs, rates, the governor, a switch on Switches and knobs, and Rotorflight's command line">
 </p>
 <p align="center"><sub>Rotorflight set-up on the transmitter itself. It needs a Version 2 receiver.</sub></p>
 
@@ -108,9 +108,10 @@ Other systems have most of these too.
 - **One-button updates from the internet** for the whole transmitter. It can update the receiver too.
 - **Updates that protect your models**: a firmware that would read your models differently is refused, and the old one comes back by itself.
 - **The link in detail**: packets a second, lost packets, longest gap, swaps between the receiver's radios, and a scan of the 2.4 GHz band for interference.
-- **Your own flight screens**: six designs of up to nine boxes, and twelve colour themes.
+- **Your own flight screens**: six designs of up to nine boxes, in big digits or round dials with amber and red zones, and twelve colour themes.
+- **Four banks or six** (flight modes), as Rotorflight has six. The phone app follows the transmitter's count.
 - **Curves of 3, 5, 7 or 9 points** for every channel in every bank, straight, smoothed or exponential; every point keeps its height when you change the count. **Eight three-position switches**, any of them doing any job; the four on the front can be knobs.
-- **Help on every page**, on the transmitter itself.
+- **Help on every page**, on the transmitter itself, each with an **animation**: a short film of the page in use, with a spoken voice. Ten more, under **Fix problems**, cure common helicopter problems.
 - **Spoken messages**, log files, model pictures sent from your phone, and Pong for rainy days.
 - **Safety first: nothing changes in flight.** No transmitter update, file transfer or restart starts while a model is connected. A receiver update runs only with the safety on, and the receiver refuses while armed. WiFi and Bluetooth switch off whenever the model could fly.
 
@@ -167,7 +168,7 @@ Prices are approximate retail prices in October 2026. LDRC prices are for parts 
 | Updates the receiver through the transmitter | **Yes** | Partly: the receiver's own WiFi page | **Yes** | ? | **Yes** |
 | Help on every page, on the radio | **Yes** | Not found: online manual | ? | ? | **Yes**: a (?) on every setting |
 | Scripts and add-on apps | No, by choice | **Yes**: Lua | **Yes**: Lua | **Yes**: apps on iX20 | **Yes**: app store |
-| Mixer depth | 16 channels, 4 flight modes, 32 mixes | Much deeper | Deep | Deep | Made for helicopters |
+| Mixer depth | 16 channels, 4 or 6 flight modes, 32 mixes | Much deeper | Deep | Deep | Made for helicopters |
 | Curve points per channel | 3, 5, 7 or 9, every point remembered | Up to 17 | ? | ? | ? |
 | Any switch, any job | **Yes**: 8 three-position switches, the front four can be knobs | **Yes** | **Yes** | **Yes** | **Yes** |
 
@@ -176,7 +177,7 @@ Prices are approximate retail prices in October 2026. LDRC prices are for parts 
 | | LDRC V2 | EdgeTX + ExpressLRS | FrSky Ethos | Spektrum | Mikado VBar Control |
 |---|---|---|---|---|---|
 | Rotorflight telemetry on the transmitter | **Yes** | **Yes** | **Yes** | Partly | **Yes**, for VBar units |
-| Rotorflight set-up from the transmitter | **Yes**: PIDs, rates, governor, rescue, servos, mixer, filters, adjustments, switches, copy a bank, battery, black box | **Yes**: PIDs, rates, governor, rescue, servos, mixer, filters, battery, ESCs of 8 makes (Rotorflight's Lua scripts) | **Yes, and wider**: over 80 pages, ESC tools | Not found | **Yes**, for VBar units |
+| Rotorflight set-up from the transmitter | **Yes**: Easy tuning, PIDs, rates, governor, rescue, servos, travel extents, filters, switches and knobs, copy a bank, battery, black box, first-time basics | **Yes**: PIDs, rates, governor, rescue, servos, mixer, filters, battery, ESCs of 8 makes (Rotorflight's Lua scripts) | **Yes, and wider**: over 80 pages, ESC tools | Not found | **Yes**, for VBar units |
 | Back up Rotorflight on the transmitter, restore exactly | **Yes**: every bank; not ports, LED, GPS or ESC | Not in the Rotorflight scripts | No | n/a | A separate app, for VBar |
 | Edit with the model switched off, send later | **Yes** | Not found | Not found | n/a | Not found |
 | Phone app for Rotorflight on iPhone and Android | **Yes**, free | Partly: Rotorflight's configurator on Android (app, or Chrome at cfg.rotorflight.org), by USB cable; no iPhone app | as EdgeTX | n/a (an app for its own flybarless units) | n/a (set-up is on the radio) |
@@ -218,7 +219,7 @@ Prices are approximate retail prices in October 2026. LDRC prices are for parts 
 - **1, 2 or 3 radios** in a receiver, with automatic switching.
 - **Outputs:** CRSF (250 frames a second by default), SBUS, IBUS, PPM.
 - **Measured on the first Version 2 flight** (Goblin RAW 420, 5 October 2026): 491 packets a second on average, 0.21 % of packets lost, longest gap 15 ms.
-- **90 model memories**, backups as many as the card holds, 4 banks (flight modes) per model, 32 mixes, 3 rates, 8 macros, help on every page (60 help texts).
+- **90 model memories**, backups as many as the card holds, 4 or 6 banks (flight modes) per model, 32 mixes, 3 rates, 8 macros, help on every page (66 help pages, each with an animation).
 
 <!-- TODO Malcolm: 90 memories: the code (MAXMODELNUMBER 91: the Models page, automatic model selection and the buddy match run 1-90) and MODELS.TXT say 90. Only the Check IDs page (Model_IDs.h) scans 1-89: please check memory 90 shows there. -->
 

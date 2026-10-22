@@ -1,6 +1,6 @@
 # The Version 2 transmitter's screen
 
-<img src="../docs/images/tx-defined-screen-9-boxes.png" width="600" alt="A flight screen with nine boxes: timer 4:07, flight battery 3.91 volts a cell, head speed 2150 RPM, link 97 per cent, ESC temperature 52 degrees, capacity used 345 mAh, current 12.4 amps, transmitter battery and bank">
+<img src="../docs/images/tx-defined-screen-9-boxes.png" width="600" alt="A flight screen with nine boxes: timer 4:07, both batteries at 3.91 and 4.05 volts a cell, head speed and ESC temperature as round dials, link 97 per cent, capacity used 345 mAh, current 12.4 A, the clock and the bank">
 
 <sub>A flight screen of your own: up to nine boxes, six designs on tabs. Drawn by this firmware's own code. Sample values.</sub>
 
@@ -9,7 +9,7 @@
 - **What the panel is:** an ESP32-S3 (WROOM-1-N4R8: 4 MB flash, 8 MB PSRAM), a 5-inch 800 × 480 display, GT911 touch, WiFi, Bluetooth, an NS4168 speaker amplifier, a microSD slot and a serial port on the back.
 - **Buy the N4R8 version.** Not Elecrow's 16 MB 5-inch IPS panel: its pins differ, and this firmware would show a black screen.
 - **What the firmware does:** it pretends to be the Nextion display that Version 1 used. The Teensy 4.1 sends the same display commands it always has (921,600 baud). The screen draws the transmitter's 76 pages from their definitions on its card, and answers with exactly the bytes a Nextion would.
-- **On top of that it has pages of its own:** updates from the internet, WiFi, themes, flight screens, the picture chooser, Rotorflight's command line, and Pong.
+- **On top of that it has pages of its own:** updates from the internet, WiFi, themes, flight screens with round dials, the picture chooser, Rotorflight's command line, the help pages' animations, and Pong.
 - **It is also the Bluetooth link to the receiver.** All Rotorflight editing on the transmitter goes over it, not over the flying link.
 - **Building a transmitter?** Start with [../TXV2/README.md](../TXV2/README.md) and [Build one](https://messiter.com/ldrc/build.html).
 

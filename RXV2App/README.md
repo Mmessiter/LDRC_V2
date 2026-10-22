@@ -16,7 +16,7 @@
 ## What it does
 
 - **Connect:** finds receivers and dongles nearby and shows their signal. One phone at a time per receiver.
-- **The receiver's own pages**, carried over Bluetooth: wizards, PIDs, rates, governor, rescue, servos, filters, black box, backups, simulator controls.
+- **The receiver's own pages**, carried over Bluetooth: wizards, PIDs, rates, governor, rescue, servos, filters, switches and knobs, black box, backups, simulator controls. With a Version 2 transmitter, the bank pages follow the transmitter's bank count.
 - **Reviews:** a recording of each model, made at every connection, to look through indoors with everything off. Edits made there are offered as *Send to model* at the next connection.
 - **Backups:** the whole Rotorflight set-up of each model, kept on the phone.
 - **Demos:** the whole app on made-up data, as a receiver, a dongle or a simulator interface.

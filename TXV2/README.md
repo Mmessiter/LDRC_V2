@@ -23,7 +23,7 @@
 
 **Flying**
 - 16 channels. Any stick, switch or knob can drive any channel.
-- 4 banks (flight modes), each with its own curves, trims and mixes.
+- 4 banks (flight modes), or 6 with **Six banks** on (Model options), each with its own curves, trims and mixes. With a Version 2 receiver, the phone app follows the transmitter's count.
 - Curves of 3, 5, 7 or 9 points for every channel in every bank (every point keeps its height when you change the count), 3 rates, 32 mixes, 8 timed macros, servo speed, subtrim, reverse, failsafe.
 - **Eight switches, any job:** banks, motor, safety, rates, buddy, or the input of any channel 5–16.
 - **Wireless buddy box** with no extra hardware, and a "nudge" mode for the instructor.
@@ -35,16 +35,21 @@
 - **Send a model memory to another transmitter** over the radio link. A Version 1 transmitter can send its models to a Version 2 over the air (tested), and two Version 2s swap them.
 
 **The screen**
-- **Your own flight screens:** six designs on tabs, each with up to nine boxes of big numbers.
+- **Your own flight screens:** six designs on tabs, each with up to nine boxes of big numbers or round dials, with amber and red zones.
 - **Twelve colour themes**, each one editable.
 - **Model pictures** sent from your phone by scanning a QR code.
-- **Help on every page**, spoken messages, log files, and Pong for rainy days.
+- **Help on every page**, each with an **animation** of the page in use, and ten more under **Fix problems**; spoken messages, log files, and Pong for rainy days.
+
+<img src="../docs/images/tx-defined-screen-dials.png" width="600" alt="A defined front screen of six round dials: the timer with hands, both batteries, head speed with a red zone from 2400 RPM, the link, ESC temperature, and capacity used with a red zone from 4000 mAh">
+
+<sub>A flight screen of round dials, each with its amber and red zones. Sample values.</sub>
+
 
 **Rotorflight on the transmitter** (needs a Version 2 receiver)
-- PIDs, rates, governor, rescue, servos, mixer, gyro filters, switches, copy a bank, battery, black box, calibrate.
+- Easy tuning, PIDs, rates, governor, rescue, servos, travel extents, filters, switches and knobs, copy a bank, battery, black box, calibrate, first-time basics.
 - **Back up the Rotorflight tune and set-up**, every bank, to the card, and put it back exactly. Ports, LED, GPS and ESC settings are not included.
 - **Edit with the model switched off.** The changes go across when it next connects.
-- With the receiver's USB cable to the flight controller: setting up in-flight adjustments (they then work without the cable), Rotorflight's command line, and the whole set-up saved to the card as text (Rotorflight's `diff all`).
+- With the receiver's USB cable to the flight controller: setting up the selectors and knobs on Switches and knobs (they then work without the cable), Rotorflight's command line, and the whole set-up saved to the card as text (Rotorflight's `diff all`).
 - The settings travel over Bluetooth from the screen to the receiver, never over the flying link, and only while the model is disarmed.
 
 <!-- TODO Malcolm: compare.md says Battery, Black box and Calibrate (B88) were not yet tried on hardware on 10 Oct. Confirm before release notes call them proven. -->
@@ -58,7 +63,7 @@
 - **The receiver can be updated through the transmitter.**
 - Nothing changes in flight. No transmitter update, file transfer or restart starts while a model is connected. A receiver update runs only with the safety on, and the receiver refuses while armed. WiFi and Bluetooth switch off whenever the model could fly.
 
-<img src="../docs/images/tx-rotorflight-six.png" width="900" alt="Six Rotorflight pages on the transmitter: the options menu with Ready to arm, PIDs, rates, the governor, an in-flight adjustment on a switch, and Rotorflight's command line">
+<img src="../docs/images/tx-rotorflight-six.png" width="900" alt="Six Rotorflight pages on the transmitter: the menu with Ready to arm, PIDs, rates, the governor, a switch on Switches and knobs, and Rotorflight's command line">
 
 <sub>Rotorflight set-up on the transmitter. Sample values.</sub>
 
@@ -72,7 +77,7 @@
 |---|---|
 | `TransmitterCode/` | The Teensy 4.1 firmware (PlatformIO). `include/` holds nearly all of it, one header per subject. `src/main.cpp` is set-up and the main loop |
 | `TransmitterCode/SD Examples/Teensy SD Example/` | What goes on the Teensy's microSD card |
-| `Help files for SD/` | The help texts (60): one for each page, and two kept for reference |
+| `Help files for SD/` | The help texts (68): one for each of the 66 help pages, and two kept for reference |
 | `Noises/` | The sounds: voice messages, prompts and sound effects |
 | `Circuits/` | The circuit boards as Proteus projects, with Gerbers in the `CADCAM` folders. `Transmitter - CADCAM` is the transmitter's main board. The `Receiver` and `SensorHub` folders are Version 1's receiver boards |
 | `STL files/` | The printed case. `STL files/V2/` holds the Version 2 parts. The rest are the Version 1 parts that Version 2 shares. STEP sources in `STL files/STEP files/` |

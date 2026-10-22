@@ -17,7 +17,7 @@
 
 - **Drives a flight controller** on one wire: **CRSF** (the default, 250 frames a second), **SBUS**, **IBUS** or **PPM**.
 - **Sends Rotorflight telemetry** to the transmitter: flight-battery volts, current, capacity used, head speed, ESC temperature.
-- **Sets up Rotorflight** from the phone app (Bluetooth) or any browser (its own WiFi): wizards for a new helicopter and for tuning, PIDs, rates, governor, rescue, servos, filters, six banks, backups, flight recordings, a black box check.
+- **Sets up Rotorflight** from the phone app (Bluetooth) or any browser (its own WiFi): wizards for a new helicopter and for tuning, PIDs, rates, governor, rescue, servos, filters, switches and knobs, six banks (following a Version 2 transmitter's bank count), backups, flight recordings, a black box check.
 - **Lets a Version 2 transmitter edit Rotorflight** too, over Bluetooth.
 - **With a short USB-C cable to the flight controller** it can do almost everything Rotorflight's configurator does. Only flashing Rotorflight itself needs a computer. That includes the command line, in-flight adjustments, ports, and reading the black box.
   <!-- TODO Malcolm: confirm the app covers every Configurator 2.3.0 tab before saying "everything". -->
