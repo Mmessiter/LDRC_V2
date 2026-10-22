@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B142 21/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B143 22/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1222,6 +1222,7 @@ void PipeFlush();                             // B71: the words waiting, in the 
 bool RfLive();                                // B71: live values - the flight controller's or the backup file's - not the model file's copies
 void RfPipeBack();                            // B80: the pipe is back: a page left unread reads its block
 void FcBankTick();                            // B82: the flight controller's bank beside the transmitter's
+void BankSyncTick();                          // B143: BankSync.h - the bank count told to the receiver over the pipe, and the warning when its selector differs
 extern bool PipeReadRefused;
 void PipeOn();                                // B41: ask the screen to join the model's receiver
 void PipeOff();

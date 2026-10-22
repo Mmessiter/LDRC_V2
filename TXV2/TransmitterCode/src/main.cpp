@@ -175,6 +175,7 @@
 #include "RF_PID_Advanced.h"
 #include "RF_Save_Restore.h"
 #include "RF_Backup.h" // B70: backup and restore of everything over the pipe, and the file as the FC's stand-in offline
+#include "BankSync.h"  // B143: the bank count told to the receiver over the pipe (after RF_Backup.h: its page-of-view for the warning)
 #include "SDFiles.h"
 #include "ChooseImage.h"
 #include "Calibrate.h"
@@ -5431,6 +5432,7 @@ void FASTRUN ManageTransmitter()
         if (LedIsBlinking && LedWasRed)
             RedLedOn();
         PipeModelGoneTick(); // B90: the model gone, a page's read of the receiver left unanswered: the backup file answers it
+        BankSyncTick();      // B143: the bank count told to the receiver, and the warning when the flight controller's selector differs
 
         if (CurrentView >= PIDVIEW && CurrentView <= RFGOVERNORVIEW_GLOBAL)
         {

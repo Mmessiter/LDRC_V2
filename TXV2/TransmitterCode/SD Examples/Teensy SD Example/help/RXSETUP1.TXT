@@ -38,6 +38,13 @@ For Rotorflight to follow banks 5 and 6, the bank line's|
 channel needs a height of its own in each bank (its curve, on|
 'Model setup'), and the bank selector six positions: see|
 'In-flight adjustments' and the phone app's 'Switches' page.||
+The receiver and the phone app follow this switch: whenever|
+the transmitter and the receiver connect, the transmitter|
+says how many banks the model has; the app's pages show that|
+many, and its bank selector is set to match. If the flight|
+controller's bank selector has another number of positions,|
+the transmitter says so, and so does the app: with the USB|
+cable, open the switches page and Save the bank line.||
 TIMER:|
 The timer runs while the motor is on, and pauses when it is off.|
 Timer counts down: on, the timer counts down from|

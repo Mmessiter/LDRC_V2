@@ -13,6 +13,7 @@ static int PipeRepId = -1;           // the reply in hand is to this request (-1
 static int PipeRepCode = 0;          // its HTTP code (0 = the screen could not ask: not joined, no answer)
 static char PipeRepBody[1600];       // its body
 static uint32_t PipeReqSentMs = 0;
+static uint32_t PipeRepMs = 0;       // B143: when the reply in hand came (BankSync.h waits for a page to have read its answer)
 
 int PipeRequest(const char *path)
 {
@@ -44,6 +45,7 @@ void PipeReplyFromScreen(const char *text) // "<id> <code> <body>" (up to the li
     PipeRepBody[n] = 0;
     PipeRepCode = (int)code;
     PipeRepId = (int)id;
+    PipeRepMs = millis();
 }
 // A Rotorflight request: fn, and the bytes to send with it (none for a read).
 bool BakOffline();                                                  // RF_Backup.h (B70): no model, but this model's backup file
