@@ -337,4 +337,19 @@ with tempfile.TemporaryDirectory() as d:
     if r.returncode: print(r.stdout[-3000:], r.stderr[-4000:]); sys.exit('does not compile')
     r = subprocess.run([exe], capture_output=True, text=True)
     print(r.stdout.strip()); print(r.stderr.strip()[-2000:])
-    sys.exit(r.returncode)
+    # (1.11.109) Every way a help page is opened names its subject, so the help page shows its Animation: the script runner
+    # itself notes a help script (main.cpp runScript), and every help script of the screen's own pages goes through it. In
+    # 1.11.108 the Help buttons of Appearance, Themes, the design page and the defined front screen ran their scripts with
+    # nothing noted, and their help pages had no Animation (Malcolm, 22 Oct).
+    import re, glob
+    bad = 0
+    main = open(os.path.join(ROOT, 'src', 'main.cpp')).read()
+    m = re.search(r'\nstatic void runScript\(const std::string &code, const std::string &self\) \{\n(.*?)\n    NextionScript sc', main, re.S)
+    if not (m and re.search(r'code\.find\("HelpView:"\)[^\n]*filmNoteHelp\(code\)', m.group(1))):
+        print('FAIL: runScript does not note a help script (filmNoteHelp) before it runs it'); bad += 1
+    for p in sorted(glob.glob(os.path.join(ROOT, 'src', '*.h')) + [os.path.join(ROOT, 'src', 'main.cpp')]):
+        for n, line in enumerate(open(p).read().splitlines(), 1):
+            if 'HelpView:' in line and '"print \\"HelpView:' in line and 'runScript(' not in line:
+                print('FAIL: %s:%d opens a help page without runScript (its Animation would not show)' % (os.path.basename(p), n)); bad += 1
+    print('help scripts: %s' % ('every one noted for its Animation' if not bad else '%d FAILED' % bad))
+    sys.exit(r.returncode or (1 if bad else 0))

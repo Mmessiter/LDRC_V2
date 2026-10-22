@@ -24,7 +24,7 @@ You choose on the front screens themselves:|
 'Original screen' on yours brings the original back.|
 The choice stays through take-offs, landings and switching off,|
 until you press the other button.||
-'Help' opens this page; its 'Films' button plays the animation.|
+'Help' opens this page; 'Animation', top left, plays its film.|
 'OK' goes back to Transmitter setup.||
 While the safety is off, the 'Appearance', 'Themes' and design|
 pages close, and will not open.|

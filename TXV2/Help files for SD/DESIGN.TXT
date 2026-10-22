@@ -45,7 +45,7 @@ put what matters most there.||
 'Stays lit: yes' stops the screen going dark while your front|
 screen shows and a model is connected (or you are flying).|
 Changes are kept as you make them. 'OK' closes the design page.|
-'Help' opens this page; its 'Films' button plays the animation.||
+'Help' opens this page; 'Animation', top left, plays its film.||
 WHICH FRONT SCREEN SHOWS:|
 You choose on the front screens themselves:|
 'Defined screens' on the original brings yours;|

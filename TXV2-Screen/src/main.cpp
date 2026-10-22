@@ -42,7 +42,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.108"
+#define SCREEN_VERSION "1.11.109"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1368,8 +1368,15 @@ struct Host : public NextionHost {
 };
 static Host host;
 static void flushOut() { if (!outBuf.empty()) { Serial.write((const uint8_t *) outBuf.data(), outBuf.size()); outBuf.clear(); } }
+static void filmNoteHelp(const std::string &script);           // (src/film_device.h)
 static void runScript(const std::string &code, const std::string &self) {
     if (code.empty()) return;
+    // (1.11.109) A help page asked for, from wherever: its subject, so that the help page shows its Animation button. Until
+    // now only a main board page's Help button was noted (at its lift), and the Help buttons of the screen's own pages -
+    // Appearance, Themes, the design page, the defined front screen - opened their help with no Animation (Malcolm, 22 Oct:
+    // "The help is there but I could not find the animations buttons yet"). Every page's help script is on a Help button's
+    // release (68 of them, checked), so a script with HelpView: in it is a Help tap.
+    if (code.find("HelpView:") != std::string::npos) filmNoteHelp(code);
     NextionScript sc(host, page.name);
     scriptDepth++;
     sc.run(code, self);
@@ -2084,8 +2091,7 @@ static void pollTouch() {
             const int key = c.key, cid = c.id, idx = held; const std::string pgName = page.name, evRel = c.evRelease, nm = c.name;
             const bool combo = c.type == "combobox";
             if (evRel.find("=44<<8") != std::string::npos) picSoon();   // the Teensy's StartChooseImage: the chooser's frame now, its page in a moment
-            if (evRel.find("HelpView:") != std::string::npos) filmNoteHelp(evRel);   // (1.11.85) a Help button: its subject, for the help page's Film
-            runScript(evRel, nm);                             // (may load another page: c is not touched after this)
+            runScript(evRel, nm);                             // (may load another page: c is not touched after this; 1.11.109: a Help button's subject is noted there, for the help page's Animation)
             if (page.name == pgName) {
                 if (key != 255) openKeyboard(key, cid);
                 else if (combo && idx < (int) page.comps.size()) { Comp &cb = page.comps[idx]; if (cb.open) closeCombo(cb); else { cb.open = true; redraw(cb); } }

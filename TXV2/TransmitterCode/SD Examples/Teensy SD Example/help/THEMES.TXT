@@ -18,7 +18,7 @@ The sample shows the theme as it will look.|
 'Defaults' puts all twelve back as they came.|
 'OK' takes you back to Themes. Press 'OK' there as well, to keep|
 the new colours. 'Cancel', on either page, forgets them.||
-'Help' opens this page; its 'Films' button plays the animation.|
+'Help' opens this page; 'Animation', top left, plays its film.|
 Coming back from Help, the Themes page opens again, with the|
 screens' theme as it was: touch your theme again.||
 While the safety is off, this page closes, and will not open.|
