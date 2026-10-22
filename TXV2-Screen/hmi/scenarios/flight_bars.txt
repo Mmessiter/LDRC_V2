@@ -50,3 +50,10 @@ page FrontView
 page FrontView
 @flight f1 w1 b9 s1 timer,rxbat,rpm,link,bars8,mah,bars16,txbat,bank
 @shot bars_9
+page FrontView
+@flight f2 w1 one s1 bars16
+@shot bars_one
+@flight f2 w1 big4 s1 bars8,timer,bars16,link,esc
+@shot bars_big4
+@flightsetup f2 w1 grid6 s1 timer,batts,bars8,link,esc,bars16
+@shot bars_setup
