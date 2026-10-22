@@ -23,6 +23,9 @@ prog = r'''
 #define FRONTVIEW 0
 #define PIDVIEW 45
 #define RFGOVERNORVIEW_GLOBAL 55
+#define ROTORFLIGHTVIEW 47
+#define RFBACKUP_RESTOREVIEW 53
+#define RFGOVERNORVIEW_PROFILE 54
 #define WHAHWHAHMSG 25
 static uint32_t now = 100000;
 static uint32_t millis() { return now; }
@@ -43,6 +46,9 @@ static void LogText(char *t, uint16_t, bool) { logs.push_back(t); }
 static void PlaySound(uint16_t) { ++sounds; }
 static void MsgBox(char *goback, char *prompt) { boxes.push_back(std::string(goback) + " | " + prompt); }
 static const char *BakPageOf(uint8_t) { return "page RFView"; }
+static int repaints = 0; static char ModelName[] = "Havok";
+static void ShowPipeState() { ++repaints; } static void ShowRFBank() {} static void ShowRFRate() {}
+static void SendText(char *, char *) {}
 ''' + logic + r'''
 static int checks = 0, failures = 0;
 #define CHECK(c, what) do { ++checks; if (!(c)) { ++failures; printf("   FAIL: %s\n", what); } } while (0)
@@ -65,17 +71,24 @@ int main()
     tick(200); CHECK(sent.size() == 2 && sent[1] == "/api/tx/banks?n=6&rates=0", "told six");
     Reply(PipeReqId, 200, "{\"ok\":true,\"tx\":6,\"rates_follow\":false,\"selector\":4,\"rates_selector\":0,\"pid\":6,\"rate\":6}");
     tick(100);
-    CHECK(boxes.size() == 1 && boxes[0].find("page FrontView") == 0 && boxes[0].find("has 4 positions; this model has 6") != std::string::npos, "the warning, back to the front view");
+    CHECK(boxes.empty(), "B145: not on the front view (the pipe is let go there)");
+    CurrentView = ROTORFLIGHTVIEW; tick(100);
+    CHECK(boxes.size() == 1 && boxes[0].find("page RFView") == 0 && boxes[0].find("has 4 positions; this model has 6") != std::string::npos, "the warning on the Rotorflight menu, back to it");
+    CHECK(repaints == 1, "the menu's words drawn again after the box");
     CHECK(logs.size() == 1 && logs[0].find("6 banks") != std::string::npos && logs[0].find("4 positions") != std::string::npos, "logged");
     CHECK(sounds == 1, "the sound");
     tick(30000); CHECK(boxes.size() == 1 && sent.size() == 2, "said once");
-    printf("- the warning waits for the motor to be off, a page it can be shown on, and no other question\n");
+    printf("- the warning waits for the motor to be off, the menu (never a page reading its block: B145), and no other question - all within five seconds of the answer\n");
     Banks = 4; MotorEnabled = true; tick(2000); CHECK(sent.size() == 3 && sent[2] == "/api/tx/banks?n=4&rates=0", "told four again");
     Reply(PipeReqId, 200, "{\"ok\":true,\"tx\":4,\"selector\":6}"); tick(1000); CHECK(boxes.size() == 1, "not with the motor on");
-    MotorEnabled = false; CurrentView = 10; tick(1000); CHECK(boxes.size() == 1, "not on another page");
-    CurrentView = 50; ModalWaits = 1; tick(1000); CHECK(boxes.size() == 1, "not over another question");
-    ModalWaits = 0; tick(100); CHECK(boxes.size() == 2 && boxes[1].find("page RFView") == 0 && boxes[1].find("has 6 positions; this model has 4") != std::string::npos, "on a Rotorflight page, back to it");
-    CurrentView = FRONTVIEW;
+    MotorEnabled = false; CurrentView = 10; tick(500); CHECK(boxes.size() == 1, "not on another page");
+    CurrentView = RFGOVERNORVIEW_PROFILE; tick(500); CHECK(boxes.size() == 1, "B145: not over the governor page (its read would be lost)");
+    CurrentView = RFGOVERNORVIEW_GLOBAL; tick(500); CHECK(boxes.size() == 1, "B145: not over the governor settings page");
+    CurrentView = PIDVIEW; tick(500); CHECK(boxes.size() == 1, "B145: not over the PIDs page");
+    CurrentView = RFBACKUP_RESTOREVIEW; tick(500); CHECK(boxes.size() == 1, "B145: not over the backup page");
+    CurrentView = 50; tick(500); CHECK(boxes.size() == 1, "B145: not over a bank picker");
+    CurrentView = ROTORFLIGHTVIEW; ModalWaits = 1; tick(500); CHECK(boxes.size() == 1, "not over another question");
+    ModalWaits = 0; tick(100); CHECK(boxes.size() == 2 && boxes[1].find("page RFView") == 0 && boxes[1].find("has 6 positions; this model has 4") != std::string::npos, "on the Rotorflight menu, back to it");
     printf("- an older receiver (404): told nothing more that session\n");
     pipeDownUp(); tick(2000); CHECK(sent.size() == 4, "told afresh after the pipe came back");
     Reply(PipeReqId, 404, "not found"); tick(30000); CHECK(sent.size() == 4 && boxes.size() == 2, "no retry, no warning");
@@ -97,8 +110,18 @@ int main()
     printf("- the pipe down and up again: told afresh\n");
     pipeDownUp(); tick(2000); CHECK(sent.size() == 14, "told after the pipe came back");
     Reply(PipeReqId, 200, OK6); tick(500); CHECK(boxes.size() == 3 && boxes[2].find("has 6 positions; this model has 4") != std::string::npos, "a six-position line with four banks: warned");
+    printf("- B145: an answer that came while the pilot was elsewhere is asked again on the menu, not warned on\n");
+    { const size_t b0 = boxes.size(), s0 = sent.size();
+      CurrentView = 67; Banks = 6; tick(2000); CHECK(sent.size() == s0 + 1 && sent.back() == "/api/tx/banks?n=6&rates=1", "told six (on the Switches page)");
+      Reply(PipeReqId, 200, "{\"ok\":true,\"tx\":6,\"selector\":4}"); tick(10000); CHECK(boxes.size() == b0, "not on the Switches page");
+      CurrentView = ROTORFLIGHTVIEW; tick(100); CHECK(boxes.size() == b0, "back on the menu ten seconds later: the old answer is not warned on");
+      tick(1500); CHECK(sent.size() == s0 + 2 && sent.back() == "/api/tx/banks?n=6&rates=1", "the receiver is asked again");
+      Reply(PipeReqId, 200, "{\"ok\":true,\"tx\":6,\"selector\":6}"); tick(1000); CHECK(boxes.size() == b0, "the line was put right meanwhile: no warning");
+      tick(30000); CHECK(sent.size() == s0 + 2 && boxes.size() == b0, "and nothing more");
+      CurrentView = 67; Banks = 4; tick(2000); Reply(PipeReqId, 200, "{\"ok\":true,\"tx\":4,\"selector\":6}"); tick(500);
+      CurrentView = ROTORFLIGHTVIEW; tick(100); CHECK(boxes.size() == b0 + 1 && boxes.back().find("has 6 positions; this model has 4") != std::string::npos, "a fresh answer (back within five seconds): warned at once"); }
     printf("- a reply without the selector (an unknown line): no warning\n");
-    Banks = 6; tick(2000); Reply(PipeReqId, 200, "{\"ok\":true,\"tx\":6,\"selector\":0}"); tick(500); CHECK(boxes.size() == 3, "selector 0 is unknown");
+    { const size_t b0 = boxes.size(); Banks = 6; tick(2000); Reply(PipeReqId, 200, "{\"ok\":true,\"tx\":6,\"selector\":0}"); tick(500); CHECK(boxes.size() == b0, "selector 0 is unknown"); }
     printf("\n%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }
