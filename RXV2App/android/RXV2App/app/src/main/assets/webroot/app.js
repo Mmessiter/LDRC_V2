@@ -535,11 +535,15 @@
             // THE TRANSMITTER DECIDES (0.9.904): a V2 transmitter tells the
             // receiver how many banks the model has (Model options, Six
             // banks: 4 or 6), and the pages follow it; the pilot's own cap is
-            // for a V1 transmitter, which says nothing. Rates follow the
-            // transmitter's count only when its rates follow its banks (a
-            // rates switch of its own may have three positions).
+            // for a V1 transmitter, which says nothing. The rates pages follow
+            // it too (0.9.906, Malcolm 22 Oct: "I set the transmitter to 4
+            // banks, but the app thinks it has 6 banks in some areas but not
+            // all"): once it has told its count the cap is no longer offered,
+            // so with the rates on a switch of their own (three positions at
+            // most) the rates pages showed all six. The bank the flight
+            // controller is on still shows, whatever its number (below).
             const tx = b.tx_banks | 0;
-            const told = (tx >= 2 && tx <= this.BANKS_MAX) && (kind !== 'rate' || !!b.tx_rates_follow);
+            const told = tx >= 2 && tx <= this.BANKS_MAX;
             if (told) { if (tx < n) n = tx; }
             else { const cap = b.shown | 0; if (cap >= 1 && cap < n) n = cap; }
             // Never hide the bank we are on — but never invent one either: a

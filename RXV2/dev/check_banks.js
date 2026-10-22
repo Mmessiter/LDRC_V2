@@ -34,12 +34,15 @@ t({pid:6,rate:6,shown:9},'pid',0,6,'junk cap ignored');
 t({pid:6,rate:6,shown:1},'pid',0,1,'cap 1');
 t({pid:6,rate:6,shown:6},'pid',0,6,'cap equals the real count');
 t({fcinfo:{pid_banks:6,rate_banks:6,banks_shown:3}},'pid',0,3,'whole state object accepted');
-// The transmitter's bank count (0.9.904): a V2 transmitter's word beats the pilot's cap; rates follow only when it says so
+// The transmitter's bank count (0.9.904): a V2 transmitter's word beats the pilot's cap; the rates pages follow it too (0.9.906)
 t({pid:6,rate:6,shown:2,tx_banks:6},'pid',0,6,'TX says 6: the cap of 2 is for a V1 transmitter');
 t({pid:6,rate:6,shown:0,tx_banks:4},'pid',0,4,'TX says 4 on a 6-bank FC');
 t({pid:3,rate:6,shown:0,tx_banks:6},'pid',0,3,'TX says 6, the FC has 3: never invent one');
 t({pid:6,rate:6,shown:0,tx_banks:4},'pid',5,6,'TX says 4 but the FC is on bank 6: never hide the bank we are on');
-t({pid:6,rate:6,shown:2,tx_banks:4},'rate',0,2,'rates keep the cap unless they follow the banks');
+t({pid:6,rate:6,shown:2,tx_banks:4},'rate',0,4,'rates follow the TX count too (0.9.906), not the old cap');
+t({pid:6,rate:6,shown:0,tx_banks:4},'rate',0,4,'TX says 4, its rates on a switch of their own: 4 rate banks, not 6 (Malcolm 22 Oct)');
+t({pid:6,rate:6,shown:0,tx_banks:4},'rate',5,6,'rates: the FC on rate bank 6 still shows');
+t({pid:6,rate:6,shown:2},'rate',0,2,'no word from the transmitter: rates keep the pilot cap (V1)');
 t({pid:6,rate:6,shown:2,tx_banks:4,tx_rates_follow:true},'rate',0,4,'rates follow the banks: the TX count');
 t({pid:6,rate:6,shown:2,tx_banks:9},'pid',0,2,'junk TX count ignored');
 t({fcinfo:{pid_banks:6,rate_banks:6,banks_shown:2,tx_banks:6}},'pid',0,6,'whole state object: tx_banks read');

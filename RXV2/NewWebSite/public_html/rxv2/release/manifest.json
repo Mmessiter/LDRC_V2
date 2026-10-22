@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.906-rates-follow-tx",
+      "url": "https://messiter.com/rxv2/release/v0.9.906/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.906/littlefs.bin",
+      "fs_md5": "162aafdda5213cb2dda9856a8cd56439",
+      "notes": "The transmitter's bank count, on every page: the rates pages follow it too (with a four-bank transmitter whose rates are on a switch of their own they showed six), and Copy a bank says why it still offers every bank (a spare bank is where a tune is parked)."
+    },
+    {
       "name": "RXV2-0.9.905-cli-arm-switch",
       "url": "https://messiter.com/rxv2/release/v0.9.905/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.905/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.895/littlefs.bin",
       "fs_md5": "d949b94d118c90444f618f88b7172a50",
       "notes": "Diff & execute on the phone (Rotorflight > Backup & restore, or A la carte): Diff to phone keeps every Rotorflight setting as text (diff all, as the transmitter's Diff to card); Execute sends a kept diff back to the model and saves. Needs the USB cable."
-    },
-    {
-      "name": "RXV2-0.9.894-easy-tuning-moved-only",
-      "url": "https://messiter.com/rxv2/release/v0.9.894/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.894/littlefs.bin",
-      "fs_md5": "5ef1b13d5d59b423aa528d39a76eca79",
-      "notes": "Easy tuning: a slider you do not move never changes its numbers (moving Cyclic used to round the tail's gains too, and the PID spool-up tick alone rewrote the start settings); a governor choice outside Rotorflight's lists is never written back."
     }
   ],
   "rotorflight": {

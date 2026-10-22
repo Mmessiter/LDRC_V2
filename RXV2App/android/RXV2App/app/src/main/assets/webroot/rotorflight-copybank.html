@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Copy a bank &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=404">
-<script src="/app.js?v=404" defer></script>
+<link rel=stylesheet href="/style.css?v=405">
+<script src="/app.js?v=405" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -219,10 +219,17 @@ async function init() {
         // all six banks").
         if (st.fcinfo && (st.fcinfo.pid_banks | 0) >= 1) BANKS = LDRC.bankMax(st, 'pid');
         // More banks here than on the tuning pages is deliberate, and looks
-        // like a fault unless it is said once.
-        const cap = (st.fcinfo || {}).banks_shown | 0;
-        if (cap >= 1 && cap < BANKS) {
-            const el = document.getElementById('parkNote');
+        // like a fault unless it is said once (0.9.906: also when the
+        // transmitter's count hides them - Malcolm, 22 Oct, a four-bank
+        // transmitter: "the app thinks it has 6 banks in some areas").
+        const cap = (st.fcinfo || {}).banks_shown | 0, tx = (st.fcinfo || {}).tx_banks | 0;
+        const el = document.getElementById('parkNote');
+        if (tx >= 2 && tx < BANKS) {
+            el.innerHTML = 'All ' + BANKS + ' banks are here. The transmitter uses banks 1 to ' + tx +
+                ', so ' + (tx + 1 === BANKS ? 'bank ' + BANKS + ' is' : 'banks ' + (tx + 1) + ' to ' + BANKS + ' are') +
+                ' spare &mdash; park a tune you want to keep there before an experiment.';
+            el.style.display = '';
+        } else if (!(tx >= 2) && cap >= 1 && cap < BANKS) {
             el.innerHTML = 'All ' + BANKS + ' banks are here, including the ' +
                 (BANKS - cap) + ' you have hidden on the tuning pages &mdash; ' +
                 'park a tune you want to keep in one of those before an experiment.';
@@ -378,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <p>Bank N is Rotorflight&rsquo;s PID profile N together with rate profile N &mdash; the same numbering the other pages use and the bank switch on your transmitter selects.</p>
 <h3>Parking a tune before an experiment</h3>
 <p>Copy the bank you are happy with into a bank you never fly &mdash; bank 6, say &mdash; before you start changing things. If the experiment goes badly, copy it back and you are exactly where you were. Quicker than a full restore, and it survives the flying session.</p>
-<p>This page shows <b>every</b> bank the flight controller has, even the ones you have hidden with <b>How many banks</b> on the Rotorflight page. That is on purpose: a bank you never fly is the best place to park, and parking would be useless if you could not copy it back.</p>
+<p>This page shows <b>every</b> bank the flight controller has, even the ones the tuning pages leave out &mdash; banks 5 and 6 when the transmitter has four banks (Model options, Six banks), or the ones you have hidden with <b>How many banks</b> on the Rotorflight page. That is on purpose: a bank you never fly is the best place to park, and parking would be useless if you could not copy it back.</p>
 <h3>What gets copied</h3>
 <ul>
 <li><b>Flight tuning</b> &mdash; everything on the PIDs, PID + and Rescue pages (and a few Rotorflight settings only the CLI shows).</li>

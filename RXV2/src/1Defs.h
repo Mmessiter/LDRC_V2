@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.905-cli-arm-switch";
+constexpr const char* FW_VERSION = "RXV2-0.9.906-rates-follow-tx";
 
 //*********************************************************************
 //  Auto-update manifest URLs
