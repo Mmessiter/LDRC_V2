@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Transmitter channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=403">
-<script src="/app.js?v=403" defer></script>
+<link rel=stylesheet href="/style.css?v=404">
+<script src="/app.js?v=404" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -111,6 +111,7 @@ const FUNCS=[
  {k:'rate', t:'Rates', hh:'The selector channel that chooses the rates profile 1–6.',              letter:'', def:7, stick:false, optional:true, share:'prof', adj:1, base:36},
 ];
 const LS='rfTxCh.';
+let TXB={};   // (0.9.904) /api/banks.json: the transmitter's bank count, which the Bank selector's positions follow
 // More functions, same catalogue as the Switches page (Arm & Rescue have
 // their own fixed rows above). Each becomes a mode range on its switch.
 const EXTRA_MODES=[
@@ -346,10 +347,14 @@ function renderFixed(){
         }
         else if(f.adj&&cur>=1){
             const b=selBounds(LS+f.k+'.bounds');
+            // (0.9.904) the transmitter's bank count when the receiver has heard it (locked); until then 4 or 6, the counts an
+            // LDRC transmitter can have. The Rates selector keeps 2..6 unless the transmitter's rates follow its banks.
+            const kind=f.k==='bank'?'pid':'rate', sp=LDRC.selectorPositions(TXB, kind), want=LDRC.selectorCount(TXB, kind, b.k);
+            if(want!==b.k){ b.k=want; localStorage.setItem(LS+f.k+'.bounds',JSON.stringify(b)); }
             let z=''; for(let q=0;q<6;q++) z+='<div class=qZone id=qz_'+f.k+q+'>'+(q+1)+'</div>';
-            let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
+            let ko=''; for(const k of sp.options) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions'+(sp.locked?' (set on the transmitter)':'')+'</option>';
             div.innerHTML+='<div class=qTrack id=qt_'+f.k+'>'+z+'<div class=qVal id=qv_'+f.k+'></div><div class=qDot id=qd_'+f.k+'></div></div>'
-                +'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+'>'+ko+'</select><span>equal sections across the switch&rsquo;s travel</span></div>'
+                +'<div style="grid-column:1 / -1;display:flex;gap:.6em;align-items:center;font-size:.85em;color:#5d7a8c"><select id=qk_'+f.k+(sp.locked?' disabled':'')+'>'+ko+'</select><span>equal sections across the switch&rsquo;s travel</span></div>'
                 +(f.k==='rate'?'<div style="grid-column:1 / -1;font-size:.8em;color:#5d7a8c">Using the <b>same channel as Bank</b> is fine &mdash; many pilots prefer one switch for both.</div>':'');
         }
         host.appendChild(div);
@@ -600,7 +605,8 @@ async function saveAll(){
 // from this phone's choices even before a Save (Malcolm 2026-08-30).
 for(const f of FUNCS) if(localStorage.getItem(LS+f.k)==null) localStorage.setItem(LS+f.k,String(f.def));
 resolveConflicts();
-renderAll();
+// (0.9.904) drawn once app.js is in (it decides the Bank selector's positions), and again once the transmitter's count is known
+document.addEventListener('DOMContentLoaded', ()=>{ renderAll(); LDRC.fetchBanks().then(b=>{ TXB=b||{}; if((TXB.tx_banks|0)>=2) renderAll(); }); });
 poll(); setInterval(poll, 200);
 </script>
 <template id=helpContent><h2>Transmitter channels</h2>
@@ -609,7 +615,7 @@ poll(); setInterval(poll, 200);
 <li><b>Pick from the lists</b> &mdash; the live &micro;s value next to each row confirms your choice moves when you move that control.</li>
 <li><b>Detect</b> &mdash; tap it, then waggle that stick or flick that switch for a few seconds. The receiver spots which channel moved.</li>
 </ul>
-<p><b>Bank</b> and <b>Rates</b> are selector switches: one bar, divided into up to six sections &mdash; one per profile. Pick <b>how many positions</b> your switch has and the bar divides itself into that many equal sections across the switch&rsquo;s travel (988&ndash;2012&thinsp;&micro;s &mdash; nothing to drag; the red tick shows where the switch is now). Both may share one channel &mdash; many pilots prefer one switch for both. Each selector is one Rotorflight adjustment (&ldquo;Profile Selection&rdquo; / &ldquo;Rate Profile Selection&rdquo;, Mapped). The receiver never reads the adjustments list back &mdash; Rotorflight 4.6 wipes its own telemetry setup answering it over the receiver link (a Rotorflight bug) &mdash; so the app remembers them for you, and backup/restore carries them. <b>Checking in the configurator?</b> Its Adjustments page lists all 42 slots in order and the wizard uses the high ones to stay clear of your own: <b>scroll a long way down</b> &mdash; Bank is row 31, Rates is row 37.</p>
+<p><b>Bank</b> and <b>Rates</b> are selector switches: one bar, divided into up to six sections &mdash; one per profile. Pick <b>how many positions</b> your switch has and the bar divides itself into that many equal sections across the switch&rsquo;s travel (988&ndash;2012&thinsp;&micro;s &mdash; nothing to drag; the red tick shows where the switch is now). The Bank selector offers four or six, the counts an LDRC transmitter has; with a V2 transmitter it is set for you &mdash; the transmitter tells the receiver how many banks the model has (four, or six with <b>Six banks</b> on its Model options page). Both may share one channel &mdash; many pilots prefer one switch for both. Each selector is one Rotorflight adjustment (&ldquo;Profile Selection&rdquo; / &ldquo;Rate Profile Selection&rdquo;, Mapped). The receiver never reads the adjustments list back &mdash; Rotorflight 4.6 wipes its own telemetry setup answering it over the receiver link (a Rotorflight bug) &mdash; so the app remembers them for you, and backup/restore carries them. <b>Checking in the configurator?</b> Its Adjustments page lists all 42 slots in order and the wizard uses the high ones to stay clear of your own: <b>scroll a long way down</b> &mdash; Bank is row 31, Rates is row 37.</p>
 <p><b>Save</b> writes it all to the flight controller and verifies by read-back: the channel order <i>(rcmap)</i>, the <b>Arm</b> switch and the <b>Rescue</b> switch <i>(Modes &mdash; ON to the right of each bar&rsquo;s draggable divider)</i>, and the receiver&rsquo;s own throttle/arm channels for its boot-safe hold and flight stamping. Fine-tune the switch ranges on the Switches page with its live marker.</p>
 <p><b>Add another function</b> covers everything else &mdash; black box, beeper, self-level, governor overrides, user switches &mdash; each written as a switch range too. Give each one <b>your own name</b> (a User switch might really be &ldquo;Lower undercarriage&rdquo;); the name lives in the app, the flight controller sees the function. Every function needs its own channel &mdash; taken channels are simply not offered in the other dropdowns. The <b>&#10006;</b> removes a function (Rescue included, for models without one) &mdash; and clears its switch range from the flight controller too, so experiments leave no trace. Bank and Rates have no &#10006;: choose <b>None</b> as their channel instead.</p>
 <p>The five sticks must live on channels 1&ndash;8; a switch can use any channel the sticks are not using, up to 16 &mdash; it must land on flight-controller channel 6 or higher, which Save checks. Choices are remembered on the phone as defaults for the next helicopter.</p>

@@ -62,7 +62,11 @@ sandbox.window = sandbox; sandbox.globalThis = sandbox;
 const ldrcKnown = { state: { info: { name: 'Goblin770' } }, viaBle: false, replayReady: null, RF_API_VERIFIED: 1209,
     msp: async () => '', fetchState: async () => ({ rf: { armed: false }, usb: { device: true, host: true }, fcinfo: {}, info: { name: 'Goblin770' } }),
     confirm: async () => true, confirmLoseChanges: async () => true, showHelp() {}, markDirty() {}, clearDirty() {},
-    rfVersionAlert: () => null, setText() {}, teachTime() {}, startPolling() {}, stopPolling() {} };
+    rfVersionAlert: () => null, setText() {}, teachTime() {}, startPolling() {}, stopPolling() {},
+    // the Bank selector's positions (0.9.904): the no-word-from-the-transmitter answer, so a page that draws the
+    // selector (Switches and knobs, Transmitter channels) draws it here as it would on a phone
+    selectorPositions: () => ({ options: [4, 6], locked: false, tx: 0 }), selectorCount: (i, k, r) => (r === 4 || r === 6) ? r : 4,
+    fetchBanks: async () => ({ pid: 6, rate: 6, shown: 0, tx_banks: 0 }) };
 sandbox.LDRC = new Proxy(ldrcKnown, {
     get(t, k) { if (k in t) return t[k]; if (typeof k !== 'string') return undefined; return async () => undefined; },
     has() { return true; },

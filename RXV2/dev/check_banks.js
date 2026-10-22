@@ -34,6 +34,42 @@ t({pid:6,rate:6,shown:9},'pid',0,6,'junk cap ignored');
 t({pid:6,rate:6,shown:1},'pid',0,1,'cap 1');
 t({pid:6,rate:6,shown:6},'pid',0,6,'cap equals the real count');
 t({fcinfo:{pid_banks:6,rate_banks:6,banks_shown:3}},'pid',0,3,'whole state object accepted');
+// The transmitter's bank count (0.9.904): a V2 transmitter's word beats the pilot's cap; rates follow only when it says so
+t({pid:6,rate:6,shown:2,tx_banks:6},'pid',0,6,'TX says 6: the cap of 2 is for a V1 transmitter');
+t({pid:6,rate:6,shown:0,tx_banks:4},'pid',0,4,'TX says 4 on a 6-bank FC');
+t({pid:3,rate:6,shown:0,tx_banks:6},'pid',0,3,'TX says 6, the FC has 3: never invent one');
+t({pid:6,rate:6,shown:0,tx_banks:4},'pid',5,6,'TX says 4 but the FC is on bank 6: never hide the bank we are on');
+t({pid:6,rate:6,shown:2,tx_banks:4},'rate',0,2,'rates keep the cap unless they follow the banks');
+t({pid:6,rate:6,shown:2,tx_banks:4,tx_rates_follow:true},'rate',0,4,'rates follow the banks: the TX count');
+t({pid:6,rate:6,shown:2,tx_banks:9},'pid',0,2,'junk TX count ignored');
+t({fcinfo:{pid_banks:6,rate_banks:6,banks_shown:2,tx_banks:6}},'pid',0,6,'whole state object: tx_banks read');
+// selectorPositions / selectorCount (0.9.904): 4 or 6 until the transmitter says, then its count only; rates 2..6 unless they follow
+const sp = (info,kind,want,why) => {
+  const g = JSON.stringify(L.selectorPositions(info,kind).options), w = JSON.stringify(want);
+  if (g !== w) bad++;
+  console.log((g===w?'PASS':'FAIL') + '  ' + why + ' -> ' + g + ' (want ' + w + ')');
+};
+sp({},'pid',[4,6],'no word from the transmitter: 4 or 6');
+sp({tx_banks:6},'pid',[6],'TX says 6');
+sp({tx_banks:4},'pid',[4],'TX says 4');
+sp({tx_banks:6},'rate',[2,3,4,5,6],'rates selector free');
+sp({tx_banks:6,tx_rates_follow:true},'rate',[6],'rates follow the banks');
+sp({tx_banks:7},'pid',[4,6],'junk count: 4 or 6');
+sp({fcinfo:{tx_banks:4}},'pid',[4],'whole state object');
+const sc = (info,kind,r,want,why) => {
+  const g = L.selectorCount(info,kind,r);
+  if (g !== want) bad++;
+  console.log((g===want?'PASS':'FAIL') + '  ' + why + ' -> ' + g + ' (want ' + want + ')');
+};
+sc({},'pid',3,4,'a remembered 3 becomes 4');
+sc({},'pid',5,6,'a remembered 5 becomes 6');
+sc({},'pid',6,6,'a remembered 6 stays');
+sc({},'pid',4,4,'a remembered 4 stays');
+sc({tx_banks:4},'pid',6,4,'locked to the transmitter');
+sc({tx_banks:6},'rate',3,3,'a rates switch of 3 stays');
+sc({tx_banks:6,tx_rates_follow:true},'rate',3,6,'rates following the banks');
+sc({},'rate',0,4,'nothing remembered: 4');
+sc({},'rate',9,6,'junk remembered: 6');
 // bankMax — Copy a bank ignores the cap so a hidden bank can be used to PARK
 // a known-good tune (0.9.745).
 const m = (info,kind,want,why) => {

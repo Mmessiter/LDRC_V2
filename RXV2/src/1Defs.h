@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.903-switches-and-knobs";
+constexpr const char* FW_VERSION = "RXV2-0.9.904-bank-count-sync";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -519,6 +519,7 @@ constexpr const char* NVS_KEY_GOV_THR_PARKED = "govthrpk"; // uint8 verdict of t
 constexpr const char* NVS_KEY_GOV_THR_MAX = "govthrmx"; // uint8 highest throttle % seen in that spell
 constexpr const char* NVS_KEY_FC_TELEM_SPEED = "fctspd";  // uint8 Rotorflight telemetry link speed we keep the FC at: 1 = fast (1000/1, default), 0 = standard (250/8)
 constexpr const char* NVS_KEY_BANKS_SHOWN = "bankshow"; // uint8 how many tuning banks the pages offer: 0 = every bank this flight controller has (default), 1..6 = show only that many
+constexpr const char* NVS_KEY_TX_BANKS    = "txbanks";  // uint8 the transmitter's bank count (0.9.904): 0 unknown, else 2..6 in the low nibble, + 0x10 when its rates follow its banks
 constexpr const char* NVS_KEY_FC_TELEM_GOOD  = "fctgood"; // 52-byte blob: the last GOOD MSP 73 image (mode, rate, ratio, sensor list) — the auto-repair's source
 constexpr const char* NVS_KEY_THR_CH      = "thrch";    // uint8 throttle channel (1..16, 0=off); held at THROTTLE_SAFE_US until the TX is first heard  // uint8 cell count for per-cell display (0 = not set, show pack volts only)  // uint8 1=expect FC on telemetry line (default); 0=ignore it (plain PWM converters echo junk that parses as telemetry)  // uint8 CRSF frame rate in Hz (50/100/250); some CRSF-to-PWM converters misbehave above ~100 Hz   // one-shot: web-initiated reboot to apply a setting → next boot skips the RF window, WiFi comes straight back
 
@@ -1238,6 +1239,16 @@ struct FcInfo {
     // uses fewer. It never hides the bank the FC is actually ON — see
     // LDRC.bankCount() in app.js. NVS_KEY_BANKS_SHOWN.
     uint8_t  banksShown       = 0;
+    // THE TRANSMITTER'S BANK COUNT (0.9.904). A V2 transmitter tells the receiver how many banks this model has (its
+    // Model options 'Six banks' switch: 4 or 6) over the Bluetooth pipe - GET /api/tx/banks?n=N&rates=F - when the pipe
+    // comes up and whenever the switch is flipped. The pages follow it: the tuning pages draw that many banks, the Bank
+    // selector on the Switches page is locked to that many positions, and both sides warn when the flight controller's
+    // bank line has another count (Malcolm, 21 Oct 2026: "it's important that the app and the transmitter are set to
+    // the same settings ... if one of them changes the number of banks without saving the switches and knob settings
+    // afterwards, the other does not know"). 0 = never told (a V1 transmitter, or an older V2): banksShown stands.
+    // Kept in NVS (NVS_KEY_TX_BANKS) so it follows the model from phone to phone and survives a reboot.
+    uint8_t  txBanks          = 0;       // 0 unknown, else 2..6 (4 or 6 from an LDRC transmitter)
+    bool     txRatesFollow    = false;   // the transmitter's rates follow its banks (its Rates selector is its Bank selector)
     bool     telemRecheck     = false;   // the poll re-reads MSP 73 at its next slot (watch, or after a write/reboot)
     bool     telemRepairDue   = false;   // found empty with a good image cached: the poll writes it back (RAM) at its next slot
     uint32_t telemCheckedMs   = 0;       // millis() of the last MSP 73 reply
@@ -1249,6 +1260,7 @@ struct FcInfo {
 };
 inline FcInfo fcInfo;
 inline bool   fcInfoNvsDirty = false;   // throttleCh/govMode changed in RAM; written to NVS at the next quiet moment
+inline bool   txBanksNvsDirty = false;  // the transmitter's bank count changed in RAM (0.9.904); written to NVS at the next quiet moment
 
 //*********************************************************************
 //  Cross-module forward declarations

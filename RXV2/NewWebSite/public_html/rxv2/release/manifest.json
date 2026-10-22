@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.904-bank-count-sync",
+      "url": "https://messiter.com/rxv2/release/v0.9.904/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.904/littlefs.bin",
+      "fs_md5": "e7ded912fb3be76b4c414918d41a063e",
+      "notes": "The transmitter's bank count: a V2 transmitter tells the receiver how many banks the model has (Model options, Six banks). The tuning pages draw that many, the Bank selector on the Switches page is set to match, and both the app and the transmitter warn when the flight controller's bank line has another count."
+    },
+    {
       "name": "RXV2-0.9.903-switches-and-knobs",
       "url": "https://messiter.com/rxv2/release/v0.9.903/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.903/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.893/littlefs.bin",
       "fs_md5": "dc61255116783c3c23b678a276fe2472",
       "notes": "Governor (global): the throttle type is now chosen from Rotorflight's three (NORMAL, SWITCH, FUNCTION); a value the flight controller holds outside its list shows as not valid and Save waits for a real choice. The receiver never passes an out-of-range governor mode or throttle type on from the transmitter."
-    },
-    {
-      "name": "RXV2-0.9.892-hobbywing-program-box",
-      "url": "https://messiter.com/rxv2/release/v0.9.892/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.892/littlefs.bin",
-      "fs_md5": "13d25a3a37153722d17a5b5b9516f855",
-      "notes": "The ESC pages now recommend Hobbywing's LCD program box for a Hobbywing ESC: quick and easy, and well worth having."
     }
   ],
   "rotorflight": {

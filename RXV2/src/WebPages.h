@@ -427,6 +427,7 @@ inline void adjCacheTick() {   // from loop(): the flash write, 2 s after the la
     if (f) { f.write(adjCache, sizeof(adjCache)); f.close(); }
     adjCacheDirty = false;
 }
+#include "BankSelector.h"   // the selector lines' position counts (0.9.904)
 inline void handleAdjustmentsJson() {
     String j;
     j.reserve(1300);
@@ -443,6 +444,37 @@ inline void handleAdjustmentsJson() {
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", j);
 }
+// GET /api/tx/banks?n=N[&rates=1] — THE TRANSMITTER'S BANK COUNT (0.9.904). A V2 transmitter says how many banks this
+// model has, over the Bluetooth pipe (a GET: the one verb its line has), when the pipe comes up and whenever its Six
+// banks switch is flipped. Kept in RAM at once and on flash at the next quiet moment (like the throttle channel it
+// learned): no flash write under a live link, and no refusal either - the transmitter IS linked when it asks. The
+// answer carries the position count of the flight controller's bank line as last seen through this receiver, so the
+// transmitter can warn at once when the two disagree (the bank switch would then put the flight controller on the
+// wrong bank). The pages (app.js bankCount, the Switches and Transmitter channels pages) read it from banks.json.
+inline void handleTxBanks() {
+    const long n = server.hasArg("n") ? server.arg("n").toInt() : -1;
+    if (n < 2 || n > 6) {
+        server.send(400, "application/json", "{\"ok\":false,\"err\":\"n=2..6 required\"}");
+        return;
+    }
+    const bool follow = server.hasArg("rates") && server.arg("rates").toInt() != 0;
+    if (fcInfo.txBanks != (uint8_t)n || fcInfo.txRatesFollow != follow) {
+        fcInfo.txBanks = (uint8_t)n;
+        fcInfo.txRatesFollow = follow;
+        txBanksNvsDirty = true;
+        char e[72];
+        snprintf(e, sizeof(e), "Transmitter: %ld banks%s", n, follow ? ", its rates follow them" : "");
+        events.add(e);
+    }
+    String j = "{\"ok\":true,\"tx\":"; j += (int)fcInfo.txBanks;
+    j += ",\"rates_follow\":";  j += (fcInfo.txRatesFollow ? "true" : "false");
+    j += ",\"selector\":";      j += (int)(adjCacheKnown ? bankSelectorZones(adjCache, 42, 2) : 0);   // 0 = unknown
+    j += ",\"rates_selector\":"; j += (int)(adjCacheKnown ? bankSelectorZones(adjCache, 42, 1) : 0);
+    j += ",\"pid\":";           j += (int)banks.pidCount;
+    j += ",\"rate\":";          j += (int)banks.rateCount; j += "}";
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", j);
+}
 inline void handleBanksJson() {
     String j = "{\"pid\":";  j += (int)banks.pidCount;
     j += ",\"rate\":";       j += (int)banks.rateCount;
@@ -454,7 +486,13 @@ inline void handleBanksJson() {
     j += ",\"fc_pid\":";     j += (banks.fcPid  == 0xFF ? -1 : (int)banks.fcPid);
     j += ",\"fc_rate\":";    j += (banks.fcRate == 0xFF ? -1 : (int)banks.fcRate);
     j += ",\"tx\":";         j += (bankTxLive() ? "true" : "false");
-    j += ",\"armed\":";      j += (fcInfo.armed ? "true" : "false"); j += "}";
+    j += ",\"armed\":";      j += (fcInfo.armed ? "true" : "false");
+    // The transmitter's bank count (0.9.904), and the positions of the flight controller's selector lines as last seen
+    // through this receiver; 0 = unknown.
+    j += ",\"tx_banks\":";       j += (int)fcInfo.txBanks;
+    j += ",\"tx_rates_follow\":"; j += (fcInfo.txRatesFollow ? "true" : "false");
+    j += ",\"selector\":";       j += (int)(adjCacheKnown ? bankSelectorZones(adjCache, 42, 2) : 0);
+    j += ",\"rates_selector\":"; j += (int)(adjCacheKnown ? bankSelectorZones(adjCache, 42, 1) : 0); j += "}";
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", j);
 }
@@ -3783,6 +3821,8 @@ inline void handleApiState() {
     j += ",\"pid_banks\":";       j += (int)banks.pidCount;
     j += ",\"rate_banks\":";      j += (int)banks.rateCount;
     j += ",\"banks_shown\":";     j += (int)fcInfo.banksShown;   // 0 = all of them
+    j += ",\"tx_banks\":";        j += (int)fcInfo.txBanks;      // the transmitter's bank count (0.9.904), 0 = never told
+    j += ",\"tx_rates_follow\":"; j += (fcInfo.txRatesFollow ? "true" : "false");
     j += ",\"telem_cfg_known\":"; j += (fcInfo.telemCfgKnown ? "true" : "false");
     j += ",\"telem_cfg_bad\":";   j += (fcTelemCfgBad() ? "true" : "false");
     j += ",\"telem_sensors\":";   j += fcInfo.telemSensors;
@@ -3922,6 +3962,7 @@ inline void registerWebRoutes() {
     server.on("/api/fc/telemetry/speed",   HTTP_POST, handleFcTelemSpeed);
     server.on("/api/fc/banks",             HTTP_POST, handleFcBanksShown);
     server.on("/api/banks.json",           HTTP_GET,  handleBanksJson);
+    server.on("/api/tx/banks",             HTTP_GET,  handleTxBanks);          // the transmitter's bank count (0.9.904)
     server.on("/api/adjustments.json",     HTTP_GET,  handleAdjustmentsJson);
     server.on("/api/esc/catch", HTTP_POST, handleEscCatchArm);
     server.on("/api/esc/catch", HTTP_GET,  handleEscCatchStatus);

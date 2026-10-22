@@ -707,7 +707,7 @@ inline void govThrottleWatchTick() {
     // flight-save doctrine — disarmed with sticks still 2 s, or TX off).
     // Also commits the throttle channel / governor mode the probe learned,
     // which may have arrived mid-flight on a TX-on boot.
-    if ((verdictDirty || fcInfoNvsDirty || telemGoodNvsDirty) && !armed) {
+    if ((verdictDirty || fcInfoNvsDirty || telemGoodNvsDirty || txBanksNvsDirty) && !armed) {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
         const bool linkDead    = !rx.lastMillis || (uint32_t)(now - rx.lastMillis) > 3000;
         if (sticksStill || linkDead) {
@@ -720,6 +720,10 @@ inline void govThrottleWatchTick() {
                 prefs.putUChar(NVS_KEY_FC_THR_CH, fcInfo.throttleCh);
                 prefs.putUChar(NVS_KEY_FC_GOV_MODE, fcInfo.govMode);
                 fcInfoNvsDirty = false;
+            }
+            if (txBanksNvsDirty) {                   // the transmitter's bank count (0.9.904)
+                prefs.putUChar(NVS_KEY_TX_BANKS, (uint8_t)(fcInfo.txBanks | (fcInfo.txRatesFollow ? 0x10 : 0)));
+                txBanksNvsDirty = false;
             }
             if (telemGoodNvsDirty) {                 // the last good telemetry setup (0.9.563)
                 prefs.putBytes(NVS_KEY_FC_TELEM_GOOD, fcInfo.telemGood, 52);

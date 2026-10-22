@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Switches and knobs &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=403">
-<script src="/app.js?v=403" defer></script>
+<link rel=stylesheet href="/style.css?v=404">
+<script src="/app.js?v=404" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -276,6 +276,7 @@ const RMINQ=875, RMAXQ=2125;
 const qpct=u=>Math.max(0,Math.min(100,(u-RMINQ)/(RMAXQ-RMINQ)*100));
 const stepUsQ=s=>1500+5*((s&0x80)?s-256:s);
 let PROF=[];
+let TXB={};   // /api/banks.json (0.9.904): the transmitter's bank count, and the positions of the flight controller's selector lines
 function localProf(){
     const out=[];
     for(const p of [{k:'bank',t:'Bank (Profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
@@ -308,7 +309,7 @@ async function loadFromReceiver(){
             const tx=l.adj+6;
             const b=old?{lo:988,hi:2012,k:Math.max(2,Math.min(6,mine.length))}:{lo:l.a1Lo,hi:l.a1Hi,k:Math.max(2,Math.min(6,l.max-l.min+1))};
             localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); localStorage.setItem('rfTxCh.'+p.k,String(tx));
-            out.push({...p,tx,b,secs:profSecs(b),src:'fc',slot:l.slot,extra:mine.slice(1).map(x=>x.slot),old});
+            out.push({...p,tx,b,secs:profSecs(b),src:'fc',slot:l.slot,extra:mine.slice(1).map(x=>x.slot),old,lineK:b.k});   // (lineK: the positions the flight controller's line has)
         }
         PROF=out; return true;
     }catch(e){ return false; }
@@ -412,18 +413,25 @@ function paintProf(){
     }
     for(const p of PROF){
         const b=selBounds('rfTxCh.'+p.k+'.bounds');
+        // THE TRANSMITTER DECIDES (0.9.904): a V2 transmitter has told the receiver its bank count, and the Bank selector is
+        // locked to that many positions (the Rates selector too when its rates follow its banks); until it has, 4 or 6 - an
+        // LDRC transmitter has no other count. A line on the flight controller with another count is flagged: Save puts it right.
+        const kind=p.k==='bank'?'pid':'rate', sp=LDRC.selectorPositions(TXB, kind), want=LDRC.selectorCount(TXB, kind, b.k);
+        if(want!==b.k){ b.k=want; localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); }
+        const lineK=p.src==='fc'&&p.lineK?p.lineK:0; p.mismatch=!!(sp.locked&&lineK&&lineK!==sp.tx);
         let z=''; for(let n=1;n<=6;n++) z+='<div class=qZone id=q_'+p.k+n+'></div>';
         let co=''; for(let c=6;c<=16;c++) co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(c-5)+')</option>';
-        let ko=''; for(let k=2;k<=6;k++) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions</option>';
+        let ko=''; for(const k of sp.options) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions'+(sp.locked?' (set on the transmitter)':'')+'</option>';
         h+='<div class="card modeCard">'
           +'<div class=mRow>'
           +'<div><label data-help="This selector chooses which numbered profile is active — the live section lights up as you move the switch.">What the switch does</label><select disabled class=fixedSel><option>'+p.t+' selector</option></select></div>'
           +'<div><label data-help="The transmitter channel this selector switch arrives on. Bank and Rates may share one channel.">Which channel</label><select id=pc_'+p.k+' onchange="document.getElementById(\'pmsg_'+p.k+'\').textContent=\'changed — tap Save\'">'+co+'</select></div>'
           +'</div>'
           +'<div class=mRow>'
-          +'<div><label data-help="How many positions your physical switch has (2–6). The bar divides into that many equal sections.">How many positions</label><select id=qk_'+p.k+'>'+ko+'</select></div>'
+          +'<div><label data-help="How many positions the selector has; the bar divides into that many equal sections. An LDRC transmitter has four banks or six, and a V2 transmitter tells the receiver which, so it is set here for you.">How many positions</label><select id=qk_'+p.k+(sp.locked?' disabled':'')+'>'+ko+'</select></div>'
           +'<div></div>'
           +'</div>'
+          +(p.mismatch?'<div class=banner style="background:#dca08c;color:#5c2a1a;font-size:.85em;padding:.5em;margin:.3em 0">The flight controller’s '+p.t.toLowerCase()+' line has '+lineK+' positions; the transmitter has '+sp.tx+' banks. Tap Save to put it right, or the switch picks the wrong bank.</div>':'')
           +(p.src==='local'?'<div class=muted style="font-size:.8em;margin:.3em 0">'+(adjSeen&&!ADJ?'The receiver does not know the flight controller\u2019s lines yet: open In-flight adjustments with the USB cable once (or the transmitter\u2019s Adjustments page) and the real line shows here.':'From this phone\u2019s choices &mdash; tap Save to write them to the flight controller.')+'</div>':'')
           +(p.old?'<div class=banner style="background:#dca08c;color:#5c2a1a;font-size:.85em;padding:.5em;margin:.3em 0">On the flight controller in a form Rotorflight applies once per power-up (one line per position). Tap Save to put it right.</div>':'')
           +((p.extra&&p.extra.length)?'<div class=banner style="background:#dca08c;color:#5c2a1a;font-size:.85em;padding:.5em;margin:.3em 0">The flight controller has '+(p.extra.length+1)+' '+p.t.toLowerCase()+' selector lines (rows '+[p.slot,...p.extra].map(x=>x+1).join(', ')+'): they fight. Tap Save to keep this one and remove the rest.</div>':'')
@@ -437,6 +445,7 @@ function paintProf(){
     }
     $('profRows').innerHTML=h;
     for(const p of PROF){ paintProfBar(p);
+        if(p.mismatch) $('pmsg_'+p.k).textContent='changed — tap Save';
         $('qk_'+p.k).addEventListener('change',()=>{ const b=selBounds('rfTxCh.'+p.k+'.bounds'); b.k=parseInt($('qk_'+p.k).value); localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); paintProfBar(p); $('pmsg_'+p.k).textContent='changed — tap Save'; }); }
 }
 function pollProf(b, st){
@@ -469,6 +478,7 @@ function paint(){
 async function load(){
     if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
     setStatus('info', LDRC.replay?'Reading from the phone…':'Reading switch assignments from the flight controller…');
+    TXB=await LDRC.fetchBanks();   // (0.9.904) the transmitter's bank count: the Bank selector follows it
     try{
         const b=hexToBytes(await LDRC.msp(34));
         if(b.length<SLOTS*4) throw new Error('short response '+b.length);
@@ -1057,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <li><b>Rescue</b> — the safety-net switch; the Rescue page shows its settings.</li>
 <li>Ranges are on Rotorflight&rsquo;s 875&ndash;2125&nbsp;µs scale. A switch typically sits near 1100 (low), 1500 (middle) and 1900 (high) — so &ldquo;1700&ndash;2100&rdquo; means &ldquo;switch high&rdquo;.</li>
 <li>The <b>bar</b> under each row is the full 875&ndash;2125&nbsp;&micro;s travel; the <b>blue zone</b> is where the function is ON, and <b>drag the round ends</b> with a finger to set the range, and the thin <b>red line</b> is the channel&rsquo;s live position &mdash; flick the switch and watch it enter the zone (it turns green inside).</li>
-<li>The <b>Bank</b> and <b>Rates</b> cards at the top are the profile selectors: pick the channel and the position count &mdash; the bar divides into equal sections across the switch&rsquo;s travel, the live section lights up, and the flight-controller line shows which profile it has ACTUALLY chosen.</li>
+<li>The <b>Bank</b> and <b>Rates</b> cards at the top are the profile selectors: pick the channel and the position count &mdash; the bar divides into equal sections across the switch&rsquo;s travel, the live section lights up, and the flight-controller line shows which profile it has ACTUALLY chosen. With a V2 LDRC transmitter the Bank selector&rsquo;s count is not yours to pick: the transmitter tells the receiver how many banks the model has (four, or six with <b>Six banks</b> on its Model options page) and the selector is set to match; a line on the flight controller with another count is flagged until you tap Save.</li>
 <li>Flick the <b>Arm</b> switch and its red line turns green inside the zone; a moment later the receiver switches its WiFi and Bluetooth off for flying (the red ARMED strip at the top) and the line keeps its last place. Disarm, and the link comes back by itself.</li>
 <li>Find a switch by flicking it and watching the red line on this page&rsquo;s own bar. <b>View channels</b> numbers channels as your transmitter sends them &mdash; not the flight controller&rsquo;s numbering, once the channel order is set on the Transmitter channels page.</li>
 </ul>

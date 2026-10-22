@@ -524,15 +524,24 @@
         // selected, so it is ALWAYS included. Returns 1..6.
         bankCount(info, kind, current) {
             const b = (info && info.fcinfo)
-                    ? { pid: info.fcinfo.pid_banks, rate: info.fcinfo.rate_banks, shown: info.fcinfo.banks_shown }
+                    ? { pid: info.fcinfo.pid_banks, rate: info.fcinfo.rate_banks, shown: info.fcinfo.banks_shown,
+                        tx_banks: info.fcinfo.tx_banks, tx_rates_follow: info.fcinfo.tx_rates_follow }
                     : (info || {});
             const real = (kind === 'rate' ? b.rate : b.pid) | 0;
             // No answer yet: 4 is what every page showed for years, so a slow
             // load does not make the row jump about.
             const most = (real >= 1 && real <= this.BANKS_MAX) ? real : 4;
             let n = most;
-            const cap = b.shown | 0;
-            if (cap >= 1 && cap < n) n = cap;
+            // THE TRANSMITTER DECIDES (0.9.904): a V2 transmitter tells the
+            // receiver how many banks the model has (Model options, Six
+            // banks: 4 or 6), and the pages follow it; the pilot's own cap is
+            // for a V1 transmitter, which says nothing. Rates follow the
+            // transmitter's count only when its rates follow its banks (a
+            // rates switch of its own may have three positions).
+            const tx = b.tx_banks | 0;
+            const told = (tx >= 2 && tx <= this.BANKS_MAX) && (kind !== 'rate' || !!b.tx_rates_follow);
+            if (told) { if (tx < n) n = tx; }
+            else { const cap = b.shown | 0; if (cap >= 1 && cap < n) n = cap; }
             // Never hide the bank we are on — but never invent one either: a
             // stale remembered bank 5 must not put a fifth button on a
             // 3-bank flight controller.
@@ -551,6 +560,34 @@
                     : (info || {});
             const real = (kind === 'rate' ? b.rate : b.pid) | 0;
             return (real >= 1 && real <= this.BANKS_MAX) ? real : 4;
+        },
+
+        // THE BANK SELECTOR'S POSITIONS (0.9.904): what the Switches and the
+        // Transmitter channels pages may offer for the Bank (kind 'pid') and
+        // Rates selectors. An LDRC transmitter has four banks or six, never
+        // three or five (with three zones banks 2 and 3 share one; with five,
+        // banks 3 and 4 do), so the Bank selector offers 4 and 6, and only the
+        // transmitter's own count once the receiver has heard it (locked).
+        // The Rates selector keeps 2..6 - a rates switch of its own may have
+        // three positions - unless the transmitter says its rates follow its
+        // banks. info = banks.json or a whole state object.
+        selectorPositions(info, kind) {
+            const b = (info && info.fcinfo)
+                    ? { tx_banks: info.fcinfo.tx_banks, tx_rates_follow: info.fcinfo.tx_rates_follow }
+                    : (info || {});
+            const tx = b.tx_banks | 0, known = tx >= 2 && tx <= this.BANKS_MAX;
+            if (kind === 'rate' && !(known && b.tx_rates_follow)) return { options: [2, 3, 4, 5, 6], locked: false, tx: 0 };
+            if (known) return { options: [tx], locked: true, tx };
+            return { options: [4, 6], locked: false, tx: 0 };
+        },
+        // ... and the count a page should use, given what it remembered: the
+        // transmitter's when locked, else the remembered count if it is on
+        // offer, else the nearest the transmitter can have (3 -> 4, 5 -> 6).
+        selectorCount(info, kind, remembered) {
+            const s = this.selectorPositions(info, kind), r = remembered | 0;
+            if (s.options.indexOf(r) >= 0) return r;
+            if (s.locked) return s.options[0];
+            return r <= 4 ? 4 : 6;
         },
 
         // Where a page should start, given what it remembered. Returns a

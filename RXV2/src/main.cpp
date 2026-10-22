@@ -241,6 +241,11 @@ void setup() {
     fcInfo.telemSpeedPref = prefs.isKey(NVS_KEY_FC_TELEM_SPEED) ? (prefs.getUChar(NVS_KEY_FC_TELEM_SPEED, 1) ? 1 : 0) : 1;
     fcInfo.banksShown     = prefs.getUChar(NVS_KEY_BANKS_SHOWN, 0);
     if (fcInfo.banksShown > 6) fcInfo.banksShown = 0;    // junk reads as "all of them"
+    {   // the transmitter's bank count (0.9.904): the count in the low nibble, bit 4 = its rates follow its banks
+        const uint8_t t = prefs.getUChar(NVS_KEY_TX_BANKS, 0), n = t & 0x0F;
+        fcInfo.txBanks = (n >= 2 && n <= 6) ? n : 0;
+        fcInfo.txRatesFollow = fcInfo.txBanks && (t & 0x10);
+    }
     if (prefs.isKey(NVS_KEY_FC_TELEM_GOOD) && prefs.getBytesLength(NVS_KEY_FC_TELEM_GOOD) == 52) {
         prefs.getBytes(NVS_KEY_FC_TELEM_GOOD, fcInfo.telemGood, 52);
         bool sensors = false;
