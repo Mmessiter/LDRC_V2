@@ -1304,29 +1304,18 @@ void loop() {
             }
         }
         if (armLearnPending && mspAsyncReady && mspAsyncFunc == 34) {
-            for (uint16_t o = 0; o + 3 < mspAsyncLen; o += 4) {
-                // slot: permanentId, auxChannel, startStep, endStep — unused
-                // slots read id 0 with an EMPTY range, so ARM (id 0) must
-                // also have start != end to count.
-                if (mspAsyncBuf[o] == 0 && mspAsyncBuf[o + 2] != mspAsyncBuf[o + 3]) {
-                    // Rotorflight has FIVE control channels (roll, pitch, yaw,
-                    // collective, throttle), so AUX1 = channel 6: aux index a
-                    // is channel a + 6. The Betaflight habit (+5) put the
-                    // Goblin's arming channel on the THROTTLE — "armed" meant
-                    // "motor on", so the radios went off with the motor and
-                    // the landing wiggle came at motor-off with the model
-                    // still armed (Malcolm 2026-09-06). 0.9.572.
-                    uint8_t ch = mspAsyncBuf[o + 1] + 6;        // aux0 = channel 6
-                    if (ch <= 16) {
-                        armingChannel = ch;                     // RAM only — not NVS
-                        armLearned = true;
-                        char m[64];
-                        snprintf(m, sizeof(m), "Arming channel found from Rotorflight: ch%u (AUX%u)",
-                                 ch, ch - 5);
-                        events.add(m);
-                    }
-                    break;
-                }
+            // The first ARM slot (MspFc.h armChannelFromModeRanges). Rotorflight has FIVE control channels (roll, pitch,
+            // yaw, collective, throttle), so AUX1 = channel 6. The Betaflight habit (+5) put the Goblin's arming channel on
+            // the THROTTLE — "armed" meant "motor on", so the radios went off with the motor and the landing wiggle came at
+            // motor-off with the model still armed (Malcolm 2026-09-06). 0.9.572.
+            const uint8_t ch = armChannelFromModeRanges(mspAsyncBuf, mspAsyncLen);
+            if (ch && !armingChannel) {                          // (0.9.905: the command line may have found it first)
+                armingChannel = ch;                              // RAM only — not NVS
+                armLearned = true;
+                char m[64];
+                snprintf(m, sizeof(m), "Arming channel found from Rotorflight: ch%u (AUX%u)",
+                         ch, ch - 5);
+                events.add(m);
             }
             mspAsyncFunc = 0xFF;
             armLearnPending = false;

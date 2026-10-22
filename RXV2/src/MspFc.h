@@ -824,6 +824,21 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
     return ok;
 }
 
+// The arm switch's channel in Rotorflight's mode ranges (MSP 34, four bytes a slot: permanentId, auxChannel, startStep,
+// endStep). Unused slots read id 0 with an EMPTY range, so ARM (id 0) must also have start != end to count. Rotorflight has
+// FIVE control channels, so AUX1 = channel 6 (0.9.572). 0 = no arm switch set up. (The background learner in main.cpp and,
+// 0.9.905, the command line's own look when that has not happened yet.)
+// ARMCH-BEGIN (dev/armch_test.sh)
+inline uint8_t armChannelFromModeRanges(const uint8_t* b, uint16_t n) {
+    for (uint16_t o = 0; o + 3 < n; o += 4)
+        if (b[o] == 0 && b[o + 2] != b[o + 3]) {
+            const uint8_t ch = (uint8_t)(b[o + 1] + 6);
+            return ch <= 16 ? ch : 0;
+        }
+    return 0;
+}
+// ARMCH-END
+
 //*********************************************************************
 //  Telemetry setup — synchronous helpers for the page/app paths (0.9.563)
 //*********************************************************************

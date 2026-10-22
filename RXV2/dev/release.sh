@@ -183,6 +183,8 @@ zsh dev/failsafe_mask_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/failsaf
 ok "failsafe_mask_test"
 zsh dev/arm_live_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/arm_live_test.sh failed - run it to see why"
 ok "arm_live_test"
+zsh dev/armch_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/armch_test.sh failed - run it to see why"
+ok "armch_test"
 node dev/gear_test.js | tail -1 | grep -q "ALL PASS" || die "dev/gear_test.js failed - run it to see why"
 ok "gear_test"
 node dev/escprog_proto_test.js | tail -1 | grep -q "ALL PASS" || die "dev/escprog_proto_test.js failed - run it to see why"

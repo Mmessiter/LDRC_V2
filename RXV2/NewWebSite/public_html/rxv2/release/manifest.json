@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.905-cli-arm-switch",
+      "url": "https://messiter.com/rxv2/release/v0.9.905/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.905/littlefs.bin",
+      "fs_md5": "e7ded912fb3be76b4c414918d41a063e",
+      "notes": "The command line from a linked transmitter: when the receiver does not yet know which switch arms the model, it asks Rotorflight there and then, and a refusal says plainly why (Mehul's RAW 420 said 'arming channel 0')."
+    },
+    {
       "name": "RXV2-0.9.904-bank-count-sync",
       "url": "https://messiter.com/rxv2/release/v0.9.904/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.904/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.894/littlefs.bin",
       "fs_md5": "5ef1b13d5d59b423aa528d39a76eca79",
       "notes": "Easy tuning: a slider you do not move never changes its numbers (moving Cyclic used to round the tail's gains too, and the PID spool-up tick alone rewrote the start settings); a governor choice outside Rotorflight's lists is never written back."
-    },
-    {
-      "name": "RXV2-0.9.893-governor-choices-in-range",
-      "url": "https://messiter.com/rxv2/release/v0.9.893/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.893/littlefs.bin",
-      "fs_md5": "dc61255116783c3c23b678a276fe2472",
-      "notes": "Governor (global): the throttle type is now chosen from Rotorflight's three (NORMAL, SWITCH, FUNCTION); a value the flight controller holds outside its list shows as not valid and Save waits for a real choice. The receiver never passes an out-of-range governor mode or throttle type on from the transmitter."
     }
   ],
   "rotorflight": {

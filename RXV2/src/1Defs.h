@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.904-bank-count-sync";
+constexpr const char* FW_VERSION = "RXV2-0.9.905-cli-arm-switch";
 
 //*********************************************************************
 //  Auto-update manifest URLs

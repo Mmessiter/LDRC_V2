@@ -3864,6 +3864,27 @@ inline void handleApiState() {
 // at the field but makes no sense for the transmitter itself, whose pilot is at the bench with the safety on. A linked
 // transmitter with no arming channel set, or with it high, is refused as before: the flight controller cannot arm while
 // its command line is open, and save or exit restart it, so this must never be near a flight.
+// 0.9.905 (Malcolm, 22 Oct, Mehul's RAW 420: "The command line did not open ... (arming channel 0 low)" - "arming is on
+// channel 6 and it's definitely off"): the arm switch's channel is learnt from Rotorflight in the background (main.cpp),
+// and on that boot it had not been yet, so this gate refused and named "channel 0". Now the command line asks Rotorflight
+// itself (MSP 34, the mode ranges) before it decides, and a refusal says what is wrong in the pilot's words. (Only with
+// the command line shut: an open one owns the cable.)
+enum CliArmWhy : uint8_t { CLI_ARM_KNOWN, CLI_ARM_NO_FC, CLI_ARM_NO_ANSWER, CLI_ARM_NONE_SET };
+inline CliArmWhy cliArmKnown() {
+    if (armingChannel >= 1 && armingChannel <= 16) return CLI_ARM_KNOWN;
+    const bool rf = fcInfo.detected && fcInfo.versionKnown && strncmp(fcInfo.variant, "RTFL", 4) == 0;
+    if (!rf || UsbHostMsp::cliMode) return CLI_ARM_NO_FC;
+    static uint8_t modes[640];
+    uint16_t n = 0;
+    if (!mspRequestAndWait(34, nullptr, 0, modes, &n, 1200)) return CLI_ARM_NO_ANSWER;
+    const uint8_t ch = armChannelFromModeRanges(modes, n);
+    if (!ch) return CLI_ARM_NONE_SET;
+    armingChannel = ch;                                    // RAM only, as the background learner's
+    char m[EventLog::MSG_LEN];
+    snprintf(m, sizeof m, "Arming channel found from Rotorflight: ch%u (AUX%u), asked by the command line", ch, ch - 5);
+    events.add(m);
+    return CLI_ARM_KNOWN;
+}
 inline bool txLinkedButSafe() {
     if (!rxTxLinkedRecently()) return false;
     const bool armLink = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
@@ -3872,11 +3893,22 @@ inline bool txLinkedButSafe() {
     return true;
 }
 inline bool refuseCliIfTxLinkedUnsafe(const char* what) {
-    if (!rxTxLinkedRecently() || txLinkedButSafe()) return false;
+    if (!rxTxLinkedRecently()) return false;
+    const CliArmWhy arm = cliArmKnown();
+    if (txLinkedButSafe()) return false;
+    // A linked transmitter with the arm switch unknown, or on, is refused as before; the words say which (the transmitter
+    // shows them under "The command line did not open.", three short lines at most).
+    char m[160];
+    if (arm == CLI_ARM_NO_FC)            snprintf(m, sizeof m, "the flight controller is not known yet: try again in a moment");
+    else if (arm == CLI_ARM_NO_ANSWER)   snprintf(m, sizeof m, "Rotorflight did not say which switch arms the model: try again in a moment");
+    else if (arm == CLI_ARM_NONE_SET)    snprintf(m, sizeof m, "Rotorflight has no arm switch set up (Modes, ARM), so the receiver cannot see that the model is safe");
+    else if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)
+                                         snprintf(m, sizeof m, "the flight controller says it is armed: disarm first");
+    else if (!(rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000))
+                                         snprintf(m, sizeof m, "the radio link has just dropped: try again in a moment");
+    else                                 snprintf(m, sizeof m, "the arm switch (channel %u) is on: switch it off first", (unsigned)armingChannel);
+    { char e[EventLog::MSG_LEN]; snprintf(e, sizeof e, "Refused (%s): %s", what, m); events.add(e); }
     server.sendHeader("Cache-Control", "no-store");
-    char m[200];
-    snprintf(m, sizeof m, "the transmitter is linked: %s needs the safety on (arming channel %u low) - the command line pauses the receiver's line to the flight controller, and save or exit restart it",
-             what, (unsigned)armingChannel);
     server.send(409, "text/plain", m);
     return true;
 }
