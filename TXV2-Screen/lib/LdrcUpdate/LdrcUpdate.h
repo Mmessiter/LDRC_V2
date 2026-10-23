@@ -31,6 +31,12 @@ public:
     virtual ~UpdateHost() {}
     virtual uint32_t ms() = 0;
     virtual std::string screenVersion() = 0;
+    // (1.11.111) Two screen boards, two builds of the firmware: STANDARD fits the 4 MB boards' 1.9 MB slot, FULL is for the
+    // 16 MB layout's 6.25 MB slots. The size of the slot the next firmware would be written to decides which one a
+    // release's "screen" (STANDARD) or "screen_full" (FULL) part is for this screen; and which build this is, so a
+    // screen on the wrong build of the same number is moved to the right one.
+    virtual uint32_t screenSlot() { return 0; }   // 0: not known - the 4 MB layout is assumed
+    virtual bool screenFull() { return false; }
     virtual std::string stamp() = 0;              // the date and time, if known (the Teensy has the clock), for the record
     virtual bool armed() = 0;                     // the motor is on or the safety is off: the radio is off, and nothing may be done
     // Why nothing may be begun or changed just now, or FLY_NO. Flying comes first: a model that is connected, or
@@ -113,6 +119,7 @@ struct UpdPart {
 struct UpdRelease {
     std::string name, date, notes, base;
     UpdPart teensy, teensyFiles, screen, screenFiles;
+    UpdPart screenFull;                           // (1.11.111) "screen_full": the FULL build, for the 16 MB layout; absent in releases before it
 };
 struct UpdEntry { std::string path; uint32_t size, crc; };
 struct UpdRecent { std::string name, date, teensy, screen, path, notes; };      // one of the releases that can be gone back to
@@ -188,6 +195,8 @@ private:
     };
     std::string stagedOf(const Item &it) const;   // where the fetched file waits on the card
     std::string urlOf(const Item &it) const;      // where it is on messiter.com
+    bool wantFull() const;                        // (1.11.111) this screen's slot is the 16 MB layout's: the FULL build is its
+    const UpdPart &screenPart() const;            // the release's screen firmware for this screen (present = false: none for it)
     std::string remoteOf(const Item &it) const;   // its name on the main board's card (kinds 0 and 1)
 
     void note(const std::string &line);

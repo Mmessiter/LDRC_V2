@@ -14,6 +14,11 @@
 static const char LATEST_URL[] = "https://messiter.com/txv1b/release/latest.txt";
 static const char RX_MANIFEST_URL[] = "https://messiter.com/rxv2/release/manifest.json";   // the receivers' releases (RXV2 dev/release.sh publishes it)
 static const char SCREEN_MARK[] = "LDRCSCREEN=" SCREEN_VERSION ";";      // the release tool looks for this in the binary
+#ifdef LDRC_FULL                                                           // (1.11.111) ... and for this: which of the two builds it is (board.h)
+static const char BUILD_MARK[] = "LDRCBUILD=full;";
+#else
+static const char BUILD_MARK[] = "LDRCBUILD=standard;";
+#endif
 
 // The core accepts new firmware the moment it starts, unless this says otherwise. We say otherwise: new
 // firmware has to show that it can join the WiFi again (and talk to the Teensy) before it is kept;
@@ -189,6 +194,12 @@ static bool updFlashOnce(std::string &why, uint32_t &size, uint32_t &crcOut) {
     uint32_t crc = 0, body = 0, done = 0; int n, turns = 0;
     while ((n = f.read(updBuf, UPD_BUF)) > 0) {
         if (updStop) { why = "cancelled"; break; }        // given up (it took too long, or the pilot is flying): the image is NOT named as the one to start
+        if (done == 0 && n >= 16 && part) {               // (1.11.111) the image's own header says what flash it was built for (byte 3: 2 = 4 MB, 4 = 16 MB). Written
+            const uint32_t built = updBuf[0] == 0xE9 ? (1u << (20 + (updBuf[3] >> 4))) : 0;   // to a slot that lies beyond that, it would run but never see its own
+            if (built && (uint64_t) part->address + part->size > built) {                      // half of the chip again: no further update could go in. Refused here, whatever chose it.
+                char b[110]; snprintf(b, sizeof b, "this firmware is built for a %lu MB flash and this screen's slot lies beyond it", (unsigned long) (built >> 20)); why = b; break;
+            }
+        }
         crc = ldrc::crc32(updBuf, (size_t) n, crc);
         const uint32_t skip = done < 16 ? min<uint32_t>(16 - done, (uint32_t) n) : 0;     // the CRC of everything after the 16-byte header, which the core holds back until end()
         body = ldrc::crc32(updBuf + skip, (size_t) n - skip, body);
@@ -273,6 +284,8 @@ static void updStart(int kind, const std::string &url, const std::string &local,
 struct ScreenHost : public ldrc::UpdateHost {
     uint32_t ms() override { return millis(); }
     std::string screenVersion() override { return SCREEN_VERSION; }
+    uint32_t screenSlot() override { return boardSlotBytes(); }      // (1.11.111) the slot the next firmware goes in: decides STANDARD or FULL (board.h)
+    bool screenFull() override { return BUILD_FULL; }
     std::string stamp() override { return lastDateTime; }
     bool armed() override { return armedNow; }
     int flying() override { return flyingNow(); }

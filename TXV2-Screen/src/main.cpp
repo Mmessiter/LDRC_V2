@@ -35,6 +35,7 @@
 #include <esp_core_dump.h>
 #include "tooth_icon.h"
 #include <esp_partition.h>
+#include "board.h"                                      // (1.11.111) which of the two boards this is: the pins that differ, the update slot
 
 #ifndef NEXTION_BAUD
 #define NEXTION_BAUD 921600
@@ -42,17 +43,26 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.110"
+#define SCREEN_VERSION "1.11.111"
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room
 #endif
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
 constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
 
-Arduino_ESP32RGBPanel *panel = new Arduino_ESP32RGBPanel(40, 41, 39, 0, 45, 48, 47, 21, 14, 5, 6, 7, 15, 16, 4, 8, 3, 46, 9, 1,
-                                                          0, 8, 4, 43, 0, 8, 4, 12, 1, 10000000);
-Arduino_RGB_Display *screen = new Arduino_RGB_Display(W, H, panel, 0, true);
-Arduino_Canvas *canvas = new Arduino_Canvas(W, H, screen);   // every draw lands here (PSRAM); present() copies finished rectangles to the panel
-Arduino_GFX *gfx = screen;                                    // switched to the canvas at boot
+// (1.11.111) Made in setup(), once boardDetect() has said which board this is: the pixel clock pin and the panel's timing
+// are the board's (board.h). The data pins, DE, VSYNC and HSYNC are the same on both.
+Arduino_ESP32RGBPanel *panel = nullptr;
+Arduino_RGB_Display *screen = nullptr;
+Arduino_Canvas *canvas = nullptr;                             // every draw lands here (PSRAM); present() copies finished rectangles to the panel
+Arduino_GFX *gfx = nullptr;                                   // the screen at first, switched to the canvas at boot
+static void panelMake() {
+    const BoardPins &b = *board;
+    panel = new Arduino_ESP32RGBPanel(40, 41, 39, b.pclk, 45, 48, 47, 21, 14, 5, 6, 7, 15, 16, 4, 8, 3, 46, 9, 1,
+                                      0, b.hsFp, b.hsPw, b.hsBp, 0, b.vsFp, b.vsPw, b.vsBp, 1, b.pclkHz);
+    screen = new Arduino_RGB_Display(W, H, panel, 0, true);
+    canvas = new Arduino_Canvas(W, H, screen);
+    gfx = screen;
+}
 static uint16_t *fbNow = nullptr, *screenFb = nullptr;        // what gfx draws into / what the panel shows
 static uint16_t *pageFb = nullptr;                            // the canvas: the page, as the Teensy draws it
 // Our own panel ("Check for update") has a layer of its own, laid over the page as rectangles go to the
@@ -2176,6 +2186,8 @@ static void webBegin() {
         out += ",\"rst\":" + std::to_string((int) esp_reset_reason());   // (1.11.7) why we last started: 1 power, 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
         out += ",\"stack\":{\"loop\":" + std::to_string((unsigned) uxTaskGetStackHighWaterMark(NULL)) + ",\"ble\":" + std::to_string(bleStackSpare()) + "}";   // (1.11.8) the least each task's stack has ever had to spare, in bytes
         out += ",\"largest\":" + std::to_string((unsigned) ESP.getMaxAllocHeap()) + ",\"rssi\":" + std::to_string((int) WiFi.RSSI());   // (1.11.11) the largest piece of free memory (a TLS connection wants ~45 kB), and the WiFi signal
+        out += ",\"board\":\"" + std::string(board->name) + "\",\"flash_mb\":" + std::to_string((unsigned) (flashChipBytes >> 20)) + ",\"image_mb\":" + std::to_string((unsigned) (flashImageBytes >> 20))
+             + ",\"slot\":" + std::to_string((unsigned) boardSlotBytes()) + ",\"build\":\"" + (BUILD_FULL ? "full" : "standard") + "\"";   // (1.11.111) which board this is (its flash chip), what the firmware was built for, the slot the next firmware goes in
         out += ",\"crash\":" + crashJson();                     // (1.11.15) the last crash's summary from the core dump in flash, if there is one
         { char q[340]; snprintf(q, sizeof(q), ",\"quiet\":{\"frames\":%lu,\"frame_us\":%lu,\"n\":%lu,\"late\":%lu,\"over\":%lu,\"wait_ms\":%lu,\"copy_us\":%lu,\"copy_max\":%lu,\"draw_us\":%lu,\"draw_max\":%lu,\"kept\":%lu,\"full\":%lu,\"warmed\":%lu,\"step_max\":%lu,\"stores\":%lu,\"store_max\":%lu}",
                                 (unsigned long) frameEnds, (unsigned long) frameUs, (unsigned long) quietN, (unsigned long) quietLateN, (unsigned long) quietOverN, (unsigned long) quietWaitMs,
@@ -2574,7 +2586,7 @@ static void audioBegin() {
     cfg.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT; cfg.communication_format = I2S_COMM_FORMAT_STAND_I2S;
     cfg.dma_buf_count = 8; cfg.dma_buf_len = FRAMES; cfg.use_apll = false; cfg.tx_desc_auto_clear = true; cfg.intr_alloc_flags = 0;
     if (i2s_driver_install(I2S_PORT, &cfg, 0, nullptr) != ESP_OK) return;
-    i2s_pin_config_t pins = {}; pins.mck_io_num = I2S_PIN_NO_CHANGE; pins.bck_io_num = 42; pins.ws_io_num = 18; pins.data_out_num = 17; pins.data_in_num = I2S_PIN_NO_CHANGE;
+    i2s_pin_config_t pins = {}; pins.mck_io_num = I2S_PIN_NO_CHANGE; pins.bck_io_num = board->i2sBclk; pins.ws_io_num = 18; pins.data_out_num = 17; pins.data_in_num = I2S_PIN_NO_CHANGE;   // (1.11.111) the bit clock is the board's: IO42 on the CrowPanel, IO0 on the twin
     i2s_set_pin(I2S_PORT, &pins);
     i2s_zero_dma_buffer(I2S_PORT);
     audioRing = (uint8_t *) ps_malloc(RING);
@@ -2808,6 +2820,7 @@ void setup() {
     // 921600 that leaves 87 microseconds before bytes are lost, and any brief interrupt delay mangled a command
     // (a stray line across the curve page). At 24 bytes there is over a millisecond in hand.
     Serial.setRxFIFOFull(24);
+    boardDetect(); panelMake();                            // (1.11.111) which board, by its flash chip: the pixel clock pin differs, and the wrong one is a black screen
     prefs.begin("screen", false);                          // FIRST: the remembered page, background and volume are read below
     themeLoad();                                           // the pilot's colours, before anything is drawn
     pinMode(LCD_BL, OUTPUT); ledcSetup(1, 20000, 8); ledcAttachPin(LCD_BL, 1); blSet(0);   // dark: see "The backlight" above
@@ -2816,10 +2829,11 @@ void setup() {
     if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) { gfx = canvas; fbNow = canvas->getFramebuffer(); canvas->fillScreen(0); } else fbNow = screenFb;
     pageFb = fbNow;
     Wire.begin(TP_SDA, TP_SCL);
+    touch.setPins(board->touchRst, board->touchInt);       // (1.11.111) the twin's touch chip has its reset on IO38: left floating it may never wake; the CrowPanel's is not wired (-1)
     touchOk = touch.begin(Wire, GT911_SLAVE_ADDRESS_L, TP_SDA, TP_SCL) || touch.begin(Wire, GT911_SLAVE_ADDRESS_H, TP_SDA, TP_SCL);
     if (touchOk) touch.setMaxCoordinates(W, H);
     sdSPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
-    blog("boot", std::string("screen up ") + SCREEN_MARK);
+    blog("boot", std::string("screen up ") + SCREEN_MARK + " " + BUILD_MARK + " on " + boardWords());   // (1.11.111: which board, and which build)
     ldrc::crc32((const uint8_t *) "", 0);                  // (its table is made now, by one task, not later by two at once)
     sdOk = SD.begin(SD_CS, sdSPI, 40000000) || SD.begin(SD_CS, sdSPI, 20000000);
     blog("boot", sdOk ? "sd ok" : "sd FAILED");

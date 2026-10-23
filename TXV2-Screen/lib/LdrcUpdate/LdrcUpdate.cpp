@@ -139,7 +139,7 @@ bool parseRelease(const std::string &text, UpdRelease &r, std::string &why) {
             const size_t dot = k.find('.');
             if (dot == std::string::npos) continue;                     // a key from the future: not ours to judge
             const std::string part = k.substr(0, dot), field = k.substr(dot + 1);
-            UpdPart *p = part == "teensy" ? &r.teensy : part == "teensy_files" ? &r.teensyFiles : part == "screen" ? &r.screen : part == "screen_files" ? &r.screenFiles : (UpdPart *) 0;
+            UpdPart *p = part == "teensy" ? &r.teensy : part == "teensy_files" ? &r.teensyFiles : part == "screen" ? &r.screen : part == "screen_files" ? &r.screenFiles : part == "screen_full" ? &r.screenFull : (UpdPart *) 0;
             if (!p) continue;
             bool ok = true;
             if (field == "version") p->version = v;
@@ -155,13 +155,14 @@ bool parseRelease(const std::string &text, UpdRelease &r, std::string &why) {
     if (!end) { why = "it is incomplete"; return false; }
     if (r.name.empty()) { why = "the release has no name"; return false; }
     if (!startsWith(r.base, "https://") || r.base[r.base.size() - 1] != '/') { why = "its address is not an https:// folder"; return false; }
-    UpdPart *parts[4] = { &r.teensy, &r.teensyFiles, &r.screen, &r.screenFiles };
-    for (int i = 0; i < 4; ++i) {
+    UpdPart *parts[5] = { &r.teensy, &r.teensyFiles, &r.screen, &r.screenFiles, &r.screenFull };
+    for (int i = 0; i < 5; ++i) {
         UpdPart &p = *parts[i];
+        const bool firmware = i == 0 || i == 2 || i == 4;
         if (!p.present) continue;
         if (p.file.empty() || p.file[0] == '/' || p.file.find("..") != std::string::npos || p.file.find("://") != std::string::npos || p.size == 0) { why = "a part of it is not described properly"; return false; }
-        if ((i == 0 || i == 2) && p.version.empty()) { why = "firmware without a version"; return false; }
-        if ((i == 0 || i == 2) && p.version.size() > 31) { why = "a version text is too long"; return false; }
+        if (firmware && p.version.empty()) { why = "firmware without a version"; return false; }
+        if (firmware && p.version.size() > 31) { why = "a version text is too long"; return false; }
     }
     return true;
 }
@@ -296,9 +297,17 @@ std::string Updater::stagedOf(const Item &it) const {
 }
 std::string Updater::urlOf(const Item &it) const {
     if (it.kind == 0) return url(rel_.teensy.file);
-    if (it.kind == 2) return url(rel_.screen.file);
+    if (it.kind == 2) return url(screenPart().file);
     return url("files/" + blobName(it.crc, it.size));
 }
+// (1.11.111) Which of a release's two screen firmwares is this screen's: by the size of the slot the next one is written
+// to, never by the chip. A 16 MB chip still on the 4 MB layout has a 1.9 MB slot and takes STANDARD; on the 16 MB layout
+// (two 6.25 MB slots) it takes FULL - a STANDARD image there would run but could not see the half of the chip the next
+// update goes to (its header says 4 MB), and no further update could go in. A release from before there were two builds
+// has no "screen_full": a 16 MB-layout screen keeps the firmware it has, and is told so.
+static const uint32_t BIG_SLOT = 4u * 1024u * 1024u;
+bool Updater::wantFull() const { return host_.screenSlot() >= BIG_SLOT; }
+const UpdPart &Updater::screenPart() const { return wantFull() ? rel_.screenFull : rel_.screen; }
 std::string Updater::remoteOf(const Item &it) const {
     if (it.kind == 0) return TEENSY_PACKAGE_REMOTE;
     if (it.kind == 1) return it.path.substr(strlen(TEENSY_COPIES));
@@ -466,11 +475,13 @@ void Updater::decide() {
     // one by one, and only those that differ are sent; firmware that has passed its trial here starts without one (B18).
     needTeensyFw_ = teensyThere_ && rel_.teensy.present && (again_ || teensyFw_ != rel_.teensy.version);
     needTeensyFiles_ = teensyThere_ && rel_.teensyFiles.present && (again_ || teensyMarker_ != hex8(rel_.teensyFiles.crc));
-    needScreenFw_ = rel_.screen.present && (again_ || host_.screenVersion() != rel_.screen.version);
+    const UpdPart &sfw = screenPart();                 // (1.11.111) STANDARD or FULL, whichever this screen's slot takes; a different build of the same number counts as new
+    needScreenFw_ = sfw.present && (again_ || host_.screenVersion() != sfw.version || host_.screenFull() != wantFull());
+    if (wantFull() && !rel_.screenFull.present && rel_.screen.present) note("this release has no firmware for a 16 MB screen: the screen keeps " + host_.screenVersion());
     std::string mark; host_.readText(SCREEN_MARK, mark, 64);
     needScreenFiles_ = rel_.screenFiles.present && (again_ || trim(mark) != hex8(rel_.screenFiles.crc));
     stRelease_ = rel_.name; stTeensy_ = teensyFw_; stTeensyThere_ = teensyThere_; stTeensyChanged_ = false;
-    stFrom_ = host_.screenVersion(); stTo_ = needScreenFw_ ? rel_.screen.version : host_.screenVersion(); stScreenFw_ = false; stFiles_ = 0; stKept_ = 0;
+    stFrom_ = host_.screenVersion(); stTo_ = needScreenFw_ ? sfw.version : host_.screenVersion(); stScreenFw_ = false; stFiles_ = 0; stKept_ = 0;
     stSettings_.clear(); stWarn_.clear(); mustSee_ = false;
     if (!needTeensyFw_ && !needTeensyFiles_ && !needScreenFw_ && !needScreenFiles_) {
         freshKind_.clear();
@@ -487,10 +498,11 @@ void Updater::decide() {
     show(UpdView::OFFER, again_ ? "Install this release again?" : choosing_ ? "Install this version?" : "Update available");
     if (choosing_) line(rel_.name + (rel_.date.empty() ? "" : ", " + rel_.date));
     if (needTeensyFw_) { row("Transmitter", teensyFw_, rel_.teensy.version); what += " main-board-firmware"; }
-    if (needScreenFw_) { row("Screen", host_.screenVersion(), rel_.screen.version); what += " screen-firmware"; }
+    if (needScreenFw_) { row("Screen", host_.screenVersion() + (host_.screenFull() ? " (16 MB)" : ""), screenPart().version + (wantFull() ? " (16 MB)" : "")); what += " screen-firmware"; }   // (1.11.111: the build named when it is the 16 MB one)
     if (needTeensyFiles_) { row("Help files", "", "changed"); what += " help-files"; }   // ("changed", not "new": an earlier version changes them too)
     if (needScreenFiles_) { row("Screen files", "", "changed"); what += " screen-files"; }
     if (!rel_.notes.empty()) line(rel_.notes);
+    if (wantFull() && !rel_.screenFull.present && rel_.screen.present) line("This release has no firmware for this 16 MB screen: it keeps what it has.");
     if (needTeensyFw_ && teensyFellBack_) line("The transmitter undid its last update by itself.");
     if (!teensyThere_) line(host_.teensySeen() ? "The transmitter does not answer: only the screen is updated." : "No transmitter is connected: only the screen is updated.");
     buttons("Install now", choosing_ ? "Back" : "Later");
@@ -624,7 +636,7 @@ void Updater::buildItems() {
         const UpdEntry &e = teensyList_[i];
         it.kind = 1; it.path = std::string(TEENSY_COPIES) + e.path; it.size = e.size; it.crc = e.crc; items_.push_back(it);
     }
-    if (needScreenFw_) { it.kind = 2; it.path = SCREEN_IMAGE; it.size = rel_.screen.size; it.crc = rel_.screen.crc; items_.push_back(it); }
+    if (needScreenFw_) { it.kind = 2; it.path = SCREEN_IMAGE; it.size = screenPart().size; it.crc = screenPart().crc; items_.push_back(it); }
     for (size_t i = 0; i < screenList_.size(); ++i) {
         const UpdEntry &e = screenList_[i];
         it.kind = 3; it.path = e.path; it.size = e.size; it.crc = e.crc; it.twin = 0;
@@ -855,8 +867,8 @@ void Updater::startFlash() {
     if (host_.flying() != UpdateHost::FLY_NO) { fail("writing the screen's firmware", flyingWords(host_.flying())); return; }
     changing_ = true; phase_ = P_FLASH;
     saveState("flash");
-    show(UpdView::WORKING, "Updating the screen"); line("Writing the screen's firmware"); view_.warning = DO_NOT; view_.hint = FLICKER; bar(0, rel_.screen.size);
-    host_.flashScreen(SCREEN_IMAGE, rel_.screen.size, rel_.screen.crc); since_ = host_.ms();
+    show(UpdView::WORKING, "Updating the screen"); line("Writing the screen's firmware"); view_.warning = DO_NOT; view_.hint = FLICKER; bar(0, screenPart().size);
+    host_.flashScreen(SCREEN_IMAGE, screenPart().size, screenPart().crc); since_ = host_.ms();
 }
 void Updater::afterAll() {
     if (stScreenFw_ || stFiles_ > 0) {                        // new firmware, or new pages and fonts: the screen starts afresh
@@ -1150,12 +1162,12 @@ void Updater::poll() {
         placeSome();
         return;
     case P_FLASH:
-        if (host_.busy()) { bar(host_.progress(), rel_.screen.size); if (now - since_ > 300000) fail("writing the screen's firmware", "it took more than five minutes"); return; }
+        if (host_.busy()) { bar(host_.progress(), screenPart().size); if (now - since_ > 300000) fail("writing the screen's firmware", "it took more than five minutes"); return; }
         {
             const Work &w = host_.done();
             if (!w.ok) { fail("writing the screen's firmware", w.error); return; }
             stScreenFw_ = true;
-            note("the screen's firmware " + rel_.screen.version + " is written");
+            note("the screen's firmware " + screenPart().version + (wantFull() ? " (the 16 MB build)" : "") + " is written");
         }
         afterAll();
         return;

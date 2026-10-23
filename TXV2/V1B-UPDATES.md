@@ -64,6 +64,17 @@ than 1.1.0 is offered: those held the house's WiFi password and were withdrawn.)
 
 A new screen with an empty card fills itself the same way (40 MB, a few minutes): flash its firmware once by USB, press the button.
 
+**Two screen boards, two builds (23 Oct 2026, screen 1.11.111).** The three 16 MB screens (Elecrow DLE06050B, N16R8) differ
+from the CrowPanel 5.0 (N4R8) in two pins (pixel clock IO42, speaker bit clock IO0 - swapped) and a touch reset on IO38;
+the firmware tells them apart at start-up by the flash chip's own size (`src/board.h`), so ONE source runs on both. Two
+builds of it: STANDARD (env `ota`, the 4 MB boards' 1.9 MB slot) and FULL (env `ota_full`, the 16 MB layout's 6.25 MB slots,
+`-DLDRC_FULL`). A release carries both (`screen` and `screen_full`); a screen fetches the one for the size of its OWN update
+slot - never its chip, so a 16 MB board still on the 4 MB layout takes STANDARD. A board on the 16 MB layout refuses an image
+built for 4 MB (its header): such an image would run but never see the half of the chip the next update goes to. Releases from
+before this have no `screen_full`: a 16 MB-layout screen keeps its firmware and the panel says so. A fresh board gets its
+layout by USB once: `python3 dev/usb_setup.py backup flash` (screen project) reads the chip, backs its factory flash up and
+flashes `usb_seed` or `usb_seed_full`; `/status` then says `board`, `flash_mb`, `slot`, `build`.
+
 ## The receiver's update: Model setup > Receiver update (B11+, screen 1.4.0, receivers 0.9.864+)
 
 Malcolm, 30 Sep 2026: *"If a receiver is connected when I hit check for update, I think it would be wonderful if we could

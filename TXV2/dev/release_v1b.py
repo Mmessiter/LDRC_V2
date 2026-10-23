@@ -15,12 +15,13 @@
      2. Every file that is to go to the website - this release's and every earlier one's - is searched for every
         text of the screen project's include/secrets.h, at stage and again at publish. One that holds any is refused.
 
-   stage takes  --no-build         use the firmware already built (Teensy: dev/out/TXFW.BIN, screen: .pio/build/ota/firmware.bin)
+   stage takes  --no-build         use the firmware already built (Teensy: dev/out/TXFW.BIN, screen: dev/out/screen_build/.pio/build/ota and ota_full)
                 --without-screen   a release that leaves the screen's firmware as it is
 
-   A release is four parts. The screen compares each with what the transmitter has and fetches what differs:
+   A release is four parts, and a fifth since 23 Oct 2026. The screen compares each with what the transmitter has and fetches what differs:
      teensy        the Teensy's firmware, as an update package (dev/make_fw_package.py)     compared by version
-     screen        the screen's firmware                                                    compared by version
+     screen        the screen's firmware, STANDARD: fits the 4 MB boards' 1.9 MB slot      compared by version (and build)
+     screen_full   the same source built FULL for the 16 MB boards' 6.25 MB slots           a screen on the 16 MB layout takes only this
      teensy_files  the files for the Teensy's SD card: the help texts, to /help             compared by the list's checksum
      screen_files  the files for the screen's card: pages, pictures, fonts, sounds, images  compared by the list's checksum
    Never the pilot's own data: no models, no logs (the screen refuses a list that names one, and so does the Teensy).
@@ -40,6 +41,7 @@ SCREEN = os.path.expanduser('~/Documents/GitHub/ESP32-board2/board4/nextion-emul
 SITE = os.path.join(ROOT, 'NewWebSite', 'public_html')
 REL = os.path.join(SITE, 'txv1b', 'release')
 BASE = 'https://messiter.com/txv1b/release/'
+PARTS = ('teensy', 'screen', 'teensy_files', 'screen_files', 'screen_full')    # every part a release may have (screen_full since 23 Oct 2026: optional, for the 16 MB boards)
 FTP_CREDENTIALS = os.path.expanduser('~/Documents/GitHub/LDRC_V2_ALL/RXV2/dev/ftp_credentials.sh')   # exports LFTP_PASSWORD, LDRC_FTP_HOST, LDRC_FTP_USER
 PIO = shutil.which('pio') or os.path.expanduser('~/.platformio/penv/bin/pio')
 
@@ -78,37 +80,49 @@ def clean_copy():
             if 'secret' in n.lower(): sys.exit(f'REFUSED: {os.path.join(d, n)} is in the copy the firmware is built from')
 
 def screen_firmware(build):
+    """The screen's TWO firmwares, from the one source (23 Oct 2026, the three 16 MB screens): STANDARD (env ota) for the
+       4 MB boards' 1.9 MB slot, and FULL (env ota_full, -DLDRC_FULL) for the 16 MB boards' 6.25 MB slots. Each image says
+       which build it is (LDRCBUILD=standard; / LDRCBUILD=full;) and what flash it was built for (its header): both are
+       checked here and again by the gate, so neither can be staged under the other's name. A screen fetches the one for
+       the slot it has (the release's "screen" or "screen_full" part; the screen's LdrcUpdate.cpp screenPart())."""
     src = open(os.path.join(SCREEN, 'src', 'main.cpp'), encoding='utf-8').read()
     m = re.search(r'#define\s+SCREEN_VERSION\s+"([^"]+)"', src)
     if not m: sys.exit('SCREEN_VERSION not found in the screen\'s main.cpp')
-    image = os.path.join(CLEAN, '.pio', 'build', 'ota', 'firmware.bin')
     if build:
-        print('Building the screen firmware (in a copy of its project that holds no secrets.h) ...')
+        print('Building the screen firmware, STANDARD and FULL (in a copy of its project that holds no secrets.h) ...')
         clean_copy()
-        run([PIO, 'run', '-e', 'ota'], CLEAN)
-    if not os.path.exists(image): sys.exit('the screen firmware has not been built yet: leave out --no-build')
-    b = open(image, 'rb').read()
-    found = re.findall(rb'LDRCSCREEN=([^;\0]{1,31});', b)
-    if len(set(found)) != 1: sys.exit('the screen firmware does not say which version it is (LDRCSCREEN=...;)')
-    version = found[0].decode()
-    if version != m.group(1): sys.exit(f'the screen firmware that is built is {version}, the source says {m.group(1)}: build it (leave out --no-build)')
-    if b[0] != 0xE9: sys.exit('the screen firmware is not an ESP32 image')
-    if len(b) > 0x1E0000: sys.exit('the screen firmware is too big for its half of the flash')
-    # The ELF of every screen build that is staged, for reading a crash's core dump against (screen 1.11.15: /status "crash",
-    # /coredump): dev/out/elf/screen-<version>.elf
-    elf = os.path.join(CLEAN, '.pio', 'build', 'ota', 'firmware.elf')
-    if os.path.exists(elf):
-        keep = os.path.join(HERE, 'out', 'elf'); os.makedirs(keep, exist_ok=True)
-        shutil.copy2(elf, os.path.join(keep, f'screen-{version}.elf'))
-        # (17 Oct 2026: 74 of them, 32 MB each, helped fill the Mac's disk) the newest eight stay here; older ones go to the
-        # archive on the 2TB SSD when it is plugged in (still there for an old core dump), else they wait here
-        archive = '/Volumes/2TB SSD/LDRC archive/TXV1B screen ELFs'
-        if os.path.isdir(archive):
-            elves = sorted((e for e in os.listdir(keep) if e.endswith('.elf')), key=lambda e: os.path.getmtime(os.path.join(keep, e)), reverse=True)
-            for e in elves[8:]:
-                try: shutil.move(os.path.join(keep, e), os.path.join(archive, e))
-                except OSError as err: print(f'  (could not move {e} to the archive: {err})')
-    return b, version
+        run([PIO, 'run', '-e', 'ota', '-e', 'ota_full'], CLEAN)
+    images = []
+    keep = os.path.join(HERE, 'out', 'elf')
+    for env, label, full, limit, header_mb in (('ota', 'STANDARD', False, 0x1E0000, 4), ('ota_full', 'FULL', True, 0x640000, 16)):
+        image = os.path.join(CLEAN, '.pio', 'build', env, 'firmware.bin')
+        if not os.path.exists(image): sys.exit(f'the screen firmware ({label}) has not been built yet: leave out --no-build')
+        b = open(image, 'rb').read()
+        found = re.findall(rb'LDRCSCREEN=([^;\0]{1,31});', b)
+        if len(set(found)) != 1: sys.exit(f'the screen firmware ({label}) does not say which version it is (LDRCSCREEN=...;)')
+        version = found[0].decode()
+        if version != m.group(1): sys.exit(f'the screen firmware ({label}) that is built is {version}, the source says {m.group(1)}: build it (leave out --no-build)')
+        if b[0] != 0xE9: sys.exit(f'the screen firmware ({label}) is not an ESP32 image')
+        if (b'LDRCBUILD=full;' in b) != full or (b'LDRCBUILD=standard;' in b) == full: sys.exit(f'the screen firmware ({label}) does not say it is the {label} build (LDRCBUILD=...;)')
+        built_mb = 1 << (b[3] >> 4)                      # the image header: the flash it was built for (2 = 4 MB, 4 = 16 MB)
+        if built_mb != header_mb: sys.exit(f'the screen firmware ({label}) is built for a {built_mb} MB flash, not {header_mb} MB: see platformio.ini')
+        if len(b) > limit: sys.exit(f'the screen firmware ({label}) is too big for its slot ({len(b)} > {limit} bytes)')
+        # The ELF of every screen build that is staged, for reading a crash's core dump against (screen 1.11.15: /status "crash",
+        # /coredump): dev/out/elf/screen-<version>.elf and screen-<version>-full.elf
+        elf = os.path.join(CLEAN, '.pio', 'build', env, 'firmware.elf')
+        if os.path.exists(elf):
+            os.makedirs(keep, exist_ok=True)
+            shutil.copy2(elf, os.path.join(keep, f'screen-{version}{"-full" if full else ""}.elf'))
+        images.append(b)
+    # (17 Oct 2026: 74 of them, 32 MB each, helped fill the Mac's disk) the newest sixteen stay here; older ones go to the
+    # archive on the 2TB SSD when it is plugged in (still there for an old core dump), else they wait here
+    archive = '/Volumes/2TB SSD/LDRC archive/TXV1B screen ELFs'
+    if os.path.isdir(archive) and os.path.isdir(keep):
+        elves = sorted((e for e in os.listdir(keep) if e.endswith('.elf')), key=lambda e: os.path.getmtime(os.path.join(keep, e)), reverse=True)
+        for e in elves[16:]:
+            try: shutil.move(os.path.join(keep, e), os.path.join(archive, e))
+            except OSError as err: print(f'  (could not move {e} to the archive: {err})')
+    return images[0], images[1], version
 
 def teensy_files():
     """The help texts: TXV1B/"Help files for SD" -> /help/NAME.TXT on the Teensy's card."""
@@ -221,18 +235,18 @@ def slug(name): return re.sub(r'[^A-Za-z0-9.]+', '-', name).strip('-')
 
 def stage(notes, build, name, with_screen=True):
     tp, tv = teensy_package(build)
-    sf, sv = screen_firmware(build) if with_screen else (None, None)
+    sf, sff, sv = screen_firmware(build) if with_screen else (None, None, None)
     tf, scf = teensy_files(), screen_files()
     private = private_values()
     print(f'  looking for {len(private)} private texts of secrets.h in everything that is to be published' if private else '  (there is no secrets.h: nothing private to look for)')
-    for label, b in [('the Teensy firmware', tp)] + ([('the screen firmware', sf)] if with_screen else []) + list(tf.items()) + list(scf.items()): refuse_private(label, b, private)
+    for label, b in [('the Teensy firmware', tp)] + ([('the screen firmware', sf), ('the 16 MB screen firmware', sff)] if with_screen else []) + list(tf.items()) + list(scf.items()): refuse_private(label, b, private)
     check_paths(tf, ['/help/'], 'the Teensy\'s files'); check_paths(scf, ['/hmi/', '/images/'], 'the screen\'s files')
     if not tf or len(scf) < 100: sys.exit('files are missing: the help texts or the screen\'s card folder')
     name = name or (f"{' '.join(tv.split(' ')[:2])} (screen {sv})" if with_screen else f"{' '.join(tv.split(' ')[:2])} (screen as it is)")
     if '\n' in notes or len(notes) > 300: sys.exit('the notes: one line, 300 characters at most')
     new = 0
     names = {}
-    for label, b in (('teensy', tp), ('screen', sf), ('teensy_list', list_text(tf)), ('screen_list', list_text(scf))):
+    for label, b in (('teensy', tp), ('screen', sf), ('screen_full', sff), ('teensy_list', list_text(tf)), ('screen_list', list_text(scf))):
         if b is None: continue
         names[label], fresh = put_blob(b); new += fresh
     for files in (tf, scf):
@@ -241,19 +255,21 @@ def stage(notes, build, name, with_screen=True):
          'teensy': {'version': tv, 'file': names['teensy'], 'size': len(tp), 'crc': f'{crc(tp):08X}'},
          'teensy_files': {'file': names['teensy_list'], 'size': len(list_text(tf)), 'crc': f'{crc(list_text(tf)):08X}', 'count': len(tf), 'bytes': sum(map(len, tf.values()))},
          'screen_files': {'file': names['screen_list'], 'size': len(list_text(scf)), 'crc': f'{crc(list_text(scf)):08X}', 'count': len(scf), 'bytes': sum(map(len, scf.values()))}}
-    if with_screen: d['screen'] = {'version': sv, 'file': names['screen'], 'size': len(sf), 'crc': f'{crc(sf):08X}'}
+    if with_screen:
+        d['screen'] = {'version': sv, 'file': names['screen'], 'size': len(sf), 'crc': f'{crc(sf):08X}'}
+        d['screen_full'] = {'version': sv, 'file': names['screen_full'], 'size': len(sff), 'crc': f'{crc(sff):08X}'}   # the FULL build, for the 16 MB layout (screens on it take only this)
     write_release(d)
     gone = tidy()
     if gone: print(f'  {gone} files that no release names any more were taken out of the staging folder')
     searched = refuse_private_everywhere(private)
     print(f'  {searched} files in the staging folder searched: nothing private in any of them')
-    print(f'\nStaged release "{name}"\n  Teensy firmware  {tv}  ({len(tp) // 1024} kB)\n  screen firmware  ' + (f'{sv}  ({len(sf) // 1024} kB)' if with_screen else 'not in this release: screens keep what they have') +
+    print(f'\nStaged release "{name}"\n  Teensy firmware  {tv}  ({len(tp) // 1024} kB)\n  screen firmware  ' + (f'{sv}  ({len(sf) // 1024} kB standard, {len(sff) // 1024} kB full for the 16 MB boards)' if with_screen else 'not in this release: screens keep what they have') +
           f'\n  Teensy files     {len(tf)}  ({d["teensy_files"]["bytes"] // 1024} kB)\n  screen files     {len(scf)}  ({d["screen_files"]["bytes"] / 1048576:.1f} MB)'
           f'\n  {new} files are new to the website\n  notes: {notes}\nNext: dev/release_v1b.py publish')
 
 def release_text(d):
     t = f"# Transmitter Version 1B: a release. Read by the screen (\"Check for update\").\nldrc-release=1\nname={d['name']}\ndate={d['date']}\nnotes={d['notes']}\nbase={d['base']}\n"
-    for part in ('teensy', 'teensy_files', 'screen', 'screen_files'):
+    for part in PARTS:
         for k in ('version', 'file', 'size', 'crc', 'count', 'bytes'):
             if part in d and k in d[part]: t += f'{part}.{k}={d[part][k]}\n'
     return t + 'end=1\n'
@@ -292,7 +308,7 @@ def write_release(d, history=True):
     versions.insert(0, {'name': d['name'], 'date': d['date'], 'notes': d['notes'], 'teensy': d['teensy']['version'], 'screen': d.get('screen', {}).get('version', 'as it is'),
                         'description': BASE + 'v/' + slug(d['name']) + '/release.txt'})
     pretty = dict(d); pretty['description'] = BASE + 'latest.txt'
-    for part in ('teensy', 'screen', 'teensy_files', 'screen_files'):
+    for part in PARTS:
         if part in d: pretty[part] = dict(d[part], url=BASE + d[part]['file'])
     json.dump({'product': 'txv1b', 'what': 'LDRC Transmitter Version 1B: releases for the button "Check for update"', 'latest': pretty, 'versions': versions}, open(mpath, 'w'), indent=1)
     open(os.path.join(REL, 'recent.txt'), 'w').write(recent_text()[0])
@@ -305,7 +321,7 @@ def referenced():
         jp = os.path.join(vdir, folder, 'release.json')
         if not os.path.exists(jp): continue
         r = json.load(open(jp))
-        for part in ('teensy', 'screen', 'teensy_files', 'screen_files'):
+        for part in PARTS:
             if part not in r: continue
             names.add(r[part]['file'])
             lp = os.path.join(REL, r[part]['file'])
@@ -336,7 +352,7 @@ def staged():
 def wanted(d):
     """Every file of the staged release: {name on the site: bytes}."""
     out = {}
-    for part in ('teensy', 'screen', 'teensy_files', 'screen_files'):
+    for part in PARTS:
         if part + '.file' not in d: continue
         name = d[part + '.file']; b = open(os.path.join(REL, name), 'rb').read()
         if len(b) != int(d[part + '.size']) or f'{crc(b):08X}' != d[part + '.crc']: sys.exit(f'{name} is not what the description says: stage again')
@@ -404,7 +420,7 @@ def purge(names):
     for folder in sorted(os.listdir(os.path.join(REL, 'v'))):
         jp = os.path.join(REL, 'v', folder, 'release.json')
         if not os.path.exists(jp): continue
-        r = json.load(open(jp)); hit = [part for part in ('teensy', 'screen', 'teensy_files', 'screen_files') if part in r and r[part]['file'] in names]
+        r = json.load(open(jp)); hit = [part for part in PARTS if part in r and r[part]['file'] in names]
         if not hit: continue
         for part in hit: del r[part]
         r['notes'] = (r['notes'] + ' ' if r['notes'] else '') + '(' + ' and '.join(hit) + ' withdrawn)'
@@ -462,7 +478,8 @@ def publish():
         want = open(os.path.join(REL, path)).read()
         if status != 200 or body.decode(errors='replace') != want: bad.append(f'{path} ({status})')
         rd = dict(l.split('=', 1) for l in want.splitlines() if '=' in l and not l.startswith('#'))
-        for part in ('teensy', 'screen', 'teensy_files', 'screen_files'):
+        for part in PARTS:
+            if part + '.file' not in rd: continue         # (screen_full: a release from before the two builds has none; the four others whole() has seen)
             n = rd[part + '.file']
             if n in files: continue                       # read back already, as part of the latest
             status, body = fetch(conn, n)
@@ -477,7 +494,7 @@ def publish():
     status, body = fetch(conn, 'recent.txt?n=' + str(os.getpid()))
     if status != 200 or body.decode(errors='replace') != rtext: sys.exit(f'recent.txt on messiter.com is not the one staged ({status})')
     print(f'{rcount} releases can be gone back to ("Earlier versions"):', ', '.join(l.split('=', 1)[1].split('|')[0] for l in rtext.splitlines() if l.startswith('release=')))
-    print(f'PUBLISHED: "{d["name"]}" is the latest release.\n  Teensy {d["teensy.version"]}, screen {d.get("screen.version", "as it is")}, {d["teensy_files.count"]} help files, {d["screen_files.count"]} screen files'
+    print(f'PUBLISHED: "{d["name"]}" is the latest release.\n  Teensy {d["teensy.version"]}, screen {d.get("screen.version", "as it is")}' + (' (standard and full)' if 'screen_full.file' in d else '') + f', {d["teensy_files.count"]} help files, {d["screen_files.count"]} screen files'
           f'\n  {BASE}latest.txt')
     # The public repository (github.com/Mmessiter/LDRC_V2) gets the same release as a snapshot, committed and pushed
     # (Malcolm, 2026-10-05: "Go!" - Version 2 is public).
@@ -489,7 +506,7 @@ def status():
     s, body = fetch(conn, 'latest.txt?n=' + str(os.getpid()))
     if s == 200:
         d = dict(l.split('=', 1) for l in body.decode(errors='replace').splitlines() if '=' in l and not l.startswith('#'))
-        print(f'live:    "{d.get("name")}" of {d.get("date")}  Teensy {d.get("teensy.version")}, screen {d.get("screen.version", "as it is")}\n         {d.get("notes")}')
+        print(f'live:    "{d.get("name")}" of {d.get("date")}  Teensy {d.get("teensy.version")}, screen {d.get("screen.version", "as it is")}' + (' (standard and full)' if 'screen_full.file' in d else ' (standard only: no 16 MB build)') + f'\n         {d.get("notes")}')
     else: print(f'live:    nothing ({s})')
     if os.path.exists(os.path.join(REL, 'latest.txt')):
         text, d = staged()
