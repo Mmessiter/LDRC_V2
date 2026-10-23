@@ -27,7 +27,11 @@ struct BoardPins {
     uint32_t pclkHz;                     // 10 MHz on both: faster, and the panel's DMA starves against our PSRAM writes (proven 28 Sep 2026)
 };
 static const BoardPins BOARD_CROWPANEL = { "crowpanel", 0, 42, -1, -1, 8, 4, 43, 8, 4, 12, 10000000 };
-static const BoardPins BOARD_IPS16     = { "ips16",    42,  0, 38, -1, 8, 4,  8, 8, 4,  8, 10000000 };
+// (1.11.112) The twin's IPS panel shows only WHITE at 10 MHz (23 Oct 2026, first board on the bench: backlight on, no picture).
+// Elecrow's own factory program for this board (factory-backup/factory_16MB_14c19f4966b8_first4MB.bin, disassembled: its
+// Arduino_ESP32RGBPanel(40, 41, 39, 42, 45, 48, 47, 21, 14, 5, 6, 7, 15, 16, 4, 8, 3, 46, 9, 1, 0, 12, 4, 16, 0, 10, 4, 10, 1,
+// 14500000) at 0x42001D8D) runs it at 14.5 MHz with these porches: 832 x 504 clocks a frame, 34.6 frames a second.
+static const BoardPins BOARD_IPS16     = { "ips16",    42,  0, 38, -1, 12, 4, 16, 10, 4, 10, 14500000 };
 static const BoardPins *board = &BOARD_CROWPANEL;
 static uint32_t flashChipBytes = 0;      // what the chip says it is
 static uint32_t flashImageBytes = 0;     // what the image header says the firmware was built for
