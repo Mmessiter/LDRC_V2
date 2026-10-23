@@ -7,8 +7,9 @@
 // (lib/NextionScript) so buttons answer the Teensy with the very bytes the
 // Nextion sent. Backgrounds are raw RGB565 files blitted straight in.
 //
-// Draw discipline for the RGB panel: 10 MHz pixel clock and never a whole-
-// screen redraw except on a page change (PSRAM contention flickers otherwise).
+// Draw discipline for the RGB panel: 10 MHz pixel clock (14.5 on the 16 MB twin,
+// src/board.h) and never a whole-screen redraw except on a page change (PSRAM
+// contention flickers otherwise).
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -43,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.112"
+#define SCREEN_VERSION "1.11.113"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -104,7 +105,11 @@ static void hookFrameEnd() {
     esp_rgb_panel_t *p = panel->*panelMember(RgbPanelTag());
     if (!p) return;
     const uint32_t vt = LCD_CAM.lcd_ctrl.lcd_vt_height, pic = (LCD_CAM.lcd_ctrl1.lcd_vb_front + 1) + (LCD_CAM.lcd_ctrl.lcd_va_height + 1);
-    if (vt >= 400 && vt < 900 && pic < vt) { vtNormal = vt; picLines = pic; picTop = LCD_CAM.lcd_ctrl1.lcd_vb_front + 1; }   // (anything odd: no quiet frames, the copies are made at once)
+    if (vt >= 400 && vt < 900 && pic < vt) {           // (anything odd: no quiet frames, the copies are made at once)
+        vtNormal = vt; picLines = pic; picTop = LCD_CAM.lcd_ctrl1.lcd_vb_front + 1;
+        const uint32_t ht = W + board->hsFp + board->hsPw + board->hsBp;   // (1.11.113) pixel clocks a line: 855 on the CrowPanel, 832 on the twin
+        quietFrameLength((uint32_t) ((uint64_t) ht * (vt + 1) * 1000000u / board->pclkHz));   // the frame's length from this board's own timing
+    }
     p->user_ctx = nullptr;
     p->on_frame_trans_done = onFrameEnd;
 }
@@ -2210,7 +2215,7 @@ static void webBegin() {
         char b[600]; snprintf(b, sizeof(b), "{\"cmds\":%lu,\"handle_us\":%lu,\"presents\":%lu,\"present_us\":%lu,\"present_px\":%lu,\"fill_full\":%lu,\"fill_inc\":%lu,\"skipped\":%lu,\"rx_max\":%d,\"loop_max_ms\":%lu,\"odd\":%lu,\"frame_ends\":%lu,\"frame_us\":%lu}",
                               (unsigned long) perfCmds, (unsigned long) perfHandleUs, (unsigned long) perfPresentN, (unsigned long) perfPresentUs, (unsigned long) perfPresentPx,
                               (unsigned long) perfFillFull, (unsigned long) perfFillInc, (unsigned long) perfSkipped, perfRxMax, (unsigned long) perfLoopMaxMs, (unsigned long) badCount,
-                              (unsigned long) frameEnds, (unsigned long) frameUs);   // (frame_ends grows 23 a second once the hook works; frame_us ~43090)
+                              (unsigned long) frameEnds, (unsigned long) frameUs);   // (frame_ends grows 23 a second once the hook works, 34.6 on the twin; frame_us ~43090, ~28920 on the twin)
         perfCmds = perfHandleUs = perfPresentN = perfPresentUs = perfPresentPx = perfFillFull = perfFillInc = perfSkipped = perfLoopMaxMs = 0; perfRxMax = 0;
         std::string out = b; out.pop_back(); out += ",\"max_us\":{";
         for (int i = 0; i < 7; ++i) { char e[40]; snprintf(e, sizeof(e), "%s\"%s\":%lu", i ? "," : "", phaseName[i], (unsigned long) phaseMax[i]); out += e; phaseMax[i] = 0; }

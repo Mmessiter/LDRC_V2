@@ -11,13 +11,19 @@
 #define QT_ISR IRAM_ATTR
 #endif
 static volatile uint32_t frameEnds = 0, frameAtUs = 0, frameUs = 43090;   // frames ended; when the one now showing began; a normal frame's length
+// (1.11.113) A normal frame's length is measured only near the board's own (a frame a flash write held up is not one): set by
+// quietFrameLength() from the board's timing (main.cpp hookFrameEnd) - 43.09 ms on the CrowPanel (855 x 504 clocks at 10 MHz),
+// 28.92 ms on the 16 MB twin (832 x 504 at 14.5 MHz). Until 1.11.113 the window was the CrowPanel's alone (40-46 ms): on the
+// twin no frame was ever measured, and the beam's sums ran at two-thirds of its scan (copies caught part-way: hmi/test_quiet).
+static uint32_t frameLoUs = 40000, frameHiUs = 46000;
+static void quietFrameLength(uint32_t us) { frameUs = us; frameLoUs = us - us / 14; frameHiUs = us + us / 15; }
 static volatile bool quietAsked = false;                // the next frame is to be a quiet one
 static volatile uint32_t quietFrame = 0;                // which frame is (or was) the quiet one: frameEnds while it lasts
 static uint32_t vtNormal = 0, picLines = 496;           // the panel's lines a frame less one (503), and the lines up to the picture's last (16 + 480)
 static const uint32_t VT_QUIET = 1023;                  // (the register's 10 bits: 1024 lines, 87.5 ms)
 static void QT_ISR quietFrameEnd() {
     const uint32_t now = QT_MICROS(), next = frameEnds + 1;
-    if (frameEnds && frameEnds != quietFrame && now - frameAtUs > 40000 && now - frameAtUs < 46000) frameUs = now - frameAtUs;   // (a normal frame's length: the quiet time's sums follow the real clock; not one a flash write held up)
+    if (frameEnds && frameEnds != quietFrame && now - frameAtUs > frameLoUs && now - frameAtUs < frameHiUs) frameUs = now - frameAtUs;   // (a normal frame's length: the quiet time's sums follow the real clock; not one a flash write held up)
     frameAtUs = now;
     if (vtNormal) {                                     // (the driver starts the next frame as soon as we return: these lines are its)
         if (quietAsked) { quietAsked = false; quietFrame = next; QT_VT_SET(VT_QUIET); }
@@ -72,7 +78,8 @@ static uint32_t quietKeptN = 0, quietFullN = 0, quietWarmN = 0, quietStepMax = 0
 static uint32_t quietStoreN = 0, quietStoreMax = 0;      // (1.11.69) the front screen's choice written to the flash: how often, the longest (us)
 // (1.11.69) The front screen's switch is copied at once, as every other page change is (Malcolm, of 1.11.67: "All of the
 // other screen changes are just fine ... Maybe we should simply use the other method?"): no quiet frame. The quiet time
-// stays here, unused, should it be wanted again.
+// stays here, unused, should it be wanted again. (1.11.113: on the 16 MB twin a quiet frame's blank is only 30 ms, short of
+// QUIET_NEED_US: every job would go late. Its numbers are the CrowPanel's.)
 static const bool QUIET_SWITCH = false;
 // Wait for the panel's frame end (a frame at most): a short flash write started then is over in the blank before the next
 // picture (16 lines, 1.4 ms), so the panel's DMA does not wait for the PSRAM in the middle of a picture.

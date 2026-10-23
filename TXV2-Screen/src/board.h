@@ -24,7 +24,7 @@ struct BoardPins {
     int pclk, i2sBclk;                   // the swapped pair
     int touchRst, touchInt;              // -1: not wired (or not to be used)
     uint16_t hsFp, hsPw, hsBp, vsFp, vsPw, vsBp;   // the panel's timing (porches in pixel clocks / lines)
-    uint32_t pclkHz;                     // 10 MHz on both: faster, and the panel's DMA starves against our PSRAM writes (proven 28 Sep 2026)
+    uint32_t pclkHz;                     // 10 MHz on the CrowPanel: faster, and its DMA starves against our PSRAM writes (proven 28 Sep 2026); 14.5 on the twin (below)
 };
 static const BoardPins BOARD_CROWPANEL = { "crowpanel", 0, 42, -1, -1, 8, 4, 43, 8, 4, 12, 10000000 };
 // (1.11.112) The twin's IPS panel shows only WHITE at 10 MHz (23 Oct 2026, first board on the bench: backlight on, no picture).
