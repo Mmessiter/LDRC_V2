@@ -31,7 +31,7 @@
 #include "qrcodegen.h"
 
 // ------------------------------------------------------------------ the layer (main.cpp): drawn on the one frame here
-static bool topOn = false; static int topWho = 0, topX = 40, topY = 36, topW = 720, topH = 408;
+// (topOn, topWho, topX/Y/W/H: render.cpp, before main.cpp's parts - the page flip's code looks at them)
 static const int TOP_TWIN_WHO = 12; static int top2X = 0, top2W = 0;   // (1.11.94: main.cpp's second stretch of the layer)
 static bool topTwin() { return topWho == TOP_TWIN_WHO && top2W > 0; }
 static bool topReady() { return true; }

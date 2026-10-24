@@ -42,7 +42,12 @@ static void picScanNames(const char *dir, bool mine, std::vector<ldrc::PicEntry>
     d.close();
 }
 static std::vector<ldrc::PicEntry> picCardList; static bool picCardListOk = false;
+static uint32_t picCardGen = 0;                                  // (1.11.119) counts the changes to the card's list: a photo added or deleted
+static void picCardChanged() { picCardListOk = false; picCardGen++; }
 static std::string picFile(const std::string &name, bool mine) { return std::string(mine ? PIC_MINE_DIR : "/images") + "/" + name + ".565"; }
+// (1.11.119) What the background warm-up (picWarm, below) last found complete: the page, its picture, the card's list as it
+// was. While nothing of that has changed it does nothing at all.
+static struct { bool done = false; uint32_t gen = 0; std::string page, pic; uint32_t at = 0; } picWarmed;
 
 // ------------------------------------------------------------------ thumbnails: 160 x 100, in PSRAM, made a few rows at a time
 struct PicThumb { std::string key; uint16_t *px = nullptr; uint32_t used = 0; bool bad = false; };
@@ -58,8 +63,9 @@ static void picThumbDrop(const std::string &name) {
         if (picThumbs[i].key == picKey(name, true) || picThumbs[i].key == picKey(name, false)) { free(picThumbs[i].px); picThumbs.erase(picThumbs.begin() + i); }
         else ++i;
     }
+    picWarmed.done = false;                                      // (the warm-up looks again: one of its eight may be the one dropped)
 }
-static void picThumbsFree() { for (auto &t : picThumbs) free(t.px); picThumbs.clear(); }
+static void picThumbsFree() { for (auto &t : picThumbs) free(t.px); picThumbs.clear(); picWarmed.done = false; }
 static void picThumbKeep(const std::string &key, uint16_t *px, bool bad) {
     while (picThumbs.size() >= PIC_THUMBS_MAX) {                  // the one not looked at for longest makes room
         size_t old = 0; for (size_t i = 1; i < picThumbs.size(); ++i) if (picThumbs[i].used < picThumbs[old].used) old = i;
@@ -141,7 +147,7 @@ struct ScreenPics : public ldrc::PicsHost {
         if (!sdOk || !ldrc::picNameOk(name)) return false;
         picThumbDrop(name);
         const bool ok = SD.remove(picFile(name, true).c_str());
-        picCardListOk = false;
+        picCardChanged();
         return ok;
     }
     void answer(const std::string &name) override {              // an ordinary touch-event text, as the receiver's order is
@@ -432,18 +438,31 @@ static void picSoonPoll() {
 
 // On the setup pages one touch away from the chooser, its list and the thumbnails of the page it will open on are made
 // in the background, a few rows at a time (never on the front page: that one is for flying).
+// (1.11.119) A look every 100 ms, and none at all once the page's eight are there - until its picture, the page or the
+// card's list changes. Before, EVERY pass of loop() copied and built the card's list and looked eight keys up: about a
+// millisecond of code streamed from flash, without pause, for as long as the Models page or Model options was up. The
+// flash shares its bus with the PSRAM the panel reads its picture from, so the picture slipped sideways almost all the
+// time (Malcolm, 24 Oct: "on the screen for selecting a model the flicking is almost continuous - sideways"; the screen
+// was drawing nothing there: /perf presents 0 in a minute). A thumbnail is made one slice every 25 ms for the same reason.
 static void picWarm() {
     if (!sdOk) return;
-    if (picJob.on) { picJobStep(); return; }
+    const uint32_t now = millis();
+    if (picJob.on) { if (now - picWarmed.at < 25) return; picWarmed.at = now; picJobStep(); return; }
+    Comp *ex = find("exp0");
+    static const std::string noPic;
+    const std::string &pic = ex ? ex->txt : noPic;
+    if (picWarmed.done && picWarmed.gen == picCardGen && picWarmed.page == page.name && picWarmed.pic == pic) return;
+    if (now - picWarmed.at < 100) return;
+    picWarmed.at = now;
     static std::vector<ldrc::PicEntry> raw, list;
     picHost.list(raw); ldrc::picBuildList(raw, list);
-    Comp *ex = find("exp0");
-    const int at = ldrc::picIndexOf(list, ex ? ldrc::picNameFromPath(ex->txt) : ""), first = at / ldrc::PIC_PER_PAGE * ldrc::PIC_PER_PAGE;
+    const int at = ldrc::picIndexOf(list, ldrc::picNameFromPath(pic)), first = at / ldrc::PIC_PER_PAGE * ldrc::PIC_PER_PAGE;
     for (int i = first; i < first + ldrc::PIC_PER_PAGE && i < (int) list.size(); ++i) {
         const ldrc::PicEntry &en = list[i];
         if (ldrc::picSameName(en.name, ldrc::PIC_NONE) || picThumbFind(picKey(en.name, en.mine))) continue;
         picJobStart(en.name, en.mine); return;
     }
+    picWarmed.done = true; picWarmed.gen = picCardGen; picWarmed.page = page.name; picWarmed.pic = pic;
 }
 
 // ------------------------------------------------------------------ every pass of loop()
@@ -596,7 +615,7 @@ static void picWeb() {
             }
             if (!picUpGood) SD.remove(tmp.c_str());
             picThumbDrop(picUpName);
-            if (picUpGood) picCardListOk = false;
+            if (picUpGood) picCardChanged();
             pictures.uploadEnded(picUpGood, picUpName, picUpWhy);
         }
     });

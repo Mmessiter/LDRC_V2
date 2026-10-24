@@ -76,6 +76,7 @@ struct FakeSerial { size_t write(const uint8_t *b, size_t n) { sentToTeensy.appe
 static int awakes() { int n = 0; size_t at = 0; while ((at = sentToTeensy.find("LDRCAWAKE", at)) != std::string::npos) { ++n; at += 9; } return n; }
 static void audioStop() { audioId = -1; audioPath.clear(); }
 static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0, filmFadeSteps = 0, filmFadeMax = 0;
+static void psramPace(uint32_t) {}                      // (1.11.116: the twin's rests between the big PSRAM moves - nothing here)
 #include "@DEV@"
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -222,7 +223,8 @@ int main() {
     { page.name = "LogView"; filmStop(); filmName = "EASY"; CHECK(filmStart());
       int32_t k = -1; uint32_t n = 0;
       for (uint32_t i = 0; i < filmHead.frames && k < 0; ++i) if (ldrcfilm::fadeOf(filmTable, (int32_t) i)) { k = (int32_t) i; n = ldrcfilm::fadeOf(filmTable, k); }
-      if (k < 0) printf("fades: none in this card's EASY (version %u): not checked\n", (unsigned) filmHead.version);
+      if (!FILM_FADES) printf("fades: off on the screen (FILM_FADES, 1.11.116 - a real screen jumps to its page): not checked\n");
+      else if (k < 0) printf("fades: none in this card's EASY (version %u): not checked\n", (unsigned) filmHead.version);
       else {
           auto playTo = [&](int32_t f) { filmStop(); filmName = "EASY"; filmStart(); while (ldrcfilm::frameAt(nowMs - filmStartMs, filmHead) < f) { nowMs += 10; filmPoll(); } for (int i = 0; i < 20; ++i) filmPoll(); return std::vector<uint16_t>(topFb, topFb + W * H); };
           const std::vector<uint16_t> A = playTo(k - 1), M = playTo(k + (int32_t) n / 2 - 1), B = playTo(k + (int32_t) n + 2);

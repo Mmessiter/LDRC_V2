@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.118"
+#define SCREEN_VERSION "1.11.119"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -154,8 +154,7 @@ static void canvasEnsureRows(int y, int h) {
     for (int b = y >> 3, last = (y + h - 1) >> 3; b <= last; ++b) {
         if (!(canvasStale & (1ull << b))) continue;
         const int r0 = b << 3, r1 = min(H, r0 + 8);
-        for (int r = r0; r < r1; ++r) memcpy(pageFb + r * W, from + r * W, W * 2);
-        psramPace((uint32_t) (r1 - r0) * W);
+        for (int r = r0; r < r1; ++r) { memcpy(pageFb + r * W, from + r * W, W * 2); psramPace(2u * W); }   // (1.11.119: a row at a time, counted double - a copy reads as much as it writes: a rest every four rows, not one burst of 25 kB)
         canvasStale &= ~(1ull << b); canvasEnsureN++;
     }
 }
@@ -315,12 +314,11 @@ static void flipTick() {
     }
     if (flipStale.w > 0 && flipStaleRow < flipStale.h && !spareHoldsFlight) {   // a few rows a pass: the spare catches up with the one on show, unseen
         lastCatchUpUs = nowUs;
-        const int rows = min(16, flipStale.h - flipStaleRow), y = flipStale.y + flipStaleRow, x = flipStale.x, w = flipStale.w;
+        const int rows = min(8, flipStale.h - flipStaleRow), y = flipStale.y + flipStaleRow, x = flipStale.x, w = flipStale.w;   // (1.11.119: eight rows a slice, was sixteen - 51 kB through the bus in one go)
         uint16_t *spare = flipFb[flipSpare]; const uint16_t *from = flipFb[flipShown];
         if (spare && from && spare != from) {
-            for (int r = y; r < y + rows; ++r) memcpy(spare + r * W + x, from + r * W + x, w * 2);
+            for (int r = y; r < y + rows; ++r) { memcpy(spare + r * W + x, from + r * W + x, w * 2); psramPace(2u * w); }   // (a row at a time, counted double: a rest every four full rows)
             Cache_WriteBack_Addr((uint32_t) (spare + y * W + x), (uint32_t) (((rows - 1) * W + w) * 2));
-            psramPace((uint32_t) rows * w);
         }
         flipStaleRow += rows;
         if (flipStaleRow >= flipStale.h) { flipStale = { 0, 0, 0, 0 }; flipSyncN++; }
@@ -1447,6 +1445,7 @@ static void drawPageNow(bool show) {
     for (auto &c : page.comps) {
         const uint32_t t1 = micros(); drawComp(c); const uint32_t us = micros() - t1;
         if (!c.vis || c.w <= 0) continue;
+        if (board->psramRestUs && us > 200) delayMicroseconds(board->psramRestUs / 3);   // (1.11.119) a breath after each component drawn: its letters are many small writes into the PSRAM, and its code streams from the flash on the same bus, while the page before is still on show (the twin; ~3 ms a page)
         if (c.type == "text" || c.type == "number" || c.type == "xfloat" || c.type == "scrolltext" || c.type == "button" || c.type == "dsbutton") { pageTextUs += us; pageTextN++; }
         else if (c.type == "picture" || c.type == "crop") { pagePicUs += us; pagePicN++; }
         else { pageOtherUs += us; pageOtherN++; }

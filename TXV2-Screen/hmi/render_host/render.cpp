@@ -19,6 +19,26 @@ static Gfx gfxObj; static Gfx *gfx = &gfxObj;
 static uint16_t *fbNow = nullptr, *screenFb = nullptr, *pageFb = nullptr;
 static void present(int, int, int, int) {}
 static bool sdOk = true;
+// (1.11.119) The twin's page flip and rotation (src/page_flip.h, main.cpp 1.11.115-116): off here, as on the 4 MB boards -
+// these are the stand-ins the drawing code is compiled against. The layer's state (topOn ...) lives here now too, since
+// the flip's code looks at it (own.h draws the layer).
+static bool topOn = false; static int topWho = 0, topX = 40, topY = 36, topW = 720, topH = 408; static uint16_t *topFb = nullptr;
+static bool flipOk = false; static const char *flipWhy = "off"; static uint16_t *flipFb[3] = { nullptr, nullptr, nullptr };
+static int flipCanvas = 2, flipSpare = 1, flipFrom = 0; static volatile uint8_t flipWant = 0, flipShown = 0;
+static bool flipRotating = false, shownIsFlight = false, spareHoldsFlight = false, flipKept = false, pageDeferred = false;
+static uint64_t canvasStale = 0; static uint32_t canvasEnsureN = 0, flipRotateN = 0; static int topDrawDepth = 0;
+static const int FLIGHT_LAYER_WHO = 5;
+static void canvasEnsureRows(int, int) {}
+static void psramPace(uint32_t) {}
+static void delayMicroseconds(uint32_t) {}
+static void drawDeferred();
+struct PresentArea { int x, y, w, h; bool over; };
+static PresentArea presentArea(int x, int y, int w, int h) { return { x, y, w, h, false }; }
+static void copyRows(uint16_t *, int, int, int, int, bool) {}
+struct CanvasStub { bool lazy = false, track = false; int tx0 = 0, ty0 = 0, tx1 = 0, ty1 = 0; void touchedClear() {} bool touchedAny() const { return false; } void touch(int, int, int, int) {} void aim(uint16_t *) {} };
+static CanvasStub canvasStubObj, *canvas = &canvasStubObj, *topCanvas = &canvasStubObj;
+struct BoardStub { int psramRestUs = 0; bool flip = false, tone = false; };
+static BoardStub boardStubObj, *board = &boardStubObj;
 // (1.11.67) the panel's quiet time: on the Mac there is no panel and no hook (vtNormal 0), so every job goes at once
 #define QT_MICROS() micros()
 #define QT_MILLIS() millis()

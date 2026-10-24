@@ -13,7 +13,7 @@ static void audioStartFile(const char *, uint32_t = 0) { audioId = FILM_AUDIO_ID
 static void audioStop() { audioId = -1; }
 static int flyingNow() { return 0; }                               // (the motor safe: films allowed)
 static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0, filmFadeSteps = 0, filmFadeMax = 0;
-static uint16_t *topFb = nullptr;                                  // (the layer: here the one frame, as the glass shows it)
+// (topFb, the layer - here the one frame, as the glass shows it - is render.cpp's, before main.cpp's parts)
 #include "film_device.h"
 static void filmShot(const std::string &args) {
     topFb = fbNow; page.name = "LogView";                          // (a film plays over a help page)
