@@ -26,8 +26,9 @@ struct BoardPins {
     uint16_t hsFp, hsPw, hsBp, vsFp, vsPw, vsBp;   // the panel's timing (porches in pixel clocks / lines)
     uint32_t pclkHz;                     // 10 MHz on the CrowPanel: faster, and its DMA starves against our PSRAM writes (proven 28 Sep 2026); 14.5 on the twin (below)
     uint16_t copyRestUs;                 // (1.11.114) a whole-page copy rests this long every 8 rows (0: none)
+    uint16_t flipRestUs;                 // (1.11.115) 0: one panel buffer; else two (src/page_flip.h), a big change composed into the hidden one resting this long every 8 rows
 };
-static const BoardPins BOARD_CROWPANEL = { "crowpanel", 0, 42, -1, -1, 8, 4, 43, 8, 4, 12, 10000000, 0 };
+static const BoardPins BOARD_CROWPANEL = { "crowpanel", 0, 42, -1, -1, 8, 4, 43, 8, 4, 12, 10000000, 0, 0 };
 // (1.11.112) The twin's IPS panel shows only WHITE at 10 MHz (23 Oct 2026, first board on the bench: backlight on, no picture).
 // Elecrow's own factory program for this board (factory-backup/factory_16MB_14c19f4966b8_first4MB.bin, disassembled: its
 // Arduino_ESP32RGBPanel(40, 41, 39, 42, 45, 48, 47, 21, 14, 5, 6, 7, 15, 16, 4, 8, 3, 46, 9, 1, 0, 12, 4, 16, 0, 10, 4, 10, 1,
@@ -36,8 +37,9 @@ static const BoardPins BOARD_CROWPANEL = { "crowpanel", 0, 42, -1, -1, 8, 4, 43,
 // So the twin keeps 14.5 MHz, and its whole-page copies rest 100 us every 8 rows instead (copyRestUs, main.cpp copyRows):
 // at full speed a page change sometimes slipped the picture sideways for a frame (the copy starves the panel's DMA of
 // PSRAM time); 300 us cured that but spread the copy over two frames (a flicker); 100 us: "only the occasional flicker
-// ... sometimes changing is completely perfect".
-static const BoardPins BOARD_IPS16     = { "ips16",    42,  0, 38, -1, 12, 4, 16, 10, 4, 10, 14500000, 100 };
+// ... sometimes changing is completely perfect". (1.11.115) Still "a slight shake ... about half of the time": the twin flips
+// between two panel buffers instead (src/page_flip.h); the 100 us rest stays for when the flip cannot be had.
+static const BoardPins BOARD_IPS16     = { "ips16",    42,  0, 38, -1, 12, 4, 16, 10, 4, 10, 14500000, 100, 300 };
 static const BoardPins *board = &BOARD_CROWPANEL;
 static uint32_t flashChipBytes = 0;      // what the chip says it is
 static uint32_t flashImageBytes = 0;     // what the image header says the firmware was built for

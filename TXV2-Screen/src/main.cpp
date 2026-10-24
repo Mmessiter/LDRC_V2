@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.114"
+#define SCREEN_VERSION "1.11.115"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -99,8 +99,9 @@ template <typename Tag, typename Tag::type M> struct PanelRob { friend typename 
 struct RgbPanelTag { typedef esp_rgb_panel_t *Arduino_ESP32RGBPanel::*type; friend type panelMember(RgbPanelTag); };
 template struct PanelRob<RgbPanelTag, &Arduino_ESP32RGBPanel::_rgb_panel>;
 #include "quiet_time.h"                                // (the quiet time's sums and jobs, host-tested: hmi/test_quiet)
+#include "page_flip.h"                                 // (1.11.115: the twin's two panel buffers)
 #include "layer_rows.h"                                // (1.11.94: the panel's rows with our layer over one or two stretches, host-tested: hmi/test_film)
-static bool IRAM_ATTR onFrameEnd(esp_lcd_panel_handle_t, esp_lcd_rgb_panel_event_data_t *, void *) { quietFrameEnd(); return false; }
+static bool IRAM_ATTR onFrameEnd(esp_lcd_panel_handle_t, esp_lcd_rgb_panel_event_data_t *, void *) { quietFrameEnd(); flipFrameEnd(); return false; }
 static void hookFrameEnd() {
     esp_rgb_panel_t *p = panel->*panelMember(RgbPanelTag());
     if (!p) return;
@@ -112,26 +113,39 @@ static void hookFrameEnd() {
     }
     p->user_ctx = nullptr;
     p->on_frame_trans_done = onFrameEnd;
+    if (board->flipRestUs && vtNormal) flipFind(&p->user_ctx, p->fb, p->fb_size, p->num_dma_nodes);   // (1.11.115)
+    else flipWhy = board->flipRestUs ? "no frame ends" : "off";
 }
-static void copyRows(int x, int y, int w, int h, bool over) {
-    const uint32_t restUs = (long) w * h >= 100000 ? board->copyRestUs : 0;   // (1.11.114) a big copy leaves the panel's DMA some PSRAM time (board.h)
+static void copyRows(uint16_t *dst, int x, int y, int w, int h, bool over, uint32_t restUs) {
     for (int yy = 0; yy < h; ++yy) {
         if (restUs && yy && (yy & 7) == 0) delayMicroseconds(restUs);
         const int row = y + yy;
         if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
             const bool twin = topTwin();                                     // (1.11.94: page | button | title | button | page)
-            ldrclayer::composeRow(screenFb + row * W, pageFb + row * W, topFb + row * W, x, w, topX, topX + topW, twin ? top2X : 0, twin ? top2X + top2W : 0);
-        } else memcpy(screenFb + row * W + x, pageFb + row * W + x, w * 2);
+            ldrclayer::composeRow(dst + row * W, pageFb + row * W, topFb + row * W, x, w, topX, topX + topW, twin ? top2X : 0, twin ? top2X + top2W : 0);
+        } else memcpy(dst + row * W + x, pageFb + row * W + x, w * 2);
     }
 }
-static void present(int x, int y, int w, int h) {
-    if (!pageFb || !screenFb || pageFb == screenFb) return;
+struct PresentArea { int x, y, w, h; bool over; };
+static PresentArea presentArea(int x, int y, int w, int h) {   // the part of the screen a copy covers (w 0: nothing)
+    if (!pageFb || !screenFb || pageFb == screenFb) return { 0, 0, 0, 0, false };
     if (x < 0) { w += x; x = 0; } if (y < 0) { h += y; y = 0; }
     if (x + w > W) w = W - x; if (y + h > H) h = H - y;
-    if (w <= 0 || h <= 0) return;
+    if (w <= 0 || h <= 0) return { 0, 0, 0, 0, false };
     const bool over = topOn && topFb && y < topY + topH && y + h > topY && (ldrclayer::spans(x, w, topX, topX + topW) || (topTwin() && ldrclayer::spans(x, w, top2X, top2X + top2W)));
-    copyRows(x, y, w, h, over);
-    Cache_WriteBack_Addr((uint32_t) (screenFb + y * W + x), (uint32_t) (((h - 1) * W + w) * 2));
+    return { x, y, w, h, over };
+}
+static void present(int x, int y, int w, int h) {
+    const PresentArea a = presentArea(x, y, w, h);
+    if (a.w <= 0) return;
+    const uint32_t restUs = (long) a.w * a.h >= 100000 ? board->copyRestUs : 0;   // (1.11.114) a big copy leaves the panel's DMA some PSRAM time (board.h)
+    // (1.11.115) With the flip, BOTH buffers, always: the interrupt may swap them at any moment, so "the shown one" read
+    // here could already be the hidden one (the first test: small changes lost from the new page, a big flicker).
+    for (int i = 0; i < (flipOk ? 2 : 1); ++i) {
+        uint16_t *dst = flipOk ? flipFb[i] : screenFb;
+        copyRows(dst, a.x, a.y, a.w, a.h, a.over, restUs);
+        Cache_WriteBack_Addr((uint32_t) (dst + a.y * W + a.x), (uint32_t) (((a.h - 1) * W + a.w) * 2));
+    }
 }
 // What has changed on the canvas and is waiting to be shown: a short list of rectangles, merged only when
 // merging wastes little (a number top-right and a bar bottom-left must not become one screen-sized copy).
@@ -173,7 +187,71 @@ static bool quietSwitch = false;                       // the front screen's swi
 static QuietJob quietCopy;
 static uint32_t copyUsPerKpx = 120;                    // (1.11.82) what a copy to the panel costs, measured as it goes: microseconds a thousand pixels
 static bool beamHeld = false;                          // (1.11.82) a rectangle was held back for the beam last pass: look again at once
+// (1.11.115) The twin's page flip (src/page_flip.h): a big change is composed into the hidden buffer, slowly, and the panel
+// is pointed at it at the next frame's end. Until then a second big change waits; small ones go to both buffers. After the
+// flip the buffer now hidden lacks that change: it is brought up to date a few rows each pass (flipSync), small changes
+// still going to both, and folded into the next big change if one comes first.
+static bool flipPending = false, flipComposing = false;
+static Rect16 flipComp = { 0, 0, 0, 0 };              // the big change being composed into the hidden buffer
+static int flipCompRow = 0;
+static uint32_t flipComposeUs = 0, flipAskedMs = 0, flipComposeMax = 0, flipWaitMax = 0, flipSyncN = 0;
+static Rect16 flipBig = { 0, 0, 0, 0 }, flipStale = { 0, 0, 0, 0 };
+static int flipStaleRow = 0;                           // rows of flipStale already brought up to date
+static Rect16 rectJoin(const Rect16 &a, const Rect16 &b) {
+    if (a.w <= 0 || a.h <= 0) return b;
+    if (b.w <= 0 || b.h <= 0) return a;
+    const int x = min(a.x, b.x), y = min(a.y, b.y), x1 = max(a.x + a.w, b.x + b.w), y1 = max(a.y + a.h, b.y + b.h);
+    return { (int16_t) x, (int16_t) y, (int16_t) (x1 - x), (int16_t) (y1 - y) };
+}
+static void flipTick() {
+    if (!flipOk) return;
+    if (flipComposing) {                               // (the first test held the loop 59 ms for it: taps were missed) a few rows a pass
+        const uint32_t t0 = micros();
+        const int rows = min(32, flipComp.h - flipCompRow);
+        const PresentArea a = presentArea(flipComp.x, flipComp.y + flipCompRow, flipComp.w, rows);
+        uint16_t *back = flipFb[flipShown ^ 1];
+        if (a.w > 0) { copyRows(back, a.x, a.y, a.w, a.h, a.over, board->flipRestUs); delayMicroseconds(board->flipRestUs); Cache_WriteBack_Addr((uint32_t) (back + a.y * W + a.x), (uint32_t) (((a.h - 1) * W + a.w) * 2)); }
+        flipCompRow += rows; flipComposeUs += micros() - t0;
+        if (flipCompRow >= flipComp.h) {
+            flipComposing = false; flipBig = flipComp;
+            flipComposeMax = max(flipComposeMax, flipComposeUs);
+            flipAskedMs = millis(); flipPending = true; flipWant = flipShown ^ 1;
+        }
+        return;
+    }
+    if (flipPending) {
+        if (flipShown == flipWant) {
+            flipPending = false; screenFb = flipFb[flipShown];
+            flipWaitMax = max(flipWaitMax, (uint32_t) (millis() - flipAskedMs));
+            flipStale = flipBig; flipStaleRow = 0;
+        } else if (millis() - flipAskedMs > 250) {   // the frame ends stopped: no more flips; the shown buffer gets the change
+            flipOk = false; flipWhy = "flip never came"; flipWant = flipShown; flipPending = false; screenFb = flipFb[flipShown];
+            dirty(flipBig.x, flipBig.y, flipBig.w, flipBig.h);
+        }
+        return;
+    }
+    if (flipStale.w > 0 && flipStaleRow < flipStale.h) {   // a few rows a pass: the hidden buffer catches up, unseen
+        const int rows = min(16, flipStale.h - flipStaleRow);
+        const PresentArea a = presentArea(flipStale.x, flipStale.y + flipStaleRow, flipStale.w, rows);
+        uint16_t *back = flipFb[flipShown ^ 1];
+        if (a.w > 0) { copyRows(back, a.x, a.y, a.w, a.h, a.over, 0); Cache_WriteBack_Addr((uint32_t) (back + a.y * W + a.x), (uint32_t) (((a.h - 1) * W + a.w) * 2)); }
+        flipStaleRow += rows;
+        if (flipStaleRow >= flipStale.h) { flipStale = { 0, 0, 0, 0 }; flipSyncN++; }
+    }
+}
+static bool flipBigChange(const Rect16 &r) {          // true: taken (composed and asked for), or waiting for the last flip
+    if (!flipOk || (long) r.w * r.h < 100000) return false;
+    if (flipPending || flipComposing) return true;
+    const Rect16 all = rectJoin(r, flipStale);         // what the hidden buffer lacks: this change, and any catching up not done
+    const PresentArea a = presentArea(all.x, all.y, all.w, all.h);
+    if (a.w <= 0) return false;
+    flipStale = { 0, 0, 0, 0 }; flipComp = { (int16_t) a.x, (int16_t) a.y, (int16_t) a.w, (int16_t) a.h };
+    flipCompRow = 0; flipComposeUs = 0; flipComposing = true;   // composed by flipTick, a few rows a pass; small changes meanwhile go to both buffers
+    flipTick();
+    return true;
+}
 static void presentDirty(bool force = false) {
+    flipTick();
     if (!dirtyN) return;
     const uint32_t now = millis();
     bool quiet = false;
@@ -195,6 +273,10 @@ static void presentDirty(bool force = false) {
     for (int i = 0; i < dirtyN; ++i) {
         const Rect16 r = dirtyList[i];
         const uint32_t copyUs = (uint32_t) ((uint64_t) r.w * r.h * copyUsPerKpx / 1000) + 30;
+        if (flipOk && (long) r.w * r.h >= 100000) {   // (1.11.115) the twin: composed unseen, then flipped to
+            if (flipPending || flipComposing) { dirtyList[kept++] = r; continue; }
+            if (flipBigChange(r)) continue;
+        }
         if (!force && now - firstDirtyMs < 60 && !beamClear(r.y, r.h, micros(), copyUs)) { dirtyList[kept++] = r; continue; }
         present(r.x, r.y, r.w, r.h); px += (uint32_t) r.w * r.h;
     }
@@ -2202,6 +2284,8 @@ static void webBegin() {
                                 (unsigned long) quietKeptN, (unsigned long) quietFullN, (unsigned long) quietWarmN, (unsigned long) quietStepMax, (unsigned long) quietStoreN, (unsigned long) quietStoreMax); out += q; }
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
+        { char q[200]; snprintf(q, sizeof(q), ",\"flip\":{\"why\":\"%s\",\"n\":%lu,\"shown\":%u,\"compose_max\":%lu,\"wait_max\":%lu,\"syncs\":%lu}",
+                                flipWhy, (unsigned long) flipDoneN, (unsigned) flipShown, (unsigned long) flipComposeMax, (unsigned long) flipWaitMax, (unsigned long) flipSyncN); out += q; }   // (1.11.115) the twin's page flip: on or why not, flips, the longest compose (us) and wait (ms)
         { std::string l = sysLast(); for (size_t i = 0; i < l.size(); ++i) if (l[i] == '"' || l[i] == '\\') l[i] = '\''; out += ",\"sys\":\"" + l + "\"}"; }   // (1.11.5) the system's last error line
         web.send(200, "application/json", out.c_str());
     });
