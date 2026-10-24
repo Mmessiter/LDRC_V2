@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.116"
+#define SCREEN_VERSION "1.11.117"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2924,9 +2924,10 @@ static int16_t toneShape(int16_t x) {
     static int32_t lp1 = 0, lp2 = 0;                       // x256
     const int32_t xs = (int32_t) x << 8;
     lp1 += ((xs - lp1) * 14) >> 8;                         // one pole at ~200 Hz (a = 0.055)
-    int32_t y = xs - (lp1 >> 1);                           // bass -6 dB
+    int32_t y = xs - ((lp1 * 179) >> 8);                   // bass -10 dB (Malcolm on -6: "a bit better! More in the same direction")
     lp2 += ((y - lp2) * 131) >> 8;                         // one pole at ~2.5 kHz (a = 0.51)
-    y += ((y - lp2) * 154) >> 8;                           // top +4 dB
+    y += ((y - lp2) * 461) >> 8;                           // top +9 dB (on +6.5: "a little bit more top")
+    y = (y * 180) >> 8;                                    // -3 dB overall: room for the louder top before limit16
     return limit16(y >> 8);
 }
 static void audioBegin() {

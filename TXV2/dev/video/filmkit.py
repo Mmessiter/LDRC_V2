@@ -32,7 +32,8 @@ import re
 def spoken_form(text):
     """what the voice is given for what is written: the voices read "ID" as "1D" (Malcolm, 24 Oct 2026, the Model IDs film:
     "the model 1D"), so ID is said as "eye dee"; the captions keep the written form"""
-    text = re.sub(r'(?<![A-Z] )\bI ?Ds\b', 'eye dees', text)   # (the films already wrote "I D": Emma read that as "1D" too; not the D of "P I D")
+    text = re.sub(r'(?<![A-Z] )\bI ?Ds\b', 'eye dee', text)    # (the films already wrote "I D": Emma read that as "1D" too; not the D of "P I D";
+                                                              #  the plural said as the singular: "eye dees" was heard as "ideas" - Malcolm, 24 Oct)
     return re.sub(r'(?<![A-Z] )\bI ?D\b', 'eye dee', text)
 VOICE = 'cbox:emma'                                          # (the voice unless LDRC_VOICE says another: 18 Oct, Malcolm chose "Emma, number three")
 EMOTION = '0.75'                                              # (how lively, for cbox: his number three was 0.75; number two 0.5)
