@@ -30,6 +30,7 @@ static uint64_t canvasStale = 0; static uint32_t canvasEnsureN = 0, flipRotateN 
 static const int FLIGHT_LAYER_WHO = 5;
 static void canvasEnsureRows(int, int) {}
 static void psramPace(uint32_t) {}
+static size_t sdReadPaced(File &f, uint8_t *dst, size_t n) { return f.read(dst, n); }   // (1.11.120: the card's big reads, in paced slabs on the screen)
 static void delayMicroseconds(uint32_t) {}
 static void drawDeferred();
 struct PresentArea { int x, y, w, h; bool over; };

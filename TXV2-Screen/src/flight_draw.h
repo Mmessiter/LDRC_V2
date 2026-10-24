@@ -350,7 +350,7 @@ static bool flPicLoad(const std::string &base) {
     const size_t bytes = (size_t) wh[0] * wh[1] * 2;
     uint16_t *px = (uint16_t *) ps_malloc(bytes);
     if (!px) { f.close(); flPicFail(path, "no memory"); return false; }
-    const size_t got = f.read((uint8_t *) px, bytes);
+    const size_t got = sdReadPaced(f, (uint8_t *) px, bytes);   // (1.11.120: in paced slabs - main.cpp)
     f.close();
     if (got != bytes) { free(px); flPicFail(path, "short read"); return false; }
     flPicForget(); flPicPx = px; flPicW = wh[0]; flPicH = wh[1]; flPicPath = path;

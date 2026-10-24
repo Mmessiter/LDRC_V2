@@ -17,6 +17,9 @@ static uint32_t hostClockMs = 0;                           // (1.11.89) the cloc
 static inline uint32_t millis() { return hostClockMs; }
 static inline uint32_t micros() { return hostClockMs * 1000; }
 static inline void *ps_malloc(size_t n) { return malloc(n); }
+static inline void *heap_caps_malloc(size_t n, unsigned) { return malloc(n); }   // (1.11.120: the picture's slab buffer, internal memory on the screen)
+#define MALLOC_CAP_INTERNAL 0
+#define MALLOC_CAP_8BIT 0
 #define Cache_WriteBack_Addr(a, b) ((void) 0)                     // (the panel's cache: nothing to do on the Mac)
 #define PROGMEM
 extern std::string sdRoot;                                 // the folder that stands for the screen's card (sd/)

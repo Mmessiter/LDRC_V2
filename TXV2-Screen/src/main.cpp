@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.119"
+#define SCREEN_VERSION "1.11.120"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -58,6 +58,19 @@ class PacedCanvas;                                            // (src/psram_pace
 PacedCanvas *canvas = nullptr;                                // every draw lands here (PSRAM); present() copies finished rectangles to the panel
 Arduino_GFX *gfx = nullptr;                                   // the screen at first, switched to the canvas at boot
 #include "psram_pace.h"                                // (1.11.116: the twin's big moves through the PSRAM, paced; the canvases' big fills)
+// (1.11.120) A big read off the card into the PSRAM goes in slabs of 4 kB with the pace's rests between. The whole file in
+// one read - a 768 kB background, a page's 30 kB of JSON, a 40 kB clip - was one unpaced burst of PSRAM writes (the card
+// driver copies it in through a bounce buffer): a slip of the twin's picture at the first visit to each page and each
+// background, and at every clip the quiet-page warm-up brought in.
+static size_t sdReadPaced(File &f, uint8_t *dst, size_t n) {
+    size_t got = 0;
+    while (got < n) {
+        const int r = f.read(dst + got, std::min((size_t) 4096, n - got));
+        if (r <= 0) break;
+        got += (size_t) r; psramPace((uint32_t) r);          // (bytes counted as pixels: a rest every 6.4 kB)
+    }
+    return got;
+}
 static void panelMake() {
     const BoardPins &b = *board;
     panel = new Arduino_ESP32RGBPanel(40, 41, 39, b.pclk, 45, 48, 47, 21, 14, 5, 6, 7, 15, 16, 4, 8, 3, 46, 9, 1,
@@ -241,6 +254,13 @@ static bool beamHeld = false;                          // (1.11.82) a rectangle 
 // flip the buffer now hidden lacks that change: it is brought up to date a few rows each pass (flipSync), small changes
 // still going to both, and folded into the next big change if one comes first.
 static bool flipPending = false, flipComposing = false;
+// (1.11.120) The pictures off the card (a model's photo: 128 kB read a row at a time, ~100 ms) are drawn AFTER a rotation,
+// not inside the page's draw: the page shows that much sooner (Models: 280-400 ms after its command -> ~130), and the card
+// is no longer read while the page before is still on show (on the twin anything the card or the code streams starves the
+// panel's reads: a sideways slip at the page change). The names are kept; the draw follows the flip as an ordinary change.
+static bool deferPics = false; static std::vector<std::string> picsLater;
+static void drawPicsLater();
+static void picsLaterDrop(const std::string &nm) { for (size_t i = 0; i < picsLater.size();) { if (picsLater[i] == nm) picsLater.erase(picsLater.begin() + i); else ++i; } }
 static uint32_t pageT0 = 0, pageDrawMs = 0, pageComposeMs = 0, pageShownMs = 0;
 static uint32_t pageSdUs = 0, pageParseUs = 0, pagePreUs = 0, pageBgUs = 0, pageCompsUs = 0;
 static uint32_t pageTextUs = 0, pagePicUs = 0, pageOtherUs = 0, pageTextN = 0, pagePicN = 0, pageOtherN = 0;   // (bench) the components by kind: text and numbers, pictures off the card, the rest   // (bench) the drawing's parts: the card, the JSON, preinitialize + background load, the background painted, the components   // (1.11.116) the last page change: ms from its command to the canvas drawn, composed, shown
@@ -291,6 +311,7 @@ static void flipTick() {
                 shownIsFlight = false;
                 pageFb = fbNow = flipFb[flipCanvas]; canvas->aim(pageFb);
                 canvasStale = (1ull << ((H + 7) / 8)) - 1;
+                if (!picsLater.empty()) drawPicsLater();       // (1.11.120) the page is on show: now its pictures off the card
             } else {
                 flipSpare = flipFrom; flipStale = flipKept ? Rect16{ 0, 0, (int16_t) W, (int16_t) H } : flipBig; flipStaleRow = 0; flipKept = false;
                 shownIsFlight = topOn && topWho == FLIGHT_LAYER_WHO && topX == 0 && topY == 0 && topW == W && topH == H;
@@ -299,6 +320,7 @@ static void flipTick() {
         } else if (millis() - flipAskedMs > 250) {   // the frame ends stopped: no more flips; the shown buffer gets the change
             flipOk = false; flipWhy = "flip never came"; flipWant = flipShown; flipPending = false; flipRotating = false; screenFb = flipFb[flipShown];
             canvasEnsureRows(0, H); dirty(0, 0, W, H);
+            if (!picsLater.empty()) drawPicsLater();           // (1.11.120: the pictures a rotation would have drawn after itself)
         }
         return;
     }
@@ -928,8 +950,8 @@ static bool loadBackground(int picId) {
     buf = bgCache.size() < 4 ? (uint16_t *) ps_malloc(W * H * 2) : nullptr;   // 4 backgrounds resident (3 MB): the clip cache needs its share of PSRAM
     if (!buf && bgCache.empty()) { f.close(); return false; }
     if (!buf) { size_t old = 0; for (size_t i = 1; i < bgCache.size(); ++i) if (bgCache[i].used < bgCache[old].used) old = i; buf = bgCache[old].buf; bgCache.erase(bgCache.begin() + old); }
-    if (wh[0] == W && wh[1] == H) f.read((uint8_t *) buf, W * H * 2);
-    else { memset(buf, 0, W * H * 2); for (int y = 0; y < wh[1] && y < H; ++y) f.read((uint8_t *) (buf + y * W), min((int) wh[0], W) * 2); }
+    if (wh[0] == W && wh[1] == H) sdReadPaced(f, (uint8_t *) buf, W * H * 2);   // (1.11.120: in slabs, paced - 768 kB in one read slipped the twin's picture)
+    else { for (int y = 0; y < H; ++y) { memset(buf + y * W, 0, W * 2); psramPace(W); } for (int y = 0; y < wh[1] && y < H; ++y) sdReadPaced(f, (uint8_t *) (buf + y * W), min((int) wh[0], W) * 2); }
     f.close();
     bgCache.push_back({picId, buf, millis()});
     bgBuf = buf; bgW = W; bgH = H;
@@ -1244,17 +1266,30 @@ static void drawComp(Comp &c) {
     const std::string &t = c.type;
     if (t == "variable" || t == "timer" || t == "audio") return;
     if (t == "external picture") {                          // the model's photo: txt holds the path the Teensy sent
-        restoreUnder(c);
-        if (c.txt.empty() || !sdOk) return;
+        if (deferPics) { picsLater.push_back(c.name); return; }   // (1.11.120) drawn after the rotation, over the page's own background
+        if (c.txt.empty() || !sdOk) { restoreUnder(c); return; }
         std::string base = c.txt.substr(c.txt.find_last_of("/\\") == std::string::npos ? 0 : c.txt.find_last_of("/\\") + 1);
         size_t dot = base.find_last_of('.'); if (dot != std::string::npos) base = base.substr(0, dot);
         const std::string path = imagePath(base);
         File f = SD.open(path.c_str());
-        if (!f) return;
-        uint16_t wh[2]; f.read((uint8_t *) wh, 4);
-        std::vector<uint16_t> row(wh[0]);
+        if (!f) { restoreUnder(c); return; }
+        uint16_t wh[2] = { 0, 0 }; f.read((uint8_t *) wh, 4);
+        if (!wh[0] || !wh[1] || wh[0] > 1024 || wh[1] > 1024) { f.close(); restoreUnder(c); return; }
         const int ox = c.x + (c.w - (int) wh[0]) / 2, oy = c.y + (c.h - (int) wh[1]) / 2;   // centred in the frame
-        for (int yy = 0; yy < wh[1]; ++yy) { f.read((uint8_t *) row.data(), wh[0] * 2); if (oy + yy >= 0 && oy + yy < H) gfx->draw16bitRGBBitmap(ox, oy + yy, row.data(), wh[0], 1); }
+        if ((int) wh[0] < c.w || (int) wh[1] < c.h) restoreUnder(c);   // (1.11.120: a picture that fills its frame needs nothing put back under it - 64 000 pixels less through the PSRAM)
+        // (1.11.120) Read in slabs of up to 8 kB into internal memory (one multi-sector read each), not a row at a time: 200
+        // reads of 640 bytes each cost the card ~100 ms, with the loop and the panel waiting on it. Short of memory: a row.
+        std::vector<uint16_t> one;
+        int chunk = max(1, min((int) wh[1], 8192 / ((int) wh[0] * 2)));
+        uint16_t *buf = chunk > 1 ? (uint16_t *) heap_caps_malloc((size_t) chunk * wh[0] * 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) : nullptr;
+        const bool own = buf != nullptr;
+        if (!buf) { chunk = 1; one.resize(wh[0]); buf = one.data(); }
+        for (int y0 = 0; y0 < (int) wh[1]; y0 += chunk) {
+            const int n = min(chunk, (int) wh[1] - y0);
+            if ((int) f.read((uint8_t *) buf, (size_t) n * wh[0] * 2) != n * (int) wh[0] * 2) break;
+            for (int yy = 0; yy < n; ++yy) { const int y = oy + y0 + yy; if (y >= 0 && y < H) gfx->draw16bitRGBBitmap(ox, y, buf + yy * wh[0], wh[0], 1); }
+        }
+        if (own) free(buf);
         f.close();
         return;
     }
@@ -1442,14 +1477,16 @@ static void drawPageNow(bool show) {
     /* bgMode 0: leave the screen as it is and draw over it */
     pageBgUs = micros() - tp; tp = micros();
     pageTextUs = pagePicUs = pageOtherUs = 0; pageTextN = pagePicN = pageOtherN = 0;
+    picsLater.clear(); deferPics = rotate;                 // (1.11.120) a rotation: the pictures off the card follow it (flipTick)
     for (auto &c : page.comps) {
         const uint32_t t1 = micros(); drawComp(c); const uint32_t us = micros() - t1;
         if (!c.vis || c.w <= 0) continue;
         if (board->psramRestUs && us > 200) delayMicroseconds(board->psramRestUs / 3);   // (1.11.119) a breath after each component drawn: its letters are many small writes into the PSRAM, and its code streams from the flash on the same bus, while the page before is still on show (the twin; ~3 ms a page)
         if (c.type == "text" || c.type == "number" || c.type == "xfloat" || c.type == "scrolltext" || c.type == "button" || c.type == "dsbutton") { pageTextUs += us; pageTextN++; }
-        else if (c.type == "picture" || c.type == "crop") { pagePicUs += us; pagePicN++; }
+        else if (c.type == "picture" || c.type == "crop" || c.type == "external picture") { pagePicUs += us; pagePicN++; }
         else { pageOtherUs += us; pageOtherN++; }
     }
+    deferPics = false;
     pageCompsUs = micros() - tp;
     fillMemo.valid = false; fillMemo.ops.clear(); fillMemo.colour = -1;   // (1.11.99: a page drawn whole has no crumbs to repair)
     if (!show) return;                                     // (the deferred drawing: into the canvas only)
@@ -1500,6 +1537,7 @@ static void redraw(Comp &c) {
     memoTouched(x, y, w, h); dirty(x, y, w, h);
 }
 static void needRedraw() { for (auto &c : page.comps) if (!c.need.empty() && c.vis) redraw(c); }
+static void drawPicsLater() { std::vector<std::string> names; names.swap(picsLater); for (auto &nm : names) if (Comp *c = find(nm)) redraw(*c); }   // (1.11.120: after the rotation)
 static void repaintHole(int x, int y, int w, int h) { if (loadingPage || noDraw) return; restoreRect(x, y, w, h); drawAbove(-1, x, y, w, h); memoTouched(x, y, w, h); dirty(x, y, w, h); }
 // A TextSelect's option list (its "path"): one option per line.
 static void setOptions(Comp &c, const std::string &s) {
@@ -1575,6 +1613,10 @@ struct Host : public NextionHost {
         if (!c->damaged && c->type != "textselect" && c->type != "combobox" && c->type != "sltext" && c->type != "slider" &&
             ((attr == "val" && c->val == v) || (attr == "pco" && c->pco == v) || (attr == "bco" && c->bco == v) || (attr == "pco2" && c->pco2 == v) || (attr == "bco2" && c->bco2 == v) ||
              (attr == "font" && c->font == v) || (attr == "pic" && c->pic == v) || (attr == "x" && c->x == v) || (attr == "y" && c->y == v))) { perfSkipped++; return; }
+        if (attr == "val" && c->type == "textselect" && !c->damaged && c->val == v) {   // (1.11.120) the row it shows already: nothing to draw (the main board writes the model's number at every entry, after the list that already sits on it)
+            const int was = c->scroll; listShowSelected(*c);
+            if (c->scroll == was) { perfSkipped++; return; }
+        }
         bool paint = true;
         if (attr == "val") { c->val = v; if (c->type == "textselect") { if (v >= 0 && v < (int) c->options.size()) c->txt = c->options[v]; listShowSelected(*c); }
                              if (c->type == "combobox" && v >= 0 && v < (int) c->options.size()) c->extra["hl"] = v; }
@@ -1624,8 +1666,10 @@ struct Host : public NextionHost {
         if (nm == "DateTime" && s.size() > 8) lastDateTime = s;
         if (nm == "StillConnected" && s.find("TURN OFF") != std::string::npos) flightCountdownAt = millis() | 1;   // (the current is written into the same box: the countdown counts until it has stopped coming)
         if (off || !c) return;
-        if (!c->damaged && c->txt == s && c->type != "sltext" && c->type != "external picture") { perfSkipped++; return; }
-        c->txt = s; if (c->type == "sltext") c->scroll = 0; redraw(*c);
+        if (!c->damaged && c->txt == s && c->type != "sltext") { perfSkipped++; return; }   // (1.11.120: a picture named again is not read off the card again - the main board names the model's picture at every entry to the Models page, right after the page that drew it)
+        c->txt = s; if (c->type == "sltext") c->scroll = 0;
+        if (c->type == "external picture") picsLaterDrop(nm);   // (drawn now with its new name: not again after the rotation)
+        redraw(*c);
     }
     void send(const uint8_t *b, size_t n) override {
         outBuf.append((const char *) b, n);
@@ -1747,7 +1791,7 @@ static bool loadPage(const std::string &name) {
     else {
         File f = SD.open(path); if (!f) return false;
         const size_t n = f.size(); raw = (char *) ps_malloc(n + 1); if (!raw) { f.close(); return false; }
-        got = f.read((uint8_t *) raw, n); raw[got] = 0; f.close();   // one read, then parse from memory (a File stream parses a byte at a time)
+        got = sdReadPaced(f, (uint8_t *) raw, n); raw[got] = 0; f.close();   // read into memory (a File stream parses a byte at a time), in paced slabs (1.11.120), then parsed
         for (auto &e : rawCache) if (!e.buf) { slot = &e; break; }
         if (!slot) { slot = &rawCache[0]; for (auto &e : rawCache) if (e.used < slot->used) slot = &e; free(slot->buf); rawBytes -= slot->len; }
         *slot = { it->second, raw, got, millis() }; rawBytes += got;
@@ -1812,7 +1856,7 @@ static bool loadPage(const std::string &name) {
     }
     if (restoring) { saverApply(np); saverPage.clear(); saverComps.clear(); }
     if (pageDeferred) { if (np.bgMode == 0) drawDeferred(); else pageDeferred = false; }   // (1.11.116) a page drawn over this one needs it drawn; a whole new page does not
-    page = np;
+    page = std::move(np);                                  // (1.11.120: moved, not copied - the whole component set, strings and maps, was copied once more at every page change)
     touchNote("page " + name);
     touchLockout = true;
     strlcpy(rtcPage, name.c_str(), sizeof(rtcPage)); rtcMagic = 0x4C445243;   // our own restart comes back to this page
@@ -2216,6 +2260,7 @@ static void pumpSerial() {
     const int waiting = Serial.available();
     if (waiting) { lastRxMs = millis(); if (waiting > perfRxMax) perfRxMax = waiting; }
     if (flipRotating && flipPending && millis() - flipAskedMs < 80) return;   // (1.11.116) the canvas is about to go on show: nothing drawn into it until it has (a frame at most; the bytes wait in the 32 kB buffer)
+    const uint32_t passT0 = micros();
     while (Serial.available()) {
         uint8_t b = Serial.read();
         const ldrc::Router::What what = router.push(b, millis(), frame);
@@ -2229,6 +2274,13 @@ static void pumpSerial() {
                 else if (!buf.empty()) { const uint32_t t0 = micros(); handle(buf); perfHandleUs += micros() - t0; perfCmds++; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 buf.clear(); ffs = 0;
                 flipTick();   // (1.11.116) the new page's compose goes on between commands: this loop runs as long as the main board streams (passes of 100-700 ms were measured), and the page showed 400 ms late (Malcolm, 24 Oct)
+                // (1.11.120) The page command asked for a rotation: NOTHING more is drawn into the canvas until the panel shows it
+                // (the wait above, a frame at most). Before, the commands right behind "page ModelsView" - its two lists - were
+                // drawn into the very buffer about to go on show, and a switch that landed mid-draw showed a half-drawn list
+                // for a frame: the flicker that stayed on that page. And a pass is at most 50 ms: the finger, the panel and
+                // the catch-ups between (that same stream held the loop 320-420 ms; the bytes keep in the 32 kB buffer).
+                if (flipRotating && flipPending) break;
+                if (micros() - passT0 > 50000) break;
             }
             continue;
         }
@@ -2970,8 +3022,12 @@ static void audioFill() {                               // called from loop(): k
     const size_t used = ldrcring::used(ringEnds, RING), space = ldrcring::space(ringEnds, RING);
     if (curClip) {                                       // from memory: everything there is room for, at once
         if (curPos >= curClip->len) { if (audioLoop) curPos = 0; else { audioDraining = true; if (used == 0) audioStop(); } return; }
-        const size_t n = min(space, (size_t) (curClip->len - curPos)); if (!n) return;
-        ringPush(curClip->data + curPos, n); curPos += n; return;
+        size_t n = min(space, (size_t) (curClip->len - curPos)); if (!n) return;
+        // (1.11.120) All of it, as before (a stall of the loop must not starve the speaker: the ring holds 5.9 s), but in 8 kB
+        // pieces with the pace's rests between: one memcpy of a whole clip within the PSRAM slipped the twin's picture at
+        // every announcement's start.
+        while (n) { const size_t piece = min(n, (size_t) 8192); ringPush(curClip->data + curPos, piece); curPos += piece; n -= piece; psramPace((uint32_t) piece); }
+        return;
     }
     if (audioDataLeft == 0) {
         if (capture && captureLen == audioDataSize) { clipAdd(audioId, capture, captureLen); capture = nullptr; }   // the copy is complete: keep it for next time
@@ -2992,6 +3048,7 @@ static void audioFill() {                               // called from loop(): k
     if (got <= 0) { audioStop(); return; }
     audioDataLeft -= got; ringPush(tmp, got);
     if (capture) { memcpy(capture + captureLen, tmp, got); captureLen += got; }
+    psramPace((uint32_t) got);                            // (1.11.120: the ring and the copy are both in the PSRAM)
 }
 static void audioStart(int id, bool loopIt) {
     audioStop();
@@ -3041,18 +3098,33 @@ static void audioStartFile(const char *path, uint32_t fromMs = 0) {   // (1.11.8
     audioPlaying = true;
     audioFill();
 }
-static void audioWarm() {                               // loop(): while nothing is happening, bring the small clips into memory one at a time
+// loop(): while nothing is happening, bring the small clips into memory one at a time. (1.11.120) In slabs of 4 kB, one
+// every 25 ms with the pace's rests, and only once the page has settled: a clip came in with one read of up to 40 kB into
+// the PSRAM, and on a page quiet enough for this (the Models page between the main board's polls - the front page never
+// is) that slipped the twin's picture at every clip, "every few seconds" after landing on the page (Malcolm, 24 Oct).
+static void audioWarm() {
     static int next = 0; static uint32_t lastTry = 0;
-    if (audioPlaying || !sdOk || !audioRing || next >= 128 || (int32_t) (millis() - lastRxMs) < 300 || millis() - lastTry < 50) return;
+    static File warmFile; static uint8_t *warmBuf = nullptr; static uint32_t warmGot = 0, warmSize = 0; static int warmId = -1;
+    if (!sdOk || !audioRing) return;
+    if (audioPlaying) { if (warmBuf) { free(warmBuf); warmBuf = nullptr; warmFile.close(); warmId = -1; } return; }   // (a sound: the clip half in is let go; played, audioFill's capture keeps it)
+    if (next >= 128 && !warmBuf) return;
+    if ((int32_t) (millis() - lastRxMs) < 300 || millis() - lastPresentMs < 1500 || millis() - lastTry < 25) return;
     lastTry = millis();
-    const int id = next++;
-    if (clipFind(id)) return;
-    uint32_t rate; if (!wavOpen(id, rate)) return;
-    if (audioDataSize > 40 * 1024) { audioFile.close(); return; }
-    clipMakeRoom(audioDataSize);
-    uint8_t *buf = (uint8_t *) ps_malloc(audioDataSize); if (!buf) { audioFile.close(); return; }
-    const int got = audioFile.read(buf, audioDataSize); audioFile.close();
-    if (got == (int) audioDataSize) clipAdd(id, buf, audioDataSize); else free(buf);
+    if (!warmBuf) {                                      // the next clip: opened, its memory taken
+        const int id = next++;
+        if (clipFind(id)) return;
+        uint32_t rate; if (!wavOpen(id, rate)) return;
+        if (!audioDataSize || audioDataSize > 40 * 1024) { audioFile.close(); return; }
+        clipMakeRoom(audioDataSize);
+        warmBuf = (uint8_t *) ps_malloc(audioDataSize); if (!warmBuf) { audioFile.close(); return; }
+        warmFile = audioFile; audioFile = File();          // (the handle is this warm-up's now; a sound meanwhile opens its own)
+        warmSize = audioDataSize; warmGot = 0; warmId = id;
+        return;
+    }
+    const int got = warmFile.read(warmBuf + warmGot, std::min((size_t) 4096, (size_t) (warmSize - warmGot)));
+    if (got <= 0) { free(warmBuf); warmBuf = nullptr; warmFile.close(); warmId = -1; return; }
+    warmGot += (uint32_t) got; psramPace((uint32_t) got);
+    if (warmGot >= warmSize) { warmFile.close(); clipAdd(warmId, warmBuf, warmSize); warmBuf = nullptr; warmId = -1; }
 }
 // A 6x6 dot in the top-left corner: green = on the WiFi, red = not.
 static void netDot(bool force = false) {

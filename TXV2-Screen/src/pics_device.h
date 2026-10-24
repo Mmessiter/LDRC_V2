@@ -94,12 +94,13 @@ static void picJobStart(const std::string &name, bool mine) {
     if (!picJob.f || picJob.f.read((uint8_t *) wh, 4) != 4 || !wh[0] || !wh[1] || wh[0] > 1024 || wh[1] > 1024) { picJob.on = true; picJobEnd(false); return; }
     picJob.px = (uint16_t *) ps_malloc(ldrc::PIC_THUMB_W * ldrc::PIC_THUMB_H * 2);
     if (!picJob.px) { picJob.on = true; picJobEnd(false); return; }
-    for (int i = 0; i < ldrc::PIC_THUMB_W * ldrc::PIC_THUMB_H; ++i) picJob.px[i] = 0;
     picJob.w = wh[0]; picJob.h = wh[1];
     // The whole picture, as large as fits in 160 x 100, centred (a 320 x 200 one fills it exactly).
     if ((long) picJob.w * ldrc::PIC_THUMB_H >= (long) picJob.h * ldrc::PIC_THUMB_W) { picJob.tw = ldrc::PIC_THUMB_W; picJob.th = std::max(1, (int) ((long) picJob.h * ldrc::PIC_THUMB_W / picJob.w)); }
     else { picJob.th = ldrc::PIC_THUMB_H; picJob.tw = std::max(1, (int) ((long) picJob.w * ldrc::PIC_THUMB_H / picJob.h)); }
     picJob.ox = (ldrc::PIC_THUMB_W - picJob.tw) / 2; picJob.oy = (ldrc::PIC_THUMB_H - picJob.th) / 2;
+    if (picJob.tw != ldrc::PIC_THUMB_W || picJob.th != ldrc::PIC_THUMB_H)   // (1.11.120) the black round a picture that does not fill the tile: a row at a time, paced (32 kB written at once slipped the twin's picture)
+        for (int r = 0; r < ldrc::PIC_THUMB_H; ++r) { memset(picJob.px + r * ldrc::PIC_THUMB_W, 0, ldrc::PIC_THUMB_W * 2); psramPace(ldrc::PIC_THUMB_W); }
     picJob.on = true;
 }
 static void picJobAbandon(const std::string &name) {
@@ -452,7 +453,7 @@ static void picWarm() {
     static const std::string noPic;
     const std::string &pic = ex ? ex->txt : noPic;
     if (picWarmed.done && picWarmed.gen == picCardGen && picWarmed.page == page.name && picWarmed.pic == pic) return;
-    if (now - picWarmed.at < 100) return;
+    if (now - picWarmed.at < 100 || now - lastPresentMs < 1500) return;   // (1.11.120: not until the page has settled - the main board fills the Models page for a second or two after it, and the card must not be read under that)
     picWarmed.at = now;
     static std::vector<ldrc::PicEntry> raw, list;
     picHost.list(raw); ldrc::picBuildList(raw, list);
