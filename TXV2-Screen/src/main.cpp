@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.113"
+#define SCREEN_VERSION "1.11.114"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -114,7 +114,9 @@ static void hookFrameEnd() {
     p->on_frame_trans_done = onFrameEnd;
 }
 static void copyRows(int x, int y, int w, int h, bool over) {
+    const uint32_t restUs = (long) w * h >= 100000 ? board->copyRestUs : 0;   // (1.11.114) a big copy leaves the panel's DMA some PSRAM time (board.h)
     for (int yy = 0; yy < h; ++yy) {
+        if (restUs && yy && (yy & 7) == 0) delayMicroseconds(restUs);
         const int row = y + yy;
         if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
             const bool twin = topTwin();                                     // (1.11.94: page | button | title | button | page)
