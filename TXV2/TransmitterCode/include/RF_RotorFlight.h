@@ -108,8 +108,17 @@ FLASHMEM void RFSettingsGather() // B99: the settings page's fields read back an
         if (temp[adc] < '0' || temp[adc] > '9')
             armDigitsOnly = false;
     int newArming = atoi(temp);
-    if (armDigitsOnly && newArming >= 1 && newArming <= 5) // B48: Rotorflight's switch channels start at 6: 1-5 would make the Switches page refuse every save
-        MsgBox((char *)"page RFSetupView", (char *)"Rotorflight's switches start at channel 6:\r\nthe arming channel must be 6 to 16.\r\nIt was left as it was.");
+    // B48: Rotorflight's switch channels start at 6 (5 is its collective), so 1-5 were refused: the Switches page would refuse
+    // every save. B146 (Malcolm, 24 Oct 2026, setting up an OMP M2: "It insists its flight controller arming channel is 5 and
+    // not changeable"): a flight controller that is not Rotorflight may want 5 - allowed once the pilot has said so. The
+    // Switches page's own guard (RF_Switches.h SwArmOk) still explains itself to a Rotorflight pilot who chose 1-5.
+    if (armDigitsOnly && newArming >= 1 && newArming <= 5 && newArming != ArmingChannel)
+    {
+        char q[120];
+        snprintf(q, sizeof(q), "Rotorflight has the collective on 5\r\nand its switches from channel 6.\r\nUse channel %d for arming anyway?", newArming);
+        if (GetConfirmation((char *)"page RFSetupView", q))
+            ArmingChannel = (uint8_t)newArming;
+    }
     else if (armDigitsOnly && newArming > 0 && newArming <= CHANNELSUSED)
         ArmingChannel = (uint8_t)newArming;
 
