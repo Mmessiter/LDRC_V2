@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.115"
+#define SCREEN_VERSION "1.11.116"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -54,22 +54,50 @@ constexpr int SD_MOSI = 11, SD_MISO = 13, SD_CLK = 12, SD_CS = 10;
 // are the board's (board.h). The data pins, DE, VSYNC and HSYNC are the same on both.
 Arduino_ESP32RGBPanel *panel = nullptr;
 Arduino_RGB_Display *screen = nullptr;
-Arduino_Canvas *canvas = nullptr;                             // every draw lands here (PSRAM); present() copies finished rectangles to the panel
+class PacedCanvas;                                            // (src/psram_pace.h, included below)
+PacedCanvas *canvas = nullptr;                                // every draw lands here (PSRAM); present() copies finished rectangles to the panel
 Arduino_GFX *gfx = nullptr;                                   // the screen at first, switched to the canvas at boot
+#include "psram_pace.h"                                // (1.11.116: the twin's big moves through the PSRAM, paced; the canvases' big fills)
 static void panelMake() {
     const BoardPins &b = *board;
     panel = new Arduino_ESP32RGBPanel(40, 41, 39, b.pclk, 45, 48, 47, 21, 14, 5, 6, 7, 15, 16, 4, 8, 3, 46, 9, 1,
                                       0, b.hsFp, b.hsPw, b.hsBp, 0, b.vsFp, b.vsPw, b.vsBp, 1, b.pclkHz);
     screen = new Arduino_RGB_Display(W, H, panel, 0, true);
-    canvas = new Arduino_Canvas(W, H, screen);
+    canvas = new PacedCanvas(W, H, screen);
     gfx = screen;
 }
 static uint16_t *fbNow = nullptr, *screenFb = nullptr;        // what gfx draws into / what the panel shows
 static uint16_t *pageFb = nullptr;                            // the canvas: the page, as the Teensy draws it
+// (1.11.116) THE ROTATION, on the twin. Three buffers of a page each (src/page_flip.h flipFb[]): the one on show, a spare,
+// and the canvas. A page change draws the new page INTO THE CANVAS, as ever, and then the panel is simply pointed at the
+// canvas: no copy. The buffer that was on show becomes the canvas, and it still holds the page before - so it is caught
+// up from the one on show in bands of 8 rows, each band before anything draws into it (canvasEnsureRows, called by every
+// write into the canvas: PacedCanvas, drawGlyphs, restoreRect) and otherwise a couple of bands a pass (flipTick). Big
+// changes that are not a page change (a film's picture under our layer, cls) go the other way, composed into the spare
+// and flipped to (flipBigChange), as in 1.11.115.
+static int flipCanvas = 2, flipSpare = 1;                     // which of flipFb[] is the canvas / the spare (the panel shows flipShown)
+static uint64_t canvasStale = 0;                              // bands of 8 rows the canvas has not yet been caught up in (bit b: rows 8b..8b+7)
+static bool flipRotating = false;                             // the flip asked for is a rotation (the canvas goes on show)
+static int flipFrom = 0;                                      // the buffer on show when the flip was asked for
+static int topDrawDepth = 0;                                  // (a rotation is completed only outside a TopDraw: it moves fbNow)
+static uint32_t flipRotateN = 0, canvasEnsureN = 0;
+// (1.11.116) THE FLIGHT SPARE. The flight screen (src/flight_device.h, topWho 5) covers the whole glass: on the front page the
+// picture IS the layer, and coming back to the front page composed all 768 kB of it again (290 ms). While the pilot is away
+// on another page the layer is not drawn on, so: when a rotation takes the flight composite off show, that buffer becomes
+// the SPARE and is kept (nothing is presented into it, no catching up); the layer's canvas notes the box round anything
+// drawn on it since; and the next compose for the flight screen copies only that box - usually nothing - and flips.
+static const int FLIGHT_LAYER_WHO = 5;
+static bool shownIsFlight = false;                            // the buffer on show is the flight composite
+static bool spareHoldsFlight = false;                         // the spare is a kept flight composite (the layer's canvas tracks what changed since)
+static bool flipKept = false;                                 // the flip in flight goes to a kept flight spare: the buffer it leaves lags by the whole page
+// (1.11.116) Under a flight screen that covers the whole glass, the page itself is not seen: coming back to the front page
+// its drawing (150 ms) is put off, and done only if something will show it - the layer going down, or a page drawn over it.
+static bool pageDeferred = false;
+static void drawDeferred();
 // Our own panel ("Check for update") has a layer of its own, laid over the page as rectangles go to the
 // glass: the Teensy goes on drawing the page underneath, and nothing it draws can show through the panel
 // or damage it. When the panel goes, the page is there as the Teensy last drew it.
-static Arduino_Canvas *topCanvas = nullptr; static uint16_t *topFb = nullptr;
+static PacedCanvas *topCanvas = nullptr; static uint16_t *topFb = nullptr;
 static bool topOn = false;
 static int topWho = 0;                                        // whose it is: 1 the update panel (src/update_device.h), 2 the WiFi page (src/wifi_device.h), 3 the link's panel, 4 the picture chooser (src/pics_device.h), 5 the flight screen, 6 its setup page (src/flight_device.h)
 static int topX = 40, topY = 36, topW = 720, topH = 408;      // the part of the screen it covers
@@ -113,17 +141,39 @@ static void hookFrameEnd() {
     }
     p->user_ctx = nullptr;
     p->on_frame_trans_done = onFrameEnd;
-    if (board->flipRestUs && vtNormal) flipFind(&p->user_ctx, p->fb, p->fb_size, p->num_dma_nodes);   // (1.11.115)
-    else flipWhy = board->flipRestUs ? "no frame ends" : "off";
+    if (board->flip && vtNormal) flipFind(&p->user_ctx, p->fb, p->fb_size, p->num_dma_nodes);   // (1.11.115)
+    else flipWhy = board->flip ? "no frame ends" : "off";
 }
-static void copyRows(uint16_t *dst, int x, int y, int w, int h, bool over, uint32_t restUs) {
+// Rows y..y+h-1 of the canvas, caught up from the buffer on show where they have not been since the last rotation.
+static void canvasEnsureRows(int y, int h) {
+    if (!canvasStale || !pageFb) return;
+    if (y < 0) { h += y; y = 0; } if (y + h > H) h = H - y;
+    if (h <= 0) return;
+    const uint16_t *from = flipFb[flipShown];
+    if (!from || from == pageFb) return;
+    for (int b = y >> 3, last = (y + h - 1) >> 3; b <= last; ++b) {
+        if (!(canvasStale & (1ull << b))) continue;
+        const int r0 = b << 3, r1 = min(H, r0 + 8);
+        for (int r = r0; r < r1; ++r) memcpy(pageFb + r * W, from + r * W, W * 2);
+        psramPace((uint32_t) (r1 - r0) * W);
+        canvasStale &= ~(1ull << b); canvasEnsureN++;
+    }
+}
+// (1.11.116) The rows are written back from the cache 8 at a time, as they are copied - not the whole area at the end: that
+// was one burst of up to 64 kB of PSRAM writes at full speed, outside the pacing (the rare flicker left on the twin).
+static void copyRows(uint16_t *dst, int x, int y, int w, int h, bool over) {
+    canvasEnsureRows(y, h);                                // (1.11.116: a band not yet caught up holds the page before)
     for (int yy = 0; yy < h; ++yy) {
-        if (restUs && yy && (yy & 7) == 0) delayMicroseconds(restUs);
         const int row = y + yy;
         if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
             const bool twin = topTwin();                                     // (1.11.94: page | button | title | button | page)
             ldrclayer::composeRow(dst + row * W, pageFb + row * W, topFb + row * W, x, w, topX, topX + topW, twin ? top2X : 0, twin ? top2X + top2W : 0);
         } else memcpy(dst + row * W + x, pageFb + row * W + x, w * 2);
+        if ((yy & 7) == 7 || yy == h - 1) {
+            const int first = row - (yy & 7);
+            Cache_WriteBack_Addr((uint32_t) (dst + first * W + x), (uint32_t) (((row - first) * W + w) * 2));
+        }
+        psramPace(w);                                      // (1.11.116: every copy, paced on the twin - src/psram_pace.h)
     }
 }
 struct PresentArea { int x, y, w, h; bool over; };
@@ -138,13 +188,13 @@ static PresentArea presentArea(int x, int y, int w, int h) {   // the part of th
 static void present(int x, int y, int w, int h) {
     const PresentArea a = presentArea(x, y, w, h);
     if (a.w <= 0) return;
-    const uint32_t restUs = (long) a.w * a.h >= 100000 ? board->copyRestUs : 0;   // (1.11.114) a big copy leaves the panel's DMA some PSRAM time (board.h)
-    // (1.11.115) With the flip, BOTH buffers, always: the interrupt may swap them at any moment, so "the shown one" read
-    // here could already be the hidden one (the first test: small changes lost from the new page, a big flicker).
-    for (int i = 0; i < (flipOk ? 2 : 1); ++i) {
+    // (1.11.115) With the flip, EVERY buffer but the canvas, always: the interrupt may swap them at any moment, so "the shown
+    // one" read here could already be the spare (the first test: small changes lost from the new page, a big flicker).
+    for (int i = 0; i < (flipOk ? 3 : 1); ++i) {
+        if (flipOk && (i == flipCanvas || !flipFb[i])) continue;
+        if (flipOk && i == flipSpare && spareHoldsFlight) continue;   // (the flight spare is kept as it is)
         uint16_t *dst = flipOk ? flipFb[i] : screenFb;
-        copyRows(dst, a.x, a.y, a.w, a.h, a.over, restUs);
-        Cache_WriteBack_Addr((uint32_t) (dst + a.y * W + a.x), (uint32_t) (((a.h - 1) * W + a.w) * 2));
+        copyRows(dst, a.x, a.y, a.w, a.h, a.over);
     }
 }
 // What has changed on the canvas and is waiting to be shown: a short list of rectangles, merged only when
@@ -192,6 +242,9 @@ static bool beamHeld = false;                          // (1.11.82) a rectangle 
 // flip the buffer now hidden lacks that change: it is brought up to date a few rows each pass (flipSync), small changes
 // still going to both, and folded into the next big change if one comes first.
 static bool flipPending = false, flipComposing = false;
+static uint32_t pageT0 = 0, pageDrawMs = 0, pageComposeMs = 0, pageShownMs = 0;
+static uint32_t pageSdUs = 0, pageParseUs = 0, pagePreUs = 0, pageBgUs = 0, pageCompsUs = 0;
+static uint32_t pageTextUs = 0, pagePicUs = 0, pageOtherUs = 0, pageTextN = 0, pagePicN = 0, pageOtherN = 0;   // (bench) the components by kind: text and numbers, pictures off the card, the rest   // (bench) the drawing's parts: the card, the JSON, preinitialize + background load, the background painted, the components   // (1.11.116) the last page change: ms from its command to the canvas drawn, composed, shown
 static Rect16 flipComp = { 0, 0, 0, 0 };              // the big change being composed into the hidden buffer
 static int flipCompRow = 0;
 static uint32_t flipComposeUs = 0, flipAskedMs = 0, flipComposeMax = 0, flipWaitMax = 0, flipSyncN = 0;
@@ -209,32 +262,66 @@ static void flipTick() {
         const uint32_t t0 = micros();
         const int rows = min(32, flipComp.h - flipCompRow);
         const PresentArea a = presentArea(flipComp.x, flipComp.y + flipCompRow, flipComp.w, rows);
-        uint16_t *back = flipFb[flipShown ^ 1];
-        if (a.w > 0) { copyRows(back, a.x, a.y, a.w, a.h, a.over, board->flipRestUs); delayMicroseconds(board->flipRestUs); Cache_WriteBack_Addr((uint32_t) (back + a.y * W + a.x), (uint32_t) (((a.h - 1) * W + a.w) * 2)); }
+        uint16_t *back = flipFb[flipSpare];
+        if (a.w > 0) copyRows(back, a.x, a.y, a.w, a.h, a.over);
         flipCompRow += rows; flipComposeUs += micros() - t0;
         if (flipCompRow >= flipComp.h) {
             flipComposing = false; flipBig = flipComp;
+            if (pageT0) pageComposeMs = millis() - pageT0;
             flipComposeMax = max(flipComposeMax, flipComposeUs);
-            flipAskedMs = millis(); flipPending = true; flipWant = flipShown ^ 1;
+            flipAskedMs = millis(); flipPending = true; flipRotating = false; flipFrom = flipShown; flipWant = flipSpare;
         }
         return;
     }
     if (flipPending) {
         if (flipShown == flipWant) {
+            if (flipRotating && topDrawDepth) return;          // (fbNow is the layer's just now: the rotation completes at the next call)
             flipPending = false; screenFb = flipFb[flipShown];
+            if (pageT0) { pageShownMs = millis() - pageT0; pageT0 = 0; }
             flipWaitMax = max(flipWaitMax, (uint32_t) (millis() - flipAskedMs));
-            flipStale = flipBig; flipStaleRow = 0;
+            if (flipRotating) {                                // the canvas is on show: the buffer that was becomes the canvas, every band to catch up
+                flipRotating = false; flipRotateN++;
+                if (shownIsFlight) {                           // (the flight spare: the flight composite is kept as the spare; the old spare becomes the canvas)
+                    flipCanvas = flipSpare; flipSpare = flipFrom;
+                    spareHoldsFlight = true; topCanvas->touchedClear(); topCanvas->track = true;
+                    flipStale = { 0, 0, 0, 0 };
+                } else {
+                    flipCanvas = flipFrom;
+                    flipStale = { 0, 0, (int16_t) W, (int16_t) H }; flipStaleRow = 0;   // (and the spare lags by the whole page)
+                }
+                shownIsFlight = false;
+                pageFb = fbNow = flipFb[flipCanvas]; canvas->aim(pageFb);
+                canvasStale = (1ull << ((H + 7) / 8)) - 1;
+            } else {
+                flipSpare = flipFrom; flipStale = flipKept ? Rect16{ 0, 0, (int16_t) W, (int16_t) H } : flipBig; flipStaleRow = 0; flipKept = false;
+                shownIsFlight = topOn && topWho == FLIGHT_LAYER_WHO && topX == 0 && topY == 0 && topW == W && topH == H;
+                spareHoldsFlight = false; topCanvas->track = false;
+            }
         } else if (millis() - flipAskedMs > 250) {   // the frame ends stopped: no more flips; the shown buffer gets the change
-            flipOk = false; flipWhy = "flip never came"; flipWant = flipShown; flipPending = false; screenFb = flipFb[flipShown];
-            dirty(flipBig.x, flipBig.y, flipBig.w, flipBig.h);
+            flipOk = false; flipWhy = "flip never came"; flipWant = flipShown; flipPending = false; flipRotating = false; screenFb = flipFb[flipShown];
+            canvasEnsureRows(0, H); dirty(0, 0, W, H);
         }
         return;
     }
-    if (flipStale.w > 0 && flipStaleRow < flipStale.h) {   // a few rows a pass: the hidden buffer catches up, unseen
-        const int rows = min(16, flipStale.h - flipStaleRow);
-        const PresentArea a = presentArea(flipStale.x, flipStale.y + flipStaleRow, flipStale.w, rows);
-        uint16_t *back = flipFb[flipShown ^ 1];
-        if (a.w > 0) { copyRows(back, a.x, a.y, a.w, a.h, a.over, 0); Cache_WriteBack_Addr((uint32_t) (back + a.y * W + a.x), (uint32_t) (((a.h - 1) * W + a.w) * 2)); }
+    // (1.11.116) The catching up after a flip is unseen work: one band or slice at most every 2 ms, so that it never adds a
+    // burst to the Teensy's own drawing right after a page change (flipTick runs after every command of its).
+    static uint32_t lastCatchUpUs = 0;
+    const uint32_t nowUs = micros();
+    if (nowUs - lastCatchUpUs < 2000) return;
+    if (canvasStale) {                                     // the canvas first: it is on the drawing's path
+        for (int b = 0; b < 64; ++b) if (canvasStale & (1ull << b)) { canvasEnsureRows(b << 3, 8); break; }
+        lastCatchUpUs = micros();
+        return;
+    }
+    if (flipStale.w > 0 && flipStaleRow < flipStale.h && !spareHoldsFlight) {   // a few rows a pass: the spare catches up with the one on show, unseen
+        lastCatchUpUs = nowUs;
+        const int rows = min(16, flipStale.h - flipStaleRow), y = flipStale.y + flipStaleRow, x = flipStale.x, w = flipStale.w;
+        uint16_t *spare = flipFb[flipSpare]; const uint16_t *from = flipFb[flipShown];
+        if (spare && from && spare != from) {
+            for (int r = y; r < y + rows; ++r) memcpy(spare + r * W + x, from + r * W + x, w * 2);
+            Cache_WriteBack_Addr((uint32_t) (spare + y * W + x), (uint32_t) (((rows - 1) * W + w) * 2));
+            psramPace((uint32_t) rows * w);
+        }
         flipStaleRow += rows;
         if (flipStaleRow >= flipStale.h) { flipStale = { 0, 0, 0, 0 }; flipSyncN++; }
     }
@@ -242,16 +329,40 @@ static void flipTick() {
 static bool flipBigChange(const Rect16 &r) {          // true: taken (composed and asked for), or waiting for the last flip
     if (!flipOk || (long) r.w * r.h < 100000) return false;
     if (flipPending || flipComposing) return true;
-    const Rect16 all = rectJoin(r, flipStale);         // what the hidden buffer lacks: this change, and any catching up not done
+    Rect16 all = rectJoin(r, flipStale);               // what the hidden buffer lacks: this change, and any catching up not done
+    if (spareHoldsFlight) {                            // (the flight spare) the flight screen back on show, whole: the spare has it but for what the layer drew since
+        const bool flightNow = topOn && topWho == FLIGHT_LAYER_WHO && topX == 0 && topY == 0 && topW == W && topH == H;
+        if (flightNow && (long) r.w * r.h >= (long) W * H * 9 / 10) {
+            flipKept = true;
+            if (!topCanvas->touchedAny()) {            // nothing: the flip alone
+                flipBig = { 0, 0, 0, 0 }; flipAskedMs = millis(); flipPending = true; flipRotating = false; flipFrom = flipShown; flipWant = flipSpare;
+                return true;
+            }
+            const int x0 = max(0, topCanvas->tx0), y0 = max(0, topCanvas->ty0), x1 = min(W, topCanvas->tx1), y1 = min(H, topCanvas->ty1);
+            all = { (int16_t) x0, (int16_t) y0, (int16_t) max(0, x1 - x0), (int16_t) max(0, y1 - y0) };
+        } else { spareHoldsFlight = false; topCanvas->track = false; all = { 0, 0, (int16_t) W, (int16_t) H }; }   // (another use of the spare: composed whole)
+    }
     const PresentArea a = presentArea(all.x, all.y, all.w, all.h);
     if (a.w <= 0) return false;
     flipStale = { 0, 0, 0, 0 }; flipComp = { (int16_t) a.x, (int16_t) a.y, (int16_t) a.w, (int16_t) a.h };
-    flipCompRow = 0; flipComposeUs = 0; flipComposing = true;   // composed by flipTick, a few rows a pass; small changes meanwhile go to both buffers
+    flipCompRow = 0; flipComposeUs = 0; flipComposing = true;   // composed by flipTick, a few rows a pass; other changes wait for the flip (presentDirty)
     flipTick();
     return true;
 }
+// The whole new page (drawPage): composed unseen and flipped to, like any big change. A compose under way starts again
+// (the page under it is new); one already waiting for its frame is followed by this one. false: no flip to be had.
+static bool flipWholePage() {
+    if (!flipOk) return false;
+    dirtyN = 0;
+    if (flipComposing) { flipComp = { 0, 0, (int16_t) W, (int16_t) H }; flipCompRow = 0; return true; }
+    if (flipPending) { dirty(0, 0, W, H); return true; }
+    return flipBigChange({ 0, 0, (int16_t) W, (int16_t) H });
+}
 static void presentDirty(bool force = false) {
     flipTick();
+    // (1.11.116) While a new picture is composed or waits for its frame, NOTHING goes to the glass: a small change shown now
+    // would land on the old page (the new page's values seen on the old one), so it waits and follows the flip.
+    if (flipComposing || flipPending) return;
     if (!dirtyN) return;
     const uint32_t now = millis();
     bool quiet = false;
@@ -273,10 +384,8 @@ static void presentDirty(bool force = false) {
     for (int i = 0; i < dirtyN; ++i) {
         const Rect16 r = dirtyList[i];
         const uint32_t copyUs = (uint32_t) ((uint64_t) r.w * r.h * copyUsPerKpx / 1000) + 30;
-        if (flipOk && (long) r.w * r.h >= 100000) {   // (1.11.115) the twin: composed unseen, then flipped to
-            if (flipPending || flipComposing) { dirtyList[kept++] = r; continue; }
-            if (flipBigChange(r)) continue;
-        }
+        if (flipComposing || flipPending) { dirtyList[kept++] = r; continue; }   // (1.11.116) begun in this pass: the rest follow the flip
+        if (flipOk && (long) r.w * r.h >= 100000 && flipBigChange(r)) continue;   // (1.11.115) the twin: composed unseen, then flipped to
         if (!force && now - firstDirtyMs < 60 && !beamClear(r.y, r.h, micros(), copyUs)) { dirtyList[kept++] = r; continue; }
         present(r.x, r.y, r.w, r.h); px += (uint32_t) r.w * r.h;
     }
@@ -355,6 +464,7 @@ static void loadAaFonts() {
         aaBits[f] = buf; aaOffset[f] = off;
     }
 }
+static int glyphBg = -1;                                   // (1.11.116) the colour under the letters being drawn, when it is one colour (a box with its own), else -1
 static inline uint16_t blend565(uint16_t bg, uint16_t fg, int a) {   // a = 1..6 of 7
     const int br = (bg >> 11) & 31, bg6 = (bg >> 5) & 63, bb = bg & 31, fr = (fg >> 11) & 31, fg6 = (fg >> 5) & 63, fb = fg & 31;
     return (uint16_t) ((((br * (7 - a) + fr * a) / 7) << 11) | (((bg6 * (7 - a) + fg6 * a) / 7) << 5) | ((bb * (7 - a) + fb * a) / 7));
@@ -369,19 +479,37 @@ static void drawGlyphs(int x, int y, int fontId, uint16_t col, const std::string
     if (y >= clipY1 || y + h <= clipY0) return;
     if (aaBits[fi]) {
         uint16_t *fb = fbNow;
+        if (fb == pageFb) canvasEnsureRows(y, h);              // (1.11.116: the rotation)
+        else if (fb == topFb && topCanvas) topCanvas->touch(max(x - 8, 0), y, textWidth(fontId, s) + 16, h);   // (the flight spare: what the layer had drawn on it)
+        const bool solid = glyphBg >= 0; uint16_t lut[8];
+        if (solid) { lut[0] = (uint16_t) glyphBg; for (int a = 1; a < 8; ++a) lut[a] = a >= 7 ? col : blend565((uint16_t) glyphBg, col, a); }
         for (unsigned char c : s) {
             if (c < f->first || c > f->last) continue;
             const NextionGlyph &g = f->glyphs[c - f->first];
             const int bw = g.bitmap_width, rowBytes = (bw + 1) / 2, gx = x - g.kern_left;
             const uint8_t *src = aaBits[fi] + aaOffset[fi][c - f->first];
+            // (1.11.116) Straight into the buffer: gfx->writePixel for every pixel of every letter (a virtual call, clipping,
+            // the canvas's own checks) was most of the 3 ms a label took - 24 labels, 84 ms of a page change on the twin.
+            // The rows are caught up above and the clip is kept here; the clip never leaves the screen.
+            const int c0 = max(clipX0, 0), c1 = min(clipX1, W), r0 = max(clipY0, 0), r1 = min(clipY1, H);
             for (int row = 0; row < h; ++row) {
-                const int py = y + row; if (py < clipY0 || py >= clipY1) continue;
+                const int py = y + row; if (py < r0 || py >= r1) continue;
                 const uint8_t *r = src + row * rowBytes;
+                uint16_t *dst = fb + py * W;
+                if (solid) {                                   // (1.11.116) one colour under the letters: the eight shades are known before the first pixel
+                    for (int col2 = 0; col2 < bw; ++col2) {
+                        const int a = (col2 & 1) ? (r[col2 >> 1] & 15) : (r[col2 >> 1] >> 4);
+                        if (!a) continue;
+                        const int px = gx + col2; if (px < c0 || px >= c1) continue;
+                        dst[px] = lut[a];
+                    }
+                    continue;
+                }
                 for (int col2 = 0; col2 < bw; ++col2) {
                     const int a = (col2 & 1) ? (r[col2 >> 1] & 15) : (r[col2 >> 1] >> 4);
                     if (!a) continue;
-                    const int px = gx + col2; if (px < clipX0 || px >= clipX1) continue;
-                    gfx->writePixel(px, py, a >= 7 ? col : blend565(fb[py * W + px], col, a));
+                    const int px = gx + col2; if (px < c0 || px >= c1) continue;
+                    dst[px] = a >= 7 ? col : blend565(dst[px], col, a);
                 }
             }
             x += g.width;
@@ -446,6 +574,7 @@ static void drawGlyphsScaled(int x, int y, int fontId, uint16_t col, const std::
         const int gx = x + (pen * s16 + 8) / 16 - g->left;
         pen += f->glyphs[c - f->first].width;
         if (!g->a) continue;
+        if (fb == pageFb) canvasEnsureRows(y, g->h);           // (1.11.116: the rotation)
         for (int dy = 0; dy < g->h; ++dy) {
             const int py = y + dy; if (py < clipY0 || py >= clipY1) continue;
             const uint8_t *row = g->a + dy * g->w;
@@ -683,6 +812,7 @@ static int audioGain = 398;                            // x1024 (volume 50), nev
 // Nextion's; its own anti-clipping (NCN) does not keep it clean above about half of full scale: AUDIO_MAX_GAIN.
 static void audioSetVolume(int v) { audioVolume = constrain(v, 0, 100); audioGain = (int) (AUDIO_MAX_GAIN * sqrt(audioVolume / 100.0) * 1024); }
 static inline int16_t limit16(int32_t y) { return (int16_t) constrain(y, -32767, 32767); }   // (the gain is at most 1: never reached)
+static int16_t toneShape(int16_t x);                   // (1.11.116, below audioTask: the twin's tone)
 static int audioId = -1;                               // the clip playing, for /status
 static uint32_t bootMs = 0;                            // when loop() first ran (ms after power), for /status
 static std::string bootLog;                            // the first ~4 kB of traffic after power, timestamped: GET /bootlog
@@ -814,7 +944,9 @@ static void restoreRect(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0 || loadingPage) return;          // during a page load the background is painted once, after preinit
     if (page.bgMode != 1 && bgBuf) {                        // image, or a popup over the previous page's image
         uint16_t *fb = fbNow;
-        for (int yy = 0; yy < h; ++yy) memcpy(fb + (y + yy) * W + x, bgBuf + (y + yy) * W + x, w * 2);
+        if (fb == pageFb) canvasEnsureRows(y, h);              // (1.11.116: the rotation)
+        else if (fb == topFb && topCanvas) topCanvas->touch(x, y, w, h);   // (the flight spare)
+        for (int yy = 0; yy < h; ++yy) { memcpy(fb + (y + yy) * W + x, bgBuf + (y + yy) * W + x, w * 2); psramPace(w); }   // (1.11.116: paced)
         if (fb == screenFb) Cache_WriteBack_Addr((uint32_t) (fb + y * W + x), (uint32_t) (((h - 1) * W + w) * 2));   // no canvas: the panel's DMA reads PSRAM directly
     } else gfx->fillRect(x, y, w, h, page.bgColor);
 }
@@ -1134,7 +1266,9 @@ static void drawComp(Comp &c) {
         if (c.sta == 1) gfx->fillRect(c.x, c.y, c.w, c.h, c.bco); else restoreUnder(c);
         drawFrame(c, c.bco, false);
         const int bw = c.borderw;
+        glyphBg = c.sta == 1 ? (int) (uint16_t) c.bco : -1;
         drawTextIn(c.x + bw, c.y + bw, c.w - 2 * bw, c.h - 2 * bw, c.font, c.sta == 1 ? inkOf(c) : (uint16_t) c.pco, c.txt, c.xcen, c.ycen, c.isbr != 0, c.scroll);
+        glyphBg = -1;
         return;
     }
     if (t == "text" || t == "number" || t == "combobox") {
@@ -1169,7 +1303,9 @@ static void drawComp(Comp &c) {
             gfx->endWrite();
             return;
         }
-        drawTextIn(c.x, c.y, c.w, c.h, c.font, c.sta == 1 ? inkOf(c) : (uint16_t) c.pco, s, c.xcen, c.ycen, t == "text" && c.isbr != 0, 0, t == "number" || c.isbr ? -1 : frameWidth(c));   // numbers never wrap ("-16" took two lines on the trims page), nor end in dots
+        glyphBg = c.sta == 1 ? (int) (uint16_t) c.bco : -1;    // (1.11.116: the box's own colour under the letters)
+        drawTextIn(c.x, c.y, c.w, c.h, c.font, c.sta == 1 ? inkOf(c) : (uint16_t) c.pco, s, c.xcen, c.ycen, t == "text" && c.isbr != 0, 0, t == "number" || c.isbr ? -1 : frameWidth(c));
+        glyphBg = -1;   // numbers never wrap ("-16" took two lines on the trims page), nor end in dots
         return;
     }
     if (t == "button" || t == "dual-state button") {
@@ -1247,13 +1383,92 @@ static void drawComp(Comp &c) {
     if (t == "hotspot") return;
     restoreRect(c.x, c.y, c.w, c.h);                        // unknown: leave the background
 }
+// (1.11.116) The whole canvas at once - the page's picture, or one colour - paced on the twin (src/psram_pace.h): at full
+// speed it slipped the picture as surely as a copy to the panel did. Unseen: its pace does not matter.
+// skip: boxes the page's own solid components are about to cover (drawPage): the background under them is never seen, and
+// not painting it is a third to a half of the 70 ms the whole picture took (1.11.116). Rows are painted in the gaps between.
+static void canvasWhole(const uint16_t *src, uint16_t colour, bool forPanel = false, const std::vector<Rect16> *skip = nullptr) {
+    if (fbNow == pageFb) { canvasStale = 0; pageDeferred = false; }   // (1.11.116: every row written, or about to be by the boxes: nothing left to catch up)
+    int16_t sx0[64], sx1[64];
+    for (int y = 0; y < H; ++y) {
+        uint16_t *row = fbNow + y * W;
+        int n = 0;
+        if (skip) for (const Rect16 &r : *skip) { if (y >= r.y && y < r.y + r.h && n < 64) { sx0[n] = r.x; sx1[n] = r.x + r.w; n++; } }
+        for (int i = 1; i < n; ++i) { int j = i; while (j > 0 && sx0[j - 1] > sx0[j]) { std::swap(sx0[j - 1], sx0[j]); std::swap(sx1[j - 1], sx1[j]); j--; } }   // (by x: a dozen at most)
+        int at = 0; uint32_t px = 0;
+        for (int i = 0; i <= n; ++i) {
+            const int gapEnd = i < n ? sx0[i] : W;
+            if (gapEnd > at) { if (src) memcpy(row + at, src + y * W + at, (gapEnd - at) * 2); else std::fill_n(row + at, gapEnd - at, colour); px += gapEnd - at; }
+            if (i < n && sx1[i] > at) at = sx1[i];
+        }
+        if (forPanel && (y & 7) == 7) Cache_WriteBack_Addr((uint32_t) (row - 7 * W), 8 * W * 2);   // (the panel's DMA will read it: written back as it goes, not in one burst)
+        if (px) psramPace(px);
+    }
+    if (fbNow == screenFb) Cache_WriteBack_Addr((uint32_t) fbNow, W * H * 2);   // no canvas: the panel's DMA reads PSRAM directly
+}
+// The page's solid, rectangular components: a text or number box with its own colour behind it (sta 1) - the cards and
+// islands the pages are built of. Their fillRect covers every pixel of the box, so the background need not go under them.
+static std::vector<Rect16> solidBoxes() {
+    std::vector<Rect16> out;
+    for (const Comp &c : page.comps) {
+        if (!c.vis || c.w <= 0 || c.h <= 0 || c.sta != 1) continue;
+        if (c.type != "text" && c.type != "number" && c.type != "combobox" && c.type != "sltext") continue;
+        int x = c.x, y = c.y, w = c.w, h = c.h;
+        if (x < 0) { w += x; x = 0; } if (y < 0) { h += y; y = 0; }
+        if (x + w > W) w = W - x; if (y + h > H) h = H - y;
+        if (w < 16 || h < 2) continue;
+        out.push_back({ (int16_t) x, (int16_t) y, (int16_t) w, (int16_t) h });
+    }
+    return out;
+}
+// (1.11.116) A page change on the twin is a ROTATION: the page is drawn into the canvas and the panel pointed at it; no copy
+// (the compose of 1.11.115 was 120 ms of it). Not while our layer is up (the canvas is the pure page; the glass needs the
+// layer over it: composed and flipped to instead), nor while a flip is in flight, nor from inside a TopDraw.
+static bool rotationNow() { return flipOk && flipFb[2] && !topOn && !flipPending && !flipComposing && topDrawDepth == 0 && fbNow == pageFb; }
+static void drawPageNow(bool show);
+static void drawDeferred() { if (!pageDeferred) return; pageDeferred = false; drawPageNow(false); }
 static void drawPage() {
-    if (page.bgMode == 2 && bgBuf) { memcpy(fbNow, bgBuf, W * H * 2); if (fbNow == screenFb) Cache_WriteBack_Addr((uint32_t) fbNow, W * H * 2); }
-    else if (page.bgMode == 1) gfx->fillScreen(page.bgColor);
+    const bool hidden = flipOk && topOn && topWho == FLIGHT_LAYER_WHO && topX == 0 && topY == 0 && topW == W && topH == H;
+    pageDeferred = false;
+    if (hidden) { pageDeferred = true; if (pageT0) pageDrawMs = millis() - pageT0; return; }   // (the layer's own whole-screen dirty brings the flight spare on show)
+    drawPageNow(true);
+}
+static void drawPageNow(bool show) {
+    uint32_t tp = micros();
+    const bool rotate = show && rotationNow();
+    if (page.bgMode == 0 && (rotate || !show)) canvasEnsureRows(0, H);   // (drawn over the page as it is: all of it must be here)
+    if (page.bgMode == 1 || (page.bgMode == 2 && bgBuf)) {
+        const std::vector<Rect16> skip = solidBoxes();
+        canvasWhole(page.bgMode == 2 ? bgBuf : nullptr, (uint16_t) page.bgColor, rotate, &skip);
+    }
     /* bgMode 0: leave the screen as it is and draw over it */
-    for (auto &c : page.comps) drawComp(c);
+    pageBgUs = micros() - tp; tp = micros();
+    pageTextUs = pagePicUs = pageOtherUs = 0; pageTextN = pagePicN = pageOtherN = 0;
+    for (auto &c : page.comps) {
+        const uint32_t t1 = micros(); drawComp(c); const uint32_t us = micros() - t1;
+        if (!c.vis || c.w <= 0) continue;
+        if (c.type == "text" || c.type == "number" || c.type == "xfloat" || c.type == "scrolltext" || c.type == "button" || c.type == "dsbutton") { pageTextUs += us; pageTextN++; }
+        else if (c.type == "picture" || c.type == "crop") { pagePicUs += us; pagePicN++; }
+        else { pageOtherUs += us; pageOtherN++; }
+    }
+    pageCompsUs = micros() - tp;
     fillMemo.valid = false; fillMemo.ops.clear(); fillMemo.colour = -1;   // (1.11.99: a page drawn whole has no crumbs to repair)
+    if (!show) return;                                     // (the deferred drawing: into the canvas only)
+    if (pageT0) pageDrawMs = millis() - pageT0;
+    if (rotate) {                                          // (1.11.116) the rotation: the panel is pointed at the canvas at the next frame's end
+        for (int y0 = 0; y0 < H; y0 += 16) {               // (what the components left in the cache: written back 16 rows at a time, a rest between - not one burst of 64 kB at the switch)
+            Cache_WriteBack_Addr((uint32_t) (pageFb + y0 * W), (uint32_t) min(16, H - y0) * W * 2);
+            if (board->psramRestUs) delayMicroseconds(board->psramRestUs / 2);
+        }
+        dirtyN = 0; lastPresentMs = millis();
+        if (pageT0) pageComposeMs = millis() - pageT0;
+        flipAskedMs = millis(); flipRotating = true; flipFrom = flipShown; flipPending = true; flipWant = flipCanvas;
+        return;
+    }
+    // (1.11.115) Otherwise composed into the spare and flipped to (src/page_flip.h) - our layer is up, or a flip is in flight.
+    if (flipWholePage()) { lastPresentMs = millis(); return; }
     dirtyN = 0; present(0, 0, W, H); lastPresentMs = millis();   // the whole page in one move, now
+    if (pageT0) { pageComposeMs = pageShownMs = millis() - pageT0; pageT0 = 0; }
 }
 // Nextion z-order: components paint in id order, so whatever was drawn AFTER a repainted one sits on
 // top of it and must come back too (the popup's OK button lives inside the dialog box: repainting the
@@ -1514,18 +1729,40 @@ static void saverApply(Page &np) {
 }
 static bool loadPage(const std::string &name) {
     auto it = pageIds.find(name); if (it == pageIds.end() || !sdOk) return false;
+    pageT0 = millis() ? millis() : 1; pageDrawMs = pageComposeMs = pageShownMs = 0;   // (1.11.116) timed: /status "flip" "last"
     // (the screen saver's memory: taken as the screen blanks, used only by the restore that follows it)
     const bool restoring = !saverPage.empty() && page.name == "BlankView" && name == saverPage;
     if (name == "BlankView" && page.name != "BlankView" && !page.name.empty()) saverRemember();
     else if (!restoring && page.name == "BlankView") { saverPage.clear(); saverComps.clear(); }
     if (!page.evExit.empty()) runScript(page.evExit, "");
     char path[32]; snprintf(path, sizeof(path), "/hmi/pages/%d.json", it->second);
-    File f = SD.open(path); if (!f) return false;
-    const size_t n = f.size(); char *raw = (char *) ps_malloc(n + 1); if (!raw) { f.close(); return false; }
-    const size_t got = f.read((uint8_t *) raw, n); raw[got] = 0; f.close();   // one read, then parse from memory (a File stream parses a byte at a time)
+    uint32_t tp = micros();
+    // (1.11.116) A page's file is kept in PSRAM once read (eight of them, the least recently used making way): the card
+    // took 16-20 ms of every page change, and OK goes back to a page just left. The parse copies what it keeps, so the
+    // text can stay. An update of the files restarts the screen, and the memory with it.
+    struct PageRaw { int id; char *buf; size_t len; uint32_t used; };
+    static PageRaw rawCache[8] = {}; static size_t rawBytes = 0;
+    char *raw = nullptr; size_t got = 0; PageRaw *slot = nullptr;
+    for (auto &e : rawCache) if (e.buf && e.id == it->second) { slot = &e; break; }
+    if (slot) { raw = slot->buf; got = slot->len; slot->used = millis(); }
+    else {
+        File f = SD.open(path); if (!f) return false;
+        const size_t n = f.size(); raw = (char *) ps_malloc(n + 1); if (!raw) { f.close(); return false; }
+        got = f.read((uint8_t *) raw, n); raw[got] = 0; f.close();   // one read, then parse from memory (a File stream parses a byte at a time)
+        for (auto &e : rawCache) if (!e.buf) { slot = &e; break; }
+        if (!slot) { slot = &rawCache[0]; for (auto &e : rawCache) if (e.used < slot->used) slot = &e; free(slot->buf); rawBytes -= slot->len; }
+        *slot = { it->second, raw, got, millis() }; rawBytes += got;
+        while (rawBytes > 600000) {                        // (never more than ~600 kB of PSRAM: the oldest goes)
+            PageRaw *old = nullptr; for (auto &e : rawCache) if (e.buf && &e != slot && (!old || e.used < old->used)) old = &e;
+            if (!old) break;
+            free(old->buf); rawBytes -= old->len; *old = {};
+        }
+    }
+    pageSdUs = micros() - tp; tp = micros();
     JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, (const char *) raw, got); free(raw);
+    DeserializationError err = deserializeJson(doc, (const char *) raw, got);
     if (err) return false;
+    pageParseUs = micros() - tp;
     Page np; np.name = name; np.id = it->second;
     JsonObject bg = doc["bg"];
     if (!bg.isNull()) {
@@ -1575,16 +1812,19 @@ static bool loadPage(const std::string &name) {
         np.byName[c.name] = np.comps.size(); np.comps.push_back(c);
     }
     if (restoring) { saverApply(np); saverPage.clear(); saverComps.clear(); }
+    if (pageDeferred) { if (np.bgMode == 0) drawDeferred(); else pageDeferred = false; }   // (1.11.116) a page drawn over this one needs it drawn; a whole new page does not
     page = np;
     touchNote("page " + name);
     touchLockout = true;
     strlcpy(rtcPage, name.c_str(), sizeof(rtcPage)); rtcMagic = 0x4C445243;   // our own restart comes back to this page
     picPageLoaded();                                       // (Malcolm, 10-03: the old picture page flashed up before the new chooser covered it)
     // Nextion order: preinitialize (may vis/colour things, choose the background) -> ONE paint -> postinitialize.
+    tp = micros();
     loadingPage = true;
     runScript(page.evPre, "");
     loadingPage = false;
     if (page.bgMode == 2) loadBackground(page.bgPic);
+    pagePreUs = micros() - tp;
     flightPageLoaded();                                    // (after preinitialize, which hides what the front page shows only with news)
     coloursPageLoaded();
     appearancePageLoaded();
@@ -1684,7 +1924,7 @@ static bool drawVerb(const std::string &cmd) {
     }
     else if (verb == "cirs" && n >= 4) { gfx->fillCircle(I(0), I(1), I(2), colourOf(a[3])); drewArea(I(0) - I(2) - 1, I(1) - I(2) - 1, 2 * I(2) + 3, 2 * I(2) + 3); }
     else if (verb == "cir" && n >= 4) { gfx->drawCircle(I(0), I(1), I(2), colourOf(a[3])); drewArea(I(0) - I(2) - 1, I(1) - I(2) - 1, 2 * I(2) + 3, 2 * I(2) + 3); }
-    else if (verb == "cls" && n >= 1) { gfx->fillScreen(colourOf(a[0])); fillMemo.valid = false; fillMemo.ops.clear(); fillMemo.colour = -1; dirty(0, 0, W, H); damage(0, 0, W, H); }
+    else if (verb == "cls" && n >= 1) { canvasWhole(nullptr, (uint16_t) colourOf(a[0])); fillMemo.valid = false; fillMemo.ops.clear(); fillMemo.colour = -1; dirty(0, 0, W, H); damage(0, 0, W, H); }
     else if (verb == "pic" && n >= 3 && sdOk) {
         char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", I(2));
         File f = SD.open(path);
@@ -1774,7 +2014,7 @@ static void handle(const std::string &cmd) {
 // ------------------------------------------------------------------ pages of our own, on the layer above the Teensy's
 static bool topReady() {
     if (topFb) return true;
-    if (!topCanvas) topCanvas = new Arduino_Canvas(W, H, screen);
+    if (!topCanvas) topCanvas = new PacedCanvas(W, H, screen);
     while (!topCanvas->begin(GFX_SKIP_OUTPUT_BEGIN)) {     // no room: give up a background picture that is not showing, and try again
         int old = -1;
         for (size_t i = 0; i < bgCache.size(); ++i) if (bgCache[i].buf != bgBuf && (old < 0 || bgCache[i].used < bgCache[old].used)) old = (int) i;
@@ -1787,8 +2027,8 @@ static bool topReady() {
 static uint32_t topEpoch = 0;                              // (1.11.68) drawings on the layer, counted: the defined front screen knows when another page of ours has drawn there
 struct TopDraw {                                           // while one of these lives, gfx draws on our layer
     Arduino_GFX *g; uint16_t *f;
-    TopDraw() : g(gfx), f(fbNow) { gfx = topCanvas; fbNow = topFb; ++topEpoch; }
-    ~TopDraw() { gfx = g; fbNow = f; }
+    TopDraw() : g(gfx), f(fbNow) { gfx = topCanvas; fbNow = topFb; ++topEpoch; ++topDrawDepth; }
+    ~TopDraw() { gfx = g; fbNow = f; --topDrawDepth; }
 };
 static void topText(int x, int y, int font, uint16_t col, const std::string &s) { gfx->startWrite(); drawGlyphs(x, y, font, col, s); gfx->endWrite(); }
 static std::string topCut(const std::string &s, int font, int maxW) {                 // what fits, with dots if something had to go
@@ -1976,6 +2216,7 @@ static void pumpSerial() {
     static ldrc::Router router; static ldrc::Frame frame;
     const int waiting = Serial.available();
     if (waiting) { lastRxMs = millis(); if (waiting > perfRxMax) perfRxMax = waiting; }
+    if (flipRotating && flipPending && millis() - flipAskedMs < 80) return;   // (1.11.116) the canvas is about to go on show: nothing drawn into it until it has (a frame at most; the bytes wait in the 32 kB buffer)
     while (Serial.available()) {
         uint8_t b = Serial.read();
         const ldrc::Router::What what = router.push(b, millis(), frame);
@@ -1988,6 +2229,7 @@ static void pumpSerial() {
                 else if (ldrc::rxStatusCommand(buf.data(), (unsigned) buf.size(), rxNews)) { rxNews.atMs = millis(); rxNewsAny = true; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 else if (!buf.empty()) { const uint32_t t0 = micros(); handle(buf); perfHandleUs += micros() - t0; perfCmds++; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 buf.clear(); ffs = 0;
+                flipTick();   // (1.11.116) the new page's compose goes on between commands: this loop runs as long as the main board streams (passes of 100-700 ms were measured), and the page showed 400 ms late (Malcolm, 24 Oct)
             }
             continue;
         }
@@ -2003,7 +2245,7 @@ static void pumpSerial() {
 static void breathe() {
     static bool in = false;
     if (in) return;
-    in = true; pumpSerial(); teensyLink.poll(); audioFill(); in = false;
+    in = true; pumpSerial(); teensyLink.poll(); audioFill(); flipTick(); in = false;
 }
 
 // ------------------------------------------------------------------ touch
@@ -2284,8 +2526,10 @@ static void webBegin() {
                                 (unsigned long) quietKeptN, (unsigned long) quietFullN, (unsigned long) quietWarmN, (unsigned long) quietStepMax, (unsigned long) quietStoreN, (unsigned long) quietStoreMax); out += q; }
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
-        { char q[200]; snprintf(q, sizeof(q), ",\"flip\":{\"why\":\"%s\",\"n\":%lu,\"shown\":%u,\"compose_max\":%lu,\"wait_max\":%lu,\"syncs\":%lu}",
-                                flipWhy, (unsigned long) flipDoneN, (unsigned) flipShown, (unsigned long) flipComposeMax, (unsigned long) flipWaitMax, (unsigned long) flipSyncN); out += q; }   // (1.11.115) the twin's page flip: on or why not, flips, the longest compose (us) and wait (ms)
+        { char q[480]; snprintf(q, sizeof(q), ",\"flip\":{\"why\":\"%s\",\"n\":%lu,\"shown\":%u,\"compose_max\":%lu,\"wait_max\":%lu,\"syncs\":%lu,\"rests\":%lu,\"rot\":%lu,\"stale\":%d,\"ensured\":%lu,\"fspare\":%d,\"fshown\":%d,\"last\":{\"draw\":%lu,\"compose\":%lu,\"shown\":%lu,\"sd\":%lu,\"parse\":%lu,\"pre\":%lu,\"bg\":%lu,\"comps\":%lu,\"text\":[%lu,%lu],\"pic\":[%lu,%lu],\"other\":[%lu,%lu]}}",
+                                flipWhy, (unsigned long) flipDoneN, (unsigned) flipShown, (unsigned long) flipComposeMax, (unsigned long) flipWaitMax, (unsigned long) flipSyncN, (unsigned long) paceRests,
+                                (unsigned long) flipRotateN, (int) __builtin_popcountll(canvasStale), (unsigned long) canvasEnsureN, (int) spareHoldsFlight, (int) shownIsFlight, (unsigned long) pageDrawMs, (unsigned long) pageComposeMs, (unsigned long) pageShownMs, (unsigned long) pageSdUs, (unsigned long) pageParseUs, (unsigned long) pagePreUs, (unsigned long) pageBgUs, (unsigned long) pageCompsUs,
+                                (unsigned long) pageTextN, (unsigned long) pageTextUs, (unsigned long) pagePicN, (unsigned long) pagePicUs, (unsigned long) pageOtherN, (unsigned long) pageOtherUs); out += q; }   // (1.11.115) the twin's page flip: on or why not, flips, the longest compose (us) and wait (ms)
         { std::string l = sysLast(); for (size_t i = 0; i < l.size(); ++i) if (l[i] == '"' || l[i] == '\\') l[i] = '\''; out += ",\"sys\":\"" + l + "\"}"; }   // (1.11.5) the system's last error line
         web.send(200, "application/json", out.c_str());
     });
@@ -2664,12 +2908,26 @@ static void audioTask(void *) {
             const size_t t = ringEnds.tail;
             int16_t v = (int16_t) (audioRing[t] | (audioRing[(t + 1) % RING] << 8));
             ldrcring::took(ringEnds, RING, 2); avail -= 2;
+            if (board->tone) v = toneShape(v);               // (1.11.116) the twin's speaker: less bass, more top (Malcolm, 24 Oct: "sounds bassy ... not enough top")
             v = limit16(((int32_t) v * audioGain) >> 10);
             frame[2 * n] = v; frame[2 * n + 1] = v; n++;
         }
         for (; n < FRAMES; ++n) { frame[2 * n] = 0; frame[2 * n + 1] = 0; }   // a clip's last buffer: padded with silence, sent now
         size_t written = 0; i2s_write(I2S_PORT, frame, FRAMES * 4, &written, portMAX_DELAY);
     }
+}
+// (1.11.116) A tone shape for the twin, per sample at 22050 Hz, in fixed point: the clips carry the CrowPanel's mastering
+// (bass lifted, top cut, for its small speaker - 1.4.7). The twin's speaker has bass of its own, so here the bass below
+// ~200 Hz comes down 6 dB (half the one-pole low-passed part taken away) and the top above ~2.5 kHz goes up 4 dB (six tenths
+// of the high-passed part added). Headroom: the boost is on the top only, and limit16 follows.
+static int16_t toneShape(int16_t x) {
+    static int32_t lp1 = 0, lp2 = 0;                       // x256
+    const int32_t xs = (int32_t) x << 8;
+    lp1 += ((xs - lp1) * 14) >> 8;                         // one pole at ~200 Hz (a = 0.055)
+    int32_t y = xs - (lp1 >> 1);                           // bass -6 dB
+    lp2 += ((y - lp2) * 131) >> 8;                         // one pole at ~2.5 kHz (a = 0.51)
+    y += ((y - lp2) * 154) >> 8;                           // top +4 dB
+    return limit16(y >> 8);
 }
 static void audioBegin() {
     i2s_config_t cfg = {};
@@ -2917,8 +3175,10 @@ void setup() {
     pinMode(LCD_BL, OUTPUT); ledcSetup(1, 20000, 8); ledcAttachPin(LCD_BL, 1); blSet(0);   // dark: see "The backlight" above
     screen->begin(); screen->fillScreen(0); screenFb = screen->getFramebuffer();
     hookFrameEnd();   // (1.11.67: the front screen's switch drawn and copied in the panel's quiet time)
+    { uint16_t *cb = (uint16_t *) heap_caps_aligned_calloc(64, 1, (size_t) W * H * 2, MALLOC_CAP_SPIRAM); if (cb) canvas->aim(cb); }   // (1.11.116) aligned as a panel buffer must be: the canvas is one of the three in turn
     if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) { gfx = canvas; fbNow = canvas->getFramebuffer(); canvas->fillScreen(0); } else fbNow = screenFb;
     pageFb = fbNow;
+    if (flipOk && pageFb && pageFb != screenFb && ((uintptr_t) pageFb & 63) == 0) { flipFb[2] = pageFb; canvas->lazy = true; }   // (the rotation is on)
     Wire.begin(TP_SDA, TP_SCL);
     touch.setPins(board->touchRst, board->touchInt);       // (1.11.111) the twin's touch chip has its reset on IO38: left floating it may never wake; the CrowPanel's is not wired (-1)
     touchOk = touch.begin(Wire, GT911_SLAVE_ADDRESS_L, TP_SDA, TP_SCL) || touch.begin(Wire, GT911_SLAVE_ADDRESS_H, TP_SDA, TP_SCL);

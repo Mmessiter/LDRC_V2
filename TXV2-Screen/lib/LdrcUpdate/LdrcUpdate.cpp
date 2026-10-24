@@ -392,6 +392,7 @@ bool Updater::linkBusy() const { return linkWanted_ || (linkOurs_ && linkStarted
 void Updater::begin() {
     if (phase_ != P_IDLE) return;
     log_.clear(); choosing_ = false; again_ = false;
+    freshDone_ = false;   // (1.11.116) the pilot's own press: one fresh start of its own. Set by a fresh start's resume, it lasted the whole power-on: after an install begun from a fresh start was cancelled, every later check failed with the memory in pieces (24 Oct: "No connection to messiter.com (-1, -0x7F00) [largest 19444]", no restart offered)
     { const size_t cut = latestUrl_.rfind('/'); recentUrl_ = latestUrl_.substr(0, cut + 1) + "recent.txt"; }
     note("---- check for update (screen " + host_.screenVersion() + ")");
     if (notNow()) return;                          // (a connected model included: the receiver has a button of its own, on the Model setup page)
@@ -1251,6 +1252,7 @@ bool parseReceiverManifest(const std::string &json, uint32_t &code, std::string 
 void Updater::beginReceiver() {
     if (phase_ != P_IDLE) return;
     log_.clear(); choosing_ = false;
+    freshDone_ = false;   // (1.11.116) as begin(): one fresh start for each press
     note("---- receiver update (screen " + host_.screenVersion() + ")");
     if (rxManifestUrl_.empty()) { message("No receivers' list", "This screen knows no list of receiver releases."); return; }
     if (host_.flying() != UpdateHost::FLY_MODEL) {

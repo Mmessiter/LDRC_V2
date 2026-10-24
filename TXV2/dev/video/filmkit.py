@@ -28,6 +28,12 @@ EMU = os.path.expanduser('~/Documents/GitHub/ESP32-board2/board4/nextion-emulato
 SCN = os.path.join(EMU, 'hmi', 'scenarios')
 FF = imageio_ffmpeg.get_ffmpeg_exe()
 HERE = os.path.dirname(os.path.abspath(__file__))
+import re
+def spoken_form(text):
+    """what the voice is given for what is written: the voices read "ID" as "1D" (Malcolm, 24 Oct 2026, the Model IDs film:
+    "the model 1D"), so ID is said as "eye dee"; the captions keep the written form"""
+    text = re.sub(r'(?<![A-Z] )\bI ?Ds\b', 'eye dees', text)   # (the films already wrote "I D": Emma read that as "1D" too; not the D of "P I D")
+    return re.sub(r'(?<![A-Z] )\bI ?D\b', 'eye dee', text)
 VOICE = 'cbox:emma'                                          # (the voice unless LDRC_VOICE says another: 18 Oct, Malcolm chose "Emma, number three")
 EMOTION = '0.75'                                              # (how lively, for cbox: his number three was 0.75; number two 0.5)
 VOICE_CACHE = '/Volumes/2TB SSD/ClaudeScratch/tts/cache'     # (lines already spoken, by voice and words: a film rebuilt speaks only what changed)
@@ -170,7 +176,7 @@ class Film:
             job = os.path.join(self.out, 'voice', 'job.json')
             json.dump({'engine': engine, 'voice': os.path.join(HERE, 'voices', vname + '.wav'), 'cache': VOICE_CACHE,
                        'emotion': float(os.environ.get('LDRC_EMOTION', EMOTION)),
-                       'lines': [{'text': text, 'out': os.path.join(self.out, 'voice', k + '.raw.wav')} for k, text in self.lines]}, open(job, 'w'))
+                       'lines': [{'text': spoken_form(text), 'written': text, 'out': os.path.join(self.out, 'voice', k + '.raw.wav')} for k, text in self.lines]}, open(job, 'w'))
             env = dict(os.environ); env.setdefault('HF_HOME', '/Volumes/2TB SSD/ClaudeScratch/hf')
             r = subprocess.run([os.environ.get('TTS_PY', '/Volumes/2TB SSD/ClaudeScratch/tts/venv/bin/python'), os.path.join(HERE, 'voice_clone.py'), job], env=env, capture_output=True, text=True)
             for l in r.stdout.splitlines():
@@ -185,6 +191,7 @@ class Film:
             if not os.path.isdir(ED): shutil.copytree(espeakng_loader.get_data_path(), ED)
             kokoro = Kokoro(os.path.join(KD, 'kokoro-v1.0.onnx'), os.path.join(KD, 'voices-v1.0.bin'),
                             espeak_config=EspeakConfig(lib_path=espeakng_loader.get_library_path(), data_path=ED))
+        self.lines = [(k, spoken_form(t)) for k, t in self.lines]
         for k, text in self.lines:
             raw = os.path.join(self.out, 'voice', k + ('.aiff' if engine == 'say' else '.raw.wav')); wav = os.path.join(self.out, 'voice', k + '.wav')
             if engine == 'say':

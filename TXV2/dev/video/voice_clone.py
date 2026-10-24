@@ -141,6 +141,9 @@ def main():
             write(ln['out'], a, sp.sr)
             r = stt.generate(ln['out'], language='en'); heard = (r.text if hasattr(r, 'text') else str(r)).strip()
             err, ok = matches(ln['text'], heard)
+            if ln.get('written'):                                 # (24 Oct: the written form - "ID" is said "eye dee" and rightly heard "ID")
+                err2, ok2 = matches(ln['written'], heard)
+                if (ok2, -err2) > (ok, -err): err, ok = err2, ok2
             if best is None or (ok, -err) > (best[3], -best[0]): best = (err, a, heard, ok)
             if ok: break
         err, a, heard, ok = best; write(ln['out'], a, sp.sr)

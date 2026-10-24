@@ -184,6 +184,7 @@ static void flightPoll() {
         const bool poke = who == FLIGHT_SETUP_WHO ? now - flightTouchedAt < 180000 : flight.cfg.stayOn && modelNear;
         if (poke && now - lastPoke > 20000 && !teensyLink.running()) { lastPoke = now; flushOut(); Serial.write((const uint8_t *) "UKRULES", 7); }
     } else if (wasWho) {
+        drawDeferred();                                         // (1.11.116: the page under the flight screen, if its drawing was put off)
         flPicForget();                                          // (the model's picture: read afresh next time it is drawn)
         if (topWho == wasWho) { topOn = false; topWho = 0; }    // (unless another page of ours has the layer now)
         dirty(0, 0, W, H); touchPainted = true;                 // the page, as the main board has drawn it meanwhile (a page of ours in our place covers less of the glass)

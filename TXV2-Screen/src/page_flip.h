@@ -24,7 +24,7 @@ struct FlipNode {                        // IDF 4.4's dma_descriptor_t
 };
 static FlipNode *flipNodes = nullptr;
 static uint32_t flipNodeN = 0;
-static uint16_t *flipFb[2] = { nullptr, nullptr };    // [0] the driver's own buffer, [1] ours
+static uint16_t *flipFb[3] = { nullptr, nullptr, nullptr };   // [0] the driver's own buffer, [1] ours, [2] the canvas's (1.11.116: the three rotate - main.cpp)
 static volatile uint8_t flipWant = 0, flipShown = 0;   // which buffer the panel should scan / scans
 static volatile uint32_t flipDoneN = 0;               // flips made (in the interrupt)
 static bool flipOk = false;

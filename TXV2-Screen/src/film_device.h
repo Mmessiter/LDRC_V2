@@ -226,6 +226,7 @@ static int filmDraw(JPEGDRAW *p) {
         uint16_t *dst = topFb + (y + r) * W + x;
         int f, l; ldrcfilm::rowDiff(dst, src, n, f, l);
         if (l >= f) { memcpy(dst + f, src + f, (size_t) (l - f + 1) * 2); if (f < x0) x0 = f; if (l > x1) x1 = l; }
+        psramPace(n);                                              // (1.11.116: a row read, and maybe written - paced on the twin, src/psram_pace.h)
     }
     if (x1 >= x0) dirty(x + x0, y, x1 - x0 + 1, std::min(p->iHeight, barTop - y));
     return 1;
@@ -265,13 +266,17 @@ static void filmFadeMove(uint32_t a) {
 static void filmFadeEnd() { if (filmFadeK >= 0) { filmFadeMove(256); filmFadeK = -1; } }   // a fade not over: its page, whole, now
 // Picture k on the screen. play (1.11.93): it is the film's turn for it, so a page that fades in (version 4) is kept whole and
 // the screen blended into it a frame at a time (filmPoll); else - a jump, or no room for the page - it is drawn at once.
+// (1.11.116) No fades: Malcolm, 24 Oct 2026: "in reality it jumps between screens and does not fade. Fading might be
+// misunderstood by users." The films keep their fade lengths (version 4); the screen cuts at the fade's first frame - the
+// moment the real one changes.
+static const bool FILM_FADES = false;
 static bool filmDecode(int32_t k, bool play = false) {
     const uint32_t off = ldrcfilm::rd32(filmTable + 8 * k), size = ldrcfilm::sizeOf(filmTable, k);
     if (!size || size > filmBufSize || !filmFile.seek(off) || filmFile.read(filmBuf, size) != (int) size) return false;
     uint16_t rx, ry, rw, rh; uint32_t jo;                     // (version 2: only the rectangle that changed, drawn where it belongs)
     if (!ldrcfilm::pictureAt(filmBuf, size, filmHead, rx, ry, rw, rh, jo)) return false;
     filmFadeEnd();                                              // (1.11.93: what comes next is drawn on the whole page)
-    const uint32_t n = play ? ldrcfilm::fadeOf(filmTable, k) : 0;
+    const uint32_t n = play && FILM_FADES ? ldrcfilm::fadeOf(filmTable, k) : 0;
     const bool whole = rx == 0 && ry == 0 && rw == W && rh == H;
     if (n && whole && !filmFadeTo) filmFadeTo = (uint16_t *) ps_malloc((size_t) W * H * 2);
     const bool fade = n && whole && filmFadeTo;
