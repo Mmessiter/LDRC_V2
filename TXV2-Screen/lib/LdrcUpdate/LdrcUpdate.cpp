@@ -222,7 +222,7 @@ Updater::Updater(UpdateHost &host, LinkMaster &link, const std::string &latestUr
       since_(0), lastPoke_(0), shownAt_(0), linkAfter_(0), restartAt_(0), stageSince_(0),
       linkOurs_(false), linkWanted_(false), linkStarted_(false), changing_(false), silent_(false), waiting_(false), noteWifi_(false),
       shownFlying_(false), mustSee_(false), textTries_(0), textMax_(8192),
-      teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
+      teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), freshCount_(0), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
       listStep_(0), at_(0), sub_(0), tries_(0), fetchTotal_(0), fetchDone_(0), fetchCount_(0), fetchIndex_(0), fetchBegan_(0), leftAt_(0), leftSecs_(-1), leftShown_(-1),
       placed_(0), trialSeen_(0), keptFiles_(0), stTeensyThere_(false), stTeensyChanged_(false), stScreenFw_(false), stFiles_(0), stKept_(0), trialStep_(0), resultGood_(false),
       rxFlow_(false), rxHave_(0), rxLatest_(0), rxPhaseSeen_(0), rxNewsAt_(0), rxQuietTotal_(0), again_(false) {}
@@ -392,7 +392,7 @@ bool Updater::linkBusy() const { return linkWanted_ || (linkOurs_ && linkStarted
 void Updater::begin() {
     if (phase_ != P_IDLE) return;
     log_.clear(); choosing_ = false; again_ = false;
-    freshDone_ = false;   // (1.11.116) the pilot's own press: one fresh start of its own. Set by a fresh start's resume, it lasted the whole power-on: after an install begun from a fresh start was cancelled, every later check failed with the memory in pieces (24 Oct: "No connection to messiter.com (-1, -0x7F00) [largest 19444]", no restart offered)
+    freshDone_ = false; freshCount_ = 0;   // (1.11.116) the pilot's own press: one fresh start of its own. Set by a fresh start's resume, it lasted the whole power-on: after an install begun from a fresh start was cancelled, every later check failed with the memory in pieces (24 Oct: "No connection to messiter.com (-1, -0x7F00) [largest 19444]", no restart offered)
     { const size_t cut = latestUrl_.rfind('/'); recentUrl_ = latestUrl_.substr(0, cut + 1) + "recent.txt"; }
     note("---- check for update (screen " + host_.screenVersion() + ")");
     if (notNow()) return;                          // (a connected model included: the receiver has a button of its own, on the Model setup page)
@@ -417,17 +417,24 @@ void Updater::freshStart(const std::string &kind) {
     note("fresh start before the " + kind + ": the memory is in pieces (largest " + num(host_.roomForTls()) + " bytes); the screen restarts and goes on by itself");
     std::string st = stateText("fresh");
     st += "resume=" + kind + "\n" + "descr=" + descrUrl_ + "\n" + std::string("again=") + (again_ ? "1" : "0") + "\n" + std::string("choosing=") + (choosing_ ? "1" : "0") + "\n";
+    st += "count=" + num((uint32_t) (freshCount_ + 1)) + "\n";   // (1.11.121: how many for this press, this one included)
     host_.writeText(STATE_FILE, st);
     show(UpdView::WORKING, "Restarting the screen first"); line("Then it carries on by itself.");
     changing_ = false; freshKind_ = kind; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
 }
 // A job failed for want of memory (the screen says so: a secure connection could not be made, -0x7F00). Before anything
-// is changed, the cure is a fresh start - once; a second shortage gets the usual verdict.
+// is changed, the cure is a fresh start: once for a check; while installing, as often as the memory needs it, up to
+// FRESH_MAX times for one press - each restart goes on from where it was, the files already fetched kept on the card.
+// (1.11.121: a 4 MB board's memory is cut up again by every big film it fetches - "It stopped at: fetching IDCHECK.ima.
+// No connection to messiter.com (-1, -0x7F00) [heap 74440, largest 32756]" right after a fresh start, Malcolm, 24 Oct -
+// so one fresh start was never going to be enough for a release with five new films.) Still short after FRESH_MAX:
+// the usual five tries and the usual verdict.
 bool Updater::freshForMemory(const Work &w) {
-    if (!w.memory || freshDone_ || changing_) return false;
+    if (!w.memory || changing_) return false;
+    const bool installing = phase_ == P_LISTS || phase_ == P_COMPARE || phase_ == P_FETCH || freshKind_ == "install";   // (a resumed install fetches the description first: that is the install's too)
+    if (freshDone_ && !(installing && freshCount_ < FRESH_MAX)) return false;
     host_.stopWork();
     restoreHave();
-    const bool installing = phase_ == P_LISTS || phase_ == P_COMPARE || phase_ == P_FETCH;
     if (phase_ == P_DESCR) choosing_ = true;                  // (the chosen version's description: fetched again after the restart)
     freshStart(installing ? "install" : "check");
     return true;
@@ -927,6 +934,7 @@ void Updater::resume() {
     if (stage == "fresh") {                                   // the screen restarted to put its memory together: the check, or the install, goes on by itself
         host_.remove(STATE_FILE);                             // (first: whatever happens next, no second restart)
         freshDone_ = true; freshKind_ = valueOf(text, "resume"); freshUrl_ = valueOf(text, "descr");
+        freshCount_ = atoi(valueOf(text, "count").c_str()); if (freshCount_ < 1) freshCount_ = 1;   // (1.11.121; a state file from before it counts as one)
         again_ = valueOf(text, "again") == "1"; freshChoosing_ = valueOf(text, "choosing") == "1"; choosing_ = false;
         if (freshUrl_.empty() || freshUrl_ == latestUrl_) { freshUrl_.clear(); freshChoosing_ = false; }
         descrUrl_ = freshUrl_.empty() ? latestUrl_ : freshUrl_;
@@ -1257,7 +1265,7 @@ bool parseReceiverManifest(const std::string &json, uint32_t &code, std::string 
 void Updater::beginReceiver() {
     if (phase_ != P_IDLE) return;
     log_.clear(); choosing_ = false;
-    freshDone_ = false;   // (1.11.116) as begin(): one fresh start for each press
+    freshDone_ = false; freshCount_ = 0;   // (1.11.116) as begin(): one fresh start for each press
     note("---- receiver update (screen " + host_.screenVersion() + ")");
     if (rxManifestUrl_.empty()) { message("No receivers' list", "This screen knows no list of receiver releases."); return; }
     if (host_.flying() != UpdateHost::FLY_MODEL) {

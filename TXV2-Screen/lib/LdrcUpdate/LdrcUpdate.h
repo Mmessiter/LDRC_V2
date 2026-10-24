@@ -222,7 +222,8 @@ private:
     void fetchAsked(const std::string &url, size_t maxBytes = 8192);      // a small text from messiter.com, tried three times
     void freshStart(const std::string &kind);     // the memory is in pieces: the screen restarts, and `kind` ("check" or "install") goes on by itself
     bool freshNeeded() const { return !freshDone_ && host_.roomForTls() < TLS_ROOM; }
-    bool freshForMemory(const Work &w);           // a job failed for want of memory: a fresh start, once (true: it is under way)
+    bool freshForMemory(const Work &w);           // a job failed for want of memory: a fresh start - once for a check, up to FRESH_MAX times while installing (true: it is under way)
+    static const int FRESH_MAX = 6;               // (1.11.121) fresh starts for one press of Install: a 4 MB board's memory is cut up again by every big film fetched
     void restoreHave();                           // the card's memory of its files, put back when the fetching failed (nothing was changed)
     static const uint32_t TLS_ROOM = 56u * 1024u;
     // the receiver's update
@@ -276,7 +277,8 @@ private:
     std::string recentUrl_; std::vector<UpdRecent> recent_; bool choosing_, noteVersions_;
     std::string descrUrl_;                        // where rel_ came from (latest.txt, or a chosen version's description): a fresh start fetches it again
     std::string haveText_;                        // the card's memory of its files (SCREEN_HAVE), taken off the card at install, put back if nothing is changed
-    std::string freshKind_, freshUrl_; bool freshDone_, freshChoosing_;   // this run began from a fresh start (so it never asks for another)
+    std::string freshKind_, freshUrl_; bool freshDone_, freshChoosing_;   // this run began from a fresh start (a check never asks for another; an install may, see freshForMemory)
+    int freshCount_;                              // (1.11.121) fresh starts made for this press so far (carried through each restart in the state file)
     bool needTeensyFw_, needTeensyFiles_, needScreenFw_, needScreenFiles_;
     std::vector<UpdEntry> teensyList_, screenList_, known_;
     std::string screenListText_;
