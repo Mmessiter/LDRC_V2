@@ -589,16 +589,10 @@ void Updater::install() {
     show(UpdView::WORKING, "Fetching the update"); line("Reading the lists"); buttons("Cancel", ""); bar(0, 1);
     host_.keepAwake(); lastPoke_ = host_.ms();
     teensyList_.clear(); screenList_.clear(); known_.clear(); screenListText_.clear(); listStep_ = 0; tries_ = 0; waiting_ = false;
-    if (needScreenFiles_) {
-        // What the last complete install put on the card, file by file. A file it names, of the size it names,
-        // is taken as right without being read (40 MB read from the card take most of a minute). The memory is
-        // taken OFF the card now and written again only when this install has put everything in place: after a
-        // failure, a cut, or a file put on the card by hand (POST /put), everything is read and checked.
-        std::string why;
-        haveText_.clear();
-        if (host_.readText(SCREEN_HAVE, haveText_, 300000) && !parseList(haveText_, false, known_, why)) { known_.clear(); haveText_.clear(); }
-        host_.remove(SCREEN_HAVE);                            // (1.11.32: and put back by restoreHave if the fetching fails, so the next try compares quickly)
-    }
+    // (1.11.118) The card's memory of its files (SCREEN_HAVE) is read once the lists are in (listsIn), not here: read and
+    // parsed between the check's secure connection and the lists' fetch, its thousands of small pieces left the memory
+    // too broken for a fresh handshake when the site had let the connection go - "No connection to messiter.com
+    // (-1, -0x7F00) [largest 32756]" at "fetching the list of files", twice in a row after a fresh start (Malcolm, 24 Oct).
     phase_ = P_LISTS; nextList();
 }
 void Updater::nextList() {
@@ -638,6 +632,17 @@ void Updater::buildItems() {
         it.kind = 1; it.path = std::string(TEENSY_COPIES) + e.path; it.size = e.size; it.crc = e.crc; items_.push_back(it);
     }
     if (needScreenFw_) { it.kind = 2; it.path = SCREEN_IMAGE; it.size = screenPart().size; it.crc = screenPart().crc; items_.push_back(it); }
+    if (needScreenFiles_) {
+        // What the last complete install put on the card, file by file. A file it names, of the size it names,
+        // is taken as right without being read (40 MB read from the card take most of a minute). The memory is
+        // taken OFF the card now and written again only when this install has put everything in place: after a
+        // failure, a cut, or a file put on the card by hand (POST /put), everything is read and checked.
+        // (1.11.118: read here, with the lists already fetched - see install().)
+        std::string why;
+        haveText_.clear();
+        if (host_.readText(SCREEN_HAVE, haveText_, 300000) && !parseList(haveText_, false, known_, why)) { known_.clear(); haveText_.clear(); }
+        host_.remove(SCREEN_HAVE);                            // (1.11.32: and put back by restoreHave if the fetching fails, so the next try compares quickly)
+    }
     for (size_t i = 0; i < screenList_.size(); ++i) {
         const UpdEntry &e = screenList_[i];
         it.kind = 3; it.path = e.path; it.size = e.size; it.crc = e.crc; it.twin = 0;
