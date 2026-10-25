@@ -31,16 +31,25 @@ static const uint32_t DMA_LATE_US = 150;                  // (the two interrupts
 // picture, whenever the DMA was started.)
 static const uint32_t DMA_SLIP_US = 15;
 static volatile uint32_t dmaGapBase = 0, dmaSlips = 0, dmaSlipMax = 0, dmaSlipsAll = 0, dmaSlipSum = 0;
+static volatile uint32_t dmaGapBase16 = 0;               // (the base in sixteenths: d/32 in whole microseconds never moved it for |d| < 32 - it sat 10 us high)
+static volatile int32_t dmaLastD = 0;                     // the last gap against the base (a slip in the frame just ended: +S)
+// THE PERIOD (25 Oct evening): the mean of 32 undisturbed gaps, the hardware's frame to within a microsecond - the frame ring's
+// phase tracker steps by it (frame_ring.h: a callback is late by how far it runs after the frame's end predicted from the
+// earliest callbacks, whatever the DMA's state - the EOF's own moment moves with every slip, and read as a clock it kept
+// the picture shifted for good).
+static volatile uint32_t dmaGapMean = 0, dmaGapSum = 0, dmaGapCnt = 0;
 static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void *) {
     const uint32_t now = (uint32_t) esp_timer_get_time();
     if (dmaEofUs) {
         const uint32_t gap = now - dmaEofUs;
         if (gap < dmaGapMin) dmaGapMin = gap; if (gap > dmaGapMax) dmaGapMax = gap;
         if (gap > 20000 && gap < 40000) {              // (a frame's gap, not a stopped engine's or a restart's)
-            if (!dmaGapBase) dmaGapBase = gap;
+            if (!dmaGapBase16) { dmaGapBase16 = gap * 16; dmaGapBase = gap; }
             else {                                     // the base follows the usual gap slowly (one early stamp must not set it for good: it did, 28859 against 28920)
                 const int32_t d = (int32_t) (gap - dmaGapBase);
-                if (d > -300 && d < 300) dmaGapBase = (uint32_t) ((int32_t) dmaGapBase + d / 32);
+                if (d > -300 && d < 300) { dmaGapBase16 = (uint32_t) ((int32_t) dmaGapBase16 + ((int32_t) (gap * 16) - (int32_t) dmaGapBase16) / 32); dmaGapBase = (dmaGapBase16 + 8) / 16; }
+                if (d > -100 && d < 100) { dmaGapSum += gap; if (++dmaGapCnt >= 32) { dmaGapMean = dmaGapSum / 32; dmaGapSum = 0; dmaGapCnt = 0; } }
+                dmaLastD = d;
                 if (d > (int32_t) DMA_SLIP_US) { const uint32_t s = (uint32_t) d; dmaSlips++; dmaSlipsAll++; dmaSlipSum += s; if (s > dmaSlipMax) dmaSlipMax = s; }
             }
         }

@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.122"
+#define SCREEN_VERSION "1.11.123"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2622,6 +2622,7 @@ static void webBegin() {
         for (int i = 0; i < 7; ++i) { char e[40]; snprintf(e, sizeof(e), "%s\"%s\":%lu", i ? "," : "", phaseName[i], (unsigned long) phaseMax[i]); out += e; phaseMax[i] = 0; }
         out += "},";
         out += dmaPerfJson();                              // (25 Oct) the panel's DMA: frames met late = the picture slipped
+        out += ringPerfJson();                             // (25 Oct evening) the ring this window: re-syncs, skips, the DMA's furthest descriptor, both latenesses' worst, the EOF offsets' span
         { char e[60]; snprintf(e, sizeof(e), ",\"nvs\":{\"writes\":%lu,\"max_us\":%lu}", (unsigned long) nvsN, (unsigned long) nvsMaxUs); out += e; nvsN = nvsMaxUs = 0; }
         { char e[100]; snprintf(e, sizeof(e), ",\"slips\":{\"n\":%lu,\"max_us\":%lu,\"sum_us\":%lu,\"gap_base\":%lu}", (unsigned long) dmaSlips, (unsigned long) dmaSlipMax, (unsigned long) dmaSlipSum, (unsigned long) dmaGapBase); out += e; dmaSlips = dmaSlipMax = dmaSlipSum = 0; }   // (25 Oct) the slip counter (dma_watch.h), this window
         out += "}";

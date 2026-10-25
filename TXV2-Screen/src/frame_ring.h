@@ -60,6 +60,36 @@ static const uint32_t RING_NODE_US = 146;              // what the DMA takes ove
 static const uint32_t RING_OFF_US = 80; static const int RING_OFF_N = 3;
 static volatile uint32_t ringExpectUs = 0; static volatile int ringOffN = 0, ringLearnN = 0;
 static volatile int ringLastIdx = -1, ringLastOn = -1; // (/status) where the DMA was at the last frame end
+// THE PHASE (25 Oct evening). Malcolm, after a cold boot: "The screen is offset again to the right" - the picture 24 lines
+// down and 55 pixels right, and it STAYED. The counters: 191 re-syncs, then 22 000 frames "late" in a row, none re-synced.
+// The gate's second clock was the EOF's stamp (precise, a known time before the frame's end) - but a slip moves the EOF's
+// moment by its own size, so after one slip of 1.4 ms at the boot every callback read as 0.8 ms late, and the re-sync that
+// would have put the DMA back was refused at every frame. One re-sync (the rescue's heal) put it right at once.
+// So the second clock is a PHASE TRACKER on the callbacks themselves: the frame's end is predicted from the one before by
+// the hardware's own period (the mean of 32 EOF-to-EOF gaps, biased 2 us long), a callback earlier than the prediction
+// resets it (a callback is never early, only less late), and the lateness is the time past the prediction. Nothing the
+// DMA does can move it. A frame end missed (two merged by a long interrupts-off) is a period's lateness and is stepped
+// over; a prediction left behind for RING_REBASE_N frames running (the period estimate short, the engine restarted) is
+// re-based on the callback in hand. The EOF now only COUNTS (eof_off, the onset log) - except that a DMA out of step by
+// RING_FAR_US for RING_FAR_N frames running, each of them re-synced, has the panel restarted (the engine's own phase
+// moved: nothing a re-sync can mend).
+static const int RING_REBASE_N = 12;
+static const uint32_t RING_FAR_US = 300; static const int RING_FAR_N = 64;
+static uint32_t ringPhaseUs = 0; static int ringPhaseLateN = 0, ringFarN = 0; static bool ringFarWas = false;
+static volatile uint32_t ringSnaps = 0, ringRebases = 0, ringRestarts = 0;
+static uint32_t IRAM_ATTR ringPeriodUs() { const uint32_t m = dmaGapMean; return (m >= 20000 && m <= 40000 ? m : frameUs) + 2; }
+// THE ONSET LOG (/status "ring".ev): the last RING_EV_N frames that mattered - the EOF moving out of step (kind 1) or back
+// (5), a re-sync from a callback over 150 us late (2), a restart by the far rule (3), a re-base (4) - each with the EOF's
+// offset in its frame, both latenesses, the DMA's descriptor, the gap's deviation, the frame's length and the moment (ms).
+struct RingEv { uint32_t ms; int32_t off, l1, lp, d; int16_t idx; uint8_t kind; uint16_t fus; };
+static const int RING_EV_N = 10; static RingEv ringEv[RING_EV_N]; static volatile int ringEvN = 0, ringEvI = 0;
+static void IRAM_ATTR ringEvent(uint8_t kind, uint32_t now, uint32_t off, int32_t l1, int32_t lp, int idx) {
+    RingEv &e = ringEv[ringEvI]; e.ms = now / 1000; e.kind = kind; e.off = (int32_t) off; e.l1 = l1; e.lp = lp; e.idx = (int16_t) idx; e.d = dmaLastD; e.fus = (uint16_t) (frameUs > 65535 ? 65535 : frameUs);
+    ringEvI = (ringEvI + 1) % RING_EV_N; if (ringEvN < RING_EV_N) ringEvN++;
+}
+// (/perf "ring": this window) the DMA's furthest descriptor at a frame end, the latest callback by either clock, the EOF's offsets' span
+static volatile uint32_t ringWinResyncs = 0, ringWinSkipped = 0, ringWinOut = 0, ringWinOffMin = 0, ringWinOffMax = 0;
+static volatile int32_t ringWinL1Max = -99999, ringWinLpMax = -99999, ringWinIdxMax = -1;
 
 static FlipNode *ringMake(uint8_t *fb) {               // a ring for fb, shaped like the driver's chain
     FlipNode *c = (FlipNode *) heap_caps_malloc(flipNodeN * sizeof(FlipNode), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
@@ -86,6 +116,7 @@ static void IRAM_ATTR ringRestart() {
     esp_rom_delay_us(1);
     lcd_ll_start(&LCD_CAM);
     dmaBaseUs = 0; dmaEofUs = 0; ringExpectUs = 0; ringLearnN = 0; ringOffN = 0;
+    ringPhaseUs = 0; ringPhaseLateN = 0; ringFarN = 0; ringFarWas = false;   // (a new phase: the tracker seeds itself from the next callback)
 }
 // From the loop. On: the rings made and closed, the change-over armed for the next frame end, the driver's restart switched
 // off (in that order: a frame end between the two still gets a restart from both, and the bit is latched either way).
@@ -145,18 +176,30 @@ static void IRAM_ATTR ringFrameEnd() {
     if (!ringOn) return;
     if (ringHealAsk) { ringHealAsk = false; ringHealNow(); return; }   // (the loop saw the EOFs stop)
     const uint32_t now = (uint32_t) esp_timer_get_time();
-    // How long after its frame's end this callback runs. From the callback before (its own latency in it: two late ones
-    // running put a re-sync into the first visible line - "very occasional flickers after changing screens", 25 Oct 11:50)
-    // AND from the DMA's EOF stamp, which is precise (+-5 us) and sits a known time before the frame's end: the later of the two.
+    // How long after its frame's end this callback runs: from the callback before (late1 - its own latency in it: two late
+    // ones running fooled it, 25 Oct 11:50) and from the phase tracker (lateP): the later of the two.
     const int32_t late1 = frameAtUs ? (int32_t) (now - (frameAtUs + frameUs)) : 0;
-    const int32_t late2 = (dmaWatchOn && dmaEofUs && ringExpectUs && frameUs > ringExpectUs) ? (int32_t) (now - (dmaEofUs + (frameUs - ringExpectUs))) : late1;
-    const int32_t lateUs = late1 > late2 ? late1 : late2;
+    int32_t lateP = 0;
+    if (!ringPhaseUs) ringPhaseUs = now;
+    else {
+        const uint32_t period = ringPeriodUs();
+        ringPhaseUs += period;
+        int32_t d = (int32_t) (now - ringPhaseUs);
+        while (d > (int32_t) (period / 2)) { ringPhaseUs += period; d -= (int32_t) period; }   // (a frame end missed)
+        if (d < 0) { ringPhaseUs = now; ringSnaps++; } else lateP = d;
+    }
+    if (lateP > (int32_t) RING_LATE_US) { if (++ringPhaseLateN >= RING_REBASE_N) { ringPhaseUs = now; ringPhaseLateN = 0; ringRebases++; ringEvent(4, now, 0, late1, lateP, -1); lateP = 0; } }
+    else ringPhaseLateN = 0;
+    const int32_t lateUs = late1 > lateP ? late1 : lateP;
     const bool late = lateUs > (int32_t) RING_LATE_US;
     const int headMax = RING_HEAD_N + (lateUs > 0 ? (int) ((uint32_t) lateUs / RING_NODE_US) : 0);   // (a little late: the DMA that much further on, rightly)
     const uint32_t eof = dmaEofUs, start = frameAtUs;
     const bool have = eof && start && (int32_t) (eof - start) > 0 && eof - start < 65000;
     const uint32_t off = have ? eof - start : 0;
     if (ringLogN < RING_LOG_N) ringLog[ringLogN++] = (uint16_t) off;
+    if (have) { if (!ringWinOffMin || off < ringWinOffMin) ringWinOffMin = off; if (off > ringWinOffMax) ringWinOffMax = off; }
+    if (late1 > ringWinL1Max) ringWinL1Max = late1;
+    if (lateP > ringWinLpMax) ringWinLpMax = lateP;
     if (ringStartUs && eof && (int32_t) (eof - ringStartUs) > 0 && eof - ringStartUs < 65000) {   // the slip counter: this frame's DMA, from our start to its EOF
         const uint32_t dur = eof - ringStartUs;
         if (!ringDurMin || dur < ringDurMin) ringDurMin = dur;
@@ -172,20 +215,26 @@ static void IRAM_ATTR ringFrameEnd() {
             if (cur >= b && cur < b + flipNodeN * sizeof(FlipNode)) { on = i; idx = (int) ((cur - b) / sizeof(FlipNode)); }
         }
         ringLastOn = on; ringLastIdx = idx;
-        if (!(on == flipShown && idx >= 0 && idx <= headMax)) ringOutN++;
+        if (idx > ringWinIdxMax) ringWinIdxMax = idx;
+        if (!(on == flipShown && idx >= 0 && idx <= headMax)) { ringOutN++; ringWinOut++; }
     }
-    if (dmaWatchOn) {                                  // (the EOF rule: counted, not acted on)
-        if (!ringExpectUs) { if (have && ++ringLearnN >= 2) ringExpectUs = off; }
+    bool far = false;
+    if (dmaWatchOn) {                                  // the EOF rule: counted (eof_off), logged (ev), and the far rule
+        if (!ringExpectUs) { if (have && late1 > -60 && late1 < 60 && dmaLastD > -12 && dmaLastD < 12 && ++ringLearnN >= 2) ringExpectUs = off; }   // (learned from an undisturbed frame: a prompt callback, no slip in it)
         else {
-            const bool out = !have || (off > ringExpectUs ? off - ringExpectUs : ringExpectUs - off) > RING_OFF_US;
-            if (out) { if (++ringOffN == RING_OFF_N) ringHealsEof++; }
-            else ringOffN = 0;
+            const uint32_t dev = !have ? 65000 : (off > ringExpectUs ? off - ringExpectUs : ringExpectUs - off);
+            if (dev > RING_OFF_US) { if (++ringOffN == RING_OFF_N) ringHealsEof++; } else ringOffN = 0;
+            far = have && dev > RING_FAR_US;           // (no EOF at all is the rescue's business, ringTick)
+            if (have && far != ringFarWas) { ringEvent(far ? 1 : 5, now, off, late1, lateP, idx); ringFarWas = far; }
         }
     }
-    if (late) { ringLateN++; ringSkipped++; return; }  // (the blank may be over: the DMA runs on, chained; the next frame end)
+    if (late) { ringLateN++; ringSkipped++; ringWinSkipped++; return; }   // (the blank may be over: the DMA runs on, chained; the next frame end)
+    if (far) { if (++ringFarN >= RING_FAR_N) { ringEvent(3, now, off, late1, lateP, idx); ringRestart(); ringRestarts++; return; } }   // (re-synced RING_FAR_N times and still far: the engine's phase moved)
+    else ringFarN = 0;
     uint8_t want = flipWant;
     if (!flipChain[want]) want = flipShown;
-    ringResync(want); ringResyncs++;
+    ringResync(want); ringResyncs++; ringWinResyncs++;
+    if (lateUs > 150) ringEvent(2, now, off, late1, lateP, idx);
     if (want != flipShown) { flipShown = want; flipDoneN++; ringSwitches++; }
 }
 // From the loop: rings for buffers made since; the panel restarted should the frames stop, or the EOFs, for 150 ms.
@@ -204,14 +253,29 @@ static void ringTick() {
     else ringHealAsk = true;                           // (the frames run, the DMA does not: at the next frame end, in the blank)
 }
 static std::string ringStatusJson() {
-    char b[360];
-    snprintf(b, sizeof b, ",\"ring\":{\"on\":%d,\"why\":\"%s\",\"ch\":%d,\"starts\":%lu,\"resyncs\":%lu,\"skipped\":%lu,\"out\":%lu,\"switches\":%lu,\"rescues\":%lu,\"heals\":%lu,\"eof_off\":%lu,\"late\":%lu,\"expect_us\":%lu,\"slips_all\":%lu,\"gap_base\":%lu,\"isr_min_us\":%lu,\"at\":[%d,%d],\"log\":[",
+    char b[420];
+    snprintf(b, sizeof b, ",\"ring\":{\"on\":%d,\"why\":\"%s\",\"ch\":%d,\"starts\":%lu,\"resyncs\":%lu,\"skipped\":%lu,\"out\":%lu,\"switches\":%lu,\"rescues\":%lu,\"heals\":%lu,\"restarts\":%lu,\"eof_off\":%lu,\"late\":%lu,\"snaps\":%lu,\"rebases\":%lu,\"expect_us\":%lu,\"period\":%lu,\"slips_all\":%lu,\"gap_base\":%lu,\"isr_min_us\":%lu,\"at\":[%d,%d],\"log\":[",
              ringOn ? 1 : 0, ringWhy, ringCh, (unsigned long) ringStarts, (unsigned long) ringResyncs, (unsigned long) ringSkipped, (unsigned long) ringOutN, (unsigned long) ringSwitches, (unsigned long) ringRescues,
-             (unsigned long) ringHeals, (unsigned long) ringHealsEof, (unsigned long) ringLateN, (unsigned long) ringExpectUs,
+             (unsigned long) ringHeals, (unsigned long) ringRestarts, (unsigned long) ringHealsEof, (unsigned long) ringLateN, (unsigned long) ringSnaps, (unsigned long) ringRebases, (unsigned long) ringExpectUs, (unsigned long) ringPeriodUs(),
              (unsigned long) dmaSlipsAll, (unsigned long) dmaGapBase, (unsigned long) ringDurMin, (int) ringLastOn, (int) ringLastIdx);
     std::string out = b;
     const int n = ringLogN < RING_LOG_N ? ringLogN : RING_LOG_N;
     for (int i = 0; i < n; ++i) { char e[12]; snprintf(e, sizeof e, "%s%u", i ? "," : "", (unsigned) ringLog[i]); out += e; }
+    out += "],\"ev\":[";
+    const int en = ringEvN;                            // (oldest first)
+    for (int i = 0; i < en; ++i) {
+        const RingEv &e = ringEv[(ringEvI + RING_EV_N - en + i) % RING_EV_N];
+        char t[120]; snprintf(t, sizeof t, "%s{\"ms\":%lu,\"k\":%u,\"off\":%ld,\"l1\":%ld,\"lp\":%ld,\"idx\":%d,\"d\":%ld,\"fus\":%u}", i ? "," : "", (unsigned long) e.ms, (unsigned) e.kind, (long) e.off, (long) e.l1, (long) e.lp, (int) e.idx, (long) e.d, (unsigned) e.fus);
+        out += t;
+    }
     out += "]}";
     return out;
+}
+static std::string ringPerfJson() {                      // the /perf block; the window starts again
+    char b[240];
+    snprintf(b, sizeof b, ",\"ring\":{\"resyncs\":%lu,\"skipped\":%lu,\"out\":%lu,\"idx_max\":%ld,\"l1_max\":%ld,\"lp_max\":%ld,\"off\":[%lu,%lu],\"period\":%lu,\"snaps\":%lu,\"rebases\":%lu}",
+             (unsigned long) ringWinResyncs, (unsigned long) ringWinSkipped, (unsigned long) ringWinOut, (long) ringWinIdxMax, (long) ringWinL1Max, (long) ringWinLpMax, (unsigned long) ringWinOffMin, (unsigned long) ringWinOffMax,
+             (unsigned long) ringPeriodUs(), (unsigned long) ringSnaps, (unsigned long) ringRebases);
+    ringWinResyncs = ringWinSkipped = ringWinOut = 0; ringWinOffMin = ringWinOffMax = 0; ringWinL1Max = ringWinLpMax = -99999; ringWinIdxMax = -1;
+    return b;
 }
