@@ -77,7 +77,7 @@ static const int RING_REBASE_N = 12;
 static const uint32_t RING_FAR_US = 300; static const int RING_FAR_N = 64;
 static uint32_t ringPhaseUs = 0; static int ringPhaseLateN = 0, ringFarN = 0; static bool ringFarWas = false;
 static volatile uint32_t ringSnaps = 0, ringRebases = 0, ringRestarts = 0;
-static uint32_t IRAM_ATTR ringPeriodUs() { const uint32_t m = dmaGapMean; return (m >= 20000 && m <= 40000 ? m : frameUs) + 2; }
+static uint32_t IRAM_ATTR ringPeriodUs() { const uint32_t m = dmaGapMean; return (m >= 20000 && m <= 60000 ? m : frameUs) + 2; }
 // THE ONSET LOG (/status "ring".ev): the last RING_EV_N frames that mattered - the EOF moving out of step (kind 1) or back
 // (5), a re-sync from a callback over 150 us late (2), a restart by the far rule (3), a re-base (4) - each with the EOF's
 // offset in its frame, both latenesses, the DMA's descriptor, the gap's deviation, the frame's length and the moment (ms).

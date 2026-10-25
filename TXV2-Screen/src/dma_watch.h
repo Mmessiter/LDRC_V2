@@ -43,14 +43,14 @@ static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void 
     if (dmaEofUs) {
         const uint32_t gap = now - dmaEofUs;
         if (gap < dmaGapMin) dmaGapMin = gap; if (gap > dmaGapMax) dmaGapMax = gap;
-        if (gap > 20000 && gap < 40000) {              // (a frame's gap, not a stopped engine's or a restart's)
+        if (gap > 20000 && gap < 60000) {              // (a frame's gap - 28.9 ms on the twin, 43.1 on the CrowPanel - not a stopped engine's or a restart's)
             if (!dmaGapBase16) { dmaGapBase16 = gap * 16; dmaGapBase = gap; }
             else {                                     // the base follows the usual gap slowly (one early stamp must not set it for good: it did, 28859 against 28920)
                 const int32_t d = (int32_t) (gap - dmaGapBase);
                 if (d > -300 && d < 300) { dmaGapBase16 = (uint32_t) ((int32_t) dmaGapBase16 + ((int32_t) (gap * 16) - (int32_t) dmaGapBase16) / 32); dmaGapBase = (dmaGapBase16 + 8) / 16; }
                 if (d > -100 && d < 100) { dmaGapSum += gap; if (++dmaGapCnt >= 32) { dmaGapMean = dmaGapSum / 32; dmaGapSum = 0; dmaGapCnt = 0; } }
                 dmaLastD = d;
-                if (d > (int32_t) DMA_SLIP_US) { const uint32_t s = (uint32_t) d; dmaSlips++; dmaSlipsAll++; dmaSlipSum += s; if (s > dmaSlipMax) dmaSlipMax = s; }
+                if (d > (int32_t) DMA_SLIP_US && d < 20000) { const uint32_t s = (uint32_t) d; dmaSlips++; dmaSlipsAll++; dmaSlipSum += s; if (s > dmaSlipMax) dmaSlipMax = s; }   // (a whole frame more is an EOF interrupt missed, not a slip)
             }
         }
     }
