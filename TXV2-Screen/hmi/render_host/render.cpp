@@ -8,6 +8,7 @@
 //   @wifi, @update, @rxupdate, @pics, @cli, @link, @banner, @pipe: the screen's own pages and messages (own.h)
 // Build and run: hmi/render_host/build.sh; hmi/render_pages.py does the rest (scenarios, PNGs, sheets).
 #include "shim.h"
+#include "../../src/busy_what.h"                      // (25 Oct evening) the Busy tags in the screen's movers (plain C++)
 std::string sdRoot; SDClass SD; SerialStub Serial;
 #include <ArduinoJson.h>
 #include "NextionScript.h"

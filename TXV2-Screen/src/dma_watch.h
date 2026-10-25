@@ -38,6 +38,13 @@ static volatile int32_t dmaLastD = 0;                     // the last gap agains
 // earliest callbacks, whatever the DMA's state - the EOF's own moment moves with every slip, and read as a clock it kept
 // the picture shifted for good).
 static volatile uint32_t dmaGapMean = 0, dmaGapSum = 0, dmaGapCnt = 0;
+// THE SLIP'S CULPRIT (25 Oct evening): every gap longer than the base by DMA_SLIPW_US or more is counted under the loop's
+// busy tag of the moment (busy_what.h) - /perf "slipw" {n[], sum[], log[[us, tag, ms]...]}, the window's first 24 logged.
+// (The EOF stamps' own jitter is +-6 us at idle: the idle tag's count is the noise floor to read the others against.)
+static volatile int32_t dmaSlipwUs = 7; static const int SLIPW_LOG = 24;   // (bench: /stall?kind=slipwus&kb=us lowers the bar - the idle noise floor is +-6 us)
+static volatile uint32_t slipwN[BUSY_N] = { 0 }, slipwSum[BUSY_N] = { 0 };
+struct SlipW { uint16_t us; uint8_t what; uint32_t ms; };
+static SlipW slipwLog[SLIPW_LOG]; static volatile int slipwLogN = 0;
 static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void *) {
     const uint32_t now = (uint32_t) esp_timer_get_time();
     if (dmaEofUs) {
@@ -50,6 +57,11 @@ static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void 
                 if (d > -300 && d < 300) { dmaGapBase16 = (uint32_t) ((int32_t) dmaGapBase16 + ((int32_t) (gap * 16) - (int32_t) dmaGapBase16) / 32); dmaGapBase = (dmaGapBase16 + 8) / 16; }
                 if (d > -100 && d < 100) { dmaGapSum += gap; if (++dmaGapCnt >= 32) { dmaGapMean = dmaGapSum / 32; dmaGapSum = 0; dmaGapCnt = 0; } }
                 dmaLastD = d;
+                if (d >= dmaSlipwUs && d < 20000) {
+                    const uint8_t w = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1;
+                    slipwN[w]++; slipwSum[w] += (uint32_t) d;
+                    if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = (uint16_t) d; e.what = w; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }
+                }
                 if (d > (int32_t) DMA_SLIP_US && d < 20000) { const uint32_t s = (uint32_t) d; dmaSlips++; dmaSlipsAll++; dmaSlipSum += s; if (s > dmaSlipMax) dmaSlipMax = s; }   // (a whole frame more is an EOF interrupt missed, not a slip)
             }
         }
@@ -99,3 +111,17 @@ static std::string dmaPerfJson() {                       // the /perf block; the
     dmaBaseUs = 0;                                     // (each window learns its own earliest: one odd early stamp at a boot or a restart would skew every later one)
     return out;
 }
+static std::string slipwPerfJson() {                     // the /perf block; the window starts again
+    std::string out = ",\"slipw\":{\"n\":[";
+    for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwN[i]); out += e; }
+    out += "],\"sum\":[";
+    for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwSum[i]); out += e; }
+    out += "],\"log\":[";
+    const int n = slipwLogN < SLIPW_LOG ? slipwLogN : SLIPW_LOG;
+    for (int i = 0; i < n; ++i) { char e[40]; snprintf(e, sizeof e, "%s[%u,%u,%lu]", i ? "," : "", (unsigned) slipwLog[i].us, (unsigned) slipwLog[i].what, (unsigned long) slipwLog[i].ms); out += e; }
+    out += "]}";
+    for (int i = 0; i < BUSY_N; ++i) { slipwN[i] = 0; slipwSum[i] = 0; }
+    slipwLogN = 0;
+    return out;
+}
+

@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.124"
+#define SCREEN_VERSION "1.11.125"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -63,6 +63,7 @@ Arduino_GFX *gfx = nullptr;                                   // the screen at f
 // driver copies it in through a bounce buffer): a slip of the twin's picture at the first visit to each page and each
 // background, and at every clip the quiet-page warm-up brought in.
 static size_t sdReadPaced(File &f, uint8_t *dst, size_t n) {
+    Busy busy_(BUSY_SD);
     size_t got = 0;
     while (got < n) {
         const int r = f.read(dst + got, std::min((size_t) 4096, n - got));
@@ -181,6 +182,7 @@ static void canvasEnsureRows(int y, int h) {
 // (1.11.116) The rows are written back from the cache 8 at a time, as they are copied - not the whole area at the end: that
 // was one burst of up to 64 kB of PSRAM writes at full speed, outside the pacing (the rare flicker left on the twin).
 static void copyRows(uint16_t *dst, int x, int y, int w, int h, bool over) {
+    Busy busy_(BUSY_COPY);
     canvasEnsureRows(y, h);                                // (1.11.116: a band not yet caught up holds the page before)
     for (int yy = 0; yy < h; ++yy) {
         const int row = y + yy;
@@ -388,6 +390,7 @@ static bool flipWholePage() {
     return flipBigChange({ 0, 0, (int16_t) W, (int16_t) H });
 }
 static void presentDirty(bool force = false) {
+    Busy busy_(BUSY_PRESENT);
     flipTick();
     // (1.11.116) While a new picture is composed or waits for its frame, NOTHING goes to the glass: a small change shown now
     // would land on the old page (the new page's values seen on the old one), so it waits and follows the flip.
@@ -910,7 +913,7 @@ static uint32_t pendingBgAt = 0, pendingVolAt = 0;         // (25 Oct) when the 
 // (25 Oct 2026) Every write to the flash (NVS) stalls the panel's DMA for its length - the picture slips sideways (1.11.69).
 // So each is started just after a frame's end, in the blank before the next picture (quiet_time.h), and counted.
 static uint32_t nvsN = 0, nvsMaxUs = 0;
-template <typename F> static void nvsQuiet(F write) { quietAtFrameEnd(); const uint32_t t0 = micros(); write(); const uint32_t us = micros() - t0; nvsN++; if (us > nvsMaxUs) nvsMaxUs = us; }
+template <typename F> static void nvsQuiet(F write) { quietAtFrameEnd(); const uint32_t t0 = micros(); { Busy busy_(BUSY_NVS); write(); } const uint32_t us = micros() - t0; nvsN++; if (us > nvsMaxUs) nvsMaxUs = us; }
 static std::string pendingDoor; static bool pendingDoorSet = false;
 static uint32_t pendingSince = 0;                          // the pilot's own switches (the radios, the workshop door): written when the wire is quiet, or after 3 s, quiet or not
 // The page to come back to after our own restart (an update) is kept in RTC memory: it survives a restart,
@@ -958,6 +961,7 @@ static Comp *find(const std::string &nm) { auto it = page.byName.find(nm); retur
 
 // ------------------------------------------------------------------ background + drawing
 static bool loadBackground(int picId) {
+    Busy busy_(BUSY_BG);
     if (picId < 0 || !sdOk) return false;
     for (auto &e : bgCache) if (e.id == picId) { e.used = millis(); bgBuf = e.buf; bgW = W; bgH = H; return true; }
     char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", picId);
@@ -1485,6 +1489,7 @@ static void drawPage() {
     drawPageNow(true);
 }
 static void drawPageNow(bool show) {
+    Busy busy_(BUSY_DRAW);
     uint32_t tp = micros();
     const bool rotate = show && rotationNow();
     if (page.bgMode == 0 && (rotate || !show)) canvasEnsureRows(0, H);   // (drawn over the page as it is: all of it must be here)
@@ -2006,6 +2011,7 @@ static bool drawVerb(const std::string &cmd) {
 static void reply(uint8_t code) { const uint8_t f[4] = { code, 0xFF, 0xFF, 0xFF }; Serial.write(f, 4); }
 static void splitRef(const std::string &ref, std::string &pg, std::string &nm) { size_t d = ref.find('.'); if (d == std::string::npos) { pg = ""; nm = ref; } else { pg = ref.substr(0, d); nm = ref.substr(d + 1); } }
 static void handle(const std::string &cmd) {
+    Busy busy_(BUSY_HANDLE);
     cmdCount++;
     if (cmd.rfind("pong=", 0) == 0) { pongCommand(cmd.substr(5)); return; }
     if (cmd.rfind("ldrcpipe ", 0) == 0) { blePipeCommand(cmd.substr(9)); return; }   // the main board's Bluetooth pipe to the receiver (src/ble_device.h, 1.11.1)
@@ -2622,7 +2628,8 @@ static void webBegin() {
         for (int i = 0; i < 7; ++i) { char e[40]; snprintf(e, sizeof(e), "%s\"%s\":%lu", i ? "," : "", phaseName[i], (unsigned long) phaseMax[i]); out += e; phaseMax[i] = 0; }
         out += "},";
         out += dmaPerfJson();                              // (25 Oct) the panel's DMA: frames met late = the picture slipped
-        out += ringPerfJson();                             // (25 Oct evening) the ring this window: re-syncs, skips, the DMA's furthest descriptor, both latenesses' worst, the EOF offsets' span
+        out += ringPerfJson();
+        out += slipwPerfJson();                            // (25 Oct evening) the slips by what the loop was doing (busy_what.h)                             // (25 Oct evening) the ring this window: re-syncs, skips, the DMA's furthest descriptor, both latenesses' worst, the EOF offsets' span
         { char e[60]; snprintf(e, sizeof(e), ",\"nvs\":{\"writes\":%lu,\"max_us\":%lu}", (unsigned long) nvsN, (unsigned long) nvsMaxUs); out += e; nvsN = nvsMaxUs = 0; }
         { char e[100]; snprintf(e, sizeof(e), ",\"slips\":{\"n\":%lu,\"max_us\":%lu,\"sum_us\":%lu,\"gap_base\":%lu}", (unsigned long) dmaSlips, (unsigned long) dmaSlipMax, (unsigned long) dmaSlipSum, (unsigned long) dmaGapBase); out += e; dmaSlips = dmaSlipMax = dmaSlipSum = 0; }   // (25 Oct) the slip counter (dma_watch.h), this window
         out += "}";
@@ -2643,7 +2650,8 @@ static void webBegin() {
         uint32_t us = 0; bool ok = true;
         if (kind == "psram") { uint8_t *m = (uint8_t *) ps_malloc((size_t) kb * 1024); if (!m) ok = false; else { const uint32_t t0 = micros(); memset(m, 0x55, (size_t) kb * 1024); us = micros() - t0; free(m); } }
         else if (kind == "nvs") { const uint32_t t0 = micros(); prefs.putInt("stallt", (int) millis()); us = micros() - t0; }
-        else if (kind == "isr") { dmaSpinUs = (uint32_t) kb; us = (uint32_t) kb; }   // the next frame's restart held back this many us (dma_watch.h)
+        else if (kind == "isr") { dmaSpinUs = (uint32_t) kb; us = (uint32_t) kb; }
+        else if (kind == "slipwus") { dmaSlipwUs = (int32_t) kb; us = (uint32_t) kb; }   // the slip-by-cause counter's bar (dma_watch.h)   // the next frame's restart held back this many us (dma_watch.h)
         else if (kind == "ring") { ringSet(kb != 0); ok = (ringOn || ringArm) == (kb != 0); }   // the hardware's chaining of the frames on (1) or off (0): the A/B (frame_ring.h)
         else if (kind == "heal") { ringHealNow(); ok = ringOn; }   // the DMA started again in step, now (frame_ring.h)
         else if (kind == "skip") { benchSkip = (uint32_t) kb; us = benchSkip; }   // the bench switches (see benchSkip)
