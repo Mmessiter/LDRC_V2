@@ -25,6 +25,19 @@ static inline void psramPace(uint32_t px) {
     if ((paceCount += px) >= 6400) { delayMicroseconds(rest); paceCount = 0; paceAt = micros(); paceRests++; }
 }
 
+// THE GENTLE WRITE-BACK (25 Oct 2026). The panel's DMA reads the PSRAM; what the CPU drew sits in the cache until written
+// back, and Cache_WriteBack_Addr over a freshly written region (8 rows = 12.8 kB, 16 rows = 25.6 kB) writes it all out in
+// one burst that holds the bus 100-200 us: the DMA starves for that long and the rest of that frame is shifted sideways -
+// Malcolm's "part of the image shifts sideways then back again, usually the lower part", the last flicker left on the twin
+// once the frames were chained by the hardware (src/frame_ring.h). Measured with the slip counter (dma_watch.h): a
+// whole-screen copy with its write-backs slipped 2 frames in 3 runs, the same copy without them none, 256-byte pieces
+// 8 us apart none in 3000 pieces. So on the twin every write-back the panel will read goes in pieces of 256 bytes (8 cache
+// lines, ~4 us of bus) with an 8 us breath between - the DMA's FIFO rides out 4 us. The CrowPanel (psramRestUs 0) as before.
+static uint32_t wbPieceBytes = 1024, wbGapUs = 8;      // (bench: /stall?kind=wbpiece&kb=bytes, wbgap&kb=us; measured 25 Oct: 256-2048 B pieces slip-free, 4096 slipped once in 1.5 MB; 1024 for margin: 20 us a kB against 30 at 256)
+static inline void wbPaced(uint32_t addr, uint32_t len) {
+    if (!board->psramRestUs || len <= 2 * wbPieceBytes) { Cache_WriteBack_Addr(addr, len); return; }
+    for (uint32_t off = 0; off < len; off += wbPieceBytes) { Cache_WriteBack_Addr(addr + off, len - off < wbPieceBytes ? len - off : wbPieceBytes); delayMicroseconds(wbGapUs); }
+}
 // The canvases (the page and our layer) fill big boxes a row at a time, paced. Everything else is Arduino_Canvas's own.
 // (1.11.116) The page's canvas is one of the three panel buffers in turn (main.cpp, "the rotation"): aim() points it at the
 // buffer that is the canvas now, and with lazy set every write first makes sure the rows it touches have been caught up

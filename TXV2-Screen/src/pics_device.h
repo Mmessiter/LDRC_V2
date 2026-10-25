@@ -482,7 +482,7 @@ static void picPoll() {
     } else {
         if (pictures.mode() != P::CLOSED) pictures.pageGone();
         picDeclined = false;
-        if ((page.name == "RXOptionsView" || page.name == "ModelsView") && !topOn) picWarm();
+        if ((page.name == "RXOptionsView" || page.name == "ModelsView") && !topOn && !(benchSkip & 4)) picWarm();
     }
     pictures.poll();
     if (pictures.gaveUp()) { picDeclined = true; banner("Update the transmitter to use the new picture chooser"); }

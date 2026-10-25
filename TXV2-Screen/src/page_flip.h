@@ -29,8 +29,10 @@ static volatile uint8_t flipWant = 0, flipShown = 0;   // which buffer the panel
 static volatile uint32_t flipDoneN = 0;               // flips made (in the interrupt)
 static bool flipOk = false;
 static const char *flipWhy = "off";                   // (/status: why there is no flip)
+static bool ringOn = false;                           // (25 Oct 2026, src/frame_ring.h: the frames chained by the hardware; the flip is a ring pointer, not a move)
 
 static void IRAM_ATTR flipFrameEnd() {
+    if (ringOn) return;                                // (frame_ring.h's ringFrameEnd has it)
     const uint8_t want = flipWant;
     if (want == flipShown || !flipNodes) return;
     const intptr_t delta = (intptr_t) ((uint8_t *) flipFb[want] - (uint8_t *) flipFb[flipShown]);
@@ -40,8 +42,9 @@ static void IRAM_ATTR flipFrameEnd() {
 
 // Called once the panel runs: userCtxField = &panel->user_ctx, fb/fbSize/nodeN from the driver's struct (fields before
 // user_ctx, which Arduino_GFX's copy has right).
-static void flipFind(void **userCtxField, uint8_t *fb, size_t fbSize, size_t nodeN) {
-    if (!fb || !fbSize || nodeN < 2 || nodeN > 4096) { flipWhy = "no panel"; return; }
+static const char *chainWhy = "not looked";
+static void chainFind(void **userCtxField, uint8_t *fb, size_t fbSize, size_t nodeN) {   // (25 Oct: the ring wants the chain on every board, flip or not)
+    if (!fb || !fbSize || nodeN < 2 || nodeN > 4096) { chainWhy = "no panel"; return; }
     uint8_t *base = (uint8_t *) userCtxField + sizeof(void *);
     for (int off = 0; off <= 40; off += 4) {
         FlipNode *n = (FlipNode *) (base + off);
@@ -56,10 +59,13 @@ static void flipFind(void **userCtxField, uint8_t *fb, size_t fbSize, size_t nod
         flipNodes = n; flipNodeN = nodeN;
         break;
     }
-    if (!flipNodes) { flipWhy = "chain not found"; return; }
-    flipFb[0] = (uint16_t *) fb;
+    if (!flipNodes) { chainWhy = "chain not found"; return; }
+    flipFb[0] = (uint16_t *) fb; chainWhy = "found";
+}
+static void flipFind(uint8_t *fb, size_t fbSize) {    // (after chainFind)
+    if (!flipNodes) { flipWhy = chainWhy; return; }
     flipFb[1] = (uint16_t *) heap_caps_aligned_calloc(64, 1, fbSize, MALLOC_CAP_SPIRAM);
-    if (!flipFb[1]) { flipNodes = nullptr; flipWhy = "no memory"; return; }
+    if (!flipFb[1]) { flipWhy = "no memory"; return; }
     memcpy(flipFb[1], fb, fbSize);
     Cache_WriteBack_Addr((uint32_t) flipFb[1], fbSize);
     flipOk = true; flipWhy = "on";

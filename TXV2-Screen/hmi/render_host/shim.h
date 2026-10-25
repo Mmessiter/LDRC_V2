@@ -21,6 +21,7 @@ static inline void *heap_caps_malloc(size_t n, unsigned) { return malloc(n); }  
 #define MALLOC_CAP_INTERNAL 0
 #define MALLOC_CAP_8BIT 0
 #define Cache_WriteBack_Addr(a, b) ((void) 0)                     // (the panel's cache: nothing to do on the Mac)
+#define wbPaced(a, b) ((void) 0)                                   // (25 Oct: the gentle write-back, src/psram_pace.h - the same nothing)
 #define PROGMEM
 extern std::string sdRoot;                                 // the folder that stands for the screen's card (sd/)
 struct File {

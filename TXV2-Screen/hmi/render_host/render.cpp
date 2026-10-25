@@ -32,6 +32,9 @@ static void canvasEnsureRows(int, int) {}
 static void psramPace(uint32_t) {}
 static size_t sdReadPaced(File &f, uint8_t *dst, size_t n) { return f.read(dst, n); }   // (1.11.120: the card's big reads, in paced slabs on the screen)
 static void delayMicroseconds(uint32_t) {}
+static void ringTick() {}                              // (25 Oct: the frame ring's loop tick, src/frame_ring.h)
+static uint32_t benchSkip = 0;                         // (25 Oct: the bench switches)
+static uint32_t pendingBgAt = 0, pendingVolAt = 0;     // (25 Oct: when a preference last changed; written once it has rested)
 static void drawDeferred();
 struct PresentArea { int x, y, w, h; bool over; };
 static PresentArea presentArea(int x, int y, int w, int h) { return { x, y, w, h, false }; }
