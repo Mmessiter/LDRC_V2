@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.126"
+#define SCREEN_VERSION "1.11.128"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1015,6 +1015,7 @@ static bool loadBackground(int picId) {
     if (wh[0] == W && wh[1] == H) sdReadPaced(f, (uint8_t *) buf, W * H * 2);   // (1.11.120: in slabs, paced - 768 kB in one read slipped the twin's picture)
     else { for (int y = 0; y < H; ++y) { memset(buf + y * W, 0, W * 2); psramPace(W); } for (int y = 0; y < wh[1] && y < H; ++y) sdReadPaced(f, (uint8_t *) (buf + y * W), min((int) wh[0], W) * 2); }
     f.close();
+    if (dcTx) wbPaced((uint32_t) buf, W * H * 2);           // (1.11.127) the picture is in the memory itself from here on: the DMA paints the page's background from it (restoreRect)
     bgCache.push_back({picId, buf, millis()});
     bgBuf = buf; bgW = W; bgH = H;
     return true;
@@ -1028,6 +1029,16 @@ static void restoreRect(int x, int y, int w, int h) {
         uint16_t *fb = fbNow;
         if (fb == pageFb) canvasEnsureRows(y, h);              // (1.11.116: the rotation)
         else if (fb == topFb && topCanvas) topCanvas->touch(x, y, w, h);   // (the flight spare)
+        // (1.11.127) The whole lines inside the rectangle go by DMA from the picture (in the memory since it was loaded), the
+        // cache's lines of them dropped first (src/dma_copy.h); the margins up to 31 pixels at each end by hand, as before.
+        const int xi0 = (x + 31) & ~31, xi1 = (x + w) & ~31;
+        if (fb != screenFb && dmaReady() && xi1 - xi0 >= 64 && h >= 4 && !((uintptr_t) fb & 63)) {
+            dmaDropLines(fb, xi0, xi1, y, h);
+            if (dmaCopyRows(fb, bgBuf, xi0, xi1, y, h)) {
+                for (int yy = 0; yy < h; ++yy) { if (xi0 > x) memcpy(fb + (y + yy) * W + x, bgBuf + (y + yy) * W + x, (xi0 - x) * 2); if (x + w > xi1) memcpy(fb + (y + yy) * W + xi1, bgBuf + (y + yy) * W + xi1, (x + w - xi1) * 2); }
+                return;
+            }
+        }
         for (int yy = 0; yy < h; ++yy) { memcpy(fb + (y + yy) * W + x, bgBuf + (y + yy) * W + x, w * 2); psramPace(w); }   // (1.11.116: paced)
         if (fb == screenFb) wbPaced((uint32_t) (fb + y * W + x), (uint32_t) (((h - 1) * W + w) * 2));   // no canvas: the panel's DMA reads PSRAM directly
     } else gfx->fillRect(x, y, w, h, page.bgColor);
@@ -2673,7 +2684,7 @@ static void webBegin() {
         out += slipwPerfJson();
         { char e[120]; snprintf(e, sizeof(e), ",\"wb\":{\"pieces\":%lu,\"slow\":%lu,\"cy_min\":%lu,\"cy_max\":%lu,\"clean_cy\":%lu}", (unsigned long) wbPieces, (unsigned long) wbSlow, (unsigned long) (wbCyMin == 0xFFFFFFFF ? 0 : wbCyMin), (unsigned long) wbCyMax, (unsigned long) wbCleanCy); out += e; wbPieces = wbSlow = 0; wbCyMin = 0xFFFFFFFF; wbCyMax = 0; }   // (25 Oct 21:00) the write-back pieces this window                            // (25 Oct evening) the slips by what the loop was doing (busy_what.h)                             // (25 Oct evening) the ring this window: re-syncs, skips, the DMA's furthest descriptor, both latenesses' worst, the EOF offsets' span
         { char e[60]; snprintf(e, sizeof(e), ",\"nvs\":{\"writes\":%lu,\"max_us\":%lu}", (unsigned long) nvsN, (unsigned long) nvsMaxUs); out += e; nvsN = nvsMaxUs = 0; }
-        { char e[100]; snprintf(e, sizeof(e), ",\"slips\":{\"n\":%lu,\"max_us\":%lu,\"sum_us\":%lu,\"gap_base\":%lu}", (unsigned long) dmaSlips, (unsigned long) dmaSlipMax, (unsigned long) dmaSlipSum, (unsigned long) dmaGapBase); out += e; dmaSlips = dmaSlipMax = dmaSlipSum = 0; }   // (25 Oct) the slip counter (dma_watch.h), this window
+        { char e[120]; snprintf(e, sizeof(e), ",\"slips\":{\"n\":%lu,\"max_us\":%lu,\"sum_us\":%lu,\"huge\":%lu,\"gap_base\":%lu}", (unsigned long) dmaSlips, (unsigned long) dmaSlipMax, (unsigned long) dmaSlipSum, (unsigned long) dmaHuge, (unsigned long) dmaGapBase); out += e; dmaSlips = dmaSlipMax = dmaSlipSum = dmaHuge = 0; }   // (25 Oct) the slip counter (dma_watch.h), this window; huge (1.11.128): frames the panel was held for 20 ms and more
         out += "}";
         web.send(200, "application/json", out.c_str());
     });
@@ -2690,7 +2701,7 @@ static void webBegin() {
         const String kind = web.hasArg("kind") ? web.arg("kind") : "psram";
         const int kb = web.hasArg("kb") ? web.arg("kb").toInt() : 256;
         uint32_t us = 0; bool ok = true;
-        const uint32_t slips0 = dmaSlipsAll; dmaProbePos = 0; dmaProbeFr = 0; dmaProbeMax = 0; char extra[300] = "";   // (26 Oct) what the panel's DMA saw during the probe: slips over the bar, the excess summed over its frames, the worst frame
+        const uint32_t slips0 = dmaSlipsAll, huge0 = dmaHugeAll; dmaProbePos = 0; dmaProbeFr = 0; dmaProbeMax = 0; char extra[300] = "";   // (26 Oct) what the panel's DMA saw during the probe: slips over the bar, frames held for 20 ms and more (huge), the excess summed over its frames, the worst frame
         if (kind == "psram") { uint8_t *m = (uint8_t *) ps_malloc((size_t) kb * 1024); if (!m) ok = false; else { const uint32_t t0 = micros(); memset(m, 0x55, (size_t) kb * 1024); us = micros() - t0; free(m); } }
         else if (kind == "nvs") { const uint32_t t0 = micros(); prefs.putInt("stallt", (int) millis()); us = micros() - t0; }
         else if (kind == "isr") { dmaSpinUs = (uint32_t) kb; us = (uint32_t) kb; }
@@ -2730,9 +2741,10 @@ static void webBegin() {
         else if (kind == "read") { File f = SD.open("/hmi/pic/1.565"); uint8_t *m = (uint8_t *) ps_malloc((size_t) kb * 1024); if (!f || !m) ok = false; else { const uint32_t t0 = micros(); sdReadPaced(f, m, (size_t) kb * 1024); us = micros() - t0; } if (m) free(m); if (f) f.close(); }
         else if (kind == "copy") { uint8_t *a = (uint8_t *) ps_malloc((size_t) kb * 1024), *c = (uint8_t *) ps_malloc((size_t) kb * 1024); if (!a || !c) ok = false; else { memset(a, 1, (size_t) kb * 1024); const uint32_t t0 = micros(); memcpy(c, a, (size_t) kb * 1024); us = micros() - t0; } if (a) free(a); if (c) free(c); }   // PSRAM to PSRAM at full speed
         else if (kind == "flash") { uint8_t *m = (uint8_t *) heap_caps_malloc(4096, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); const esp_partition_t *p = esp_ota_get_running_partition(); if (!m || !p) ok = false; else { const uint32_t t0 = micros(); for (size_t off = 0; off + 4096 <= (size_t) kb * 1024 && off + 4096 <= p->size; off += 4096) esp_partition_read(p, off, m, 4096); us = micros() - t0; } if (m) free(m); }   // the flash read straight (not through the cache), 4 kB a transaction: the bus the PSRAM shares
+        else if (kind == "dmacopy") { prefs.putInt("dmacopy", kb != 0 ? 1 : 0); ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra); }   // the DMA copy on/off, now and at the next start
         else ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra);   // (26 Oct) m2m, m2mp, m2mrows, wbnop, lcdpri, dcstat - or an unknown kind (src/dma_copy.h)
-        char b[460]; snprintf(b, sizeof b, "{\"kind\":\"%s\",\"kb\":%d,\"us\":%lu,\"ok\":%d,\"slips\":%lu,\"pos\":%lu,\"fr\":%lu,\"dmax\":%ld%s}", kind.c_str(), kb, (unsigned long) us, ok ? 1 : 0,
-                 (unsigned long) (dmaSlipsAll - slips0), (unsigned long) dmaProbePos, (unsigned long) dmaProbeFr, (long) dmaProbeMax, extra);
+        char b[460]; snprintf(b, sizeof b, "{\"kind\":\"%s\",\"kb\":%d,\"us\":%lu,\"ok\":%d,\"slips\":%lu,\"huge\":%lu,\"pos\":%lu,\"fr\":%lu,\"dmax\":%ld%s}", kind.c_str(), kb, (unsigned long) us, ok ? 1 : 0,
+                 (unsigned long) (dmaSlipsAll - slips0), (unsigned long) (dmaHugeAll - huge0), (unsigned long) dmaProbePos, (unsigned long) dmaProbeFr, (long) dmaProbeMax, extra);
         web.send(200, "application/json", b);
     });
     // A file for the screen's card. Folders on the way are made; a file that could not be written is an ERROR
@@ -3376,7 +3388,7 @@ void setup() {
     if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) { gfx = canvas; fbNow = canvas->getFramebuffer(); canvas->fillScreen(0); } else fbNow = screenFb;
     pageFb = fbNow;
     if (flipOk && pageFb && pageFb != screenFb && ((uintptr_t) pageFb & 63) == 0) { flipFb[2] = pageFb; canvas->lazy = true; }   // (the rotation is on)
-    dcOn = prefs.getInt("dmacopy", 1) != 0; dmaCopyInit();   // (1.11.126) the copies between the panel's buffers by DMA from here on, the panel's channel at priority 5 (src/dma_copy.h); /look?key=dmacopy&val=0 and a restart: the CPU's copy as before
+    dcOn = prefs.getInt("dmacopy", 0) != 0; dmaCopyInit();   // (1.11.128) the DMA copy of 1.11.126 is OFF unless the pref says so (Malcolm, 26 Oct: more flicker on the desk than it cured, the bench's counters blind to it); /stall?kind=dmacopy&kb=1 for the bench
     blog("boot", std::string("dmacopy ") + dcWhy);
     if (prefs.getInt("ring", 1)) ringSet(true); else ringWhy = "off (pref)";   // (25 Oct) the frames chained by the hardware from here on (src/frame_ring.h); /look?key=ring&val=0 keeps the driver's own restarts
     blog("boot", std::string("ring ") + ringWhy);

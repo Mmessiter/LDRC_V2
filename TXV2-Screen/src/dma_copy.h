@@ -15,8 +15,14 @@
 // CPU must still read a panel buffer (the canvas catching up after a rotation, by DMA too; a compose row's partial lines;
 // /fb) the lines are invalidated first: a cached line of a DMA-written row is stale.
 // The panel's GDMA channel is raised to priority 5 when the pair is made (gdma_ll_tx_set_priority): the panel is served
-// first at every arbitration, our copy takes what is left. Off: /look?key=dmacopy&val=0 and a restart (the CPU's copy as in
-// 1.11.125); the CPU's copy is also the fall-back of every DMA copy that does not come (a timeout, counted).
+// first at every arbitration, our copy takes what is left. The CPU's copy is the fall-back of every DMA copy that does not
+// come (a timeout, counted).
+// 1.11.128 (26 Oct, midday): OFF BY DEFAULT. On the desk, with the DMA copy on, Malcolm saw MORE flicker than before ("rather
+// worse"; with the panel's channel back at priority 0 "very badly, seldom stable for more than a moment"; off again: "much
+// better, just the occasional flicker after changing screens"), while every counter here read clean - the bench's slip
+// counters only look at frames whose EOF gap is under 20 ms, so a copy that holds the panel's DMA for longer than that is
+// invisible to them (dmaHuge counts those since 1.11.128). The pref "dmacopy" (0) and /stall?kind=dmacopy&kb=1 switch it
+// on at run time for the bench; everything below stays for the next experiments.
 // Bench probes (/stall, the 16 MB builds): m2m (SRAM -> PSRAM), m2mp (PSRAM -> PSRAM), m2mrows (by way of a 16 kB SRAM
 // staging buffer), m2mcanvas / m2mcanvasw (the canvas to both panel buffers, the band written back gently / in one call),
 // wbnop (clean write-backs), lcdpri (the panel channel's priority), dcstat (everything above).
@@ -67,7 +73,7 @@ static bool dmaCopyInit() {
     dcWhy = "on";
     return true;
 }
-static inline bool dmaReady() { return dcTx != nullptr && dcDone; }
+static inline bool dmaReady() { return dcOn && dcTx != nullptr && dcDone; }   // (dcOn: switched at run time too - /stall?kind=dmacopy&kb=0|1, kept in the pref)
 // One start: the descriptors are filled by the caller (count n), both channels started, the copy waited for (a 51 kB copy is
 // ~2 ms). False = it did not come in 50 ms (counted; the pair is reset so the next copy can go).
 static bool dcRun(int n) {
@@ -91,7 +97,7 @@ static inline void dcDesc(int i, void *dst, const void *src, size_t len, bool la
 // drew them, the destination's lines invalidated where the CPU will read them. False = not done (no pair, or a copy that
 // did not come): the caller copies by hand, the whole range.
 static bool dmaCopyRows(uint16_t *dst, const uint16_t *src, int x0, int x1, int y, int h) {
-    if (!dmaReady() || x1 <= x0 || h <= 0 || (x0 & 31) || (x1 & 31)) return false;
+    if (!dmaReady() || x1 <= x0 || h <= 0 || (x0 & 31) || (x1 & 31) || ((uintptr_t) dst & 63) || ((uintptr_t) src & 63)) return false;
     const size_t bytes = (size_t) (x1 - x0) * 2;
     if (bytes > 4032) return false;
     for (int r = y; r < y + h; ) {
@@ -101,6 +107,27 @@ static bool dmaCopyRows(uint16_t *dst, const uint16_t *src, int x0, int x1, int 
         dcRows += n; r += n;
     }
     return true;
+}
+// (1.11.127) Rows y..y+h-1 of dst, pixels x0..x1-1, all from ONE row segment srcRow (a fill: its first row, filled by the CPU
+// and written back) - one descriptor per row, the same source for each.
+static bool dmaFillRows(uint16_t *dst, const uint16_t *srcRow, int x0, int x1, int y, int h) {
+    if (!dmaReady() || x1 <= x0 || h <= 0 || (x0 & 31) || (x1 & 31) || ((uintptr_t) dst & 63) || ((uintptr_t) srcRow & 63)) return false;
+    const size_t bytes = (size_t) (x1 - x0) * 2;
+    if (bytes > 4032) return false;
+    for (int r = y; r < y + h; ) {
+        const int n = min(DC_DESC_N, y + h - r);
+        for (int i = 0; i < n; ++i) dcDesc(i, dst + (r + i) * W + x0, srcRow, bytes, i == n - 1);
+        if (!dcRun(n)) return false;
+        dcRows += n; r += n;
+    }
+    return true;
+}
+// (1.11.127) Before a DMA writes rows of a buffer the CPU draws into (the canvas, the layer): the cache's lines of pixels
+// x0..x1-1 (whole 64-byte lines, every one entirely inside what is about to be overwritten) are dropped - a dirty one holds
+// old content the DMA replaces, a clean one would be stale afterwards. Whole rows go in one call.
+static void dmaDropLines(uint16_t *fb, int x0, int x1, int y, int h) {
+    if (x0 == 0 && x1 == W) { Cache_Invalidate_Addr((uint32_t) (fb + y * W), (uint32_t) h * W * 2); return; }
+    for (int r = y; r < y + h; ++r) Cache_Invalidate_Addr((uint32_t) (fb + r * W + x0), (uint32_t) (x1 - x0) * 2);
 }
 // A plain copy of n bytes (a multiple of 64; dst and src 64-aligned in the PSRAM, 4-aligned in SRAM), 4032 bytes a descriptor.
 static bool dmaCopy(void *dst, const void *src, size_t n) {
@@ -128,6 +155,7 @@ static bool dcBuffers() {
 static bool dmaCopyProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN) {
     extra[0] = 0;
     if (kind == "lcdpri") { if (dcLcdCh < 0 || kb < 0 || kb > 15) return false; gdma_ll_tx_set_priority(&GDMA, dcLcdCh, (uint32_t) kb); us = kb; return true; }
+    if (kind == "dmacopy") { dcOn = kb != 0; if (dcOn) dmaCopyInit(); us = dcOn; snprintf(extra, extraN, ",\"why\":\"%s\"", dcWhy); return true; }   // the A/B at run time: 0 = every copy by the CPU, as 1.11.125 (main.cpp keeps it in the pref)
     if (kind == "dcstat") {
         snprintf(extra, extraN, ",\"why\":\"%s\",\"tx\":%d,\"rx\":%d,\"lcd\":%d,\"copies\":%lu,\"rows\":%lu,\"eofs\":%lu,\"timeouts\":%lu,\"us_max\":%lu,\"align\":%lu,\"fb\":[%lu,%lu,%lu],\"canvas\":%lu,\"lcdpri\":%u",
                  dcWhy, dcTxCh, dcRxCh, dcLcdCh, (unsigned long) dcCopies, (unsigned long) dcRows, (unsigned long) dcEofs, (unsigned long) dcTimeouts, (unsigned long) dcUsMax, (unsigned long) dcAlign,

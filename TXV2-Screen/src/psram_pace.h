@@ -58,6 +58,9 @@ static inline void wbPaced(uint32_t addr, uint32_t len) {
 // buffer that is the canvas now, and with lazy set every write first makes sure the rows it touches have been caught up
 // from the buffer on show (canvasEnsureRows, main.cpp) - the buffer a rotation leaves behind still holds the page before.
 static void canvasEnsureRows(int y, int h);
+static inline bool dmaReady();                            // (1.11.127) src/dma_copy.h, included after this: a big fill goes by DMA
+static bool dmaFillRows(uint16_t *dst, const uint16_t *srcRow, int x0, int x1, int y, int h);
+static void dmaDropLines(uint16_t *fb, int x0, int x1, int y, int h);
 class PacedCanvas : public Arduino_Canvas {
 public:
     bool lazy = false;
@@ -77,6 +80,21 @@ public:
         touch(x, y, w, h);
         if (!board->psramRestUs || (int32_t) w * h < 6400 || !_framebuffer) { Arduino_Canvas::writeFillRectPreclipped(x, y, w, h, color); return; }
         uint16_t *row = _framebuffer + (int32_t) y * _width + x;
+        // (1.11.127) A big fill by DMA: the first row filled by the CPU and written back, every other row's whole lines copied
+        // from it by the DMA (PSRAM to PSRAM, the panel served first - src/dma_copy.h), the margins up to 31 pixels at each
+        // end filled by hand. The cache's lines of the rows the DMA writes are dropped first.
+        const int xi0 = (x + 31) & ~31, xi1 = (x + w) & ~31;
+        if (dmaReady() && xi1 - xi0 >= 64 && h >= 8 && !((uintptr_t) _framebuffer & 63)) {
+            std::fill_n(row, w, color);
+            wbPaced((uint32_t) (_framebuffer + (int32_t) y * _width + xi0), (uint32_t) (xi1 - xi0) * 2);
+            dmaDropLines(_framebuffer, xi0, xi1, y + 1, h - 1);
+            if (dmaFillRows(_framebuffer, _framebuffer + (int32_t) y * _width + xi0, xi0, xi1, y + 1, h - 1)) {
+                uint16_t *r2 = row + _width;
+                for (int j = 1; j < h; ++j, r2 += _width) { if (xi0 > x) std::fill_n(r2, xi0 - x, color); if (x + w > xi1) std::fill_n(r2 + (xi1 - x), x + w - xi1, color); }
+                return;
+            }
+            row += _width; --h;                                // (the DMA did not come: the rows left, by hand)
+        }
         for (int j = 0; j < h; ++j, row += _width) { std::fill_n(row, w, color); psramPace(w); }
     }
     void drawIndexedBitmap(int16_t x, int16_t y, uint8_t *bitmap, uint16_t *color_index, int16_t w, int16_t h, int16_t x_skip = 0) override { if (lazy) canvasEnsureRows(y, h); touch(x, y, w, h); Arduino_Canvas::drawIndexedBitmap(x, y, bitmap, color_index, w, h, x_skip); }

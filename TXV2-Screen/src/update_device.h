@@ -151,7 +151,11 @@ static void updFetchFile(ldrc::Work &w) {
     if (!f) { w.error = "the screen's card would not take it"; updHangUp(); return; }
     uint32_t crc = 0;
     const uint32_t reading = millis();
-    const bool got = updRead(len, w.error, [&](const uint8_t *b, size_t n) { crc = ldrc::crc32(b, n, crc); const uint32_t t = micros(); const bool ok = f.write(b, n) == n; updCardUs += micros() - t; return ok; });
+    const bool got = updRead(len, w.error, [&](const uint8_t *b, size_t n) {
+        crc = ldrc::crc32(b, n, crc); const uint32_t t = micros(); const size_t k = f.write(b, n); updCardUs += micros() - t;
+        if (k != n) { char d[72]; snprintf(d, sizeof d, "the screen's card would not take it (took %u of %u bytes at %lu, errno %d)", (unsigned) k, (unsigned) n, (unsigned long) updProgress, (int) errno); w.error = d; }   // (1.11.127) which write, and why: every big file's first write failed once on 26 Oct, the retry took it
+        return k == n;
+    });
     f.close();
     updReadMs += millis() - reading;
     if (got && crc != updJob.crc) { w.error = "what arrived is not what the list names"; }
