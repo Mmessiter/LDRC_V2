@@ -59,7 +59,10 @@ static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void 
     if (dmaEofUs) {
         const uint32_t gap = now - dmaEofUs;
         if (gap < dmaGapMin) dmaGapMin = gap; if (gap > dmaGapMax) dmaGapMax = gap;
-        if (gap >= 60000 && gap < 2000000) { dmaHuge++; dmaHugeAll++; }   // (1.11.128) two frames and more between EOFs: the panel held, not a stopped engine (ringTick restarts that after 150 ms)
+        if (gap >= 60000 && gap < 2000000) {           // (1.11.128) two frames and more between EOFs: the panel held, not a stopped engine (ringTick restarts that after 150 ms)
+            dmaHuge++; dmaHugeAll++;
+            if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = 65535; e.what = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1; e.seen = busySeen; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }   // (us 65535 = a gap of 60 ms and more; the gap itself in dmaGapMax)
+        }
         if (gap > 20000 && gap < 60000) {              // (a frame's gap - 28.9 ms on the twin, 43.1 on the CrowPanel - not a stopped engine's or a restart's)
             if (!dmaGapBase16) { dmaGapBase16 = gap * 16; dmaGapBase = gap; }
             else {                                     // the base follows the usual gap slowly (one early stamp must not set it for good: it did, 28859 against 28920)
@@ -74,11 +77,11 @@ static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void 
                     if (seen & BUSY_MOVERS) { for (int i = 0; i < BUSY_N; ++i) if ((seen & BUSY_MOVERS) & (1u << i)) { slipwPos[i] += pos; slipwFr[i]++; } }
                     else { slipwIdlePos += pos; slipwIdleFr++; }
                 }
-                if (d >= dmaSlipwUs && d < 20000) {
+                if (d >= dmaSlipwUs) {                     // (1.11.128: the huge ones too - logged with their size, up to 65534 us)
                     const uint8_t w = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1;
                     slipwN[w]++; slipwSum[w] += (uint32_t) d;
                     for (int i = 0; i < BUSY_N; ++i) if (seen & (1u << i)) slipwSeenN[i]++;
-                    if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = (uint16_t) d; e.what = w; e.seen = seen; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }
+                    if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = (uint16_t) (d > 65534 ? 65534 : d); e.what = w; e.seen = seen; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }
                 }
                 if (d > (int32_t) DMA_SLIP_US && d < 20000) { const uint32_t s = (uint32_t) d; dmaSlips++; dmaSlipsAll++; dmaSlipSum += s; if (s > dmaSlipMax) dmaSlipMax = s; }   // (a whole frame more is an EOF interrupt missed, not a slip)
                 if (d >= 20000) { dmaHuge++; dmaHugeAll++; }   // (1.11.128) ... or the panel held for most of a frame: counted apart, no longer dropped

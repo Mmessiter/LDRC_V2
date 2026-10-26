@@ -18,13 +18,15 @@
 #include "busy_what.h"                               // (25 Oct evening) the tag the EOF interrupt reads at a slip
 
 static uint32_t paceCount = 0, paceAt = 0, paceRests = 0;
+static uint32_t paceQuantumPx = 6400;                     // (bench, 26 Oct: /stall?kind=pacepx&kb=px - a shorter burst between rests, the rest scaled with it: the same duty, a smaller bite out of the panel)
+static uint32_t paceRestOverride = 0;                     // (bench, 26 Oct: /stall?kind=rest&kb=us - the rest after each quantum instead of the board's; 0 = the board's)
 static inline void psramPace(uint32_t px) {
-    const uint32_t rest = board->psramRestUs;
+    const uint32_t rest = paceRestOverride ? paceRestOverride : board->psramRestUs;
     if (!rest) return;
     const uint32_t now = micros();
     if (now - paceAt > rest) paceCount = 0;               // (idle since the last call: the bus has had its rest)
     paceAt = now;
-    if ((paceCount += px) >= 6400) { { Busy r(BUSY_REST); delayMicroseconds(rest); } paceCount = 0; paceAt = micros(); paceRests++; }
+    if ((paceCount += px) >= paceQuantumPx) { { Busy r(BUSY_REST); delayMicroseconds(paceQuantumPx >= 6400 ? rest : rest * paceQuantumPx / 6400); } paceCount = 0; paceAt = micros(); paceRests++; }
 }
 
 // THE GENTLE WRITE-BACK (25 Oct 2026). The panel's DMA reads the PSRAM; what the CPU drew sits in the cache until written

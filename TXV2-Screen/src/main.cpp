@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.128"
+#define SCREEN_VERSION "1.11.129"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -239,6 +239,7 @@ static PresentArea presentArea(int x, int y, int w, int h) {   // the part of th
     const bool over = topOn && topFb && y < topY + topH && y + h > topY && (ldrclayer::spans(x, w, topX, topX + topW) || (topTwin() && ldrclayer::spans(x, w, top2X, top2X + top2W)));
     return { x, y, w, h, over };
 }
+static bool spareSkip(int x, int y, int w, int h);     // (26 Oct, below flipTick) true: the spare is stale and this change is noted for the next compose
 static void present(int x, int y, int w, int h) {
     const PresentArea a = presentArea(x, y, w, h);
     if (a.w <= 0) return;
@@ -249,6 +250,7 @@ static void present(int x, int y, int w, int h) {
     for (int i = 0; i < (flipOk ? 3 : 1); ++i) {
         if (flipOk && (i == flipCanvas || !flipFb[i])) continue;
         if (flipOk && i == flipSpare && spareHoldsFlight) continue;   // (the flight spare is kept as it is)
+        if (flipOk && i == flipSpare && spareSkip(a.x, a.y, a.w, a.h)) continue;   // (26 Oct) a stale spare is left alone: this change joins what the next compose must cover
         uint16_t *dst = flipOk ? flipFb[i] : screenFb;
         copyRows(dst, a.x, a.y, a.w, a.h, a.over, wbDone);
     }
@@ -313,11 +315,22 @@ static int flipCompRow = 0;
 static uint32_t flipComposeUs = 0, flipAskedMs = 0, flipComposeMax = 0, flipWaitMax = 0, flipSyncN = 0;
 static Rect16 flipBig = { 0, 0, 0, 0 }, flipStale = { 0, 0, 0, 0 };
 static int flipStaleRow = 0;                           // rows of flipStale already brought up to date
+// (26 Oct 2026) THE EAGER SYNC IS OFF: after a flip the spare lagged by the whole page and flipTick copied it up, 8 rows every
+// 2 ms, for 120 ms - 768 kB through the CPU's cache right after a page change, and each slice's write-back shifted the new
+// picture a little (Malcolm: pages with a picture "flicker for the half second after moving to that screen"; text pages hide
+// the same shifts). The spare is now left stale: every present that would have gone to it joins its rectangle to flipStale
+// instead, and the next big change composes the union, as it always did for a stale spare. Bench: /stall?kind=sync&kb=1.
+static bool flipSyncOn = false;
 static Rect16 rectJoin(const Rect16 &a, const Rect16 &b) {
     if (a.w <= 0 || a.h <= 0) return b;
     if (b.w <= 0 || b.h <= 0) return a;
     const int x = min(a.x, b.x), y = min(a.y, b.y), x1 = max(a.x + a.w, b.x + b.w), y1 = max(a.y + a.h, b.y + b.h);
     return { (int16_t) x, (int16_t) y, (int16_t) (x1 - x), (int16_t) (y1 - y) };
+}
+static bool spareSkip(int x, int y, int w, int h) {   // (26 Oct) with the eager sync off, a stale spare is left alone: the change joins what the next compose must cover
+    if (flipSyncOn || flipStale.w <= 0) return false;
+    flipStale = rectJoin(flipStale, { (int16_t) x, (int16_t) y, (int16_t) w, (int16_t) h }); flipStaleRow = 0;
+    return true;
 }
 static void flipTick() {
     Busy busy_(BUSY_FLIP);
@@ -381,7 +394,7 @@ static void flipTick() {
         lastCatchUpUs = micros();
         return;
     }
-    if (flipStale.w > 0 && flipStaleRow < flipStale.h && !spareHoldsFlight) {   // a few rows a pass: the spare catches up with the one on show, unseen
+    if (flipSyncOn && flipStale.w > 0 && flipStaleRow < flipStale.h && !spareHoldsFlight) {   // a few rows a pass: the spare catches up with the one on show, unseen (off since 26 Oct: see flipSyncOn)
         lastCatchUpUs = nowUs;
         const int rows = min(8, flipStale.h - flipStaleRow), y = flipStale.y + flipStaleRow, x = flipStale.x, w = flipStale.w;   // (1.11.119: eight rows a slice, was sixteen - 51 kB through the bus in one go)
         uint16_t *spare = flipFb[flipSpare]; const uint16_t *from = flipFb[flipShown];
@@ -2742,6 +2755,9 @@ static void webBegin() {
         else if (kind == "copy") { uint8_t *a = (uint8_t *) ps_malloc((size_t) kb * 1024), *c = (uint8_t *) ps_malloc((size_t) kb * 1024); if (!a || !c) ok = false; else { memset(a, 1, (size_t) kb * 1024); const uint32_t t0 = micros(); memcpy(c, a, (size_t) kb * 1024); us = micros() - t0; } if (a) free(a); if (c) free(c); }   // PSRAM to PSRAM at full speed
         else if (kind == "flash") { uint8_t *m = (uint8_t *) heap_caps_malloc(4096, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); const esp_partition_t *p = esp_ota_get_running_partition(); if (!m || !p) ok = false; else { const uint32_t t0 = micros(); for (size_t off = 0; off + 4096 <= (size_t) kb * 1024 && off + 4096 <= p->size; off += 4096) esp_partition_read(p, off, m, 4096); us = micros() - t0; } if (m) free(m); }   // the flash read straight (not through the cache), 4 kB a transaction: the bus the PSRAM shares
         else if (kind == "dmacopy") { prefs.putInt("dmacopy", kb != 0 ? 1 : 0); ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra); }   // the DMA copy on/off, now and at the next start
+        else if (kind == "pacepx") { if (kb >= 400 && kb <= 64000) paceQuantumPx = (uint32_t) kb; us = paceQuantumPx; }   // (26 Oct) the pacing's burst between rests, in pixels (src/psram_pace.h)
+        else if (kind == "sync") { flipSyncOn = kb != 0; flipStaleRow = 0; us = flipSyncOn; }   // (26 Oct) the spare's eager catch-up after a flip: 1 = as before, 0 = left stale until the next compose
+        else if (kind == "rest") { if (kb >= 0 && kb <= 20000) paceRestOverride = (uint32_t) kb; us = paceRestOverride ? paceRestOverride : board->psramRestUs; }   // (26 Oct) the pacing's rest after each quantum, us (0 = the board's)
         else ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra);   // (26 Oct) m2m, m2mp, m2mrows, wbnop, lcdpri, dcstat - or an unknown kind (src/dma_copy.h)
         char b[460]; snprintf(b, sizeof b, "{\"kind\":\"%s\",\"kb\":%d,\"us\":%lu,\"ok\":%d,\"slips\":%lu,\"huge\":%lu,\"pos\":%lu,\"fr\":%lu,\"dmax\":%ld%s}", kind.c_str(), kb, (unsigned long) us, ok ? 1 : 0,
                  (unsigned long) (dmaSlipsAll - slips0), (unsigned long) (dmaHugeAll - huge0), (unsigned long) dmaProbePos, (unsigned long) dmaProbeFr, (long) dmaProbeMax, extra);

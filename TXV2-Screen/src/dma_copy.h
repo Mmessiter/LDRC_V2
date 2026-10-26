@@ -38,6 +38,8 @@
 static gdma_channel_handle_t dcTx = nullptr, dcRx = nullptr;
 static int dcTxCh = -1, dcRxCh = -1, dcLcdCh = -1;
 static const int DC_DESC_N = 32;                       // rows a start: 32 full rows = 51 kB, ~2 ms
+static int dcRowsPerStart = DC_DESC_N;                 // (bench: /stall?kind=dcrows&kb=N - fewer rows a start, a breath for the panel between)
+static uint32_t dcBlock = 64, dcBurst = 1;             // (bench: dcblock&kb=16|32|64 the PSRAM block of our channels; dcburst&kb=0|1 their data bursts)
 static const uint32_t DC_LCD_PRI = 5;                  // the panel's channel: above ours (0)
 static dma_descriptor_t *dcTxD = nullptr, *dcRxD = nullptr;
 static volatile bool dcDone = true;
@@ -101,7 +103,7 @@ static bool dmaCopyRows(uint16_t *dst, const uint16_t *src, int x0, int x1, int 
     const size_t bytes = (size_t) (x1 - x0) * 2;
     if (bytes > 4032) return false;
     for (int r = y; r < y + h; ) {
-        const int n = min(DC_DESC_N, y + h - r);
+        const int n = min(dcRowsPerStart, y + h - r);
         for (int i = 0; i < n; ++i) dcDesc(i, dst + (r + i) * W + x0, src + (r + i) * W + x0, bytes, i == n - 1);
         if (!dcRun(n)) return false;
         dcRows += n; r += n;
@@ -115,7 +117,7 @@ static bool dmaFillRows(uint16_t *dst, const uint16_t *srcRow, int x0, int x1, i
     const size_t bytes = (size_t) (x1 - x0) * 2;
     if (bytes > 4032) return false;
     for (int r = y; r < y + h; ) {
-        const int n = min(DC_DESC_N, y + h - r);
+        const int n = min(dcRowsPerStart, y + h - r);
         for (int i = 0; i < n; ++i) dcDesc(i, dst + (r + i) * W + x0, srcRow, bytes, i == n - 1);
         if (!dcRun(n)) return false;
         dcRows += n; r += n;
@@ -154,8 +156,15 @@ static bool dcBuffers() {
 // The bench probes. `kb` is kilobytes for m2m/m2mp, rows for m2mrows/m2mcanvas, thousands of operations for wbnop, the priority for lcdpri.
 static bool dmaCopyProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN) {
     extra[0] = 0;
-    if (kind == "lcdpri") { if (dcLcdCh < 0 || kb < 0 || kb > 15) return false; gdma_ll_tx_set_priority(&GDMA, dcLcdCh, (uint32_t) kb); us = kb; return true; }
+    if (kind == "lcdpri") {                            // the panel channel's priority, with or without our pair
+        if (dcLcdCh < 0) { int id = -1; if (ringDma && gdma_get_channel_id(ringDma, &id) == ESP_OK && id >= 0) dcLcdCh = id; }
+        if (dcLcdCh < 0 || kb < 0 || kb > 15) return false;
+        gdma_ll_tx_set_priority(&GDMA, dcLcdCh, (uint32_t) kb); us = kb; return true;
+    }
     if (kind == "dmacopy") { dcOn = kb != 0; if (dcOn) dmaCopyInit(); us = dcOn; snprintf(extra, extraN, ",\"why\":\"%s\"", dcWhy); return true; }   // the A/B at run time: 0 = every copy by the CPU, as 1.11.125 (main.cpp keeps it in the pref)
+    if (kind == "dcrows") { if (kb >= 1 && kb <= DC_DESC_N) dcRowsPerStart = kb; us = dcRowsPerStart; return true; }
+    if (kind == "dcburst") { if (dcTxCh < 0) return false; dcBurst = kb != 0; gdma_ll_tx_enable_data_burst(&GDMA, dcTxCh, dcBurst); gdma_ll_rx_enable_data_burst(&GDMA, dcRxCh, dcBurst); us = dcBurst; return true; }
+    if (kind == "dcblock") { if (dcTxCh < 0 || (kb != 16 && kb != 32 && kb != 64)) return false; dcBlock = kb; const uint32_t ix = kb == 64 ? GDMA_LL_EXT_MEM_BK_SIZE_64B : kb == 32 ? GDMA_LL_EXT_MEM_BK_SIZE_32B : GDMA_LL_EXT_MEM_BK_SIZE_16B; gdma_ll_tx_set_block_size_psram(&GDMA, dcTxCh, ix); gdma_ll_rx_set_block_size_psram(&GDMA, dcRxCh, ix); us = kb; return true; }
     if (kind == "dcstat") {
         snprintf(extra, extraN, ",\"why\":\"%s\",\"tx\":%d,\"rx\":%d,\"lcd\":%d,\"copies\":%lu,\"rows\":%lu,\"eofs\":%lu,\"timeouts\":%lu,\"us_max\":%lu,\"align\":%lu,\"fb\":[%lu,%lu,%lu],\"canvas\":%lu,\"lcdpri\":%u",
                  dcWhy, dcTxCh, dcRxCh, dcLcdCh, (unsigned long) dcCopies, (unsigned long) dcRows, (unsigned long) dcEofs, (unsigned long) dcTimeouts, (unsigned long) dcUsMax, (unsigned long) dcAlign,
