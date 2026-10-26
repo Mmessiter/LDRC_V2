@@ -390,6 +390,7 @@ struct ScreenHost : public ldrc::UpdateHost {
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
     bool reject() override { flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // comes back only if there is nothing to go back to
     void restart() override { flushOut(); delay(200); ESP.restart(); }
+    void beforeFreshStart(const std::string &kind) override { (void) kind; prefs.putInt("stripskip", 1); }   // (1.11.134) the install's fresh start runs without the strips (src/strip_feed.h): the install path exactly as proven before them; the restart after the install brings them back
     uint32_t roomForTls() override { return (uint32_t) ESP.getMaxAllocHeap(); }
     void fetchBegins() override { updAskMs = 0; updReadMs = 0; updCardUs = 0; updCheckMs = 0; updFreeMs = 0; updFiles = 0; updRssiSum = 0; updRssiMin = 0; }
     std::string fetchNotes() override {                     // (1.11.93) "where the time went: ..." (see updAskMs)

@@ -17,6 +17,9 @@ static uint32_t hostClockMs = 0;                           // (1.11.89) the cloc
 static inline uint32_t millis() { return hostClockMs; }
 static inline uint32_t micros() { return hostClockMs * 1000; }
 static inline void *ps_malloc(size_t n) { return malloc(n); }
+static int stripWant = 0; static bool stripOn = false, stripArm = false, ringOn = false; static inline bool stripBegin() { return false; }   // (26 Oct evening: the strips - none on the Mac)
+static bool stripStopWanted = false; static inline void stripRelease() {}   // (the strips stand down for the update page - none on the Mac)
+static bool updShowing();                                        // (own.h defines it: the update page)
 static inline bool clipDropOne() { return false; }                 // (1.11.133: the screen lets a cached sound clip go for room; none here)
 static inline void *heap_caps_malloc(size_t n, unsigned) { return malloc(n); }   // (1.11.120: the picture's slab buffer, internal memory on the screen)
 #define MALLOC_CAP_INTERNAL 0

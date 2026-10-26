@@ -38,6 +38,7 @@
 #include "hal/lcd_ll.h"
 #include "soc/lcd_cam_struct.h"
 #include "soc/gdma_struct.h"
+static void IRAM_ATTR stripFrameEnd(bool late); static void IRAM_ATTR stripStartNow(); static void IRAM_ATTR stripResync();   // (26 Oct evening) src/strip_feed.h, included after: the panel on internal RAM
 
 static FlipNode *flipChain[3] = { nullptr, nullptr, nullptr };   // a ring per panel buffer; [0] is the driver's own chain
 static volatile int8_t ringPending = -1;               // the ring on show points at this buffer's ring: the DMA follows it at the frame's end
@@ -109,6 +110,7 @@ static bool ringEnsure() {                             // (from the loop) a ring
 }
 // The driver's own restart, with the engine told to chain the frames (latched by this lcd_ll_start) - from the ring on show.
 static void IRAM_ATTR ringRestart() {
+    if (stripOn) { stripStartNow(); return; }          // (the strips: their ring, from slot 0)
     if (!ringDma || !flipChain[flipShown]) return;
     lcd_ll_enable_auto_next_frame(&LCD_CAM, true);
     gdma_reset(ringDma); lcd_ll_stop(&LCD_CAM); lcd_ll_fifo_reset(&LCD_CAM);
@@ -169,12 +171,13 @@ static void IRAM_ATTR ringResync(uint8_t want) {
     ringStartUs = (uint32_t) esp_timer_get_time();
 }
 static volatile uint32_t ringResyncs = 0, ringSkipped = 0, ringOutN = 0;
-static void IRAM_ATTR ringHealNow() { ringResync(flipShown); ringHeals++; }
+static void IRAM_ATTR ringHealNow() { if (stripOn) stripResync(); else ringResync(flipShown); ringHeals++; }
 // At the frame's end (before quietFrameEnd moves frameAtUs on, and in place of flipFrameEnd's descriptor move).
 static void IRAM_ATTR ringFrameEnd() {
     if (ringArm) { ringArm = false; ringRestart(); ringOn = true; ringWhy = "on"; ringStarts++; ringLogN = 0; return; }   // the change-over
     if (!ringOn) return;
     if (ringHealAsk) { ringHealAsk = false; ringHealNow(); return; }   // (the loop saw the EOFs stop)
+    if (stripArm) { stripFrameEnd(false); ringStarts++; return; }   // (26 Oct evening) the strips' change-over: their ring from here on
     const uint32_t now = (uint32_t) esp_timer_get_time();
     // How long after its frame's end this callback runs: from the callback before (late1 - its own latency in it: two late
     // ones running fooled it, 25 Oct 11:50) and from the phase tracker (lateP): the later of the two.
@@ -216,7 +219,7 @@ static void IRAM_ATTR ringFrameEnd() {
         }
         ringLastOn = on; ringLastIdx = idx;
         if (idx > ringWinIdxMax) ringWinIdxMax = idx;
-        if (!(on == flipShown && idx >= 0 && idx <= headMax)) { ringOutN++; ringWinOut++; }
+        if (!stripOn && !(on == flipShown && idx >= 0 && idx <= headMax)) { ringOutN++; ringWinOut++; }   // (the strips' ring is not one of these: not out of step)
     }
     bool far = false;
     if (dmaWatchOn) {                                  // the EOF rule: counted (eof_off), logged (ev), and the far rule
@@ -231,6 +234,7 @@ static void IRAM_ATTR ringFrameEnd() {
     if (late) { ringLateN++; ringSkipped++; ringWinSkipped++; return; }   // (the blank may be over: the DMA runs on, chained; the next frame end)
     if (far) { if (++ringFarN >= RING_FAR_N) { ringEvent(3, now, off, late1, lateP, idx); ringRestart(); ringRestarts++; return; } }   // (re-synced RING_FAR_N times and still far: the engine's phase moved)
     else ringFarN = 0;
+    if (stripOn) { stripFrameEnd(false); ringResyncs++; ringWinResyncs++; return; }   // (26 Oct evening) the strips' ring back at slot 0; the flip is theirs (at strip 59)
     uint8_t want = flipWant;
     if (!flipChain[want]) want = flipShown;
     ringResync(want); ringResyncs++; ringWinResyncs++;

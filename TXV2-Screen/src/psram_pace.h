@@ -19,10 +19,11 @@
 
 static uint32_t paceCount = 0, paceAt = 0, paceRests = 0;
 static uint32_t paceQuantumPx = 6400;                     // (bench, 26 Oct: /stall?kind=pacepx&kb=px - a shorter burst between rests, the rest scaled with it: the same duty, a smaller bite out of the panel)
+static bool stripOn = false; static volatile bool stripArm = false;   // (26 Oct evening) src/strip_feed.h: the panel reads internal RAM - no pacing needed while it does
 static uint32_t paceRestOverride = 0;                     // (bench, 26 Oct: /stall?kind=rest&kb=us - the rest after each quantum instead of the board's; 0 = the board's)
 static inline void psramPace(uint32_t px) {
     const uint32_t rest = paceRestOverride ? paceRestOverride : board->psramRestUs;
-    if (!rest) return;
+    if (!rest || stripOn) return;
     const uint32_t now = micros();
     if (now - paceAt > rest) paceCount = 0;               // (idle since the last call: the bus has had its rest)
     paceAt = now;
@@ -45,7 +46,7 @@ static uint32_t wbPieceBytes = 256, wbGapUs = 8, wbCleanCy = 0;   // (bench: /st
 static volatile uint32_t wbPieces = 0, wbSlow = 0, wbCyMin = 0xFFFFFFFF, wbCyMax = 0;
 static inline void wbPaced(uint32_t addr, uint32_t len) {
     Busy busy_(BUSY_WB);
-    if (!board->psramRestUs || len <= 2 * wbPieceBytes) { Cache_WriteBack_Addr(addr, len); return; }
+    if (!board->psramRestUs || stripOn || len <= 2 * wbPieceBytes) { Cache_WriteBack_Addr(addr, len); return; }
     for (uint32_t off = 0; off < len; off += wbPieceBytes) {
         const uint32_t n = len - off < wbPieceBytes ? len - off : wbPieceBytes;
         const uint32_t c0 = xthal_get_ccount();

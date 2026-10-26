@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.133"
+#define SCREEN_VERSION "1.11.134"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -147,6 +147,8 @@ template struct PanelRob<RgbPanelTag, &Arduino_ESP32RGBPanel::_rgb_panel>;
 #include "dma_watch.h"                                 // (25 Oct 2026: the panel's DMA met its EOF late = the picture slipped; /perf "dma")
 #include "frame_ring.h"                                // (25 Oct 2026: the frames chained by the hardware, no restart by software; /status "ring")
 #include "dma_copy.h"                                  // (26 Oct 2026, bench: a GDMA memory-to-memory copy into the panel's buffers - no cache write-backs; /stall m2m, m2mrows, lcdpri)
+#include "strip_feed.h"                                // (26 Oct 2026, evening: the panel reads internal RAM, fed by a DMA copy from the PSRAM picture; pref "strips", /status "strips")
+static bool updShowing();                              // (update_device.h, included later: the strips stand down while the update page is up)
 #include "layer_rows.h"                                // (1.11.94: the panel's rows with our layer over one or two stretches, host-tested: hmi/test_film)
 static bool IRAM_ATTR onFrameEnd(esp_lcd_panel_handle_t, esp_lcd_rgb_panel_event_data_t *, void *) { dmaFrameTick(); dmaSpin(); ringFrameEnd(); quietFrameEnd(); flipFrameEnd(); return false; }
 static void hookFrameEnd() {
@@ -335,6 +337,9 @@ static bool spareSkip(int x, int y, int w, int h) {   // (26 Oct) with the eager
 static void flipTick() {
     Busy busy_(BUSY_FLIP);
     ringTick();                                        // (25 Oct) the engine started again should the frames stop
+    if (stripOn && updShowing() && !stripStopWanted) stripStopWanted = true;   // (26 Oct, late) the update page: the strips stand down (their 19 kB of internal RAM to the secure connection)
+    stripRelease();
+    if (stripWant && ringOn && !stripOn && !stripArm && !stripStopWanted && !updShowing()) stripBegin();   // (26 Oct evening) the strips, once the ring runs (the pref "strips"), and back after the update page
     if (!flipOk) return;
     if (flipComposing) {                               // (the first test held the loop 59 ms for it: taps were missed) a few rows a pass
         const uint32_t t0 = micros();
@@ -442,6 +447,7 @@ static bool flipWholePage() {
     if (flipPending) { dirty(0, 0, W, H); return true; }
     return flipBigChange({ 0, 0, (int16_t) W, (int16_t) H });
 }
+static bool presentNoFlip = false, filmNoFlipWanted = false;   // (26 Oct evening, bench) a film's frames straight to the shown buffer instead of a compose and flip: /stall?kind=filmflip&kb=0 for the next film. MEASURED on the new twin: no better (7, 6 slips per 30 s against 8, 4), so the flip stays
 static void presentDirty(bool force = false) {
     Busy busy_(BUSY_PRESENT);
     flipTick();
@@ -470,7 +476,7 @@ static void presentDirty(bool force = false) {
         const Rect16 r = dirtyList[i];
         const uint32_t copyUs = (uint32_t) ((uint64_t) r.w * r.h * copyUsPerKpx / 1000) + 30;
         if (flipComposing || flipPending) { dirtyList[kept++] = r; continue; }   // (1.11.116) begun in this pass: the rest follow the flip
-        if (flipOk && (long) r.w * r.h >= 100000 && flipBigChange(r)) continue;   // (1.11.115) the twin: composed unseen, then flipped to
+        if (flipOk && !presentNoFlip && (long) r.w * r.h >= 100000 && flipBigChange(r)) continue;   // (1.11.115) the twin: composed unseen, then flipped to (not a film's frames: presentNoFlip)
         if (!force && now - firstDirtyMs < 60 && !beamClear(r.y, r.h, micros(), copyUs)) { dirtyList[kept++] = r; continue; }
         present(r.x, r.y, r.w, r.h); px += (uint32_t) r.w * r.h;
     }
@@ -2656,6 +2662,7 @@ static uint32_t quietUntil = 0; static bool quietBacklightOff = false, quietWifi
 static File uploadFile; static bool uploadGood = false; static uint32_t uploadBytes = 0;
 
 static std::string psramJson();                        // (1.11.132) defined after the device headers (it names their buffers)
+static bool filmProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN);   // (26 Oct evening, bench) src/film_device.h: a film played from the bench, stopped, its frames through the flip or not
 static void webBegin() {
     web.on("/status", HTTP_GET, []() {                   // (the one page that answers when the workshop door is shut)
         char b[520]; snprintf(b, sizeof(b), "{\"fw\":\"" SCREEN_VERSION "\",\"door\":%s,\"door_kept\":%s,\"tx\":%d,\"flying\":%d,\"rx\":{\"phase\":%d,\"why\":%d,\"outcome\":%d,\"release\":\"%lX\",\"wanted\":\"%lX\",\"left\":%lu,\"flags\":%lu,\"age\":%ld},\"page\":\"%s\",\"id\":%d,\"cmds\":%lu,\"odd\":%lu,\"minheap\":%u,\"heap\":%u,\"psram\":%u,\"sd\":%d,\"touch\":%d,\"ip\":\"%s\",\"audio\":%d,\"boot\":%lu,\"up\":%lu}",
@@ -2678,6 +2685,7 @@ static void webBegin() {
         out += ringStatusJson();
         out += ","; dmaCopyJson(out);                      // (1.11.126) the DMA copy: on, copies, rows, timeouts, the panel channel's priority
         out += ","; xipJson(out);                          // (1.11.131) the code in the PSRAM: mode, pages, ms, strikes, why
+        out += ","; stripJson(out);                        // (26 Oct evening) the strips: on, frames, fills, late
         out += ","; out += psramJson();                   // (1.11.132) the PSRAM's holders: largest free block, resident pictures of the most allowed, the floor's evictions, the layer, the model picture, the film
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
@@ -2770,6 +2778,8 @@ static void webBegin() {
         else if (kind == "dmacopy") { prefs.putInt("dmacopy", kb != 0 ? 1 : 0); ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra); }   // the DMA copy on/off, now and at the next start
         else if (kind == "xip") { const int want = kb < -1 ? -1 : kb > 2 ? 2 : kb; prefs.putInt("xip", want); prefs.putInt("xipbad", 0); us = xipMode; snprintf(extra, sizeof extra, ",\"want\":%d,\"now\":\"%s\"", want, xipWhy); }   // (1.11.131) the code in the PSRAM at the NEXT start: -1 the board's choice, 0 off, 1 the code, 2 the code and its constants (the strikes forgiven)
         else if (kind == "mmu") { us = xipMode; xipMmuWords(kb > 0 ? kb : 32, extra, sizeof extra); }   // (1.11.131) the MMU's first N entries, hex (8xxx = a PSRAM page)
+        else if (kind == "strips") { const int want = kb < -1 ? -1 : kb > 1 ? 1 : kb; prefs.putInt("strips", want); prefs.putInt("stripbad", 0); us = stripOn; snprintf(extra, sizeof extra, ",\"want\":%d,\"why\":\"%s\"", want, stripWhy); }   // (1.11.134) the strips at the next start: -1 the board's choice, 0 off, 1 on (the strikes forgiven)
+        else if (kind == "film" || kind == "filmstop" || kind == "filmflip") ok = filmProbe(kind, kb, us, extra, sizeof extra);   // (26 Oct evening) film&kb=N plays the list's Nth film on the bench, filmstop ends it (us = pictures shown), filmflip&kb=1 sends its frames through the flip
         else if (kind == "pacepx") { if (kb >= 400 && kb <= 64000) paceQuantumPx = (uint32_t) kb; us = paceQuantumPx; }   // (26 Oct) the pacing's burst between rests, in pixels (src/psram_pace.h)
         else if (kind == "sync") { flipSyncOn = kb != 0; flipStaleRow = 0; us = flipSyncOn; }   // (26 Oct) the spare's eager catch-up after a flip: 1 = as before, 0 = left stale until the next compose
         else if (kind == "rest") { if (kb >= 0 && kb <= 20000) paceRestOverride = (uint32_t) kb; us = paceRestOverride ? paceRestOverride : board->psramRestUs; }   // (26 Oct) the pacing's rest after each quantum, us (0 = the board's)
@@ -3243,7 +3253,7 @@ static void audioStart(int id, bool loopIt) {
         uint8_t *buf = (uint8_t *) psMallocRoom(audioDataSize);
         if (buf) {
             uint32_t got = 0;
-            while (got < audioDataSize) { const int n = audioFile.read(buf + got, min((uint32_t) 4096, audioDataSize - got)); if (n <= 0) break; got += n; }
+            while (got < audioDataSize) { const int n = audioFile.read(buf + got, min((uint32_t) 4096, audioDataSize - got)); if (n <= 0) break; got += n; psramPace((uint32_t) n); }   // (26 Oct evening: paced into the PSRAM, as every other card read)
             audioFile.close();
             if (got == audioDataSize) { clipAdd(id, buf, audioDataSize); if (Clip *c = clipFind(id)) { curClip = c; curPos = 0; audioPlaying = true; audioFill(); return; } }
             free(buf);
@@ -3455,7 +3465,26 @@ void setup() {
     if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) { gfx = canvas; fbNow = canvas->getFramebuffer(); canvas->fillScreen(0); } else fbNow = screenFb;
     pageFb = fbNow;
     if (flipOk && pageFb && pageFb != screenFb && ((uintptr_t) pageFb & 63) == 0) { flipFb[2] = pageFb; canvas->lazy = true; }   // (the rotation is on)
-    dcOn = prefs.getInt("dmacopy", 0) != 0; dmaCopyInit();   // (1.11.128) the DMA copy of 1.11.126 is OFF unless the pref says so (Malcolm, 26 Oct: more flicker on the desk than it cured, the bench's counters blind to it); /stall?kind=dmacopy&kb=1 for the bench
+    dcOn = prefs.getInt("dmacopy", 0) != 0; dmaCopyInit();
+    {   // (1.11.134) THE STRIPS (src/strip_feed.h): the pref "strips" (-1 the board's choice = the twin; 0 off; 1 on). A start that armed
+        // them and died by a panic or a watchdog before 20 s counts a strike (prefs striparm/stripbad); two turn them off until the pref is
+        // set again (/stall?kind=strips) or the next firmware version (stripver).
+        if (prefs.getString("stripver", "") != SCREEN_VERSION) { prefs.putString("stripver", SCREEN_VERSION); prefs.putInt("stripbad", 0); }
+        int strikes = prefs.getInt("stripbad", 0);
+        if (prefs.getInt("striparm", 0)) {
+            const esp_reset_reason_t r = esp_reset_reason();
+            if (r == ESP_RST_PANIC || r == ESP_RST_INT_WDT || r == ESP_RST_TASK_WDT) prefs.putInt("stripbad", ++strikes);
+            prefs.putInt("striparm", 0);
+        }
+        stripStrikes = strikes;
+        const int want = prefs.getInt("strips", -1);
+        stripWant = want < 0 ? (board->psramRestUs != 0 ? 1 : 0) : want;
+        const bool skip = prefs.getInt("stripskip", 0) != 0; if (skip) prefs.putInt("stripskip", 0);   // (the updater's fresh start before an install: this one start without them)
+        if (strikes >= 2) { stripWant = 0; stripWhy = "off (two early crashes)"; }
+        else if (skip && stripWant) { stripWant = 0; stripWhy = "off (the update's fresh start)"; }
+        else if (!stripWant) stripWhy = want < 0 ? "off (board)" : "off (pref)";
+        else { prefs.putInt("striparm", 1); stripArmed = true; }
+    }   // (1.11.128) the DMA copy of 1.11.126 is OFF unless the pref says so (Malcolm, 26 Oct: more flicker on the desk than it cured, the bench's counters blind to it); /stall?kind=dmacopy&kb=1 for the bench
     blog("boot", std::string("dmacopy ") + dcWhy);
     if (prefs.getInt("ring", 1)) ringSet(true); else ringWhy = "off (pref)";   // (25 Oct) the frames chained by the hardware from here on (src/frame_ring.h); /look?key=ring&val=0 keeps the driver's own restarts
     blog("boot", std::string("ring ") + ringWhy);
@@ -3528,7 +3557,7 @@ void loop() {
     { Busy b(BUSY_SERIAL); pumpSerial(); } { Busy b(BUSY_LINK); linkPoll(); updPoll(); } { Busy b(BUSY_WIFI); wifiPoll(); } { Busy b(BUSY_PICS); picPoll(); }
     { Busy b(BUSY_FLIGHT); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); } { Busy b(BUSY_FILM); filmPoll(); } { Busy b(BUSY_WIFI); blPoll(); blePoll(); } { Busy b(BUSY_CLI); cliPoll(); } PHASE(0)   // (25 Oct evening: Busy tags = who slipped the panel, /perf "slipw")
     { Busy b(BUSY_AUDIO); audioFill(); if (!teensyLink.running() && !(benchSkip & 4)) audioWarm(); } PHASE(1)
-    { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running()) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
+    { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running()) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } if (stripArmed && now > 20000 && !teensyLink.running()) { stripArmed = false; nvsQuiet([&] { prefs.putInt("striparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
     { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && (clipDropOne() || bgEvictOne())) psramEvictions++; } }   // (1.11.132/133: clips first) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
     { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)
     { Busy b(BUSY_TIMERS); pollTimers(); } PHASE(4)

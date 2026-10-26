@@ -78,6 +78,8 @@ static int awakes() { int n = 0; size_t at = 0; while ((at = sentToTeensy.find("
 static void audioStop() { audioId = -1; audioPath.clear(); }
 static uint32_t filmDecodeUs = 0, filmDecodeMax = 0, filmPictures = 0, filmSkipped = 0, filmFadeSteps = 0, filmFadeMax = 0;
 static void psramPace(uint32_t) {}                      // (1.11.116: the twin's rests between the big PSRAM moves - nothing here)
+static bool presentNoFlip = false, filmNoFlipWanted = false;   // (main.cpp: a film's frames skip the flip)
+static size_t sdReadPaced(File &f, uint8_t *d, size_t n) { const int r = f.read(d, n); return r < 0 ? 0 : (size_t) r; }   // (the screen reads the card in paced slabs)
 #include "@DEV@"
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)

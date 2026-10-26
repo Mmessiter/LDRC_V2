@@ -419,6 +419,7 @@ void Updater::freshStart(const std::string &kind) {
     st += "resume=" + kind + "\n" + "descr=" + descrUrl_ + "\n" + std::string("again=") + (again_ ? "1" : "0") + "\n" + std::string("choosing=") + (choosing_ ? "1" : "0") + "\n";
     st += "count=" + num((uint32_t) (freshCount_ + 1)) + "\n";   // (1.11.121: how many for this press, this one included)
     host_.writeText(STATE_FILE, st);
+    host_.beforeFreshStart(kind);
     show(UpdView::WORKING, "Restarting the screen first"); line("Then it carries on by itself.");
     changing_ = false; freshKind_ = kind; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
 }

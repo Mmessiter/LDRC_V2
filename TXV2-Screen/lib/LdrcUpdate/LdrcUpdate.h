@@ -84,6 +84,7 @@ public:
     virtual void accept() = 0;
     virtual bool reject() = 0;                    // the previous firmware comes back (a restart); false: there is none to go back to
     virtual void restart() = 0;
+    virtual void beforeFreshStart(const std::string &kind) { (void) kind; }   // (1.11.134) a fresh start is coming for `kind` ("check" or "install"): the screen may note it (an install's start runs without the strips)
     // The largest piece of memory a new secure connection could get (bytes). After a Bluetooth session the memory is
     // in pieces, and a connection to messiter.com wants some 45 kB in one; the update then restarts the screen first
     // and goes on by itself (1.11.31). The default says "plenty".

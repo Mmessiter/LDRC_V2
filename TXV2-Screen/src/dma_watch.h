@@ -54,7 +54,10 @@ static volatile uint32_t dmaProbePos = 0, dmaProbeFr = 0; static volatile int32_
 static volatile uint32_t dmaHuge = 0, dmaHugeAll = 0;    // (1.11.128) EOF gaps of 60 ms and more, or 20 ms over the base: a frame the panel's DMA was held from for longer than a slip - the counters above never saw these (the DMA copy of 1.11.126)
 struct SlipW { uint16_t us; uint8_t what; uint32_t seen; uint32_t ms; };
 static SlipW slipwLog[SLIPW_LOG]; static volatile int slipwLogN = 0;
-static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void *) {
+static void IRAM_ATTR stripOnLcdEof();                   // (26 Oct evening) src/strip_feed.h: every slot's EOF while the strips run
+static void IRAM_ATTR dmaOnEofFrame();
+static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void *) { if (stripOn) stripOnLcdEof(); else dmaOnEofFrame(); return false; }   // (the one callback the driver allows: taken at boot, dispatched here)
+static void IRAM_ATTR dmaOnEofFrame() {
     const uint32_t now = (uint32_t) esp_timer_get_time();
     if (dmaEofUs) {
         const uint32_t gap = now - dmaEofUs;
@@ -89,7 +92,6 @@ static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void 
         }
     }
     dmaEofPrevUs = dmaEofUs; dmaEofUs = now;
-    return false;
 }
 static void dmaWatchStart(gdma_channel_handle_t ch) {
     if (!ch) return;

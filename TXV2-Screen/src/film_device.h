@@ -76,6 +76,7 @@ static bool filmUp() { return topOn && topWho == FILM_WHO; }
 static bool filmButtonUp() { return topOn && topWho == FILM_BTN_WHO; }
 static bool filmMenuUp() { return topOn && topWho == FILM_MENU_WHO; }
 static bool filmPlaying = false;
+static bool filmBench = false;                                   // (26 Oct evening) played from the bench: on any page, the safety as it is
 static bool filmAllowed() { const int f = flyingNow(); return f == 0 || f >= 3; }   // not 1 (the motor on) or 2 (the safety off)
 
 // The Help button just tapped (main.cpp, at the lift: its script "print "HelpView:EASY.TXT" ...")
@@ -272,7 +273,7 @@ static void filmFadeEnd() { if (filmFadeK >= 0) { filmFadeMove(256); filmFadeK =
 static const bool FILM_FADES = false;
 static bool filmDecode(int32_t k, bool play = false) {
     const uint32_t off = ldrcfilm::rd32(filmTable + 8 * k), size = ldrcfilm::sizeOf(filmTable, k);
-    if (!size || size > filmBufSize || !filmFile.seek(off) || filmFile.read(filmBuf, size) != (int) size) return false;
+    if (!size || size > filmBufSize || !filmFile.seek(off) || sdReadPaced(filmFile, filmBuf, size) != (size_t) size) return false;   // (26 Oct evening) the picture's bytes into the PSRAM in paced slabs, as the backgrounds since 1.11.120: one read of 20-80 kB slipped the panel about one picture in four
     uint16_t rx, ry, rw, rh; uint32_t jo;                     // (version 2: only the rectangle that changed, drawn where it belongs)
     if (!ldrcfilm::pictureAt(filmBuf, size, filmHead, rx, ry, rw, rh, jo)) return false;
     filmFadeEnd();                                              // (1.11.93: what comes next is drawn on the whole page)
@@ -290,7 +291,7 @@ static bool filmDecode(int32_t k, bool play = false) {
 
 static void filmStop(bool toMenu = false) {
     if (filmPlaying && audioId == FILM_AUDIO_ID) audioStop();
-    filmPlaying = false; filmPaused = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
+    filmPlaying = false; presentNoFlip = false; filmPaused = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
     filmFadeK = -1; free(filmFadeTo); filmFadeTo = nullptr;        // (1.11.93: 750 kB back)
     if (filmFile) filmFile.close();
     if (filmUp()) {
@@ -300,7 +301,7 @@ static void filmStop(bool toMenu = false) {
 }
 static bool filmStart() {
     filmStop();
-    if (!sdOk || !filmAllowed() || filmName.empty() || !topReady()) return false;
+    if (!sdOk || (!filmAllowed() && !filmBench) || filmName.empty() || !topReady()) return false;
     filmMenuDown = -1; filmMenuHeld = false;
     filmFile = SD.open(filmPath(".ldf").c_str());
     if (!filmFile) return false;
@@ -323,7 +324,7 @@ static bool filmStart() {
     if (!filmBuf) { filmFile.close(); return false; }
     filmBtnHeld = false;
     topX = 0; topY = 0; topW = W; topH = H; topWho = FILM_WHO; topOn = true;
-    filmLast = -1; filmPictures = filmSkipped = 0; filmDecodeMax = 0; filmFadeSteps = filmFadeMax = 0; filmPlaying = true;
+    filmLast = -1; filmPictures = filmSkipped = 0; filmDecodeMax = 0; filmFadeSteps = filmFadeMax = 0; filmPlaying = true; presentNoFlip = filmNoFlipWanted;   // (26 Oct evening, bench only: the frames straight to the shown buffer - main.cpp presentDirty)
     filmPaused = false; filmTapDeaf = false; filmCtlHeld = false; filmCtlDown = -1; filmStripKept = false; filmSeekWant = -1; filmSeekHeld = false;
     if (!filmDecode(0)) { filmStop(); return false; }          // the first picture before the sound, so they start together
     dirty(0, 0, W, H); touchPainted = true;                    // (1.11.94) all of it shown: only what differed from the layer's old picture was marked, and the help page showed through the rest
@@ -481,7 +482,7 @@ static void filmPoll() {
         filmAwakeAt = now ? now : 1; flushOut(); Serial.write((const uint8_t *) "LDRCAWAKE", 9);
     }
     if (filmPlaying) {
-        if (!filmUp() || !filmAllowed() || !helpPage) { filmStop(false); return; }   // (another page of ours took the layer; the safety off or the motor on; the page went)
+        if (!filmBench && (!filmUp() || !filmAllowed() || !helpPage)) { filmStop(false); return; }   // (another page of ours took the layer; the safety off or the motor on; the page went)
         if (filmPaused) { if (filmSeekWant >= 0 && filmSeekWant != filmLast) filmSeekStep(25); return; }   // (1.11.89: the picture follows the slider)
         const uint32_t ms = now - filmStartMs;
         const int32_t want = ldrcfilm::frameAt(ms, filmHead) < 0 ? (int32_t) filmHead.frames - 1 : ldrcfilm::frameAt(ms, filmHead);
@@ -516,3 +517,19 @@ static void filmPoll() {
     if (want && !filmButtonUp()) filmButtonShow();
     else if (!want && filmButtonUp()) filmButtonHide();
 }
+
+#ifdef ARDUINO                                                     // (the Mac builds know no String and no bench)
+// (26 Oct evening, bench) /stall?kind=film&kb=N: the list's Nth film played here and now (on whatever page, the safety as it
+// is); filmstop ends it and answers the pictures shown; filmflip&kb=1 sends its frames through the flip (as 1.11.133 did).
+static bool filmProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN) {
+    if (kind == "filmflip") { filmNoFlipWanted = kb == 0; us = filmNoFlipWanted ? 0 : 1; return true; }
+    if (kind == "filmstop") { us = (uint32_t) filmPictures; filmBench = false; filmStop(false); return true; }
+    filmReadList();
+    if (kb < 0 || kb >= filmCount) { us = (uint32_t) filmCount; return false; }
+    filmName = filmList[kb].name; filmBench = true;
+    const bool ok = filmStart();
+    us = (uint32_t) filmCount;
+    snprintf(extra, extraN, ",\"film\":\"%s\",\"frames\":%lu", filmName.c_str(), (unsigned long) filmHead.frames);
+    return ok;
+}
+#endif
