@@ -271,6 +271,7 @@ private:
     bool shownFlying_;                            // the panel came up WHILE the motor was on (it says so): it must stay long enough to be read
     bool mustSee_;                                // a verdict that says DO NOT FLY: it steps aside for nothing, until OK is pressed
     std::string textUrl_; int textTries_; size_t textMax_;
+    bool textRound2_; uint32_t textWaitMs_;                  // (1.11.130) after a fresh start, three failed asks get a longer breath and three more: a WiFi just joined may take its time
     std::string stage_;
     UpdRelease rel_;
     bool teensyThere_, teensyFellBack_; std::string teensyFw_, teensyMarker_;

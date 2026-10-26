@@ -221,7 +221,7 @@ Updater::Updater(UpdateHost &host, LinkMaster &link, const std::string &latestUr
     : host_(host), link_(link), latestUrl_(latestUrl), phase_(P_IDLE),
       since_(0), lastPoke_(0), shownAt_(0), linkAfter_(0), restartAt_(0), stageSince_(0),
       linkOurs_(false), linkWanted_(false), linkStarted_(false), changing_(false), silent_(false), waiting_(false), noteWifi_(false),
-      shownFlying_(false), mustSee_(false), textTries_(0), textMax_(8192),
+      shownFlying_(false), mustSee_(false), textTries_(0), textMax_(8192), textRound2_(false), textWaitMs_(2000),
       teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), freshCount_(0), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
       listStep_(0), at_(0), sub_(0), tries_(0), fetchTotal_(0), fetchDone_(0), fetchCount_(0), fetchIndex_(0), fetchBegan_(0), leftAt_(0), leftSecs_(-1), leftShown_(-1),
       placed_(0), trialSeen_(0), keptFiles_(0), stTeensyThere_(false), stTeensyChanged_(false), stScreenFw_(false), stFiles_(0), stKept_(0), trialStep_(0), resultGood_(false),
@@ -522,15 +522,15 @@ void Updater::decide() {
 
 // ------------------------------------------------------------------ going back: the few releases before this one
 void Updater::fetchAsked(const std::string &url, size_t maxBytes) {
-    textUrl_ = url; textTries_ = 1; waiting_ = false; textMax_ = maxBytes;
+    textUrl_ = url; textTries_ = 1; waiting_ = false; textMax_ = maxBytes; textRound2_ = false; textWaitMs_ = 2000;
     host_.fetchText(url, maxBytes); since_ = host_.ms();
 }
 // (P_LATEST, P_RECENT, P_DESCR) One answer that fails is not the end: a WiFi just joined often loses its first try.
 bool Updater::textArrived() {
     const uint32_t now = host_.ms();
     if (waiting_) {
-        if (now - since_ < 2000) return false;
-        waiting_ = false; host_.fetchText(textUrl_, textMax_); since_ = now;
+        if (now - since_ < textWaitMs_) return false;
+        waiting_ = false; textWaitMs_ = 2000; host_.fetchText(textUrl_, textMax_); since_ = now;
         return false;
     }
     if (host_.busy()) { if (now - since_ > 60000) { host_.stopWork(); message("messiter.com did not answer", "Check the WiFi, then try again."); } return false; }
@@ -539,6 +539,11 @@ bool Updater::textArrived() {
     note("asking messiter.com: " + w.error + (textTries_ < 3 ? " (it is asked again)" : ""));
     if (flyingNow() != UpdateHost::FLY_NO) { notNow(); return false; }
     if ((phase_ == P_LATEST || phase_ == P_DESCR) && freshForMemory(w)) return false;
+    if (textTries_ >= 3 && freshDone_ && !textRound2_) {   // (1.11.130) a run that began from a fresh start: the WiFi has only just joined (26 Oct: three asks within seconds, all "no connection"; asked again half a minute later it answered) - a longer breath, then three tries more
+        note("asking messiter.com: ten seconds more for the WiFi, then it is asked again");
+        textRound2_ = true; textTries_ = 1; waiting_ = true; since_ = now; textWaitMs_ = 10000;
+        return false;
+    }
     if (textTries_ >= 3) { message("messiter.com did not answer", "Check the WiFi, then try again.", sentence(w.error)); return false; }   // (what to do first, why after)
     textTries_++; waiting_ = true; since_ = now;
     return false;

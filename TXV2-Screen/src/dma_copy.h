@@ -139,7 +139,7 @@ static bool dmaCopy(void *dst, const void *src, size_t n) {
     return dcRun(i);
 }
 static void dmaCopyJson(std::string &out) {           // (/status "dmacopy")
-    char b[200]; snprintf(b, sizeof b, "\"dmacopy\":{\"why\":\"%s\",\"copies\":%lu,\"rows\":%lu,\"timeouts\":%lu,\"us_max\":%lu,\"lcd_pri\":%u}", dcWhy, (unsigned long) dcCopies, (unsigned long) dcRows, (unsigned long) dcTimeouts, (unsigned long) dcUsMax,
+    char b[220]; snprintf(b, sizeof b, "\"dmacopy\":{\"on\":%d,\"why\":\"%s\",\"copies\":%lu,\"rows\":%lu,\"timeouts\":%lu,\"us_max\":%lu,\"lcd_pri\":%u}", dcOn ? 1 : 0, dcWhy, (unsigned long) dcCopies, (unsigned long) dcRows, (unsigned long) dcTimeouts, (unsigned long) dcUsMax,
              dcLcdCh >= 0 ? (unsigned) GDMA.channel[dcLcdCh].out.pri.tx_pri : 0u);
     out += b;
 }
