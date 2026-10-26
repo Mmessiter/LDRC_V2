@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.132"
+#define SCREEN_VERSION "1.11.133"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1023,7 +1023,8 @@ static bool bgEvictOne() {
     if (old < 0) return false;
     free(bgCache[old].buf); bgCache.erase(bgCache.begin() + old); return true;
 }
-static void *psMallocRoom(size_t n) { for (;;) { void *p = ps_malloc(n); if (p || !bgEvictOne()) return p; } }   // ps_malloc that makes room by giving up backgrounds
+static bool clipDropOne();                                 // (1.11.133) the sound clip cache, below: its least used clip let go
+static void *psMallocRoom(size_t n) { for (;;) { void *p = ps_malloc(n); if (p) return p; if (!clipDropOne() && !bgEvictOne()) return nullptr; } }   // ps_malloc that makes room: sound clips first (40 kB each, back from the card in a moment), then backgrounds not on show
 static const uint32_t PSRAM_FLOOR = 512u * 1024u; static uint32_t psramEvictions = 0;   // (1.11.132) loop() keeps this much PSRAM free (/status "xip" evictions)
 static bool loadBackground(int picId) {
     Busy busy_(BUSY_BG);
@@ -3085,6 +3086,15 @@ static void clipMakeRoom(size_t need) {
     }
 }
 static void clipAdd(int id, uint8_t *data, uint32_t len) { clips.push_back({ id, data, len, millis() }); clipBytes += len; }
+// (1.11.133) The clip cache fills to CLIP_BUDGET (1.5 MB) while the screen is idle (audioWarm): with the firmware's code in the PSRAM
+// (1.11.131) that left a twin at 0.4 MB free. It is the PSRAM's most elastic part, so the floor (loop) and psMallocRoom let its
+// least recently used clip go first. Never while a clip plays from memory: curClip points into the vector.
+static bool clipDropOne() {
+    if (curClip || audioPlaying || clips.empty()) return false;
+    int old = 0;
+    for (size_t i = 1; i < clips.size(); ++i) if (clips[i].used < clips[old].used) old = (int) i;
+    free(clips[old].data); clipBytes -= clips[old].len; clips.erase(clips.begin() + old); return true;
+}
 static bool wavOpenPath(const char *path, uint32_t &rate, bool adpcmOk = false);
 static bool wavOpen(int id, uint32_t &rate) {           // leaves audioFile at the samples; sets audioDataStart/Size/Left
     char path[32]; snprintf(path, sizeof(path), "/hmi/audio/%d.wav", id);
@@ -3278,6 +3288,7 @@ static void audioWarm() {
     if ((int32_t) (millis() - lastRxMs) < 300 || millis() - lastPresentMs < 1500 || millis() - lastTry < 25) return;
     lastTry = millis();
     if (!warmBuf) {                                      // the next clip: opened, its memory taken
+        if (ESP.getFreePsram() < PSRAM_FLOOR + 256 * 1024) return;   // (1.11.133) warming never pushes the PSRAM under its floor (the code lives there since 1.11.131)
         const int id = next++;
         if (clipFind(id)) return;
         uint32_t rate; if (!wavOpen(id, rate)) return;
@@ -3403,9 +3414,9 @@ static void netPoll() {
 // (1.11.132) The PSRAM's big holders, for /status "mem": who has it when it runs short (twin #2 was seen at 71 kB free after its update).
 static std::string psramJson() {
     char b[300];
-    snprintf(b, sizeof b, "\"mem\":{\"psram_largest\":%u,\"pictures\":\"%u/%u\",\"evictions\":%u,\"top\":%d,\"model\":%d,\"film\":%u,\"fade\":%d,\"audio\":%d}",
+    snprintf(b, sizeof b, "\"mem\":{\"psram_largest\":%u,\"pictures\":\"%u/%u\",\"evictions\":%u,\"top\":%d,\"model\":%d,\"film\":%u,\"fade\":%d,\"audio\":%d,\"clips\":%u,\"clip_n\":%u}",
              (unsigned) heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM), (unsigned) bgCache.size(), (unsigned) bgCacheMax, (unsigned) psramEvictions,
-             topFb ? 1 : 0, flPicPx ? 1 : 0, (unsigned) filmBufSize, filmFadeTo ? 1 : 0, audioRing ? 1 : 0);
+             topFb ? 1 : 0, flPicPx ? 1 : 0, (unsigned) filmBufSize, filmFadeTo ? 1 : 0, audioRing ? 1 : 0, (unsigned) clipBytes, (unsigned) clips.size());
     return b;
 }
 void setup() {
@@ -3518,7 +3529,7 @@ void loop() {
     { Busy b(BUSY_FLIGHT); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); } { Busy b(BUSY_FILM); filmPoll(); } { Busy b(BUSY_WIFI); blPoll(); blePoll(); } { Busy b(BUSY_CLI); cliPoll(); } PHASE(0)   // (25 Oct evening: Busy tags = who slipped the panel, /perf "slipw")
     { Busy b(BUSY_AUDIO); audioFill(); if (!teensyLink.running() && !(benchSkip & 4)) audioWarm(); } PHASE(1)
     { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running()) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
-    { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && bgEvictOne()) psramEvictions++; } }   // (1.11.132) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
+    { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && (clipDropOne() || bgEvictOne())) psramEvictions++; } }   // (1.11.132/133: clips first) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
     { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)
     { Busy b(BUSY_TIMERS); pollTimers(); } PHASE(4)
     presentDirty(touchPainted); touchPainted = false; PHASE(5)   // a finger's feedback is shown at once; the Teensy's at the end of its burst
