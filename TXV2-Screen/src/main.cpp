@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.131"
+#define SCREEN_VERSION "1.11.132"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1024,6 +1024,7 @@ static bool bgEvictOne() {
     free(bgCache[old].buf); bgCache.erase(bgCache.begin() + old); return true;
 }
 static void *psMallocRoom(size_t n) { for (;;) { void *p = ps_malloc(n); if (p || !bgEvictOne()) return p; } }   // ps_malloc that makes room by giving up backgrounds
+static const uint32_t PSRAM_FLOOR = 512u * 1024u; static uint32_t psramEvictions = 0;   // (1.11.132) loop() keeps this much PSRAM free (/status "xip" evictions)
 static bool loadBackground(int picId) {
     Busy busy_(BUSY_BG);
     if (picId < 0 || !sdOk) return false;
@@ -1888,7 +1889,7 @@ static bool loadPage(const std::string &name) {
     if (slot) { raw = slot->buf; got = slot->len; slot->used = millis(); }
     else {
         File f = SD.open(path); if (!f) return false;
-        const size_t n = f.size(); raw = (char *) ps_malloc(n + 1); if (!raw) { f.close(); return false; }
+        const size_t n = f.size(); raw = (char *) psMallocRoom(n + 1); if (!raw) { f.close(); return false; }   // (1.11.132: a page must never fail for want of room - a resident picture goes first)
         got = sdReadPaced(f, (uint8_t *) raw, n); raw[got] = 0; f.close();   // read into memory (a File stream parses a byte at a time), in paced slabs (1.11.120), then parsed
         for (auto &e : rawCache) if (!e.buf) { slot = &e; break; }
         if (!slot) { slot = &rawCache[0]; for (auto &e : rawCache) if (e.used < slot->used) slot = &e; free(slot->buf); rawBytes -= slot->len; }
@@ -2653,6 +2654,7 @@ static uint32_t bannerUntil = 0;                           // the user's switch:
 static uint32_t quietUntil = 0; static bool quietBacklightOff = false, quietWifiOff = false;
 static File uploadFile; static bool uploadGood = false; static uint32_t uploadBytes = 0;
 
+static std::string psramJson();                        // (1.11.132) defined after the device headers (it names their buffers)
 static void webBegin() {
     web.on("/status", HTTP_GET, []() {                   // (the one page that answers when the workshop door is shut)
         char b[520]; snprintf(b, sizeof(b), "{\"fw\":\"" SCREEN_VERSION "\",\"door\":%s,\"door_kept\":%s,\"tx\":%d,\"flying\":%d,\"rx\":{\"phase\":%d,\"why\":%d,\"outcome\":%d,\"release\":\"%lX\",\"wanted\":\"%lX\",\"left\":%lu,\"flags\":%lu,\"age\":%ld},\"page\":\"%s\",\"id\":%d,\"cmds\":%lu,\"odd\":%lu,\"minheap\":%u,\"heap\":%u,\"psram\":%u,\"sd\":%d,\"touch\":%d,\"ip\":\"%s\",\"audio\":%d,\"boot\":%lu,\"up\":%lu}",
@@ -2675,6 +2677,7 @@ static void webBegin() {
         out += ringStatusJson();
         out += ","; dmaCopyJson(out);                      // (1.11.126) the DMA copy: on, copies, rows, timeouts, the panel channel's priority
         out += ","; xipJson(out);                          // (1.11.131) the code in the PSRAM: mode, pages, ms, strikes, why
+        out += ","; out += psramJson();                   // (1.11.132) the PSRAM's holders: largest free block, resident pictures of the most allowed, the floor's evictions, the layer, the model picture, the film
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
         { char q[480]; snprintf(q, sizeof(q), ",\"flip\":{\"why\":\"%s\",\"n\":%lu,\"shown\":%u,\"compose_max\":%lu,\"wait_max\":%lu,\"syncs\":%lu,\"rests\":%lu,\"rot\":%lu,\"stale\":%d,\"ensured\":%lu,\"fspare\":%d,\"fshown\":%d,\"last\":{\"draw\":%lu,\"compose\":%lu,\"shown\":%lu,\"sd\":%lu,\"parse\":%lu,\"pre\":%lu,\"bg\":%lu,\"comps\":%lu,\"text\":[%lu,%lu],\"pic\":[%lu,%lu],\"other\":[%lu,%lu]}}",
@@ -3227,7 +3230,7 @@ static void audioStart(int id, bool loopIt) {
     // very moment (Malcolm, 8 Oct). The read takes some tens of milliseconds, once.
     if (audioDataSize <= CLIP_BUDGET / 2) {
         clipMakeRoom(audioDataSize);
-        uint8_t *buf = (uint8_t *) ps_malloc(audioDataSize);
+        uint8_t *buf = (uint8_t *) psMallocRoom(audioDataSize);
         if (buf) {
             uint32_t got = 0;
             while (got < audioDataSize) { const int n = audioFile.read(buf + got, min((uint32_t) 4096, audioDataSize - got)); if (n <= 0) break; got += n; }
@@ -3280,7 +3283,7 @@ static void audioWarm() {
         uint32_t rate; if (!wavOpen(id, rate)) return;
         if (!audioDataSize || audioDataSize > 40 * 1024) { audioFile.close(); return; }
         clipMakeRoom(audioDataSize);
-        warmBuf = (uint8_t *) ps_malloc(audioDataSize); if (!warmBuf) { audioFile.close(); return; }
+        warmBuf = (uint8_t *) psMallocRoom(audioDataSize); if (!warmBuf) { audioFile.close(); return; }
         warmFile = audioFile; audioFile = File();          // (the handle is this warm-up's now; a sound meanwhile opens its own)
         warmSize = audioDataSize; warmGot = 0; warmId = id;
         return;
@@ -3397,6 +3400,14 @@ static void netPoll() {
 #include "cli_device.h"
 #include "film_device.h"   // (1.11.85) films on the help pages
 
+// (1.11.132) The PSRAM's big holders, for /status "mem": who has it when it runs short (twin #2 was seen at 71 kB free after its update).
+static std::string psramJson() {
+    char b[300];
+    snprintf(b, sizeof b, "\"mem\":{\"psram_largest\":%u,\"pictures\":\"%u/%u\",\"evictions\":%u,\"top\":%d,\"model\":%d,\"film\":%u,\"fade\":%d,\"audio\":%d}",
+             (unsigned) heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM), (unsigned) bgCache.size(), (unsigned) bgCacheMax, (unsigned) psramEvictions,
+             topFb ? 1 : 0, flPicPx ? 1 : 0, (unsigned) filmBufSize, filmFadeTo ? 1 : 0, audioRing ? 1 : 0);
+    return b;
+}
 void setup() {
     Serial.setRxBufferSize(32768);                        // BEFORE begin(): set afterwards it stayed at 256 bytes and telemetry bursts overran it
     Serial.begin(NEXTION_BAUD);
@@ -3507,6 +3518,7 @@ void loop() {
     { Busy b(BUSY_FLIGHT); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); } { Busy b(BUSY_FILM); filmPoll(); } { Busy b(BUSY_WIFI); blPoll(); blePoll(); } { Busy b(BUSY_CLI); cliPoll(); } PHASE(0)   // (25 Oct evening: Busy tags = who slipped the panel, /perf "slipw")
     { Busy b(BUSY_AUDIO); audioFill(); if (!teensyLink.running() && !(benchSkip & 4)) audioWarm(); } PHASE(1)
     { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running()) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
+    { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && bgEvictOne()) psramEvictions++; } }   // (1.11.132) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
     { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)
     { Busy b(BUSY_TIMERS); pollTimers(); } PHASE(4)
     presentDirty(touchPainted); touchPainted = false; PHASE(5)   // a finger's feedback is shown at once; the Teensy's at the end of its burst

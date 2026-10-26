@@ -92,7 +92,7 @@ static void picJobStart(const std::string &name, bool mine) {
     picJob.f = SD.open(picFile(name, mine).c_str(), FILE_READ);
     uint16_t wh[2] = { 0, 0 };
     if (!picJob.f || picJob.f.read((uint8_t *) wh, 4) != 4 || !wh[0] || !wh[1] || wh[0] > 1024 || wh[1] > 1024) { picJob.on = true; picJobEnd(false); return; }
-    picJob.px = (uint16_t *) ps_malloc(ldrc::PIC_THUMB_W * ldrc::PIC_THUMB_H * 2);
+    picJob.px = (uint16_t *) psMallocRoom(ldrc::PIC_THUMB_W * ldrc::PIC_THUMB_H * 2);
     if (!picJob.px) { picJob.on = true; picJobEnd(false); return; }
     picJob.w = wh[0]; picJob.h = wh[1];
     // The whole picture, as large as fits in 160 x 100, centred (a 320 x 200 one fills it exactly).

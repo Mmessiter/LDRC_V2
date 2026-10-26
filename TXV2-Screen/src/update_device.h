@@ -275,7 +275,7 @@ static void updTask(void *) {
 }
 static void updStart(int kind, const std::string &url, const std::string &local, uint32_t size, uint32_t crc, size_t maxBytes) {
     if (updBusy) return;
-    if (!updBuf) updBuf = (uint8_t *) ps_malloc(UPD_BUF);
+    if (!updBuf) updBuf = (uint8_t *) psMallocRoom(UPD_BUF);
     if (!updTaskHandle) xTaskCreatePinnedToCore(updTask, "update", 24576, nullptr, 1, &updTaskHandle, 0);
     if (!updBuf || !updTaskHandle) { updWork = ldrc::Work(); updWork.error = "the screen is out of memory"; return; }
     updJob.kind = kind; updJob.url = url; updJob.local = local; updJob.size = size; updJob.crc = crc; updJob.maxBytes = maxBytes;
