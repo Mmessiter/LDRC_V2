@@ -278,7 +278,7 @@ static bool filmDecode(int32_t k, bool play = false) {
     filmFadeEnd();                                              // (1.11.93: what comes next is drawn on the whole page)
     const uint32_t n = play && FILM_FADES ? ldrcfilm::fadeOf(filmTable, k) : 0;
     const bool whole = rx == 0 && ry == 0 && rw == W && rh == H;
-    if (n && whole && !filmFadeTo) filmFadeTo = (uint16_t *) ps_malloc((size_t) W * H * 2);
+    if (n && whole && !filmFadeTo) filmFadeTo = (uint16_t *) psMallocRoom((size_t) W * H * 2);   // (1.11.131: room made by giving up a resident picture if need be)
     const bool fade = n && whole && filmFadeTo;
     const uint32_t t0 = micros();
     bool ok = filmJpeg.openRAM(filmBuf + jo, (int) (size - jo), fade ? filmDrawTo : filmDraw) != 0;
@@ -319,7 +319,7 @@ static bool filmStart() {
         filmSectionCount = n; extra = 4 + 4 * n;
     }
     if (!ldrcfilm::tableSound(filmTable, filmHead, fileSize, biggest, extra)) { filmFile.close(); return false; }
-    if (biggest > filmBufSize) { free(filmBuf); filmBuf = (uint8_t *) ps_malloc(biggest); filmBufSize = filmBuf ? biggest : 0; }
+    if (biggest > filmBufSize) { free(filmBuf); filmBuf = (uint8_t *) psMallocRoom(biggest); filmBufSize = filmBuf ? biggest : 0; }   // (1.11.131: room made by giving up a resident picture if need be)
     if (!filmBuf) { filmFile.close(); return false; }
     filmBtnHeld = false;
     topX = 0; topY = 0; topW = W; topH = H; topWho = FILM_WHO; topOn = true;

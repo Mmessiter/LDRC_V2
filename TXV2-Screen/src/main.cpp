@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.130"
+#define SCREEN_VERSION "1.11.131"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -734,6 +734,7 @@ static int bgW = 0, bgH = 0;
 static bool loadingPage = false;                           // true while a page's preinitialize runs: no repaints yet
 struct BgEntry { int id; uint16_t *buf; uint32_t used; };
 static std::vector<BgEntry> bgCache;                       // up to 4 backgrounds resident (most pages share one)
+static size_t bgCacheMax = 4;                              // (1.11.131) fewer when the firmware's code took its share of the PSRAM (setup)
 static uint32_t cmdCount = 0, badCount = 0;
 static bool touchLockout = false;                      // set on a page change: ignore touches until the finger is off
 static bool touchPainted = false;                      // a touch changed the picture: show it without waiting for the frame timer
@@ -957,6 +958,7 @@ static std::string sysSince(uint32_t mark) {
     return out;
 }
 static Preferences prefs;
+#include "code_in_psram.h"                             // (1.11.131, 26 Oct 2026: the firmware's own code and constants copied into the PSRAM at start, off the flash the panel's bus shares; pref "xip", /status "xip")
 // Flash writes stall the chip for milliseconds and the UART's 128-byte FIFO overflows at 921600 baud in
 // 1.1 ms: a preference saved during a page load mangled whatever the Teensy sent right then (its file
 // lists, its findfile question at boot). Saves wait until the link has been quiet for half a second.
@@ -1013,6 +1015,15 @@ static void openKeyboard(int key, int compId);   // (below: the keyboard pages)
 static Comp *find(const std::string &nm) { auto it = page.byName.find(nm); return it == page.byName.end() ? nullptr : &page.comps[it->second]; }
 
 // ------------------------------------------------------------------ background + drawing
+// (1.11.131) The resident pictures are the PSRAM's elastic part: when something else needs room - our own pages' layer
+// (topReady), a film's buffers - a background that is not on show is given up, the least recently used first.
+static bool bgEvictOne() {
+    int old = -1;
+    for (size_t i = 0; i < bgCache.size(); ++i) if (bgCache[i].buf != bgBuf && (old < 0 || bgCache[i].used < bgCache[old].used)) old = (int) i;
+    if (old < 0) return false;
+    free(bgCache[old].buf); bgCache.erase(bgCache.begin() + old); return true;
+}
+static void *psMallocRoom(size_t n) { for (;;) { void *p = ps_malloc(n); if (p || !bgEvictOne()) return p; } }   // ps_malloc that makes room by giving up backgrounds
 static bool loadBackground(int picId) {
     Busy busy_(BUSY_BG);
     if (picId < 0 || !sdOk) return false;
@@ -1022,7 +1033,7 @@ static bool loadBackground(int picId) {
     if (!f) return false;
     uint16_t wh[2]; f.read((uint8_t *) wh, 4);
     uint16_t *buf;
-    buf = bgCache.size() < 4 ? (uint16_t *) ps_malloc(W * H * 2) : nullptr;   // 4 backgrounds resident (3 MB): the clip cache needs its share of PSRAM
+    buf = bgCache.size() < bgCacheMax ? (uint16_t *) ps_malloc(W * H * 2) : nullptr;   // 4 backgrounds resident (3 MB): the clip cache needs its share of PSRAM (1.11.131: fewer with the code in the PSRAM - setup)
     if (!buf && bgCache.empty()) { f.close(); return false; }
     if (!buf) { size_t old = 0; for (size_t i = 1; i < bgCache.size(); ++i) if (bgCache[i].used < bgCache[old].used) old = i; buf = bgCache[old].buf; bgCache.erase(bgCache.begin() + old); }
     if (wh[0] == W && wh[1] == H) sdReadPaced(f, (uint8_t *) buf, W * H * 2);   // (1.11.120: in slabs, paced - 768 kB in one read slipped the twin's picture)
@@ -2147,10 +2158,7 @@ static bool topReady() {
     if (topFb) return true;
     if (!topCanvas) topCanvas = new PacedCanvas(W, H, screen);
     while (!topCanvas->begin(GFX_SKIP_OUTPUT_BEGIN)) {     // no room: give up a background picture that is not showing, and try again
-        int old = -1;
-        for (size_t i = 0; i < bgCache.size(); ++i) if (bgCache[i].buf != bgBuf && (old < 0 || bgCache[i].used < bgCache[old].used)) old = (int) i;
-        if (old < 0) break;
-        free(bgCache[old].buf); bgCache.erase(bgCache.begin() + old);
+        if (!bgEvictOne()) break;
     }
     topFb = topCanvas->getFramebuffer();
     return topFb != nullptr;
@@ -2666,6 +2674,7 @@ static void webBegin() {
         { char q[120]; snprintf(q, sizeof(q), ",\"dma\":{\"on\":%d,\"base_us\":%lu,\"late\":%lu,\"missed\":%lu}", dmaWatchOn ? 1 : 0, (unsigned long) dmaBaseUs, (unsigned long) dmaLateAll, (unsigned long) dmaMissedAll); out += q; }   // (25 Oct) since boot
         out += ringStatusJson();
         out += ","; dmaCopyJson(out);                      // (1.11.126) the DMA copy: on, copies, rows, timeouts, the panel channel's priority
+        out += ","; xipJson(out);                          // (1.11.131) the code in the PSRAM: mode, pages, ms, strikes, why
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
         { char q[480]; snprintf(q, sizeof(q), ",\"flip\":{\"why\":\"%s\",\"n\":%lu,\"shown\":%u,\"compose_max\":%lu,\"wait_max\":%lu,\"syncs\":%lu,\"rests\":%lu,\"rot\":%lu,\"stale\":%d,\"ensured\":%lu,\"fspare\":%d,\"fshown\":%d,\"last\":{\"draw\":%lu,\"compose\":%lu,\"shown\":%lu,\"sd\":%lu,\"parse\":%lu,\"pre\":%lu,\"bg\":%lu,\"comps\":%lu,\"text\":[%lu,%lu],\"pic\":[%lu,%lu],\"other\":[%lu,%lu]}}",
@@ -2755,6 +2764,8 @@ static void webBegin() {
         else if (kind == "copy") { uint8_t *a = (uint8_t *) ps_malloc((size_t) kb * 1024), *c = (uint8_t *) ps_malloc((size_t) kb * 1024); if (!a || !c) ok = false; else { memset(a, 1, (size_t) kb * 1024); const uint32_t t0 = micros(); memcpy(c, a, (size_t) kb * 1024); us = micros() - t0; } if (a) free(a); if (c) free(c); }   // PSRAM to PSRAM at full speed
         else if (kind == "flash") { uint8_t *m = (uint8_t *) heap_caps_malloc(4096, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); const esp_partition_t *p = esp_ota_get_running_partition(); if (!m || !p) ok = false; else { const uint32_t t0 = micros(); for (size_t off = 0; off + 4096 <= (size_t) kb * 1024 && off + 4096 <= p->size; off += 4096) esp_partition_read(p, off, m, 4096); us = micros() - t0; } if (m) free(m); }   // the flash read straight (not through the cache), 4 kB a transaction: the bus the PSRAM shares
         else if (kind == "dmacopy") { prefs.putInt("dmacopy", kb != 0 ? 1 : 0); ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra); }   // the DMA copy on/off, now and at the next start
+        else if (kind == "xip") { const int want = kb < -1 ? -1 : kb > 2 ? 2 : kb; prefs.putInt("xip", want); prefs.putInt("xipbad", 0); us = xipMode; snprintf(extra, sizeof extra, ",\"want\":%d,\"now\":\"%s\"", want, xipWhy); }   // (1.11.131) the code in the PSRAM at the NEXT start: -1 the board's choice, 0 off, 1 the code, 2 the code and its constants (the strikes forgiven)
+        else if (kind == "mmu") { us = xipMode; xipMmuWords(kb > 0 ? kb : 32, extra, sizeof extra); }   // (1.11.131) the MMU's first N entries, hex (8xxx = a PSRAM page)
         else if (kind == "pacepx") { if (kb >= 400 && kb <= 64000) paceQuantumPx = (uint32_t) kb; us = paceQuantumPx; }   // (26 Oct) the pacing's burst between rests, in pixels (src/psram_pace.h)
         else if (kind == "sync") { flipSyncOn = kb != 0; flipStaleRow = 0; us = flipSyncOn; }   // (26 Oct) the spare's eager catch-up after a flip: 1 = as before, 0 = left stale until the next compose
         else if (kind == "rest") { if (kb >= 0 && kb <= 20000) paceRestOverride = (uint32_t) kb; us = paceRestOverride ? paceRestOverride : board->psramRestUs; }   // (26 Oct) the pacing's rest after each quantum, us (0 = the board's)
@@ -3397,6 +3408,24 @@ void setup() {
     boardDetect(); panelMake();                            // (1.11.111) which board, by its flash chip: the pixel clock pin differs, and the wrong one is a black screen
     prefs.begin("screen", false);                          // FIRST: the remembered page, background and volume are read below
     themeLoad();                                           // the pilot's colours, before anything is drawn
+    {   // (1.11.131) THE CODE IN THE PSRAM (src/code_in_psram.h), before the panel runs. A start that switched and then died by a
+        // panic or a watchdog before loop() reached 20 s counts a strike; two strikes turn it off until the pref is set again
+        // (/stall?kind=xip) or the next firmware. A power cut or our own restart within those 20 s is not a strike.
+        if (prefs.getString("xipver", "") != SCREEN_VERSION) { prefs.putString("xipver", SCREEN_VERSION); prefs.putInt("xipbad", 0); }
+        int strikes = prefs.getInt("xipbad", 0);
+        if (prefs.getInt("xiparm", 0)) {
+            const esp_reset_reason_t r = esp_reset_reason();
+            if (r == ESP_RST_PANIC || r == ESP_RST_INT_WDT || r == ESP_RST_TASK_WDT) prefs.putInt("xipbad", ++strikes);   // (not the RTC watchdog, 7: a quick restart of our own ends that way at times, bench 26 Oct)
+            prefs.putInt("xiparm", 0);
+        }
+        xipStrikes = strikes;
+        const int want = prefs.getInt("xip", -1);
+        if (strikes >= 2) xipWhy = "off (two early crashes)";
+        else if (!xipWanted(want)) xipWhy = want < 0 ? "off (board)" : "off (pref)";
+        else { prefs.putInt("xiparm", 1); xipBegin(want); if (xipMode) xipArmed = true; else prefs.putInt("xiparm", 0); }
+        if (xipMode) { const size_t pic = (size_t) W * H * 2, took = ((size_t) (xipTextPages + xipRodataPages) * MMU_PAGE_SIZE + pic - 1) / pic; bgCacheMax = took >= 3 ? 2 : 5 - took; }   // the code's share of the PSRAM (1.4 MB = two pictures' worth) comes out of the resident pictures, 4 -> 3 (2 at the least); a film short of room gives up another (psMallocRoom)
+        blog("boot", std::string("xip ") + xipWhy);
+    }
     pinMode(LCD_BL, OUTPUT); ledcSetup(1, 20000, 8); ledcAttachPin(LCD_BL, 1); blSet(0);   // dark: see "The backlight" above
     screen->begin(); screen->fillScreen(0); screenFb = screen->getFramebuffer();
     hookFrameEnd();   // (1.11.67: the front screen's switch drawn and copied in the panel's quiet time)
@@ -3477,7 +3506,7 @@ void loop() {
     { Busy b(BUSY_SERIAL); pumpSerial(); } { Busy b(BUSY_LINK); linkPoll(); updPoll(); } { Busy b(BUSY_WIFI); wifiPoll(); } { Busy b(BUSY_PICS); picPoll(); }
     { Busy b(BUSY_FLIGHT); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); } { Busy b(BUSY_FILM); filmPoll(); } { Busy b(BUSY_WIFI); blPoll(); blePoll(); } { Busy b(BUSY_CLI); cliPoll(); } PHASE(0)   // (25 Oct evening: Busy tags = who slipped the panel, /perf "slipw")
     { Busy b(BUSY_AUDIO); audioFill(); if (!teensyLink.running() && !(benchSkip & 4)) audioWarm(); } PHASE(1)
-    { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); } PHASE(2)
+    { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running()) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
     { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)
     { Busy b(BUSY_TIMERS); pollTimers(); } PHASE(4)
     presentDirty(touchPainted); touchPainted = false; PHASE(5)   // a finger's feedback is shown at once; the Teensy's at the end of its burst

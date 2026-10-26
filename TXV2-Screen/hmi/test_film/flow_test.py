@@ -23,6 +23,7 @@ static uint32_t nowMs = 1000;
 static uint32_t millis() { return nowMs; }
 static uint32_t micros() { return nowMs * 1000; }
 static void *ps_malloc(size_t n) { return malloc(n); }
+static void *psMallocRoom(size_t n) { return malloc(n); }   // (1.11.131: on the screen it gives up resident pictures for room)
 static std::string SDROOT = "@SD@";
 struct File {
     FILE *fp = nullptr; long sz = 0;

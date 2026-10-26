@@ -348,7 +348,7 @@ static bool flPicLoad(const std::string &base) {
     uint16_t wh[2] = { 0, 0 };
     if (f.read((uint8_t *) wh, 4) != 4 || !wh[0] || !wh[1] || wh[0] > 800 || wh[1] > 480) { f.close(); flPicFail(path, "header"); return false; }
     const size_t bytes = (size_t) wh[0] * wh[1] * 2;
-    uint16_t *px = (uint16_t *) ps_malloc(bytes);
+    uint16_t *px = (uint16_t *) psMallocRoom(bytes);   // (1.11.131: room made by giving up a resident background if need be)
     if (!px) { f.close(); flPicFail(path, "no memory"); return false; }
     const size_t got = sdReadPaced(f, (uint8_t *) px, bytes);   // (1.11.120: in paced slabs - main.cpp)
     f.close();
