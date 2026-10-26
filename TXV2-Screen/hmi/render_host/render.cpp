@@ -34,6 +34,8 @@ static void psramPace(uint32_t) {}
 static size_t sdReadPaced(File &f, uint8_t *dst, size_t n) { return f.read(dst, n); }   // (1.11.120: the card's big reads, in paced slabs on the screen)
 static void delayMicroseconds(uint32_t) {}
 static void ringTick() {}                              // (25 Oct: the frame ring's loop tick, src/frame_ring.h)
+static const bool dcTx = false;                        // (1.11.126: the DMA copy, src/dma_copy.h - none on the Mac: every copy by hand)
+static bool dmaCopyRows(uint16_t *, const uint16_t *, int, int, int, int) { return false; }
 static uint32_t benchSkip = 0;                         // (25 Oct: the bench switches)
 static uint32_t pendingBgAt = 0, pendingVolAt = 0;     // (25 Oct: when a preference last changed; written once it has rested)
 static void drawDeferred();

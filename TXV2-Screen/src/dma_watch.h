@@ -42,8 +42,16 @@ static volatile uint32_t dmaGapMean = 0, dmaGapSum = 0, dmaGapCnt = 0;
 // busy tag of the moment (busy_what.h) - /perf "slipw" {n[], sum[], log[[us, tag, ms]...]}, the window's first 24 logged.
 // (The EOF stamps' own jitter is +-6 us at idle: the idle tag's count is the noise floor to read the others against.)
 static volatile int32_t dmaSlipwUs = 7; static const int SLIPW_LOG = 24;   // (bench: /stall?kind=slipwus&kb=us lowers the bar - the idle noise floor is +-6 us)
-static volatile uint32_t slipwN[BUSY_N] = { 0 }, slipwSum[BUSY_N] = { 0 };
-struct SlipW { uint16_t us; uint8_t what; uint32_t ms; };
+static volatile uint32_t slipwN[BUSY_N] = { 0 }, slipwSum[BUSY_N] = { 0 }, slipwSeenN[BUSY_N] = { 0 };   // by the tag at the EOF; by every tag seen in the frame
+// THE FINE ESTIMATOR (25 Oct 20:50). A slip smaller than the stamps' jitter cannot be told apart frame by frame, but it can
+// be averaged out: for EVERY frame the gap's excess over the base (its positive part) is added to each MOVER tag seen in
+// that frame (sd, wb, copy, rest, draw, nvs, bg, present, handle, flip, ensure - the loop's phases are seen in every
+// frame and say nothing), and to a baseline of frames with no mover at all. /perf "slipw".pos[] / .fr[] against .idle:
+// the mean excess per frame for each mover, the noise floor being the baseline's (~3 us).
+static const uint32_t BUSY_MOVERS = (1u << 1) | (1u << 2) | (1u << 3) | (1u << 4) | (1u << 5) | (1u << 6) | (1u << 7) | (1u << 8) | (1u << 9) | (1u << 20) | (1u << 21);
+static volatile uint32_t slipwPos[BUSY_N] = { 0 }, slipwFr[BUSY_N] = { 0 }, slipwIdlePos = 0, slipwIdleFr = 0;
+static volatile uint32_t dmaProbePos = 0, dmaProbeFr = 0; static volatile int32_t dmaProbeMax = 0;   // (26 Oct, bench) a /stall probe's own frames: the excess summed, their number, the worst
+struct SlipW { uint16_t us; uint8_t what; uint32_t seen; uint32_t ms; };
 static SlipW slipwLog[SLIPW_LOG]; static volatile int slipwLogN = 0;
 static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void *) {
     const uint32_t now = (uint32_t) esp_timer_get_time();
@@ -57,10 +65,18 @@ static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void 
                 if (d > -300 && d < 300) { dmaGapBase16 = (uint32_t) ((int32_t) dmaGapBase16 + ((int32_t) (gap * 16) - (int32_t) dmaGapBase16) / 32); dmaGapBase = (dmaGapBase16 + 8) / 16; }
                 if (d > -100 && d < 100) { dmaGapSum += gap; if (++dmaGapCnt >= 32) { dmaGapMean = dmaGapSum / 32; dmaGapSum = 0; dmaGapCnt = 0; } }
                 dmaLastD = d;
+                const uint32_t seen = busySeen; busySeen = 0;   // (this frame's tags; the mask starts again)
+                if (d < 20000) {                           // the fine estimator: this frame's excess under every mover seen, or under the baseline
+                    const uint32_t pos = d > 0 ? (uint32_t) d : 0;
+                    dmaProbePos += pos; dmaProbeFr = dmaProbeFr + 1; if (d > dmaProbeMax) dmaProbeMax = d;
+                    if (seen & BUSY_MOVERS) { for (int i = 0; i < BUSY_N; ++i) if ((seen & BUSY_MOVERS) & (1u << i)) { slipwPos[i] += pos; slipwFr[i]++; } }
+                    else { slipwIdlePos += pos; slipwIdleFr++; }
+                }
                 if (d >= dmaSlipwUs && d < 20000) {
                     const uint8_t w = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1;
                     slipwN[w]++; slipwSum[w] += (uint32_t) d;
-                    if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = (uint16_t) d; e.what = w; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }
+                    for (int i = 0; i < BUSY_N; ++i) if (seen & (1u << i)) slipwSeenN[i]++;
+                    if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = (uint16_t) d; e.what = w; e.seen = seen; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }
                 }
                 if (d > (int32_t) DMA_SLIP_US && d < 20000) { const uint32_t s = (uint32_t) d; dmaSlips++; dmaSlipsAll++; dmaSlipSum += s; if (s > dmaSlipMax) dmaSlipMax = s; }   // (a whole frame more is an EOF interrupt missed, not a slip)
             }
@@ -116,11 +132,18 @@ static std::string slipwPerfJson() {                     // the /perf block; the
     for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwN[i]); out += e; }
     out += "],\"sum\":[";
     for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwSum[i]); out += e; }
+    out += "],\"seen\":[";
+    for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwSeenN[i]); out += e; }
     out += "],\"log\":[";
     const int n = slipwLogN < SLIPW_LOG ? slipwLogN : SLIPW_LOG;
-    for (int i = 0; i < n; ++i) { char e[40]; snprintf(e, sizeof e, "%s[%u,%u,%lu]", i ? "," : "", (unsigned) slipwLog[i].us, (unsigned) slipwLog[i].what, (unsigned long) slipwLog[i].ms); out += e; }
-    out += "]}";
-    for (int i = 0; i < BUSY_N; ++i) { slipwN[i] = 0; slipwSum[i] = 0; }
+    for (int i = 0; i < n; ++i) { char e[56]; snprintf(e, sizeof e, "%s[%u,%u,%lu,%lu]", i ? "," : "", (unsigned) slipwLog[i].us, (unsigned) slipwLog[i].what, (unsigned long) slipwLog[i].seen, (unsigned long) slipwLog[i].ms); out += e; }
+    out += "],\"pos\":[";
+    for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwPos[i]); out += e; }
+    out += "],\"fr\":[";
+    for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwFr[i]); out += e; }
+    { char e[48]; snprintf(e, sizeof e, "],\"idle\":[%lu,%lu]}", (unsigned long) slipwIdlePos, (unsigned long) slipwIdleFr); out += e; }
+    for (int i = 0; i < BUSY_N; ++i) { slipwN[i] = 0; slipwSum[i] = 0; slipwSeenN[i] = 0; slipwPos[i] = 0; slipwFr[i] = 0; }
+    slipwIdlePos = 0; slipwIdleFr = 0;
     slipwLogN = 0;
     return out;
 }

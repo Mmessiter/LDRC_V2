@@ -14,6 +14,7 @@
 #include <Arduino.h>
 #include <Arduino_GFX_Library.h>
 #include <algorithm>
+#include <xtensa/hal.h>                                  // xthal_get_ccount: the write-back pieces' cost
 #include "busy_what.h"                               // (25 Oct evening) the tag the EOF interrupt reads at a slip
 
 static uint32_t paceCount = 0, paceAt = 0, paceRests = 0;
@@ -34,11 +35,23 @@ static inline void psramPace(uint32_t px) {
 // whole-screen copy with its write-backs slipped 2 frames in 3 runs, the same copy without them none, 256-byte pieces
 // 8 us apart none in 3000 pieces. So on the twin every write-back the panel will read goes in pieces of 256 bytes (8 cache
 // lines, ~4 us of bus) with an 8 us breath between - the DMA's FIFO rides out 4 us. The CrowPanel (psramRestUs 0) as before.
-static uint32_t wbPieceBytes = 256, wbGapUs = 8;       // (bench: /stall?kind=wbpiece&kb=bytes, wbgap&kb=us. 25 Oct morning at a 15 us threshold: 256-2048 B slip-free, 4096 slipped once in 1.5 MB, 1024 chosen; 25 Oct EVENING at a 7 us threshold, three whole-screen presents each: 1024 B 4 slips of 7-12 us (Malcolm's "little shimmy sideways" before each new background), 512 B one, 256 B NONE (209 ms a present against 157), 128 B none (277 ms); 256 B with a 3 us gap one. So 256 B / 8 us: 20 us a kB against 30 at 256)
+static uint32_t wbPieceBytes = 256, wbGapUs = 8, wbCleanCy = 0;   // (bench: /stall?kind=wbpiece&kb=bytes, wbgap&kb=us, wbclean&kb=cycles. 25 Oct morning at a 15 us bar: 256-2048 B slip-free, 1024 chosen; 25 Oct EVENING at a 7 us bar, three whole-screen presents each: 1024 B 4 slips (Malcolm's "little shimmy sideways" before each new background), 512 B one, 256 B none (209 ms a present against 157), 128 B none (277 ms). 256 B shipped in 1.11.125; his run on it still had 7-10 us slips in the catch-up copies' write-backs ("a sideways shift, usually of the lower screen, much more rare now") -> 128 B tried 21:05: the fine estimator 0.9-1.2 us a frame against 1.3-1.4 at 256 B, a full-screen present 279 ms against 211 - not worth 68 ms; 256 B stays. The adaptive gap below is a dead end (wbCleanCy 0): the ROM routine returns before the bus transfer, so a clean piece and a dirty one cost the same cycles.)
+// THE ADAPTIVE GAP (25 Oct 21:00). The breath after a piece is only needed when the piece WROTE something; a clean piece
+// (no dirty line in it - most of a 768 kB sweep) holds the bus for nothing. The ROM routine's cost tells them apart: the
+// cycle count of each call, against wbCleanCy (0 = a breath after every piece; calibrated on the bench with /perf "wb":
+// pieces, slow, cy_min, cy_max - /stall?kind=wbtime on a clean canvas gives the clean cost, present&kb=480 the dirty one).
+static volatile uint32_t wbPieces = 0, wbSlow = 0, wbCyMin = 0xFFFFFFFF, wbCyMax = 0;
 static inline void wbPaced(uint32_t addr, uint32_t len) {
     Busy busy_(BUSY_WB);
     if (!board->psramRestUs || len <= 2 * wbPieceBytes) { Cache_WriteBack_Addr(addr, len); return; }
-    for (uint32_t off = 0; off < len; off += wbPieceBytes) { Cache_WriteBack_Addr(addr + off, len - off < wbPieceBytes ? len - off : wbPieceBytes); delayMicroseconds(wbGapUs); }
+    for (uint32_t off = 0; off < len; off += wbPieceBytes) {
+        const uint32_t n = len - off < wbPieceBytes ? len - off : wbPieceBytes;
+        const uint32_t c0 = xthal_get_ccount();
+        Cache_WriteBack_Addr(addr + off, n);
+        const uint32_t cy = xthal_get_ccount() - c0;
+        wbPieces++; if (cy < wbCyMin) wbCyMin = cy; if (cy > wbCyMax) wbCyMax = cy;
+        if (!wbCleanCy || cy > wbCleanCy) { wbSlow++; delayMicroseconds(wbGapUs); }
+    }
 }
 // The canvases (the page and our layer) fill big boxes a row at a time, paced. Everything else is Arduino_Canvas's own.
 // (1.11.116) The page's canvas is one of the three panel buffers in turn (main.cpp, "the rotation"): aim() points it at the
