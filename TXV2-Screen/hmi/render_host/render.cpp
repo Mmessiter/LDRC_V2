@@ -20,6 +20,9 @@ static Gfx gfxObj; static Gfx *gfx = &gfxObj;
 static uint16_t *fbNow = nullptr, *screenFb = nullptr, *pageFb = nullptr;
 static void present(int, int, int, int) {}
 static bool sdOk = true;
+static File assetOpen(const char *p) { return SD.open(p); }   // (1.11.138) the pack is the 16 MB boards' (src/flash_pack.h); here the card
+static bool assetsOk() { return sdOk; }
+static File sdOpenChecked(const char *p) { return SD.open(p); }
 // (1.11.119) The twin's page flip and rotation (src/page_flip.h, main.cpp 1.11.115-116): off here, as on the 4 MB boards -
 // these are the stand-ins the drawing code is compiled against. The layer's state (topOn ...) lives here now too, since
 // the flip's code looks at it (own.h draws the layer).

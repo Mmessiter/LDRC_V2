@@ -343,7 +343,7 @@ static bool flPicRetryDue(uint32_t now) {               // the screen asks at ea
 static bool flPicLoad(const std::string &base) {
     const std::string path = imagePath(base);
     if (flPicPx && path == flPicPath) return true;
-    File f = SD.open(path.c_str());
+    File f = sdOpenChecked(path.c_str());
     if (!f) { flPicFail(path, "no such file"); return false; }
     uint16_t wh[2] = { 0, 0 };
     if (f.read((uint8_t *) wh, 4) != 4 || !wh[0] || !wh[1] || wh[0] > 800 || wh[1] > 480) { f.close(); flPicFail(path, "header"); return false; }

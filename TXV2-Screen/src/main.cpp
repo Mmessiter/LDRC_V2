@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.137"
+#define SCREEN_VERSION "1.11.138"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -544,11 +544,16 @@ static int clipX0 = 0, clipY0 = 0, clipX1 = 800, clipY1 = 480;   // drawGlyphs p
 static uint8_t *aaBits[7] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 static uint32_t *aaOffset[7] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 static int fontIdx(int id) { return (id >= 0 && id < 7) ? id : 6; }
+static File assetOpen(const char *path);                 // (1.11.138, flash_pack.h) the pack's copy on the 16 MB boards, else the card's
+static bool assetsOk();                                  // pages, fonts and sounds can be had: the card, or the pack
+static File sdOpenChecked(const char *path);             // the card's file; a card that has gone is given up, not asked again (1.2 s a time)
 static void loadAaFonts() {
     for (int f = 0; f < 7; ++f) {
+        if (aaBits[f]) { free(aaBits[f]); aaBits[f] = nullptr; }         // (1.11.138) read again after a pack was built: the old tables go first
+        if (aaOffset[f]) { free(aaOffset[f]); aaOffset[f] = nullptr; }
         const NextionFont *nf = nextion_fonts[f];
         char path[32]; snprintf(path, sizeof(path), "/hmi/font%d_aa.bin", f);
-        File file = SD.open(path); if (!file) continue;
+        File file = assetOpen(path); if (!file) continue;
         const size_t n = file.size();
         uint8_t *buf = (uint8_t *) ps_malloc(n); if (!buf) { file.close(); continue; }
         const bool ok = file.read(buf, n) == n; file.close();
@@ -981,6 +986,7 @@ static std::string sysSince(uint32_t mark) {
     return out;
 }
 static Preferences prefs;
+#include "flash_pack.h"                                 // (1.11.138, 27 Oct 2026: on the 16 MB boards the pages, fonts and sounds live in the spare 3.4 MB flash partition, memory-mapped, copied from the card at start-up when missing or stale: faster than the card, and there without one)
 #include "code_in_psram.h"                             // (1.11.131, 26 Oct 2026: the firmware's own code and constants copied into the PSRAM at start, off the flash the panel's bus shares; pref "xip", /status "xip")
 // Flash writes stall the chip for milliseconds and the UART's 128-byte FIFO overflows at 921600 baud in
 // 1.1 ms: a preference saved during a page load mangled whatever the Teensy sent right then (its file
@@ -1049,12 +1055,12 @@ static bool bgEvictOne() {
 static bool clipDropOne();                                 // (1.11.133) the sound clip cache, below: its least used clip let go
 static void *psMallocRoom(size_t n) { for (;;) { void *p = ps_malloc(n); if (p) return p; if (!clipDropOne() && !bgEvictOne()) return nullptr; } }   // ps_malloc that makes room: sound clips first (40 kB each, back from the card in a moment), then backgrounds not on show
 static const uint32_t PSRAM_FLOOR = 512u * 1024u; static uint32_t psramEvictions = 0;   // (1.11.132) loop() keeps this much PSRAM free (/status "xip" evictions)
-static bool loadBackground(int picId) {
+static bool loadBackground(int picId) {                  // (1.11.138: its open is sdOpenChecked, below)
     Busy busy_(BUSY_BG);
     if (picId < 0 || !sdOk) return false;
     for (auto &e : bgCache) if (e.id == picId) { e.used = millis(); bgBuf = e.buf; bgW = W; bgH = H; return true; }
     char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", picId);
-    File f = SD.open(path);
+    File f = sdOpenChecked(path);
     if (!f) return false;
     uint16_t wh[2]; f.read((uint8_t *) wh, 4);
     uint16_t *buf;
@@ -1393,7 +1399,7 @@ static void drawComp(Comp &c) {
         std::string base = c.txt.substr(c.txt.find_last_of("/\\") == std::string::npos ? 0 : c.txt.find_last_of("/\\") + 1);
         size_t dot = base.find_last_of('.'); if (dot != std::string::npos) base = base.substr(0, dot);
         const std::string path = imagePath(base);
-        File f = SD.open(path.c_str());
+        File f = sdOpenChecked(path.c_str());
         if (!f) { restoreUnder(c); return; }
         uint16_t wh[2] = { 0, 0 }; f.read((uint8_t *) wh, 4);
         if (!wh[0] || !wh[1] || wh[0] > 1024 || wh[1] > 1024) { f.close(); restoreUnder(c); return; }
@@ -1528,7 +1534,7 @@ static void drawComp(Comp &c) {
     if (t == "picture") {
         if (c.pic >= 0 && sdOk) {
             char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", c.pic);
-            File f = SD.open(path);
+            File f = sdOpenChecked(path);
             if (f) { uint16_t wh[2]; f.read((uint8_t *) wh, 4); std::vector<uint16_t> row(wh[0]);
                      for (int yy = 0; yy < wh[1] && c.y + yy < H; ++yy) { f.read((uint8_t *) row.data(), wh[0] * 2); gfx->draw16bitRGBBitmap(c.x, c.y + yy, row.data(), min((int) wh[0], W - c.x), 1); }
                      f.close(); }
@@ -1687,9 +1693,9 @@ using CompInfoList = std::vector<CompInfo, PsAlloc<CompInfo>>;   // (1.11.137) i
 static PsMap<std::string, CompInfoList> pageInfo;
 static const CompInfoList *infoFor(const std::string &pg) {
     auto it = pageInfo.find(pg); if (it != pageInfo.end()) return &it->second;
-    auto pid = pageIds.find(pg); if (pid == pageIds.end() || !sdOk) return nullptr;
+    auto pid = pageIds.find(pg); if (pid == pageIds.end() || !assetsOk()) return nullptr;
     char path[32]; snprintf(path, sizeof(path), "/hmi/pages/%d.json", pid->second);
-    File f = SD.open(path); if (!f) return nullptr;
+    File f = assetOpen(path); if (!f) return nullptr;
     JsonDocument filter; filter["comps"][0]["n"] = true; filter["comps"][0]["i"] = true; filter["comps"][0]["t"] = true; filter["comps"][0]["a"]["txt_maxl"] = true;
     filter["comps"][0]["g"] = true; filter["comps"][0]["val"] = true; filter["comps"][0]["txt"] = true;
     JsonDocument doc(&psJsonAlloc); DeserializationError err = deserializeJson(doc, f, DeserializationOption::Filter(filter)); f.close();
@@ -1905,7 +1911,7 @@ static void saverApply(Page &np) {
     }
 }
 static bool loadPage(const std::string &name) {
-    auto it = pageIds.find(name); if (it == pageIds.end() || !sdOk) return false;
+    auto it = pageIds.find(name); if (it == pageIds.end() || !assetsOk()) return false;
     pageT0 = millis() ? millis() : 1; pageDrawMs = pageComposeMs = pageShownMs = 0;   // (1.11.116) timed: /status "flip" "last"
     // (the screen saver's memory: taken as the screen blanks, used only by the restore that follows it)
     const bool restoring = !saverPage.empty() && page.name == "BlankView" && name == saverPage;
@@ -1923,7 +1929,7 @@ static bool loadPage(const std::string &name) {
     for (auto &e : rawCache) if (e.buf && e.id == it->second) { slot = &e; break; }
     if (slot) { raw = slot->buf; got = slot->len; slot->used = millis(); }
     else {
-        File f = SD.open(path); if (!f) return false;
+        File f = assetOpen(path); if (!f) return false;
         const size_t n = f.size(); raw = (char *) psMallocRoom(n + 1); if (!raw) { f.close(); return false; }   // (1.11.132: a page must never fail for want of room - a resident picture goes first)
         got = sdReadPaced(f, (uint8_t *) raw, n); raw[got] = 0; f.close();   // read into memory (a File stream parses a byte at a time), in paced slabs (1.11.120), then parsed
         for (auto &e : rawCache) if (!e.buf) { slot = &e; break; }
@@ -2104,7 +2110,7 @@ static bool drawVerb(const std::string &cmd) {
     else if (verb == "cls" && n >= 1) { canvasWhole(nullptr, (uint16_t) colourOf(a[0])); fillMemo.valid = false; fillMemo.ops.clear(); fillMemo.colour = -1; dirty(0, 0, W, H); damage(0, 0, W, H); }
     else if (verb == "pic" && n >= 3 && sdOk) {
         char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", I(2));
-        File f = SD.open(path);
+        File f = sdOpenChecked(path);
         if (f) { uint16_t wh[2]; f.read((uint8_t *) wh, 4); std::vector<uint16_t> row(wh[0]);
                  for (int yy = 0; yy < wh[1] && I(1) + yy < H; ++yy) { f.read((uint8_t *) row.data(), wh[0] * 2); gfx->draw16bitRGBBitmap(I(0), I(1) + yy, row.data(), min((int) wh[0], W - I(0)), 1); }
                  f.close(); drewArea(I(0), I(1), wh[0], wh[1]); }
@@ -2715,7 +2721,9 @@ static void webBegin() {
         out += ","; dmaCopyJson(out);                      // (1.11.126) the DMA copy: on, copies, rows, timeouts, the panel channel's priority
         out += ","; xipJson(out);                          // (1.11.131) the code in the PSRAM: mode, pages, ms, strikes, why
         out += ","; stripJson(out);                        // (26 Oct evening) the strips: on, frames, fills, late
-        out += ","; out += iramJson();                    // (1.11.137) the chip's own RAM and our holders of it
+        out += ","; out += iramJson();
+        out += ",\"sd_gone\":" + std::to_string((unsigned long) sdGoneMs);   // (1.11.138) when the card stopped answering and was given up (0: never)
+        out += ","; out += packJson();                    // (1.11.138) the pack: pages, fonts and sounds in the chip's flash (16 MB boards)                    // (1.11.137) the chip's own RAM and our holders of it
         out += ","; out += psramJson();                   // (1.11.132) the PSRAM's holders: largest free block, resident pictures of the most allowed, the floor's evictions, the layer, the model picture, the film
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
@@ -2831,7 +2839,8 @@ static void webBegin() {
             if (!doorOpen() || web.header("X-LDRC") != "1") return;     // (the answer above says why)
             String path = web.arg("path"); if (!path.startsWith("/")) path = "/" + path;
             sdMakeFolders(path.c_str()); SD.remove(path);
-            if (path.startsWith("/hmi/") || path.startsWith("/images/")) SD.remove("/update/screen_have.txt");   // the next install reads and checks every file ("Check for update")
+            if (path.startsWith("/hmi/") || path.startsWith("/images/")) SD.remove("/update/screen_have.txt");
+            if (packCovers(path.c_str())) packMarkStale();   // (1.11.138) the pack follows at the next start   // the next install reads and checks every file ("Check for update")
             uploadFile = SD.open(path, FILE_WRITE); uploadGood = (bool) uploadFile; uploadBytes = 0;
         }
         else if (up.status == UPLOAD_FILE_WRITE) { if (uploadFile && uploadGood) { if (uploadFile.write(up.buf, up.currentSize) != up.currentSize) uploadGood = false; else uploadBytes += up.currentSize; } breathe(); }
@@ -2850,6 +2859,12 @@ static void webBegin() {
         web.setContentLength(p->size); web.send(200, "application/octet-stream", "");
         static uint8_t buf[1024];
         for (uint32_t at = 0; at < p->size; at += sizeof buf) { if (esp_partition_read(p, at, buf, sizeof buf) != ESP_OK) break; web.sendContent((const char *) buf, sizeof buf); }
+    });
+    doorOn("/pack", HTTP_GET, []() { web.send(200, "application/json", ("{" + packJson() + "}").c_str()); });   // (1.11.138) the pack's state
+    doorOn("/pack/build", HTTP_POST, []() {               // (1.11.138) the pack built afresh from the card: at the next start, which this is
+        packMarkStale();
+        web.send(200, "text/plain", "the pack is marked stale: the screen restarts and copies the card's pages, fonts and sounds into the chip\n");
+        flushOut(); delay(200); ESP.restart();
     });
     doorOn("/kept", HTTP_GET, []() {                    // /kept[?page=Name]: the values that outlive a page, as the screen holds them (a workshop look)
         const std::string want = web.hasArg("page") ? std::string(web.arg("page").c_str()) + "." : std::string();
@@ -3141,7 +3156,7 @@ static bool wavOpen(int id, uint32_t &rate) {           // leaves audioFile at t
     return wavOpenPath(path, rate);
 }
 static bool wavOpenPath(const char *path, uint32_t &rate, bool adpcmOk) {   // (1.11.85: a film's sound too; 1.11.93: adpcmOk, a film's may be IMA ADPCM)
-    audioFile = SD.open(path); if (!audioFile) return false;
+    audioFile = assetOpen(path); if (!audioFile) return false;   // (1.11.138) the pack's copy when there is one
     uint8_t h[12]; if (audioFile.read(h, 12) != 12 || memcmp(h, "RIFF", 4) || memcmp(h + 8, "WAVE", 4)) { audioFile.close(); return false; }
     rate = 22050; bool haveData = false; uint32_t tag = 1, chans = 1, bits = 16, align = 2;
     audioBlock = 0; audioBlockSamples = 0; audioSkip = 0;
@@ -3272,7 +3287,7 @@ static void audioStart(int id, bool loopIt) {
     audioLoop = loopIt; audioId = id;
     if (Clip *c = clipFind(id)) { curClip = c; curPos = 0; audioPlaying = true; audioFill(); return; }
     uint32_t rate;
-    if (!sdOk || !wavOpen(id, rate)) { audioId = -1; return; }
+    if (!assetsOk() || !wavOpen(id, rate)) { audioId = -1; return; }
     if (rate != audioRate) { i2s_set_sample_rates(I2S_PORT, rate); audioRate = rate; }
     // (1.11.37) A clip not yet in memory is read WHOLE before a sample of it is played, and kept. It used to stream from
     // the card as the main loop found time, and "Model memory matched" (56 kB, above the size the idle warming keeps)
@@ -3322,7 +3337,7 @@ static void audioWarm() {
     Busy busy_(BUSY_AUDIO);
     static int next = 0; static uint32_t lastTry = 0;
     static File warmFile; static uint8_t *warmBuf = nullptr; static uint32_t warmGot = 0, warmSize = 0; static int warmId = -1;
-    if (!sdOk || !audioRing) return;
+    if (!assetsOk() || !audioRing) return;
     if (audioPlaying) { if (warmBuf) { free(warmBuf); warmBuf = nullptr; warmFile.close(); warmId = -1; } return; }   // (a sound: the clip half in is let go; played, audioFill's capture keeps it)
     if (next >= 128 && !warmBuf) return;
     if ((int32_t) (millis() - lastRxMs) < 300 || millis() - lastPresentMs < 1500 || millis() - lastTry < 25) return;
@@ -3543,10 +3558,12 @@ void setup() {
     sdOk = SD.begin(SD_CS, sdSPI, 40000000) || SD.begin(SD_CS, sdSPI, 20000000);
     blog("boot", sdOk ? "sd ok" : "sd FAILED");
     updMend();                                             // a file that was being replaced when the power went is put back, before anything is read
-    if (sdOk) loadAaFonts();
+    packMount();                                           // (1.11.138, flash_pack.h) the pack: pages, fonts and sounds in the chip's own flash, on the 16 MB boards
+    if (assetsOk()) loadAaFonts();
     blog("boot", "fonts");
-    if (sdOk) {
-        File f = SD.open("/hmi/index.json");
+    if (packStartup()) loadAaFonts();                      // a pack missing or stale is copied from the card now (a line on the panel): then the fonts from it
+    if (assetsOk()) {
+        File f = assetOpen("/hmi/index.json");
         if (f) { JsonDocument doc; if (!deserializeJson(doc, f)) for (JsonObject p : doc["pages"].as<JsonArray>()) { int id = p["id"] | 0; std::string nm = p["name"] | ""; if ((int) pageNames.size() <= id) pageNames.resize(id + 1); pageNames[id] = nm; pageIds[nm] = id; } f.close(); }
     }
     { char b[80]; snprintf(b, sizeof(b), "LDRC V2 screen  sd=%d pages=%d touch=%d", sdOk, (int) pageNames.size(), touchOk); gfx->startWrite(); drawGlyphs(20, 40, 6, 0xFF9C, b); gfx->endWrite(); present(0, 0, W, 80); }
@@ -3602,6 +3619,7 @@ void loop() {
     { Busy b(BUSY_SERIAL); pumpSerial(); } { Busy b(BUSY_LINK); linkPoll(); updPoll(); } { Busy b(BUSY_WIFI); wifiPoll(); } { Busy b(BUSY_PICS); picPoll(); }
     { Busy b(BUSY_FLIGHT); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); } { Busy b(BUSY_FILM); filmPoll(); } { Busy b(BUSY_WIFI); blPoll(); blePoll(); } { Busy b(BUSY_CLI); cliPoll(); } PHASE(0)   // (25 Oct evening: Busy tags = who slipped the panel, /perf "slipw")
     { Busy b(BUSY_AUDIO); audioFill(); if (!teensyLink.running() && !(benchSkip & 4)) audioWarm(); } PHASE(1)
+    { Busy b(BUSY_SD); packTick(!teensyLink.running() && (int32_t) (now - lastRxMs) >= 100 && now - lastPresentMs >= 300 && !flyingNow()); }   // (1.11.138) the card against the pack, a file at a time between the front page's clock ticks
     { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running()) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } if (stripArmed && now > 20000 && !teensyLink.running()) { stripArmed = false; nvsQuiet([&] { prefs.putInt("striparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
     { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && (clipDropOne() || bgEvictOne())) psramEvictions++; } }   // (1.11.132/133: clips first) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
     { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)

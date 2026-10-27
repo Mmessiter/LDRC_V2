@@ -24,6 +24,8 @@ static inline bool clipDropOne() { return false; }                 // (1.11.133:
 static inline void *heap_caps_malloc(size_t n, unsigned) { return malloc(n); }   // (1.11.120: the picture's slab buffer, internal memory on the screen)
 #define MALLOC_CAP_INTERNAL 0
 #define MALLOC_CAP_8BIT 0
+#define MALLOC_CAP_SPIRAM 0                                 // (1.11.137: PsAlloc, the kept store and the page parse in the PSRAM)
+static inline void *heap_caps_realloc(void *p, size_t n, unsigned) { return realloc(p, n); }
 #define Cache_WriteBack_Addr(a, b) ((void) 0)                     // (the panel's cache: nothing to do on the Mac)
 #define wbPaced(a, b) ((void) 0)                                   // (25 Oct: the gentle write-back, src/psram_pace.h - the same nothing)
 #define Cache_Invalidate_Addr(a, b) ((void) 0)                    // (1.11.126: lines a DMA wrote - no DMA on the Mac)

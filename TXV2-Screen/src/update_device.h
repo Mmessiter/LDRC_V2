@@ -104,6 +104,7 @@ static bool updReplace(const std::string &from, const std::string &to, bool note
     }
     if (!SD.rename(from.c_str(), to.c_str())) { if (was) SD.rename(aside.c_str(), to.c_str()); if (was && note) SD.remove(UPD_PLACING); return false; }
     if (was) { SD.remove(aside.c_str()); if (note) SD.remove(UPD_PLACING); }
+    if (packCovers(to.c_str())) packMarkStale();           // (1.11.138) a page, font or sound replaced: the pack is copied afresh at the next start
     return true;
 }
 static void updMend() {                                     // at start-up, before a page is read from the card
