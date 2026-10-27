@@ -665,6 +665,15 @@ static void flightDrawButton(const ldrc::FlightButton &b) {
     flUnclip();
 }
 
+// The flash this screen runs on (board.h on the device; the Mac's renderer has no chip and shows the 4 MB look).
+static uint32_t flFlashBytes() {
+#ifdef ARDUINO
+    return flashChipBytes;
+#else
+    const char *e = getenv("LDRC_FLASH_MB");               // the Mac renderer: LDRC_FLASH_MB=16 shows the 16 MB look
+    return e ? (uint32_t) atoi(e) << 20 : 0;
+#endif
+}
 // The strip along the top. In flight: the model on the left, the bank in the middle, the time on the right. On the
 // setup page: its title, and under the strip the line that says what to do.
 static void flightDrawStrip(const ldrc::FlightScene &sc) {
@@ -679,11 +688,16 @@ static void flightDrawStrip(const ldrc::FlightScene &sc) {
             const int room = sc.stripRight - 12, font = textWidth(0, sc.alert) <= room ? 0 : 6;
             flText(6 + (room - textWidth(font, sc.alert)) / 2, (FLIGHT_STRIP - fontHeight(font)) / 2, font, 0xFFFF, sc.alert);   // (white on the red, whatever the theme: a light theme's text colour did not read on it)
         }
-        else if (!sc.middle.empty()) {                           // the bank, centred in what is left between the name and the tabs
-            const int room = sc.stripRight - third - 8; const std::string m = flCut(sc.middle, 6, room);
+        // (1.11.135) "16 MB" at the strip's right end on a 16 MB board: the two kinds of transmitter look the same from the
+        // outside (Malcolm, 27 Oct 2026), and only this kind takes the FULL build. Nothing on a 4 MB board.
+        const std::string tag = (!alert && flFlashBytes() >= 16u * 1024u * 1024u) ? "16 MB" : "";
+        const int tagW = tag.empty() ? 0 : textWidth(6, tag) + 10, rightW = sc.right.empty() ? 0 : textWidth(6, sc.right) + 6;
+        if (!alert && !sc.middle.empty()) {                      // the bank, centred in what is left between the name and the tabs (and the tag)
+            const int room = sc.stripRight - third - 8 - tagW - rightW; const std::string m = flCut(sc.middle, 6, room);
             flText(third + (room - textWidth(6, m)) / 2 + 4, y, 6, FL_INK, m);
         }
         if (!sc.right.empty()) flText(sc.stripRight - 6 - textWidth(6, sc.right), y, 6, FL_INK, sc.right);   // (nothing since 1.10.1; the tabs and the Help button are beyond)
+        if (!tag.empty()) flText(sc.stripRight - 6 - rightW - textWidth(6, tag), y, 6, FL_ON_GROUND, tag);
         flUnclip();
         return;
     }
