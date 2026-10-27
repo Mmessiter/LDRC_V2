@@ -164,7 +164,7 @@ void DualRatesEnd()
 
 /******************************************************************************************************************************/
 
-void DisplayDualRateValues()
+FLASHMEM void DisplayDualRateValues()
 {
     char rate1[] = "rate1";
     char rate2[] = "rate2";

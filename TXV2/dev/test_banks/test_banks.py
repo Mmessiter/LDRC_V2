@@ -43,6 +43,9 @@ def lift_from(text, head, rename=None):
                     return out if not rename else out.replace(rename[0], rename[1])
     raise SystemExit('cannot lift ' + head)
 def lift(rel, head, rename=None): return lift_from(src(rel), head, rename)
+def lift_old(text, head, rename=None):   # B149: the committed source may carry a FLASHMEM on the heading (it does since B149)
+    try: return lift_from(text, head, rename)
+    except SystemExit: return lift_from(text, 'FLASHMEM ' + head, rename)
 def one_liner(text, head):
     for l in text.split('\n'):
         if l.startswith(head): return l + '\n'
@@ -110,15 +113,15 @@ static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 
    + lift('include/SDcard.h', 'static uint8_t Ext2Sum(') + one_liner(sdc, 'static uint8_t BanksSlot()') \
    + lift('include/SDcard.h', 'FLASHMEM void BanksCopy(') + lift('include/SDcard.h', 'FLASHMEM static void BanksFromFour()') \
    + lift('include/SDcard.h', 'FLASHMEM static int BanksBlockBuild(') + lift('include/SDcard.h', 'FLASHMEM static bool BanksBlockTake(') \
-   + lift('include/SDcard.h', 'FLASHMEM void SixBanksSet(') + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()') \
+   + lift('include/SDcard.h', 'FLASHMEM void SixBanksSet(') + lift('include/SDcard.h', 'FLASHMEM void ReadModelExtension()') + lift('include/SDcard.h', 'FLASHMEM void SaveModelExtension()') \
    + 'static uint8_t DualRateValue = 100; static uint16_t ReversedChannelBITS = 0; static int savesSeen = 0, seenClears = 0; static void SaveOneModel(uint32_t) { ++savesSeen; } static void GetCurveDots(uint8_t, uint16_t) {} static void AdjSeenClear() { ++seenClears; } static uint8_t BanksCount() { return SixBanks ? 6 : 4; }\n' + lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)') \
    + '#define MINMICROS 500\n#define MAXMICROS 2500\nstatic uint32_t millis() { return 0; }\nstatic uint8_t SourceOfOutput(uint8_t o) { return o; }\nstatic uint16_t CurveMicros(uint8_t d) { const uint32_t lo = MaxRangeNarrow ? 945 : 500, hi = MaxRangeNarrow ? 2055 : 2500; return (uint16_t)(lo + ((uint32_t)d * (hi - lo) + 90) / 180); }\n' \
    + lift('include/RF_Adjust.h', 'FLASHMEM static int AdjFcUs(') + 'static int AdjTxBankUs(int ch0, int bank) { int v = CurveMicros(CurvePoint[bank][ch0][0]); if (ReversedChannelBITS & (1 << ch0)) v = MAXMICROS - (v - MINMICROS); return AdjFcUs((uint16_t)v); }\n' \
    + one_liner(src('include/RF_Adjust.h'), 'static uint32_t AdjSeenHoldUntil') + one_liner(src('include/RF_Adjust.h'), 'struct AdjUndoRec') + one_liner(src('include/RF_Adjust.h'), '#define ADJ_UNDO_MAX') + one_liner(src('include/RF_Adjust.h'), 'DMAMEM static AdjUndoRec AdjUndo') + one_liner(src('include/RF_Adjust.h'), 'static int AdjUndoN') \
    + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjUndoKeep(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjModelRevert(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjModelCommit(') \
    + lift('include/RF_Adjust.h', 'FLASHMEM static int AdjHeightUs(') + lift('include/RF_Adjust.h', 'FLASHMEM static int AdjHeightFor(') + lift('include/RF_Adjust.h', 'FLASHMEM static void AdjSpaceBanks(') \
-   + lift_from(sdc_old, 'void ReadModelExtension()', ('void ReadModelExtension()', 'void ReadModelExtensionOld()')) \
-   + lift_from(sdc_old, 'void SaveModelExtension()', ('void SaveModelExtension()', 'void SaveModelExtensionOld()')) + r'''
+   + lift_old(sdc_old, 'void ReadModelExtension()', ('void ReadModelExtension()', 'void ReadModelExtensionOld()')) \
+   + lift_old(sdc_old, 'void SaveModelExtension()', ('void SaveModelExtension()', 'void SaveModelExtensionOld()')) + r'''
 // helpers
 static const int SEQ = 2111;   // the checked sequence and its checksum, as measured on a real models.dat (19 Oct 2026)
 static void randomCurve(int b, int ch, int n) { CurvePointCount[ch] = (uint8_t) n; for (int k = 0; k < CURVE_POINTS_MAX; ++k) CurvePoint[b][ch][k] = k < n ? (uint8_t) (rnd() % 181) : 0; CurveStoreClear(b, ch); CurveStoreSync(b, ch); for (int s = 0; s <= 8; s += 2) if (CurveStore[b][ch][s] == CURVE_UNSET) CurveStore[b][ch][s] = (uint8_t) (rnd() % 181); }   // (the five of old are always in the store: a model starts from them)

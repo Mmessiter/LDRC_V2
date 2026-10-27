@@ -1782,7 +1782,7 @@ int AnalogueReed(uint8_t InputChannel)
 
 /*********************************************************************************************************************************/
 
-void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when a calibration starts (Reset transmitter ran from the Calibrate page and took it)
+FLASHMEM void SetDefaultValues(bool Calibrating) // B16: the calibration branch only when a calibration starts (Reset transmitter ran from the Calibrate page and took it)
 {
     uint16_t j = 0;
     uint16_t i = 0;
@@ -2279,7 +2279,7 @@ FLASHMEM uint8_t CurveSegments(int16_t *x1, int16_t *y1, int16_t *x2, int16_t *y
 
 /*********************************************************************************************************************************/
 
-FASTRUN void DisplayCurve()
+FLASHMEM void DisplayCurve()
 {
 
     char cmdBuffer[512] = "";          // Buffer for commands
@@ -2713,7 +2713,7 @@ void ZeroDataScreen()
 }
 /***************************************************** ReadNewSwitchFunction ****************************************************************************/
 
-void ReadNewSwitchFunction()
+FLASHMEM void ReadNewSwitchFunction()
 {
     char OneSwitchView_r0[] = "r0"; // Not used (B38: a real choice for a front switch)
     char OneSwitchView_r1[] = "r1"; // Flight modes

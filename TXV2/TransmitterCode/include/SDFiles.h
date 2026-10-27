@@ -140,7 +140,7 @@ uint32_t GetFileSize(char *filename)
 
 /*********************************************************************************************************************************/
 
-void WriteEntireBuffer()
+FLASHMEM void WriteEntireBuffer()
 {
     ModelsFileNumber.close();
     CloseModelsFile();
@@ -159,7 +159,7 @@ void WriteEntireBuffer()
 
 /******************************************************************************************************************************/
 
-void ShowFreeSpaceEtc()
+FLASHMEM void ShowFreeSpaceEtc()
 {
 
     float FreeSpaceOnSD = ((float)TINYCARD.totalSize() - (float)TINYCARD.usedSize()) / ((float)(1024 * 1024 * 1024));
@@ -334,7 +334,7 @@ static uint32_t LogDateKey(const char *name)
         y += 2000;
     return (uint32_t)y * 10000u + (uint32_t)m * 100u + (uint32_t)d;
 }
-void TidyLogFolder()
+FLASHMEM void TidyLogFolder()
 {
     for (int round = 0; round < 60; ++round) // (never for ever: each round removes one file)
     {
@@ -422,7 +422,7 @@ void DeleteMODfile(int p)
     ClearText();
 }
 /*********************************************************************************************************************************/
-void BuildDirectory() 
+FLASHMEM void BuildDirectory() 
 {
     char Entry1[30];
     char fn[20];

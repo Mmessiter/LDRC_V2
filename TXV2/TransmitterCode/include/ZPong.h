@@ -46,7 +46,7 @@ void SendPong(int x, int y, int ly, int ry)
 }
 /*********************************************************************************************************************************/
 
-void PlayPong()
+FLASHMEM void PlayPong()
 { // called 100 times per second
     static uint32_t  Ponged          = 0;
     static short int x               = STARTX;

@@ -188,7 +188,7 @@ def check(ok, what):
 # ---- the flow, as source
 i0 = main.find('Look("Starting calibration")'); seg = main[i0:main.find('CurrentMode = CALIBRATELIMITS', i0)]
 check(i0 > 0 and 'SetDefaultValues(true);' in seg and 'ReduceLimits();' in seg and 'ResetSwitchNumbers();' in seg and 'Save' not in seg, 'start: the defaults for calibrating, the limits pulled in, nothing saved (B17)')
-sdv = lift('src/main.cpp', 'void SetDefaultValues(bool Calibrating)')
+sdv = lift('src/main.cpp', 'FLASHMEM void SetDefaultValues(bool Calibrating)')
 check('MaxRangeNarrow = 0;' in sdv and sdv.index('MaxRangeNarrow = 0;') < sdv.index('if (Calibrating)'), "a calibration runs on the wide range (B113's byte reset with the other defaults): ReduceLimits's 0 / 180 reach the bars' ends")
 check(re.search(r'case CALIBRATELIMITS:[^\n]*\n\s*CalibrateSticks\(\);', main) is not None and re.search(r'case CENTRESTICKS:[^\n]*\n\s*ChannelCentres\(\);', main) is not None, 'the two steps run from the main loop, nothing sent meanwhile')
 i1 = main.find('if (CurrentMode == CENTRESTICKS)'); seg = main[i1:i1 + 700]

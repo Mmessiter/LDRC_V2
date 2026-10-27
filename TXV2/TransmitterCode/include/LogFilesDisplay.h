@@ -28,7 +28,7 @@
 #define GOING_DOWN 2
 
 char LogLines[MXLINES + 1][MXLINELENGTH + 1];
-uint32_t SeekPosition[MAXSEEKPOSITIONS];
+DMAMEM uint32_t SeekPosition[MAXSEEKPOSITIONS]; // B149: in RAM2 (20 kB out of RAM1). RAM2 is not zeroed at start: LogVIEWNew clears it before every use
 int16_t StartReadLine = 0;
 uint32_t ThisSeekPosition = 0;
 uint16_t FinalReadStartLine = 0xFFFF;
@@ -48,7 +48,7 @@ uint32_t ViewFileSize = 0;                          // B125: the size of the fil
 // backwards while the read buffer still holds everything to its end and the window still has room for the lines: as
 // full as any other window, and it scrolls. Every line before it has its place in SeekPosition by now (the windows
 // that found the end overlap). Returns the lines of the window now at StartReadLine.
-uint16_t WidenFinalWindow(uint16_t L) // L: the lines the window at StartReadLine (the one that reached the end) showed
+FLASHMEM uint16_t WidenFinalWindow(uint16_t L) // L: the lines the window at StartReadLine (the one that reached the end) showed
 {
     const uint32_t total = (uint32_t)StartReadLine + L;
     int start = StartReadLine;
@@ -61,7 +61,7 @@ uint16_t WidenFinalWindow(uint16_t L) // L: the lines the window at StartReadLin
 }
 
 // ******************************************************************************************************************************/
-void TopOfLogFileNEW()
+FLASHMEM void TopOfLogFileNEW()
 {
     char LogTeXt_val_y[] = "LogText.val_y";
     StartReadLine = 0;
@@ -77,7 +77,7 @@ void TopOfLogFileNEW()
  * final window left the view blank or garbled. Now: one near-window stride per read to find the end,
  * then display the final window and scroll to its true bottom (content height − visible box height).
  */
-void BottomOfLogFileNEW()
+FLASHMEM void BottomOfLogFileNEW()
 {
     char LogTeXt_val_y[] = "LogText.val_y";
     while (FinalReadStartLine == 0xFFFF) // end of file not discovered yet — walk forward to find it
@@ -108,7 +108,7 @@ void BottomOfLogFileNEW()
 
 // ************************************************************************
 // This function reads more of the log file automatically and scroll up or as needed. IT WORKS !!!!!
-void LogReleasedNEW()
+FLASHMEM void LogReleasedNEW()
 {
     uint8_t Direction = GOING_NOWHERE;
     char Current_Y_Nextion_Label[] = "LogText.val_y";
@@ -193,7 +193,7 @@ void LogReleasedNEW()
     Previous_Current_Y = Current_Y;
 }
 /****************************************************************************************************************************/
-void ShowLogFileNew(uint16_t LinesCounter)
+FLASHMEM void ShowLogFileNew(uint16_t LinesCounter)
 {
     char TheText[MAXFILELEN + 10]; // MAX = 5K or so
     char LogTeXt1[] = "LogText";
@@ -241,14 +241,14 @@ void ShowLogFileNew(uint16_t LinesCounter)
 /******************************************************************************************************************/
 // if there is still room in the array, this function stores the file pointer so scrolling up is possible
 
-void StoreThisNewSeekPosition(uint16_t ThisPosition, uint32_t ThisValue)
+FLASHMEM void StoreThisNewSeekPosition(uint16_t ThisPosition, uint32_t ThisValue)
 {
     if (ThisPosition < MAXSEEKPOSITIONS)
         SeekPosition[ThisPosition] = ThisValue;
 }
 
 // ****************************************************************************************
-bool WrapNow(uint16_t ColumnIndex, uint8_t LastChar)
+FLASHMEM bool WrapNow(uint16_t ColumnIndex, uint8_t LastChar)
 {
     if (ColumnIndex >= WRAPPOINT)
     {
@@ -278,7 +278,7 @@ bool WrapNow(uint16_t ColumnIndex, uint8_t LastChar)
 char WrappedFileName[] = "/WRAP.TMP";
 bool ViewingWrappedCopy = false;
 
-bool MakeWrappedCopy()
+FLASHMEM bool MakeWrappedCopy()
 {
     char in[512];
     char out[1024];
@@ -350,7 +350,7 @@ bool MakeWrappedCopy()
 
 // Open whichever file the viewer should actually read: the pre-wrapped copy
 // when one was made, else the original.
-File OpenViewFile()
+FLASHMEM File OpenViewFile()
 {
     if (ViewingWrappedCopy)
     {
@@ -374,7 +374,7 @@ File OpenViewFile()
 // tail unreachable — the "can't scroll to the end on SOME help files" bug.
 bool WindowOverflowed = false;
 
-uint16_t BuildLinesArray(char *ReadBuffer, uint16_t BytesRead, uint32_t StartSeekPosition)
+FLASHMEM uint16_t BuildLinesArray(char *ReadBuffer, uint16_t BytesRead, uint32_t StartSeekPosition)
 {
     uint16_t LinesCounter = 0;
     uint32_t BufferIndex = 0;
@@ -427,7 +427,7 @@ uint16_t BuildLinesArray(char *ReadBuffer, uint16_t BytesRead, uint32_t StartSee
 }
 /******************************************************************************************************************************/
 
-uint16_t ReadAFewLines()
+FLASHMEM uint16_t ReadAFewLines()
 {
     char ReadBuffer[READBUFFERSIZE + 50]; // a bit of extra just in case
 
@@ -469,14 +469,14 @@ uint16_t ReadAFewLines()
 }
 /******************************************************************************************************************************/
 
-void StartLogFileView() // This is the entry point
+FLASHMEM void StartLogFileView() // This is the entry point
 {
     strcpy(TextFileName, "");
     LogVIEWNew();
 }
 /******************************************************************************************************************************/
 
-void LogVIEWNew() // Start log screen
+FLASHMEM void LogVIEWNew() // Start log screen
 {
     char Current_Y_Nextion_Label[] = "LogText.val_y"; // the Y position of the log text on the Nextion screen
     char fnf[] = "File not found: ";

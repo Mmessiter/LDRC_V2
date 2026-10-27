@@ -280,7 +280,7 @@ void EncodeAFloat(float value)
 /************************************************************************************************************/
 // NB ONLY THE LOW 12 BITS ARE ACTUALLY SENT! (Because of the compression) so don't use the high four BITs!
 
-void LoadOneParameter() // todo: return length of this parameter (avoid using MAX 12 always)
+FLASHMEM void LoadOneParameter() // todo: return length of this parameter (avoid using MAX 12 always)
 {
     uint16_t Twobytes = 0;
     uint8_t FS_Byte1;

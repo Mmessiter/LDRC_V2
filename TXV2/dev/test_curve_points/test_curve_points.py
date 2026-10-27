@@ -438,7 +438,7 @@ prog = (PROGRAM.replace('@DEFS@', DEFS).replace('@MAP@', TEENSY_MAP).replace('@I
         .replace('@OLD@', OLD if HAVE_OLD else '#define NO_OLD 1\n')
         .replace('@GRAPHCMD@', lift('src/main.cpp', 'FLASHMEM static void GraphCmd('))
         .replace('@LAYOUT@', lift('src/main.cpp', 'FLASHMEM void CurveLayoutShow()'))
-        .replace('@EXT@', lift('include/SDcard.h', 'static uint8_t Ext2Sum(') + lift('include/SDcard.h', 'void ReadModelExtension()') + lift('include/SDcard.h', 'void SaveModelExtension()')))
+        .replace('@EXT@', lift('include/SDcard.h', 'static uint8_t Ext2Sum(') + lift('include/SDcard.h', 'FLASHMEM void ReadModelExtension()') + lift('include/SDcard.h', 'FLASHMEM void SaveModelExtension()')))
 LIB = os.path.join(TC, '.pio', 'libdeps', 'teensy41', 'InterpolationLib', 'src')
 if not os.path.isdir(LIB): sys.exit('InterpolationLib not found at ' + LIB + ' (build the Teensy once)')
 with tempfile.TemporaryDirectory() as d:

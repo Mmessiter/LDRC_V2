@@ -176,7 +176,7 @@ private:
 #define FW_STAGED "/FW/STAGED.TXT"
 #define FW_PROVEN_KEEP 16
 
-bool FwIsProven(uint32_t crc)
+FLASHMEM bool FwIsProven(uint32_t crc)
 {
     File f = SD.open(FW_PROVEN, FILE_READ);
     if (!f)
@@ -206,7 +206,7 @@ bool FwIsProven(uint32_t crc)
     return found;
 }
 
-void FwWriteStaged(uint32_t crc, const char *version)
+FLASHMEM void FwWriteStaged(uint32_t crc, const char *version)
 {
     if (!SD.exists("/FW"))
         SD.mkdir("/FW");
@@ -221,7 +221,7 @@ void FwWriteStaged(uint32_t crc, const char *version)
 }
 
 // The firmware on trial has been accepted: if it is the package last staged here, it goes on the list.
-void FwRememberProven()
+FLASHMEM void FwRememberProven()
 {
     File f = SD.open(FW_STAGED, FILE_READ);
     if (!f)
@@ -288,7 +288,7 @@ void FwRememberProven()
 /*********************************************************************************************************************************/
 // The little file that says whether the firmware is on trial:   trial 2 2.5.7 A 30/09/26
 
-void FwWriteState(const char *kind, int tries, const char *version)
+FLASHMEM void FwWriteState(const char *kind, int tries, const char *version)
 {
     if (!SD_Card_Exists)
         return;
@@ -335,7 +335,7 @@ bool FwReadState(char *kind, size_t kindSize, int &tries, char *version, size_t 
 /*********************************************************************************************************************************/
 // Flash, step 3: the image in the package at `path` into the upper half, then read back. Nothing is lost if this fails.
 
-uint8_t FwStage(const char *path, const ldrc::FwHeader &h)
+FLASHMEM uint8_t FwStage(const char *path, const ldrc::FwHeader &h)
 {
     static uint8_t page[256];
     File f = SD.open(path, FILE_READ);
@@ -384,7 +384,7 @@ uint8_t FwStage(const char *path, const ldrc::FwHeader &h)
 /*********************************************************************************************************************************/
 // Flash, step 2: the firmware now running, kept on the card as a package like any other.
 
-uint8_t FwKeepRunning()
+FLASHMEM uint8_t FwKeepRunning()
 {
     static uint8_t chunk[2048];
     const uint32_t size = FwRunningSize();
@@ -539,7 +539,7 @@ void LinkSend(const ldrc::Frame &f)
 /*********************************************************************************************************************************/
 // The screen has knocked. Until it says goodbye (or falls silent for 30 s) this Teensy is a file server, not a transmitter.
 
-void LinkMode()
+FLASHMEM void LinkMode()
 {
     CRUMB(CRUMB_LINK);
     static TeensyCard card;

@@ -579,7 +579,7 @@ void DrawFhssBox()
 }
 
 /************************************************************************************************************/
-void ScanAllChannels(bool cls)
+FLASHMEM void ScanAllChannels(bool cls)
 {
     const uint16_t x1 = xx1;
     const uint16_t y1 = yy1;

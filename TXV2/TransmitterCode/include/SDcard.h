@@ -131,7 +131,7 @@ void CheckServoType()
 /**********************************  READ A MODEL ***********************************************************************************************/
 /************************************************************************************************************************************************/
 
-bool ReadOneModel(uint32_t Mnum)
+FLASHMEM bool ReadOneModel(uint32_t Mnum)
 {
     uint16_t j;
     uint16_t i;
@@ -864,7 +864,7 @@ FLASHMEM void SixBanksSet(bool on) // Model options: on, banks 5 and 6 from thei
     }
     SixBanks = on;
 }
-void ReadModelExtension()
+FLASHMEM void ReadModelExtension()
 {
     const int a = SDCardAddress; // (just past the checksum)
     DoingCheckSm = true;         // (BuildCheckSum() skips while this is set)
@@ -986,7 +986,7 @@ void ReadModelExtension()
         BanksFromFour(); // (four banks, or the block missing or unsound: banks 5 and 6 are bank 4's twins until set)
     DoingCheckSm = false;
 }
-void SaveModelExtension()
+FLASHMEM void SaveModelExtension()
 {
     const int a = SDCardAddress; // (just past the checksum: at most the file's end, so the write is an append, never a seek beyond it)
     const int size = (int)ModelsFileNumber.size();
@@ -1100,7 +1100,7 @@ void SaveTxExtension()
 
 // NB This starts with transmitter params and then calls the model params load function
 
-bool LoadAllParameters()
+FLASHMEM bool LoadAllParameters()
 {
     CRUMB(CRUMB_LOAD);
     int j = 0;
@@ -1307,7 +1307,7 @@ bool LoadAllParameters()
 /******************************************** SAVE ONLY THE TRANSMITTER PARAMS ****************************************************/
 /*********************************************************************************************************************************/
 
-void SaveTransmitterParameters()
+FLASHMEM void SaveTransmitterParameters()
 {
     bool EON = false;
     int j = 0;
@@ -1528,7 +1528,7 @@ void SaveAllParameters()
 /*********************************************************************************************************************************/
 
 /** MODEL Specific */
-void SaveOneModel(uint32_t mnum)
+FLASHMEM void SaveOneModel(uint32_t mnum)
 {
     uint32_t j;
     uint32_t i;

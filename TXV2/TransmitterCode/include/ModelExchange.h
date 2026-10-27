@@ -106,7 +106,7 @@ void ShowRemoteID()
 /*********************************************************************************************************************************/
 
 /** @brief SEND A MODEL FILE */
-void SendModelFile()
+FLASHMEM void SendModelFile()
 {
     uint64_t TXPipe;
     uint8_t Fack[32];
@@ -369,7 +369,7 @@ static void ReceiveAbandoned(const char *why, bool sadSound)
 }
 
 /** @brief RECEIVE A MODEL FILE */
-void ReceiveModelFile()
+FLASHMEM void ReceiveModelFile()
 {
     uint64_t RXPipe;
     uint32_t RXTimer = 0;

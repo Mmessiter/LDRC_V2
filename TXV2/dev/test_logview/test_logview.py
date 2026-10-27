@@ -25,6 +25,7 @@ FAKE_DEFS = r'''
 #include <vector>
 #include <algorithm>
 #define FLASHMEM
+#define DMAMEM                                         // B149: the seek table lives in RAM2 on the Teensy
 #define FASTRUN
 #define MAXFILELEN (1024 * 3)
 #define LOGVIEW 23

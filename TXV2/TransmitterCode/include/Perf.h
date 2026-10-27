@@ -110,7 +110,7 @@ const char *PerfHelloText()
 }
 
 // The whole report into one file.
-static void PerfReportTo(File &f)
+FLASHMEM static void PerfReportTo(File &f)
 {
     char line[160];
     snprintf(line, sizeof line, "LDRC transmitter timing - firmware 2.5.6 %s - up %lu s\n", TXVERSION_EXTRA, (unsigned long)(millis() / 1000));
@@ -168,7 +168,7 @@ static void PerfReportTo(File &f)
 // copy kept in /PERF/ named by the date and time - B15 wrote it only when the link opened, so a transmitter switched off
 // straight after flying lost the lot: Malcolm's first simulator session, 1-10-2026.) Nothing is written with no model
 // connected since power-on, so the last session's report stays on the card until the next one has something to say.
-void PerfWriteReport(bool keepCopy)
+FLASHMEM void PerfWriteReport(bool keepCopy)
 {
     if (!PerfSends)
         return; // no model has been connected since power-on: nothing to say
