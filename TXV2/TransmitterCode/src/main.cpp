@@ -4690,6 +4690,7 @@ FASTRUN void ButtonWasPressed()
             // page's own preinitialize hides the picture (vis exp0,0). So: the whole front page, as GotoFrontView makes it -
             // the picture, the trims, the bank, the names - and the page itself, should the screen have put back another.
             PreviousBank = 250; // sure to be different
+            BankSoundHeld = true; // B147: the redraw must not SAY the bank - nothing changed (Malcolm, 27 Oct: "Bank 4!" after every update)
             GotoFrontView();
             return;
         }

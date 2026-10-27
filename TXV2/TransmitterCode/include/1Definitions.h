@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B146 24/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B147 27/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1551,6 +1551,7 @@ uint8_t BankSounds[BANK_NAMES_N] = {
     BANKSIX};   // "Profile 6"
 uint8_t BanksInUse[BANKS_USED] = {0, 1, 2, 3, 32, 33}; // (B130: 5 and 6 live in the model's banks block)
 uint8_t PreviousBank = 1;
+bool BankSoundHeld = false;                   // B147: the next BankHasChanged redraws without the bank's sound (set where PreviousBank is forced)
 // ************************************
 char ChannelNames[CHANNELSUSED][11] = {{"Aileron"}, {"Elevator"}, {"Throttle"}, {"Rudder"}, {"Gear"}, {"AUX1"}, {"AUX2"}, {"AUX3"}, {"AUX4"}, {"AUX5"}, {"AUX6"}, {"AUX7"}, {"AUX8"}, {"AUX9"}, {"AUX10"}, {"AUX11"}};
 uint8_t DualRateInUse = 1;

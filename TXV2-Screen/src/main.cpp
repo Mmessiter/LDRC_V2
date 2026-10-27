@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.136"
+#define SCREEN_VERSION "1.11.137"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -725,8 +725,22 @@ static std::string pageNameNow() { return page.name; }
 static std::vector<std::string> pageNames;                 // by id
 static std::map<std::string, int> pageIds;
 // Values that outlive a page: global-scope components, and writes to pages not on screen.
-struct Kept { std::map<std::string, int32_t> ints; std::map<std::string, std::string> txts; };
-static std::map<std::string, Kept> kept;                   // key "Page.Comp"
+// (1.11.137) The store's nodes live in the PSRAM. Every value the main board writes to a page is remembered here for the
+// page's return, and a tour of the pages on the new transmitter grew it from 44 entries to 216 and the chip's own RAM from
+// 75 kB free to 18 kB (27 Oct 2026: the web server stopped, the strips fell late). The keys and the code stay as they
+// were: only the allocator changes, so the map's nodes - the bulk of it - come out of the 8 MB instead.
+template <class T> struct PsAlloc {
+    using value_type = T;
+    PsAlloc() noexcept {}
+    template <class U> PsAlloc(const PsAlloc<U> &) noexcept {}
+    T *allocate(size_t n) { void *p = heap_caps_malloc(n * sizeof(T), MALLOC_CAP_SPIRAM); if (!p) p = malloc(n * sizeof(T)); if (!p) abort(); return (T *) p; }
+    void deallocate(T *p, size_t) noexcept { free(p); }
+    template <class U> bool operator==(const PsAlloc<U> &) const noexcept { return true; }
+    template <class U> bool operator!=(const PsAlloc<U> &) const noexcept { return false; }
+};
+template <class K, class V> using PsMap = std::map<K, V, std::less<K>, PsAlloc<std::pair<const K, V>>>;
+struct Kept { PsMap<std::string, int32_t> ints; PsMap<std::string, std::string> txts; };
+static PsMap<std::string, Kept> kept;                      // key "Page.Comp"
 struct Comp; static std::string pageNameNow();
 // A value the FINGER changed (a switch flipped, a slider moved, a row picked) is remembered like one the main board wrote,
 // so that the page comes back with it, as a Nextion's global components do. (Screen 1.8.9; Malcolm, 10-04: "on the
@@ -1658,23 +1672,34 @@ static void setOptions(Comp &c, const std::string &s) {
 // ------------------------------------------------------------------ pages not on screen
 // The keyboard pages address their caller's box as p[page].b[id]: name, type and txt_maxl come from
 // the page file on the card, read once per page and kept.
+// (1.11.137) The page files are parsed in the PSRAM. A page's tree needs about twice its file - up to 50 kB for the biggest
+// pages - and ArduinoJson took it from the chip's own RAM in small pieces, which left that RAM in fragments: after forty
+// page changes on the new transmitter the internal heap stood at 7 kB, the web server stopped answering, and the strips
+// began to fall late (27 Oct 2026). The PSRAM has megabytes; internal RAM is for the panel, the radio and the card.
+struct PsJsonAlloc : ArduinoJson::Allocator {
+    void *allocate(size_t n) override { void *p = heap_caps_malloc(n, MALLOC_CAP_SPIRAM); return p ? p : malloc(n); }
+    void deallocate(void *p) override { free(p); }
+    void *reallocate(void *p, size_t n) override { return heap_caps_realloc(p, n, MALLOC_CAP_SPIRAM) ?: realloc(p, n); }
+};
+static PsJsonAlloc psJsonAlloc;
 struct CompInfo { int id; std::string name; int typeCode; int txtMaxl; bool global; int32_t val; std::string txt; };   // (val, txt: as the page file has them: a global's value before anything wrote it)
-static std::map<std::string, std::vector<CompInfo>> pageInfo;
-static const std::vector<CompInfo> *infoFor(const std::string &pg) {
+using CompInfoList = std::vector<CompInfo, PsAlloc<CompInfo>>;   // (1.11.137) in the PSRAM: four pages' worth took 18 kB of the chip's RAM
+static PsMap<std::string, CompInfoList> pageInfo;
+static const CompInfoList *infoFor(const std::string &pg) {
     auto it = pageInfo.find(pg); if (it != pageInfo.end()) return &it->second;
     auto pid = pageIds.find(pg); if (pid == pageIds.end() || !sdOk) return nullptr;
     char path[32]; snprintf(path, sizeof(path), "/hmi/pages/%d.json", pid->second);
     File f = SD.open(path); if (!f) return nullptr;
     JsonDocument filter; filter["comps"][0]["n"] = true; filter["comps"][0]["i"] = true; filter["comps"][0]["t"] = true; filter["comps"][0]["a"]["txt_maxl"] = true;
     filter["comps"][0]["g"] = true; filter["comps"][0]["val"] = true; filter["comps"][0]["txt"] = true;
-    JsonDocument doc; DeserializationError err = deserializeJson(doc, f, DeserializationOption::Filter(filter)); f.close();
+    JsonDocument doc(&psJsonAlloc); DeserializationError err = deserializeJson(doc, f, DeserializationOption::Filter(filter)); f.close();
     if (err) return nullptr;
-    std::vector<CompInfo> v;
+    CompInfoList v;
     for (JsonObject j : doc["comps"].as<JsonArray>()) v.push_back({ j["i"] | 0, std::string(j["n"] | ""), typeCodeOf(j["t"] | ""), j["a"]["txt_maxl"] | 0, (j["g"] | "l")[0] == 'g', j["val"] | 0, std::string(j["txt"] | "") });
     pageInfo[pg] = v;
     return &pageInfo[pg];
 }
-static const CompInfo *infoOf(const std::string &pg, const std::string &nm) { const std::vector<CompInfo> *v = infoFor(pg); if (v) for (auto &ci : *v) if (ci.name == nm) return &ci; return nullptr; }
+static const CompInfo *infoOf(const std::string &pg, const std::string &nm) { const CompInfoList *v = infoFor(pg); if (v) for (auto &ci : *v) if (ci.name == nm) return &ci; return nullptr; }
 // ------------------------------------------------------------------ script host
 static void runScript(const std::string &code, const std::string &self);
 struct Host : public NextionHost {
@@ -1809,7 +1834,7 @@ struct Host : public NextionHost {
     std::string pageNameById(int32_t id) override { return id >= 0 && id < (int) pageNames.size() ? pageNames[id] : ""; }
     std::string compNameById(const std::string &pg, int32_t id) override {
         if (pg.empty() || pg == page.name) { for (auto &c : page.comps) if (c.id == id) return c.name; return ""; }
-        const std::vector<CompInfo> *v = infoFor(pg); if (v) for (auto &ci : *v) if (ci.id == id) return ci.name;
+        const CompInfoList *v = infoFor(pg); if (v) for (auto &ci : *v) if (ci.id == id) return ci.name;
         return "";
     }
     int32_t getSys(const std::string &name) override { auto it = sys.find(name); return it == sys.end() ? 0 : it->second; }
@@ -1911,7 +1936,7 @@ static bool loadPage(const std::string &name) {
         }
     }
     pageSdUs = micros() - tp; tp = micros();
-    JsonDocument doc;
+    JsonDocument doc(&psJsonAlloc);                        // (1.11.137) the tree in the PSRAM, not the chip's RAM (PsJsonAlloc)
     DeserializationError err = deserializeJson(doc, (const char *) raw, got);
     if (err) return false;
     pageParseUs = micros() - tp;
@@ -2665,6 +2690,7 @@ static uint32_t quietUntil = 0; static bool quietBacklightOff = false, quietWifi
 static File uploadFile; static bool uploadGood = false; static uint32_t uploadBytes = 0;
 
 static std::string psramJson();                        // (1.11.132) defined after the device headers (it names their buffers)
+static std::string iramJson();                         // (1.11.137) likewise
 static bool filmProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN);   // (26 Oct evening, bench) src/film_device.h: a film played from the bench, stopped, its frames through the flip or not
 static void webBegin() {
     web.on("/status", HTTP_GET, []() {                   // (the one page that answers when the workshop door is shut)
@@ -2689,6 +2715,7 @@ static void webBegin() {
         out += ","; dmaCopyJson(out);                      // (1.11.126) the DMA copy: on, copies, rows, timeouts, the panel channel's priority
         out += ","; xipJson(out);                          // (1.11.131) the code in the PSRAM: mode, pages, ms, strikes, why
         out += ","; stripJson(out);                        // (26 Oct evening) the strips: on, frames, fills, late
+        out += ","; out += iramJson();                    // (1.11.137) the chip's own RAM and our holders of it
         out += ","; out += psramJson();                   // (1.11.132) the PSRAM's holders: largest free block, resident pictures of the most allowed, the floor's evictions, the layer, the model picture, the film
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
@@ -3425,6 +3452,20 @@ static void netPoll() {
 #include "film_device.h"   // (1.11.85) films on the help pages
 
 // (1.11.132) The PSRAM's big holders, for /status "mem": who has it when it runs short (twin #2 was seen at 71 kB free after its update).
+// (1.11.137) /status "iram": the chip's own RAM, and what of ours holds it - the kept values (every write to a page not on
+// show, and every value a finger set), the page-info cache, the logs. Read it after a page tour: what grew is the holder.
+static std::string iramJson() {
+    multi_heap_info_t hi = {}; heap_caps_get_info(&hi, MALLOC_CAP_INTERNAL);
+    size_t keptBytes = 0, keptTxts = 0;
+    for (auto &k : kept) { keptBytes += k.first.size() + 48 + k.second.ints.size() * 56; for (auto &t : k.second.txts) { keptBytes += t.first.size() + t.second.size() + 64; ++keptTxts; } }
+    size_t infoBytes = 0; for (auto &p : pageInfo) { infoBytes += p.first.size() + 48; for (auto &c : p.second) infoBytes += sizeof(CompInfo) + c.name.size() + c.txt.size(); }
+    char b[360];
+    snprintf(b, sizeof b, "\"iram\":{\"free\":%u,\"allocated\":%u,\"largest\":%u,\"blocks_used\":%u,\"blocks_free\":%u,\"min\":%u,\"kept\":%u,\"kept_txts\":%u,\"kept_bytes\":%u,\"info_pages\":%u,\"info_bytes\":%u,\"touch_log\":%u,\"boot_log\":%u,\"radio_log\":%u,\"comps\":%u,\"glyphs\":%u}",
+             (unsigned) hi.total_free_bytes, (unsigned) hi.total_allocated_bytes, (unsigned) hi.largest_free_block, (unsigned) hi.allocated_blocks, (unsigned) hi.free_blocks, (unsigned) hi.minimum_free_bytes,
+             (unsigned) kept.size(), (unsigned) keptTxts, (unsigned) keptBytes, (unsigned) pageInfo.size(), (unsigned) infoBytes, (unsigned) touchLog.size(), (unsigned) bootLog.size(), (unsigned) radioLog.size(),
+             (unsigned) page.comps.size(), (unsigned) scaledGlyphs.size());
+    return b;
+}
 static std::string psramJson() {
     char b[300];
     snprintf(b, sizeof b, "\"mem\":{\"psram_largest\":%u,\"pictures\":\"%u/%u\",\"evictions\":%u,\"top\":%d,\"model\":%d,\"film\":%u,\"fade\":%d,\"audio\":%d,\"clips\":%u,\"clip_n\":%u}",

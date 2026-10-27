@@ -442,9 +442,10 @@ void BankHasChanged()
         LogNewBank();
     if (MotorEnabled == MotorWasEnabled)
     { // When turning off motor, don't sound bank too.
-        if (AnnounceBanks)
+        if (AnnounceBanks && !BankSoundHeld) // B147: a forced redraw (the screen back from a restart) is not a change worth saying
             SoundBank();
     }
+    BankSoundHeld = false;
     if (CurrentView == FRONTVIEW)
     {
         ShowBank();
