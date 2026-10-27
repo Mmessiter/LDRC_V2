@@ -44,7 +44,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.135"
+#define SCREEN_VERSION "1.11.136"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -366,7 +366,7 @@ static void flipTick() {
                 flipRotating = false; flipRotateN++;
                 if (shownIsFlight) {                           // (the flight spare: the flight composite is kept as the spare; the old spare becomes the canvas)
                     flipCanvas = flipSpare; flipSpare = flipFrom;
-                    spareHoldsFlight = true; topCanvas->touchedClear(); topCanvas->track = true;
+                    spareHoldsFlight = true; if (topCanvas) { topCanvas->touchedClear(); topCanvas->track = true; }
                     flipStale = { 0, 0, 0, 0 };
                 } else {
                     flipCanvas = flipFrom;
@@ -379,7 +379,10 @@ static void flipTick() {
             } else {
                 flipSpare = flipFrom; flipStale = flipKept ? Rect16{ 0, 0, (int16_t) W, (int16_t) H } : flipBig; flipStaleRow = 0; flipKept = false;
                 shownIsFlight = topOn && topWho == FLIGHT_LAYER_WHO && topX == 0 && topY == 0 && topW == W && topH == H;
-                spareHoldsFlight = false; topCanvas->track = false;
+                // (1.11.136) the layer may not exist yet: a flip that completed before any page of our own had drawn wrote through
+                // the null here (StoreProhibited at 0x3d = PacedCanvas::track) - the new transmitter's two early crashes of 26 Oct,
+                // which struck the code-in-PSRAM and the strips off and left it flickering on the old path (found 27 Oct).
+                spareHoldsFlight = false; if (topCanvas) topCanvas->track = false;
             }
         } else if (millis() - flipAskedMs > 250) {   // the frame ends stopped: no more flips; the shown buffer gets the change
             flipOk = false; flipWhy = "flip never came"; flipWant = flipShown; flipPending = false; flipRotating = false; screenFb = flipFb[flipShown];
@@ -423,13 +426,13 @@ static bool flipBigChange(const Rect16 &r) {          // true: taken (composed a
         const bool flightNow = topOn && topWho == FLIGHT_LAYER_WHO && topX == 0 && topY == 0 && topW == W && topH == H;
         if (flightNow && (long) r.w * r.h >= (long) W * H * 9 / 10) {
             flipKept = true;
-            if (!topCanvas->touchedAny()) {            // nothing: the flip alone
+            if (!topCanvas || !topCanvas->touchedAny()) {   // nothing: the flip alone
                 flipBig = { 0, 0, 0, 0 }; flipAskedMs = millis(); flipPending = true; flipRotating = false; flipFrom = flipShown; flipWant = flipSpare;
                 return true;
             }
             const int x0 = max(0, topCanvas->tx0), y0 = max(0, topCanvas->ty0), x1 = min(W, topCanvas->tx1), y1 = min(H, topCanvas->ty1);
             all = { (int16_t) x0, (int16_t) y0, (int16_t) max(0, x1 - x0), (int16_t) max(0, y1 - y0) };
-        } else { spareHoldsFlight = false; topCanvas->track = false; all = { 0, 0, (int16_t) W, (int16_t) H }; }   // (another use of the spare: composed whole)
+        } else { spareHoldsFlight = false; if (topCanvas) topCanvas->track = false; all = { 0, 0, (int16_t) W, (int16_t) H }; }   // (another use of the spare: composed whole)
     }
     const PresentArea a = presentArea(all.x, all.y, all.w, all.h);
     if (a.w <= 0) return false;
@@ -3465,6 +3468,7 @@ void setup() {
     if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) { gfx = canvas; fbNow = canvas->getFramebuffer(); canvas->fillScreen(0); } else fbNow = screenFb;
     pageFb = fbNow;
     if (flipOk && pageFb && pageFb != screenFb && ((uintptr_t) pageFb & 63) == 0) { flipFb[2] = pageFb; canvas->lazy = true; }   // (the rotation is on)
+    blog("boot", std::string("layer ") + (topReady() ? "ready" : "no room"));   // (1.11.136) our own layer made now, before any flip can complete (see flipTick)
     dcOn = prefs.getInt("dmacopy", 0) != 0; dmaCopyInit();
     {   // (1.11.134) THE STRIPS (src/strip_feed.h): the pref "strips" (-1 the board's choice = the twin; 0 off; 1 on). A start that armed
         // them and died by a panic or a watchdog before 20 s counts a strike (prefs striparm/stripbad); two turn them off until the pref is
