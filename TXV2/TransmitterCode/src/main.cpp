@@ -2151,6 +2151,20 @@ FLASHMEM void CurveLayoutShow()
         snprintf(Cmd, sizeof(Cmd), "%s.val=%d", names[k], CurveMicros(CurvePoint[Bank][ch][idx]));
         GraphCmd(Buffer, Cmd);
     }
+    // B150 (Malcolm, 27 Oct 2026: "my arithmetic is not very good when I'm trying to make a symmetrical curve ... it's
+    // not immediately obvious when the distance above the centre and below the centre are the same"): a point and its
+    // twin across the centre that stand the same distance above and below the centre POINT show their two numbers in
+    // green; the centre's number, and a point whose twin does not match, stay white. Judged in the degrees the points are
+    // kept in (one press of + or - is one degree), so a matched pair may still show microseconds a unit apart: that is
+    // the display's rounding (CurveMicros truncates), not the curve's.
+    for (uint8_t k = 0; k < shown; ++k)
+    {
+        const uint8_t idx = expo ? (k == 0 ? 0 : k == 1 ? CurveMid(n) : n - 1) : k;
+        const uint8_t mid = CurveMid(n);
+        const bool matched = idx != mid && (int)CurvePoint[Bank][ch][idx] + (int)CurvePoint[Bank][ch][n - 1 - idx] == 2 * (int)CurvePoint[Bank][ch][mid];
+        snprintf(Cmd, sizeof(Cmd), "%s.pco=%u", names[k], matched ? 2016u : 65535u); // (green, white: the page's own)
+        GraphCmd(Buffer, Cmd);
+    }
     snprintf(Cmd, sizeof(Cmd), "pt3.val=%d", n == 3 ? 1 : 0);
     GraphCmd(Buffer, Cmd);
     snprintf(Cmd, sizeof(Cmd), "pt5.val=%d", n == 5 ? 1 : 0);
