@@ -188,6 +188,15 @@ FLASHMEM void StoreModelID()
     DisplayCurrentID();
 }
 /// *********************************************************************************************************************************/
+// B148: this transmitter's own ID, the five bytes a receiver binds to, written the way the receiver's pages and the
+// Air Monitor write them (the bind frame carries MacAddress[1..5]; the receiver stores them reversed) - so that two
+// transmitters that look alike can be told apart (Malcolm, 27 Oct 2026: "the receiver knows the ID ... but I don't!").
+FLASHMEM void DisplayTransmitterID()
+{
+    char buf[20];
+    sprintf(buf, "%02X %02X %02X %02X %02X", MacAddress[5], MacAddress[4], MacAddress[3], MacAddress[2], MacAddress[1]);
+    SendText((char *)"t6", buf);
+}
 FLASHMEM void StartModelIDView()
 {
     SendCommand((char *)"page IDsStartView");
@@ -195,6 +204,7 @@ FLASHMEM void StartModelIDView()
     SendText((char *)"t1", ModelName);
     DisplayStoredID();
     DisplayCurrentID();
+    DisplayTransmitterID();
 }
 // *********************************************************************************************************************************/
 FLASHMEM void EndModelIDView()
