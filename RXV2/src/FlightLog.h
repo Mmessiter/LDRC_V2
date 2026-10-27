@@ -164,6 +164,86 @@ inline uint8_t fltPhys(uint8_t logical) {
 }
 
 //*********************************************************************
+//  The flight index: the list of saved flights, kept in RAM
+//*********************************************************************
+// The flight list used to open all 20 slot files on every request: 552 ms with loop() stopped, measured on
+// 2026-10-27 - and the phone app asks for the list the moment it connects. A receiver that had just bound went
+// deaf for half a second, the transmitter lost it, and a bind "failed" on the bench (the Air Monitor saw the
+// whole thing). Now each slot's header lives here. The index is filled one card read per loop pass while no
+// transmitter is linked (about half a second after boot, long before anyone asks), kept current by the save and
+// delete paths at no cost, and with a transmitter linked the card is read only because the pilot asked for the
+// diary, one slot every 250 ms, never while armed: a 25 ms blip the transmitter's retries absorb.
+struct FltIndexEntry {
+    uint8_t  known;        // this slot has been read (or written) since boot
+    uint8_t  present;      // a valid flight file is in it
+    uint16_t count;
+    uint32_t connMs;
+    uint32_t savedEpochS;
+};
+inline FltIndexEntry fltIndex[FLIGHT_KEEP] = {};
+inline bool     fltIndexComplete   = false;
+inline uint8_t  fltIndexNext       = 0;
+inline uint32_t fltIndexAskedMs    = 0;     // the last time somebody asked for the flight list
+inline uint32_t fltIndexLastReadMs = 0;
+
+inline void fltIndexSet(uint8_t phys, const FlightHeader& h) {
+    if (phys >= FLIGHT_KEEP) return;
+    FltIndexEntry& e = fltIndex[phys];
+    e.known = 1; e.present = 1; e.count = h.count; e.connMs = h.connMs; e.savedEpochS = h.savedEpochS;
+}
+inline void fltIndexClear(uint8_t phys) {           // the slot is known to be empty
+    if (phys >= FLIGHT_KEEP) return;
+    fltIndex[phys] = FltIndexEntry{};
+    fltIndex[phys].known = 1;
+}
+inline void fltIndexInvalidateAll() {               // the files changed under us (an fs update, a wipe): read again
+    for (uint8_t i = 0; i < FLIGHT_KEEP; ++i) fltIndex[i] = FltIndexEntry{};
+    fltIndexComplete = false;
+}
+inline void fltIndexWanted() { fltIndexAskedMs = millis() ? millis() : 1; }
+
+// One slot's header from the card: one file open, ~25 ms on a full LittleFS.
+inline void fltIndexReadSlot(uint8_t phys) {
+    if (phys >= FLIGHT_KEEP) return;
+    FltIndexEntry& e = fltIndex[phys];
+    e = FltIndexEntry{};
+    e.known = 1;
+    if (!littleFsMounted) return;
+    File file = LittleFS.open(flightPath(phys), "r");
+    if (!file) return;
+    FlightHeader h{};
+    const bool ok = (file.read((uint8_t*)&h, sizeof(h)) == (int)sizeof(h)) &&
+                    (h.magic == FLIGHT_MAGIC || h.magic == FLIGHT_MAGIC_FLT3 || h.magic == FLIGHT_MAGIC_FLT2);
+    file.close();
+    if (!ok) return;
+    if (h.magic != FLIGHT_MAGIC) h.savedEpochS = 0;   // shorter header: that field read sample bytes
+    e.present = 1; e.count = h.count; e.connMs = h.connMs; e.savedEpochS = h.savedEpochS;
+}
+
+// From loop(): at most one card read per pass, and none that the control link would feel.
+inline void fltIndexTick() {
+    if (fltIndexComplete || !littleFsMounted) return;
+    const uint32_t now = millis();
+    const bool txLive = rx.lastMillis && (uint32_t)(now - rx.lastMillis) < 1000;
+    if (txLive) {
+        const bool armed = armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
+        if (armed) return;                                                         // never in the air
+        if (!fltIndexAskedMs || (uint32_t)(now - fltIndexAskedMs) > 10000) return; // only because the pilot asked
+        if ((uint32_t)(now - fltIndexLastReadMs) < 250) return;                    // and gently
+    }
+    for (uint8_t n = 0; n < FLIGHT_KEEP; ++n) {
+        const uint8_t p = fltIndexNext;
+        fltIndexNext = (uint8_t)((fltIndexNext + 1) % FLIGHT_KEEP);
+        if (!fltIndex[p].known) {
+            fltIndexReadSlot(p);
+            fltIndexLastReadMs = now;
+            return;                                                                // one read per pass
+        }
+    }
+    fltIndexComplete = true;
+}
+
+//*********************************************************************
 //  Save the current RAM flight to flash
 //*********************************************************************
 // rotate = true  : a NEW flight — shuffle flt0→flt1→flt2 and write flt0.
@@ -220,6 +300,7 @@ inline void saveFlightToLittleFS(bool rotate = true) {
     LittleFS.remove(flightPath(target));
     LittleFS.rename("/flt.tmp", flightPath(target));
     if (rotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
+    fltIndexSet(target, h);
     fltPendingStampMs[target] = h.savedEpochS ? 0 : millis();   // slots are stable: no shifting
     tuneCountFlight(rotate, fltSessionEverArmed ? fltSessionArmedMs : h.connMs);
     eventsPersist();
@@ -333,6 +414,7 @@ inline void flightSaveAsyncTick() {
     LittleFS.remove(flightPath(target));
     LittleFS.rename("/flt.tmp", flightPath(target));
     if (svRotate) { fltHead = target; prefs.putUChar(NVS_KEY_FLT_HEAD, fltHead); }
+    fltIndexSet(target, svHdr);
     fltPendingStampMs[target] = svHdr.savedEpochS ? 0 : millis();
     tuneCountFlight(svRotate, svFlightMs);
     eventsPersist();
@@ -358,6 +440,7 @@ inline void patchFlightEpochs() {
                 const uint32_t epochS = (uint32_t)((epochOffsetMs + (int64_t)fltPendingStampMs[i]) / 1000);
                 f.seek(offsetof(FlightHeader, savedEpochS));
                 f.write((const uint8_t*)&epochS, sizeof(epochS));
+                if (fltIndex[i].known && fltIndex[i].present) fltIndex[i].savedEpochS = epochS;
             }
             f.close();
         }
@@ -584,21 +667,24 @@ inline void buildFlightsListJson(String& j) {
              (unsigned)((rx.lastMillis > linkStats.connStartMs) ? (rx.lastMillis - linkStats.connStartMs) : 0),
              (fltSavePending || svState) ? "true" : "false");
     j += b;
+    // From the RAM index, never from the card (see fltIndexTick). A slot not yet read is left out and the
+    // live entry says "indexing": the page's next refresh will have it.
+    bool indexing = false;
     if (littleFsMounted) {
         for (uint8_t f = 1; f <= FLIGHT_KEEP; ++f) {
-            File file = LittleFS.open(flightPath(fltPhys(f - 1)), "r");
-            if (!file) continue;
-            FlightHeader h{};
-            bool ok = (file.read((uint8_t*)&h, sizeof(h)) == (int)sizeof(h)) &&
-                      (h.magic == FLIGHT_MAGIC || h.magic == FLIGHT_MAGIC_FLT3 || h.magic == FLIGHT_MAGIC_FLT2);
-            file.close();
-            if (!ok) continue;
-            if (h.magic != FLIGHT_MAGIC) h.savedEpochS = 0;   // shorter header: that field read sample bytes
+            const uint8_t phys = fltPhys(f - 1);
+            const FltIndexEntry& e = fltIndex[phys];
+            if (!e.known) { indexing = true; continue; }
+            if (!e.present) continue;
             snprintf(b, sizeof(b), ",{\"i\":%u,\"count\":%u,\"dur_ms\":%u,\"saved_at\":%u,\"phys\":%u}",
-                     f, (unsigned)h.count, (unsigned)h.connMs, (unsigned)h.savedEpochS,
-                     (unsigned)fltPhys(f - 1));
+                     f, (unsigned)e.count, (unsigned)e.connMs, (unsigned)e.savedEpochS, (unsigned)phys);
             j += b;
         }
+    }
+    if (indexing) {
+        // mark the live entry (the first object) so a page can say the card is still being read
+        int k = j.indexOf("\"live\":true");
+        if (k >= 0) j = j.substring(0, k) + "\"indexing\":true," + j.substring(k);
     }
     j += "]";
 }

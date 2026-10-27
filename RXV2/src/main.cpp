@@ -810,10 +810,18 @@ void loop() {
             // "little jump every minute or two at the table").
             if (dt > 50000) {
                 char b[EventLog::MSG_LEN];
-                if (g_stallOpUs >= 5000)
-                    snprintf(b, sizeof(b), "DIAG LOOP-STALL %lums (%s %lums)",
+                if (g_stallOpUs >= 5000) {
+                    // A web or BLE stall names the request it was answering (2026-10-27: "ble 1200ms" and
+                    // "http 551ms" were the flight list, found only by timing every page by hand).
+                    char req[56] = "";
+                    if (strcmp(g_stallOpName, "ble") == 0 && g_bleLastPath[0])
+                        snprintf(req, sizeof(req), ": %s", g_bleLastPath);
+                    else if (strcmp(g_stallOpName, "http") == 0 && g_bleRouter.uri().length())
+                        snprintf(req, sizeof(req), ": %s", g_bleRouter.uri().c_str());
+                    snprintf(b, sizeof(b), "DIAG LOOP-STALL %lums (%s %lums%s)",
                              (unsigned long)(dt / 1000), g_stallOpName,
-                             (unsigned long)(g_stallOpUs / 1000));
+                             (unsigned long)(g_stallOpUs / 1000), req);
+                }
                 else
                     snprintf(b, sizeof(b), "DIAG LOOP-STALL %lums (outside timed calls: WiFi/BLE task or flash)",
                              (unsigned long)(dt / 1000));
@@ -1150,6 +1158,7 @@ void loop() {
     { StallScope s("vbat");        vbatPoll(); }              // battery divider ADC (5 Hz, no-op when off)
     { StallScope s("teleSample");  telemetrySampleTick(); }   // 1 Hz flight telemetry log (ESC temp / head speed / battery)
     { StallScope s("flightSave");  flightSaveTick(); }        // save the flight to flash on DISARM — safe, on the ground (arming-channel idea)
+    if (!svState) { StallScope s("flightIndex"); fltIndexTick(); }   // the flight list's RAM index, one card read per pass while no transmitter is linked (2026-10-27)
     { StallScope s("flightAsync"); flightSaveAsyncTick(); }   // trickle any in-progress save out, ~64 samples per pass (10 ms doctrine)
     { StallScope s("tunePersist"); tunePersistTick(); }       // pay a transmitter edit's deferred NVS write once provably on the ground
     { StallScope s("battGuard");   batteryGuardTick(); }      // low-battery warning + forgotten-model deep sleep (Malcolm 2026-07-28)

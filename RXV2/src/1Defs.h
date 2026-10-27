@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.906-rates-follow-tx";
+constexpr const char* FW_VERSION = "RXV2-0.9.907-flight-index";
 
 //*********************************************************************
 //  Auto-update manifest URLs

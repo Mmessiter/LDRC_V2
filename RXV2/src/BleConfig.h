@@ -259,6 +259,10 @@ public:
         }
         return ::server.header(name);
     }
+    String uri() {                       // the request being (or last) served, over either link
+        if (bleActive) return blePath;
+        return ::server.uri();
+    }
 
     // ---- response ----
     void sendHeader(const String& k, const String& v, bool first = false) {
@@ -489,25 +493,48 @@ inline void bleStop() {
 // radios right after replying — their reply is normally pumped from loop()
 // AFTER the handler returns, which would be too late. Small replies only.
 inline bool bleEarlyPumped = false;
+inline char g_bleLastPath[48] = "";   // the request being answered, for the loop-stall diagnostic (main.cpp)
 
+// This runs INSIDE loop(), so every millisecond it waits is a millisecond of dead air on the control link: no
+// packet read, no ack loaded. It used to wait up to 1.65 s for a phone that was not taking the notifications
+// (0.5 s header + 1 s body + 0.15 s tail) - the "DIAG LOOP-STALL 1205ms (ble)" of 2026-10-27, which hit a
+// receiver 2.3 s after it had bound and made the transmitter lose it (a failed bind on the bench, seen by the
+// Air Monitor). Now the whole wait is bounded: 40 ms with a transmitter linked, 300 ms without, and the tail
+// only when something was actually handed to the stack. A reply that cannot leave in that time was never going
+// to: the phone is not reading.
 inline void bleEarlyPump() {
     if (!bleActive || !bleSent || !bleClientConnected || !bleRespChr) return;
+    const bool     txLive   = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+    const uint32_t budgetMs = txLive ? 40 : 300;
+    const uint32_t t0       = millis();
+    auto overBudget = [&]() { return (uint32_t)(millis() - t0) >= budgetMs; };
+
     const String loc = (bleLocation.length() || !bleReqId.length()) ? bleLocation : ("#" + bleReqId);
     String hdr = "R" + String(bleCode) + "|" + bleType + "|" +
                  String(bleBody.length()) + "|" + loc + "\n";
-    for (int t = 0; t < 50 && !bleRespChr->notify((const uint8_t*)hdr.c_str(), hdr.length()); ++t)
-        delay(10);
+    bool headerOut = false;
+    while (!(headerOut = bleRespChr->notify((const uint8_t*)hdr.c_str(), hdr.length())) && !overBudget())
+        delay(5);
     size_t mtu   = bleConnMtu > 23 ? bleConnMtu : 23;
     size_t chunk = (mtu > 23 ? mtu - 3 : 20);
     if (chunk > 240) chunk = 240;
     size_t off = 0;
-    int stalls = 0;
-    while (off < bleBody.length() && stalls < 100) {
+    while (headerOut && off < bleBody.length()) {
         size_t n = min(chunk, bleBody.length() - off);
-        if (!bleRespChr->notify((const uint8_t*)bleBody.c_str() + off, n)) { delay(10); ++stalls; continue; }
+        if (!bleRespChr->notify((const uint8_t*)bleBody.c_str() + off, n)) {
+            if (overBudget()) break;
+            delay(5);
+            continue;
+        }
         off += n;
     }
-    delay(150);
+    if (headerOut) delay(txLive ? 30 : 100);   // let the host task put what was queued on the air before a restart
+    if (!headerOut || off < bleBody.length()) {
+        char b[EventLog::MSG_LEN];
+        snprintf(b, sizeof(b), "BLE reply cut short (%s, %lu ms, link %s)", g_bleLastPath,
+                 (unsigned long)(millis() - t0), txLive ? "live" : "idle");
+        events.add(b);
+    }
     bleBody = "";
     bleEarlyPumped = true;
 }
@@ -546,6 +573,7 @@ inline void bleExecuteRequest() {
     int qm = pathAndQuery.indexOf('?');
     blePath = (qm < 0) ? pathAndQuery : pathAndQuery.substring(0, qm);
     if (qm >= 0) bleParseParams(pathAndQuery.substring(qm + 1));
+    snprintf(g_bleLastPath, sizeof(g_bleLastPath), "%s %s", bleMethod.c_str(), blePath.c_str());
 
     // headers until blank line, body after
     int pos = nl + 1;

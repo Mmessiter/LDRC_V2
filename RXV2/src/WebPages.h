@@ -1230,6 +1230,7 @@ inline void handleFlightDelete() {
     const uint8_t phys = (physArg >= 0) ? (uint8_t)physArg : fltPhys((uint8_t)(i - 1));
     const bool existed = LittleFS.exists(flightPath(phys));
     if (existed) LittleFS.remove(flightPath(phys));
+    fltIndexClear(phys);
     fltPendingStampMs[phys] = 0;
     if (existed) events.add("Flight deleted from flash");
     server.send(200, "application/json", existed ? "{\"ok\":true}" : "{\"ok\":false}");
@@ -1750,6 +1751,7 @@ inline int restoreFlightsFromRam() {
     char m[48];
     snprintf(m, sizeof(m), "Lifeboat: %d flights ashore", restored);
     events.add(m);
+    fltIndexInvalidateAll();      // the slot files were rewritten: the index reads them again when idle
     return restored;
 }
 
@@ -3434,6 +3436,7 @@ inline void handleApiFlights() {
     // The async writer does the actual work over the next loop passes; the
     // page's 5 s refresh then shows the freshly saved flight.
     fltSaveAsapMs = millis();
+    fltIndexWanted();             // a linked receiver reads any unread slot gently from now on (FlightLog.h)
     String j; buildFlightsListJson(j);
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", j);

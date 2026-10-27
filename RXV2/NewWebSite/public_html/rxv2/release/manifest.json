@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.907-flight-index",
+      "url": "https://messiter.com/rxv2/release/v0.9.907/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.907/littlefs.bin",
+      "fs_md5": "162aafdda5213cb2dda9856a8cd56439",
+      "notes": "The flight list now comes from a RAM index: the receiver no longer stops for half a second when the app asks for its flights (a bind failed on the bench while the phone was connected). Bluetooth replies wait 40 ms at most with a transmitter linked, and a loop stall names the request."
+    },
+    {
       "name": "RXV2-0.9.906-rates-follow-tx",
       "url": "https://messiter.com/rxv2/release/v0.9.906/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.906/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.896/littlefs.bin",
       "fs_md5": "696912875a472c557fbf4c7b7063e39e",
       "notes": "Rates type: a new type gives its starting values (as Rotorflight's Configurator), never a type Rotorflight lacks; the hello wave removed; Receiver settings: a Cells list for the receiver battery."
-    },
-    {
-      "name": "RXV2-0.9.895-diff-and-execute",
-      "url": "https://messiter.com/rxv2/release/v0.9.895/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.895/littlefs.bin",
-      "fs_md5": "d949b94d118c90444f618f88b7172a50",
-      "notes": "Diff & execute on the phone (Rotorflight > Backup & restore, or A la carte): Diff to phone keeps every Rotorflight setting as text (diff all, as the transmitter's Diff to card); Execute sends a kept diff back to the model and saves. Needs the USB cable."
     }
   ],
   "rotorflight": {
