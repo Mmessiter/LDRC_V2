@@ -1,1 +1,226 @@
-{"name":"BackGroundView","id":17,"w":800,"h":480,"bg":{"sta":2,"mode":"image","picture":2},"nav":{"up":255,"down":255,"left":255,"right":255},"ev":{"preinitialize":"BackGroundView.pic=Screen_Background\n//vis n0,0\nn0.val=Screen_Background"},"comps":[{"n":"card","i":7,"t":"text","g":"l","x":110,"y":157,"w":580,"h":166,"font":6,"sta":1,"c":{"pco":65535,"borderc":65535,"bco":4426},"txt":"","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":1,"isbr":0}},{"n":"t1","i":1,"t":"text","g":"l","x":126,"y":173,"w":290,"h":70,"font":0,"sta":1,"c":{"pco":65535,"borderc":0,"bco":4426},"txt":"Background picture","a":{"style":0,"key":255,"borderw":0,"xcen":0,"ycen":1,"pw":0,"txt_maxl":70,"isbr":0}},{"n":"n0","i":2,"t":"number","g":"g","x":608,"y":173,"w":66,"h":70,"font":0,"sta":1,"c":{"pco":0,"borderc":0,"bco":65535},"val":0,"a":{"style":2,"key":255,"borderw":2,"xcen":1,"ycen":1,"lenth":0,"format":0,"isbr":1}},{"n":"b0","i":3,"t":"button","g":"l","x":534,"y":173,"w":64,"h":70,"font":0,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"+","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"if(n0.val<43)\n{\n  n0.val+=1\n}else\n{\n  n0.val=1\n}\nScreen_Background=n0.val\nBackGroundView.pic=Screen_Background"}},{"n":"b1","i":4,"t":"button","g":"l","x":460,"y":173,"w":64,"h":70,"font":0,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"-","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"if(n0.val>1)\n{\n  n0.val-=1\n}else\n{\n  n0.val=43\n}\nScreen_Background=n0.val\nBackGroundView.pic=Screen_Background"}},{"n":"b2","i":5,"t":"button","g":"l","x":514,"y":257,"w":160,"h":50,"font":6,"sta":1,"c":{"bco2":1024,"pco":0,"borderc":0,"bco":54938,"pco2":65535},"txt":"OK","val":0,"a":{"style":4,"borderw":2,"xcen":1,"ycen":1,"txt_maxl":10,"isbr":0},"ev":{"r":"va0.val=43<<8\nprint va0.val"}},{"n":"va0","i":6,"t":"variable","g":"l","sta":0,"txt":"newtxt","val":0,"a":{"txt_maxl":10}}]}
+{
+ "name": "BackGroundView",
+ "id": 17,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 2
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "//(B151) typed on the keypad (n0 opens keybdB): the number applies, within 1 to 43\nif(typed.val==1)\n{\n  typed.val=0\n  if(n0.val<1)\n  {\n    n0.val=1\n  }\n  if(n0.val>43)\n  {\n    n0.val=43\n  }\n  Screen_Background=n0.val\n}\nBackGroundView.pic=Screen_Background\n//vis n0,0\nn0.val=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "card",
+   "i": 7,
+   "t": "text",
+   "g": "l",
+   "x": 110,
+   "y": 157,
+   "w": 580,
+   "h": 166,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t1",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 126,
+   "y": 173,
+   "w": 290,
+   "h": 70,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "Background picture",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 70,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "n0",
+   "i": 2,
+   "t": "number",
+   "g": "g",
+   "x": 608,
+   "y": 173,
+   "w": 66,
+   "h": 70,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "val": 0,
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "lenth": 0,
+    "format": 0,
+    "isbr": 1
+   },
+   "ev": {
+    "r": "typed.val=1\nkeybdB.t1.txt=\"Background picture: type 1 to 43\""
+   }
+  },
+  {
+   "n": "b0",
+   "i": 3,
+   "t": "button",
+   "g": "l",
+   "x": 534,
+   "y": 173,
+   "w": 64,
+   "h": 70,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "+",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "if(n0.val<43)\n{\n  n0.val+=1\n}else\n{\n  n0.val=1\n}\nScreen_Background=n0.val\nBackGroundView.pic=Screen_Background"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 4,
+   "t": "button",
+   "g": "l",
+   "x": 460,
+   "y": 173,
+   "w": 64,
+   "h": 70,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "-",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "if(n0.val>1)\n{\n  n0.val-=1\n}else\n{\n  n0.val=43\n}\nScreen_Background=n0.val\nBackGroundView.pic=Screen_Background"
+   }
+  },
+  {
+   "n": "b2",
+   "i": 5,
+   "t": "button",
+   "g": "l",
+   "x": 514,
+   "y": 257,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=43<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "va0",
+   "i": 6,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "typed",
+   "i": 8,
+   "t": "variable",
+   "g": "g",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0
+  }
+ ]
+}
