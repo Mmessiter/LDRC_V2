@@ -27,6 +27,7 @@
 #include "LdrcTheme.h"
 #include "nextion_fonts.h"
 #include <WiFi.h>
+#include <esp_wifi.h>                                   // (1.11.139) esp_wifi_sta_get_ap_info: joined by the driver's account (wifiUpNow)
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 #include <WebServer.h>
@@ -44,7 +45,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.138"
+#define SCREEN_VERSION "1.11.139"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2660,11 +2661,22 @@ static WebServer web(80);
 static bool otaReady = false;
 static std::string doorSsid;                               // the network on which the door is open ("" = on none)
 static bool otaListening = false;
+namespace ldrc { bool wifiSameName(const std::string &a, const std::string &b); }   // (LdrcWifi.h, which the WiFi page includes further down)
+// (1.11.139, 28 Oct 2026) Joined, by the driver's own account. The library's WL_CONNECTED is set by its event task, and the
+// door was seen SHUT for minutes while the web server answered on House and the door's network was House: the status it
+// was judged by had gone stale after the Bluetooth pipe's stack came down and the WiFi joined again. The driver's record of
+// the access point and an address of ours say whether we are joined; the network's name is compared as the WiFi page
+// compares names (wifiSameName). /status "wifi" shows both accounts and both names, for the next time.
+static bool wifiUpNow() {
+    if (!radiosLive) return false;
+    if (WiFi.status() == WL_CONNECTED) return true;
+    wifi_ap_record_t ap; return esp_wifi_sta_get_ap_info(&ap) == ESP_OK && (uint32_t) WiFi.localIP() != 0;
+}
 static bool doorOpen() {
 #ifdef LDRC_DOORS_OPEN
     return true;
 #else
-    return !doorSsid.empty() && radiosLive && WiFi.status() == WL_CONNECTED && doorSsid == WiFi.SSID().c_str();
+    return !doorSsid.empty() && wifiUpNow() && ldrc::wifiSameName(doorSsid, std::string(WiFi.SSID().c_str()));
 #endif
 }
 static bool doorPass(bool changes) {
@@ -2681,7 +2693,7 @@ static void banner(const char *msg);
 // one finds the door as it was left. (A bench build answers on every network whatever this says, but keeps it all
 // the same: the door can be opened from the Mac BEFORE the transmitter updates itself to the published firmware.)
 static bool doorSet(bool open) {
-    if (open && (!radiosLive || WiFi.status() != WL_CONNECTED)) return false;
+    if (open && !wifiUpNow()) return false;
     doorSsid = open ? std::string(WiFi.SSID().c_str()) : std::string();
     pendingDoor = doorSsid; pendingDoorSet = true; pendingSince = millis(); otaReady = false;
     return true;
@@ -2709,6 +2721,8 @@ static void webBegin() {
         out += ",\"rst\":" + std::to_string((int) esp_reset_reason());   // (1.11.7) why we last started: 1 power, 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
         out += ",\"stack\":{\"loop\":" + std::to_string((unsigned) uxTaskGetStackHighWaterMark(NULL)) + ",\"ble\":" + std::to_string(bleStackSpare()) + "}";   // (1.11.8) the least each task's stack has ever had to spare, in bytes
         out += ",\"largest\":" + std::to_string((unsigned) ESP.getMaxAllocHeap()) + ",\"rssi\":" + std::to_string((int) WiFi.RSSI());   // (1.11.11) the largest piece of free memory (a TLS connection wants ~45 kB), and the WiFi signal
+        { std::string s = WiFi.SSID().c_str(), d = doorSsid; for (auto *t : {&s, &d}) for (auto &c : *t) if (c == '"' || c == '\\') c = '\'';
+          out += ",\"wifi\":{\"st\":" + std::to_string((int) WiFi.status()) + ",\"up\":" + (wifiUpNow() ? "true" : "false") + ",\"ssid\":\"" + s + "\",\"door_ssid\":\"" + d + "\"}"; }   // (1.11.139) the library's status (3 = joined) beside the driver's account, and the two names the door compares
         out += ",\"board\":\"" + std::string(board->name) + "\",\"flash_mb\":" + std::to_string((unsigned) (flashChipBytes >> 20)) + ",\"image_mb\":" + std::to_string((unsigned) (flashImageBytes >> 20))
              + ",\"slot\":" + std::to_string((unsigned) boardSlotBytes()) + ",\"build\":\"" + (BUILD_FULL ? "full" : "standard") + "\"";   // (1.11.111) which board this is (its flash chip), what the firmware was built for, the slot the next firmware goes in
         out += ",\"crash\":" + crashJson();                     // (1.11.15) the last crash's summary from the core dump in flash, if there is one
@@ -3361,7 +3375,7 @@ static void audioWarm() {
 }
 // A 6x6 dot in the top-left corner: green = on the WiFi, red = not.
 static void netDot(bool force = false) {
-    static int last = -1; const int now = !radiosLive ? 2 : WiFi.status() == WL_CONNECTED ? 1 : 0;
+    static int last = -1; const int now = !radiosLive ? 2 : wifiUpNow() ? 1 : 0;
     if (now == last && !force) return; last = now;
     gfx->fillRect(0, 0, 6, 6, now == 1 ? 0x07E0 : now == 2 ? 0x8410 : 0xF800);
     memoTouched(0, 0, 6, 6); dirty(0, 0, 6, 6);
