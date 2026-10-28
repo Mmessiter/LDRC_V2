@@ -218,9 +218,11 @@ FLASHMEM static void GovAskValues()
 FLASHMEM static void GovQueueWrite()
 {
     // Queue in reverse order — LIFO executes PROFILE1 first, PROFILE2 second
+    const bool readBack = RfVerifyArm(VK_GOV, GovAskValues);   // B153: the block is read back after the write and compared with what was sent (the read queued first: the stack sends it last)
     AddParameterstoQueue(SEND_GOV_WRITE_PROFILE2); // executes 2nd
     AddParameterstoQueue(SEND_GOV_WRITE_PROFILE1); // executes 1st
     GOVS_PROFILE_Were_Edited = false;
+    if (readBack) return;                          // "reading back ..." stays up: the verdict does the rest (RF_Verify.h)
     BlockBankChanges = false;
     if (CurrentView == RFGOVERNORVIEW_PROFILE) { SendCommand((char *)"vis b3,0"); HideGOVMsg(); }   // hide Save button
     PlaySound(BEEPCOMPLETE);

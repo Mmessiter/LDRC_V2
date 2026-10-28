@@ -98,8 +98,10 @@ FLASHMEM static void RatesAdvAskValues()
 FLASHMEM static void RatesAdvQueueWrite()
 {
     Rates_Advanced_Were_Edited = false;
+    const bool readBack = RfVerifyArm(VK_RATES_ADV, RatesAdvAskValues);   // B153: the block is read back after the write and compared with what was sent (the read queued first: the stack sends it last)
     AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_SECOND_8); // Send RATES ADVANCED values from TX to RX
     AddParameterstoQueue(GET_RATES_ADVANCED_VALUES_FIRST_7);  // Send RATES ADVANCED values from TX to RX ...because this queue is a LIFO stack
+    if (readBack) return;                                     // "reading back ..." stays up: the verdict does the rest (RF_Verify.h)
     if (CurrentView == RATESADVANCEDVIEW) Hide_Advanced_Rates_Msg();   // SECOND MUST BE QUEUED FIRST!!!  because this queue is a LIFO stack
     PlaySound(BEEPCOMPLETE);                                  // let user know we're done
     if (RfValueWasCut && CurrentView == RATESADVANCEDVIEW)

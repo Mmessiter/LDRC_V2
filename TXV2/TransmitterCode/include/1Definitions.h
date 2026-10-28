@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B152 28/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B153 28/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1301,6 +1301,18 @@ void RotorFlightEnd();
 void StartRatesAdvancedView();
 void StartPIDAdvancedView();
 void SendForegroundColour(const char *label, uint16_t colour);
+// B153: a save read back and compared with what was sent (RF_Verify.h)
+enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV };
+#define RF_VERIFY_WAIT_MS 4000 // the read-back's window: the receiver writes first (its read, write, check, save), then answers
+bool RfVerifyArm(uint8_t kind, void (*ask)());
+bool RfVerifyPending();
+int RfVerifySet();
+bool RfVerifyEnd(uint8_t kind);
+void RfVerifyTick();
+void RfCutNote(const char *page);
+void RatesAdvancedMsg(const char *msg, uint16_t Colour);
+void PIDAdvancedMsg(const char *msg, uint16_t Colour);
+void GOVS_P_Were_Edited();
 void Display_Advanced_Rates_Values(uint8_t n, uint8_t m);
 void Hide_Advanced_Rates_Msg();
 void ForegroundColourAdvancedRates(uint16_t Colour);

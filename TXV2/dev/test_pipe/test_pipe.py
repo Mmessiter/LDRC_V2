@@ -130,6 +130,7 @@ static void Start_RF_Governor() { ++restarts; }
 static void AddWords() {}
 static void DisplayGovValues(uint8_t, uint8_t) {}
 static void HidePIDMsg() {} static void HidePID_Advanced_Msg() {} static void HideGOVMsg() {} static void HideRATESMsg() {} static void Hide_Advanced_Rates_Msg() {}
+static bool RfVerifyPending() { return false; } static int RfVerifySet() { return 0; }   // (B153: no read-back here)
 bool AllGlobalConfigBytesReceived();
 void DisplayGovConfigValues(uint8_t n, uint8_t m);
 void HideGOVConfigMsg();

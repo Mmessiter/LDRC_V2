@@ -1180,6 +1180,7 @@ void Hide_msg_if_needed()
 
     uint32_t now = millis();
     BlockMaskTick();
+    RfVerifyTick();   // B153: the "Saved" line after a read-back goes after its time
     if (SilenceMsgUntil && (int32_t)(now - SilenceMsgUntil) >= 0) { SilenceMsgUntil = 0; SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,0" : "vis busy,0")); }
 
     if (Reading_PIDS_Now)
@@ -1187,6 +1188,7 @@ void Hide_msg_if_needed()
         if ((now - PID_Start_Time) > PID_Send_Duration)
         {
             Reading_PIDS_Now = false;
+            if (RfVerifyEnd(VK_PID)) return;   // B153: a read-back that never matched, or never came: its verdict
             HidePIDMsg();
             BlockSilence("PIDs");
             return;
@@ -1197,6 +1199,7 @@ void Hide_msg_if_needed()
         if ((now - RATES_Start_Time) > RATES_Send_Duration)
         {
             Reading_RATES_Now = false;
+            if (RfVerifyEnd(VK_RATES)) return;   // B153
             HideRATESMsg();
             BlockSilence("Rates");
             return;
@@ -1207,6 +1210,7 @@ void Hide_msg_if_needed()
         if ((now - RATES_Advanced_Start_Time) > Rates_Advanced_Send_Duration)
         {
             Reading_RATES_Advanced_Now = false;
+            if (RfVerifyEnd(VK_RATES_ADV)) return;   // B153
             Hide_Advanced_Rates_Msg();
             BlockSilence("Advanced rates");
             return;
@@ -1217,6 +1221,7 @@ void Hide_msg_if_needed()
         if ((now - PID_Advanced_Start_Time) > PID_Advanced_Send_Duration)
         {
             Reading_PIDS_Advanced_Now = false;
+            if (RfVerifyEnd(VK_PID_ADV)) return;   // B153
             HidePID_Advanced_Msg();
             BlockSilence("Advanced PIDs");
             return;
@@ -1228,6 +1233,7 @@ void Hide_msg_if_needed()
         if ((now - GOV_Start_Time) > GOV_Send_Duration)
         {
             Reading_GOV_Now = false;
+            if (RfVerifyEnd(VK_GOV)) return;   // B153
             HideGOVMsg();
             BlockSilence("Governor");
             return;
@@ -1348,6 +1354,12 @@ static void BlockItemSeen(uint8_t item)
     BlockSeen |= (uint16_t)(1 << (item - 25));
     const uint16_t want = Reading_PIDS_Now ? 0x3BF : Reading_PIDS_Advanced_Now ? 0xBF : Reading_GOV_Config_Now ? 0x3F : Reading_GOV_Now ? 0x1F : (Reading_RATES_Now || Reading_RATES_Advanced_Now) ? 0x0F : 0;
     if (!want || (BlockSeen & want) != want || BlockShown) return;
+    if (RfVerifyPending())
+    { // B153: a read-back after a save: the set is compared with what was sent (RF_Verify.h) - the same ends it there and says so; a different one waits for the window's end, another set may follow
+        const int v = RfVerifySet();
+        if (v == 1) { BlockShown = true; return; }
+        if (v == 2) { BlockSeen = 0; return; }
+    }
     BlockShown = true;   // (the set is shown; a fresh read that follows updates the numbers without another hide)
     if (Reading_PIDS_Now) { HidePIDMsg(); PIDS_Loaded = true; }   // B40: the set came whole: edits may be saved
     else if (Reading_PIDS_Advanced_Now) HidePID_Advanced_Msg();

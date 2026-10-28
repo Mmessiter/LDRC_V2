@@ -181,6 +181,7 @@
 #include "Calibrate.h"
 #include "RF_Governor_Profile.h"
 #include "RF_Governor_Global.h"
+#include "RF_Verify.h" // B153: a save read back from the flight controller (after the pages: their arrays and box names)
 #include "RF_Easy.h" // B104: Easy tuning, the phone app's sliders, over the pipe (after RF_Backup.h: the backup is the sliders' centre)
 #include "Model_IDs.h"
 #include "Motor_sign.h"

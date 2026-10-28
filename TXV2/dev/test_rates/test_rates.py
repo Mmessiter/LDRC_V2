@@ -90,6 +90,11 @@ static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (
 static int saveNowAnswer = 0, saveNowAsked = 0;
 static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
 static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
+// B153: the read-back after a save (RF_Verify.h, its own test): here only whether the page asks for it - with the pipe,
+// the page's read goes first (the stack sends it last) and the page leaves its message up
+enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV };
+static bool readBackOn = false; static int readBackKind = -1;
+static bool RfVerifyArm(uint8_t kind, void (*ask)()) { readBackKind = kind; if (!readBackOn) return false; ask(); RATES_Send_Duration = 4000; RatesMsg("Sent: reading back from the flight controller ...", Gray); return true; }
 ''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
@@ -123,6 +128,13 @@ int main() {
     live = false; saves = 0; boxes = 0; Saved_Rate_Values[0][0] = 4; SendEditedRates();   // (and the local save, the model not connected: nothing saved either)
     CHECK(boxes == 1 && lastBox.find("The screen did not answer") == 0 && saves == 0 && Rates_Were_Edited);
     live = true; typed("250", "40", "20", "12.5"); boxes = 0; queued.clear(); SendEditedRates(); CHECK(boxes == 0 && queued.size() == 2 && Rate_Values[1] == 50);   // (the box back: sent as before)
+    // 4c. B153: with the pipe the save is read back - the page's read queued first (sent last, after the two write packets),
+    // the window 4 s, "reading back" left up, Save hidden, the bank switch held, nothing played or closed yet (the verdict does that)
+    CHECK(readBackKind == VK_RATES);
+    readBackOn = true; Rates_Were_Edited = true; RfLeaveAfterSave = true; RfLeaveView = RATESVIEW_RF; cmds.clear(); sounds = 0; queued.clear(); Reading_RATES_Now = false; SendEditedRates();
+    CHECK(queued.size() == 3 && queued[0] == SEND_RATES_VALUES && queued[1] == GET_SECOND_6_RATES_VALUES && queued[2] == GET_FIRST_7_RATES_VALUES && Reading_RATES_Now && RATES_Send_Duration == 4000);
+    CHECK(fields["busy"] == "Sent: reading back from the flight controller ..." && cmds.back() == "vis b3,0" && !Rates_Were_Edited && BlockBankChanges && RfLeaveAfterSave && sounds == 1);   // (BEEPMIDDLE at the start only)
+    readBackOn = false; RfLeaveAfterSave = false; Reading_RATES_Now = false; BlockBankChanges = false; HideRATESMsg();
     // 5. a local save keeps the bank's own type (it was always made Actual, so a type-6 bank came back with Actual's scales);
     // B106: the page's type, which ShowRatesLocalBank takes from the saved bank (and the picker may change)
     live = false; DualRateInUse = 1; Saved_Rate_Values[0][0] = 6; ShowRatesLocalBank(); typed("250", "40", "20", "12.5"); saves = 0; SendEditedRates();

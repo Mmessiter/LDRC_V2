@@ -118,10 +118,12 @@ FLASHMEM static void PidAdvAskValues()
 }
 FLASHMEM static void PidAdvQueueWrite()
 {
+    const bool readBack = RfVerifyArm(VK_PID_ADV, PidAdvAskValues);        // B153: the block is read back after the write and compared with what was sent (the read queued first: the stack sends it last)
     AddParameterstoQueue(GET_THIRD_8_ADVANCED_PID_VALUES);                  // LAST MUST BE QUEUED FIRST!!!
     AddParameterstoQueue(GET_SECOND_9_ADVANCED_PID_VALUES);                 // the order of the other two doesn't matter ...
     AddParameterstoQueue(GET_FIRST_9_ADVANCED_PID_VALUES);                  // its a LIFO stack with 26 parametres to send
     PIDS_Advanced_Were_Edited = false;                                      // reset edited flag
+    if (readBack) return;                                                   // "reading back ..." stays up: the verdict does the rest (RF_Verify.h)
     BlockBankChanges = false;
     if (CurrentView == PIDADVANCEDVIEW)
     {

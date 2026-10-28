@@ -251,8 +251,10 @@ FLASHMEM static void RatesQueueWrite()
 {
     Rates_Were_Edited = false;
     Wait_for_Advanced_Rates_to_Be_Sent_Too = false;     // this flag tells the Ack payload parser not to wait until these have been sent before allowing bank changes again because rates changes can cause problems if a bank change happens while they are being sent
+    const bool readBack = RfVerifyArm(VK_RATES, RatesAskValues);   // B153: the block is read back after the write and compared with what was sent (the read queued first: the stack sends it last)
     AddParameterstoQueue(GET_SECOND_6_RATES_VALUES);    // SECOND MUST BE QUEUED FIRST!!! Send RATES 7-12 values from TX to RX
     AddParameterstoQueue(GET_FIRST_7_RATES_VALUES);     // SECOND MUST BE QUEUED FIRST!!! Send RATES 1-6 values from TX to RX
+    if (readBack) return;                               // "reading back ..." stays up: the verdict does the rest (RF_Verify.h)
     if (CurrentView == RATESVIEW_RF)
     {
         HideRATESMsg();                                 // ...because this queue is a LIFO stack

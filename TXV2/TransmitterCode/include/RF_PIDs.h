@@ -143,9 +143,11 @@ FLASHMEM static void PidAskValues()
 }
 FLASHMEM static void PidQueueWrite()
 {
+    const bool readBack = RfVerifyArm(VK_PID, PidAskValues);   // B153: the block is read back after the write and compared with what was sent (the read queued first: the stack sends it last)
     AddParameterstoQueue(GET_SECOND_11_PID_VALUES);  // SECOND MUST BE QUEUED FIRST!!! Send PID 6-16 values from TX to RX
     AddParameterstoQueue(GET_FIRST_6_PID_VALUES);    // SECOND MUST BE QUEUED FIRST!!! Send PID 0-5 values from TX to RX
     PIDS_Were_Edited = false;
+    if (readBack) return;                            // "reading back ..." stays up: the verdict does the rest (RF_Verify.h)
     if (CurrentView == PIDVIEW) { SendCommand((char *)"vis b3,0"); HidePIDMsg(); }   // hide "Send" button
     PlaySound(BEEPCOMPLETE);                         // let user know we're done
     RfSavedThenLeave(PIDVIEW);                       // B102: OK's "Save now?" closes the page once saved
