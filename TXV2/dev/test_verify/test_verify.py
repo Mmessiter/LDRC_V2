@@ -105,7 +105,7 @@ int main() {
     reset(); nowMs = 5000; CHECK(RfVerifyArm(VK_RATES, RatesAskValues) && asks == 1 && RfVerifyPending() && Reading_RATES_Now && RATES_Send_Duration == 4000 && RATES_Start_Time == 5000);
     CHECK(msgs.size() == 1 && msgs[0] == "rates:Sent: reading back from the flight controller ..." && has(cmds, "vis b3,0") && BlockBankChanges);
     // the same set back (the read filled the same values): done - hidden, "Saved ..." on the line, the done sound, the page may close, the window closed
-    RfValueWasCut = true; CHECK(RfVerifySet() == 1 && !RfVerifyPending() && !Reading_RATES_Now && has(hides, "rates") && texts["busy"] == "Saved: the flight controller holds what you sent." && has(cmds, "vis busy,1"));
+    RfValueWasCut = true; CHECK(RfVerifySet() == 1 && !RfVerifyPending() && !Reading_RATES_Now && has(hides, "rates") && texts["busy"] == "Saved, and confirmed by reading it back." && has(cmds, "vis busy,1"));
     CHECK(sounds.size() == 1 && sounds[0] == "done" && leaves == 1 && cutNotes == 1 && boxes == 0 && edited.empty() && reds.empty());
     // the line goes after 3 s - not while another read has it
     cmds.clear(); nowMs = 7999; RfVerifyTick(); CHECK(!has(cmds, "vis busy,0")); nowMs = 8000; Reading_RATES_Now = true; RfVerifyTick(); CHECK(!has(cmds, "vis busy,0"));

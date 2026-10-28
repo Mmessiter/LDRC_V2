@@ -6,7 +6,7 @@
 // a second) was never heard of here: the pilot had to switch banks to see what the flight controller really holds. Now
 // the block is asked for again straight after the write packets (queued first, so the LIFO stack sends it last), and
 // what comes back is compared with what was sent:
-//   - the same: "Saved: the flight controller holds what you sent" on the page's line for three seconds, the done
+//   - the same: "Saved, and confirmed by reading it back." on the page's line for three seconds, the done
 //     sound, and OK's "Save now?" closes the page (RfSavedThenLeave) - usually within a second of Save;
 //   - different, or nothing in the window (4 s): the values sent go back on the page with the boxes that differ in red,
 //     Save is shown again, and a message says so. A different set does not decide at once but at the window's end: the
@@ -256,7 +256,7 @@ FLASHMEM int RfVerifySet()
     VfReadDone(k);                          // (the window closes here: nothing more to parse)
     VfHide(k);
     SendCommand((char *)"vis b3,0");
-    SendText((char *)"busy", (char *)"Saved: the flight controller holds what you sent.");
+    SendText((char *)"busy", (char *)"Saved, and confirmed by reading it back.");   // (B154, Malcolm: "the flight controller holds what you sent" was "technically correct but ... phrased better for ordinary users")
     SendCommand((char *)"vis busy,1");
     VfBannerUntil = millis() + 3000;
     VfBannerView = CurrentView;

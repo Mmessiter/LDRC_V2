@@ -1168,9 +1168,12 @@ static void BlockMaskTick();   // (below, with the block reads)
 static uint32_t SilenceMsgUntil = 0;
 static void BlockSilence(const char *what)
 {
-    char b[110];
-    if (BlockSeen) return;   // something came: the page shows it
-    snprintf(b, sizeof(b), "%s: nothing came back in %u s (Bluetooth %u). Bank switch again, or leave and return.", what, (unsigned)(MSP_WAIT_TIME / 1000), (unsigned)PipeState);
+    char b[120];
+    if (BlockShown) return;  // the set came whole: the page shows it
+    // B154: a set that came in PART (an item lost on the way: the page would show its old numbers, or zeros, with nothing
+    // said - Malcolm's photo of 28 Oct 2026: a Rates page of zeros and a blank type, "Couldn't read rates") is said too
+    if (BlockSeen) snprintf(b, sizeof(b), "%s: only PART came back in %u s (Bluetooth %u). Bank switch again, or leave and return.", what, (unsigned)(MSP_WAIT_TIME / 1000), (unsigned)PipeState);
+    else snprintf(b, sizeof(b), "%s: nothing came back in %u s (Bluetooth %u). Bank switch again, or leave and return.", what, (unsigned)(MSP_WAIT_TIME / 1000), (unsigned)PipeState);
     SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), b);
     SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,1" : "vis busy,1"));
     SilenceMsgUntil = millis() + 6000;
