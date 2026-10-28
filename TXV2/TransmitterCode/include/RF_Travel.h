@@ -438,7 +438,9 @@ FLASHMEM void SaveTravel()
     }
     // B59: the fields FIRST. The question is a page of its own, and the travel page comes back from it reloaded, every
     // field blank: read after the question, they were zeros, and zeros were written (Malcolm, 7 Oct: "It wrote zero").
+    NextionTextMissed = false;
     TravGather();
+    if (RfFieldsMissed(TravPageWord())) return;   // B152: a box unanswered: nothing written
     if (!GetConfirmation((char *)TravPageWord(), (char *)"Save the travel extents?\r\nThey change how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
     {
         TravPageHead();

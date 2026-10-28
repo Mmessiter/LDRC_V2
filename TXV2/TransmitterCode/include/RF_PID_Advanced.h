@@ -43,7 +43,7 @@ FLASHMEM void ReadEditedPIDAdvancedValues()
             continue;
         }
         char temp[10];
-        GetText(PID_Advanced_Labels[i], temp, sizeof(temp));  // ClaudeFix-2-7-2026
+        if (GetText(PID_Advanced_Labels[i], temp, sizeof(temp)) == 0) continue;   // B152: unanswered: the value in hand stays (NextionTextMissed: a save stops)
         if ((i == 1) || (i == 25)) // these two are floats multiplied by 10
             PID_Advanced_Values[i] = RfByteOf((float)atof(temp) * 10.0f); // B07: cut, never wrapped
         else
@@ -173,7 +173,9 @@ FLASHMEM void ShowPIDAdvancedBank() // this is called when bank is changed so ne
 FLASHMEM void SaveToLocalABank()
 {
     PIDAdvancedMsg((char *)"Saving edited advanced PIDs ...", Gray); // Show sending message
-    ReadEditedPIDAdvancedValues();                                         // read the edited PID Advanced values from the screen;
+    NextionTextMissed = false;
+    ReadEditedPIDAdvancedValues();   // read the edited PID Advanced values from the screen
+    if (RfFieldsMissed("page PID_A_View")) { HidePID_Advanced_Msg(); return; }   // B152: a box unanswered: nothing saved
     for (int i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
     {
         Saved_PID_Advanced_Values[i][Bank - 1] = PID_Advanced_Values[i];
@@ -208,7 +210,9 @@ FLASHMEM void SendEditedPID_Advanced()
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);                                                      // allow LOTS of time for screen to update BEFORE sending another Nextion command
     PIDAdvancedMsg((char *)"Sending edited advanced PIDs ...", Gray); // Show sending message
-    ReadEditedPIDAdvancedValues();                                          // read the edited PID Advanced values from the screen;
+    NextionTextMissed = false;
+    ReadEditedPIDAdvancedValues();   // read the edited PID Advanced values from the screen
+    if (RfFieldsMissed("page PID_A_View")) { HidePID_Advanced_Msg(); return; }   // B152: a box unanswered: nothing sent
     BlockBankChanges = true;
     BankCheck(false, Bank, PidAdvQueueWrite, "page PID_A_View");     // B102: into this bank, or not at all (the edited flag stays until then)
 }

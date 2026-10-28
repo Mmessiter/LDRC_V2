@@ -378,10 +378,12 @@ FLASHMEM void SaveRescue()
         MsgBox((char *)(CurrentView == RESCUEVIEW ? "page RescueView" : "page Rescue2View"), why);
         return;
     }
+    NextionTextMissed = false;
     if (CurrentView == RESCUEVIEW)
         RescueGatherPage1();
     else
         RescueGatherPage2();
+    if (RfFieldsMissed(CurrentView == RESCUEVIEW ? "page RescueView" : "page Rescue2View")) return;   // B152: a box unanswered: nothing written
     RescueBusy("Writing to the flight controller ...");
     RescueAskSelect(RSC_W_SELECT);
 }

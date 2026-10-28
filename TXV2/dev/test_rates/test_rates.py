@@ -69,7 +69,8 @@ static int ModelNumber = 1; static char ModelName[20] = "Goblin"; static int sav
 static std::map<std::string, std::string> fields; static std::vector<std::string> cmds; static std::vector<int> queued;
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendCommand(char *c) { cmds.push_back(c); }
-static void GetText(char *n, char *out, size_t sz) { strncpy(out, fields.count(n) ? fields[n].c_str() : "", sz - 1); out[sz - 1] = 0; }
+bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; ++sounds; ++boxes; lastBox = "The screen did not answer for one of\r\nthe boxes, so NOTHING was sent.\r\nPlease press Save again."; return true; }   // (B152: as Nextion.h)
+static uint16_t GetText(char *n, char *out, size_t sz) { if (!fields.count(n)) NextionTextMissed = true; strncpy(out, fields.count(n) ? fields[n].c_str() : "", sz - 1); out[sz - 1] = 0; return (uint16_t) strlen(out); }   // (B152: a box not on the page = the screen silent)
 static void SendForegroundColour(const char *, uint16_t) {}
 static void MsgBox(char *page, char *msg) { ++boxes; lastBox = msg; }
 static void PlaySound(int) { ++sounds; }
@@ -115,6 +116,13 @@ int main() {
     live = true; boxes = 0; queued.clear(); SendEditedRates();
     CHECK(boxes == 1 && lastBox.find("A value was too big for Rotorflight") == 0 && !RfValueWasCut && queued.size() == 2 && fields["tn0"] == "1275" && fields["tn9"] == "31.88");
     typed("250", "40", "20", "12.5"); boxes = 0; SendEditedRates(); CHECK(boxes == 0 && Rate_Values[1] == 50);   // (nothing cut: no box)
+    // 4b. B152 (Mehul's RAW 420 took off with no aileron): a box the screen does not answer for - here tn0 is not on the page -
+    // is NOT read as 0: the value in hand stays, nothing is sent, and the pilot is told to press Save again
+    fields.erase("tn0"); boxes = 0; queued.clear(); NextionTextMissed = false; Rates_Were_Edited = true; SendEditedRates();
+    CHECK(boxes == 1 && lastBox.find("The screen did not answer") == 0 && queued.empty() && Rate_Values[1] == 50 && !NextionTextMissed && !BlockBankChanges);
+    live = false; saves = 0; boxes = 0; Saved_Rate_Values[0][0] = 4; SendEditedRates();   // (and the local save, the model not connected: nothing saved either)
+    CHECK(boxes == 1 && lastBox.find("The screen did not answer") == 0 && saves == 0 && Rates_Were_Edited);
+    live = true; typed("250", "40", "20", "12.5"); boxes = 0; queued.clear(); SendEditedRates(); CHECK(boxes == 0 && queued.size() == 2 && Rate_Values[1] == 50);   // (the box back: sent as before)
     // 5. a local save keeps the bank's own type (it was always made Actual, so a type-6 bank came back with Actual's scales);
     // B106: the page's type, which ShowRatesLocalBank takes from the saved bank (and the picker may change)
     live = false; DualRateInUse = 1; Saved_Rate_Values[0][0] = 6; ShowRatesLocalBank(); typed("250", "40", "20", "12.5"); saves = 0; SendEditedRates();

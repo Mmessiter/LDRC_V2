@@ -190,7 +190,7 @@ FLASHMEM void ReadRatesAdvanced()
         if (i == 14) // last one is divided by 10 and therefore must be text
         {
             char temp[10];
-            GetText(RatesAWindows[i], temp, sizeof(temp));  // ClaudeFix-2-7-2026
+            if (GetText(RatesAWindows[i], temp, sizeof(temp)) == 0) continue;   // B152: unanswered: the value in hand stays (NextionTextMissed: a save stops)
             Rate_Advanced_Values[i] = RfByteOf((float)atof(temp) * 10.0f); // B07: cut, never wrapped
             continue;
         }
@@ -203,7 +203,9 @@ FLASHMEM void SaveLocalRatesAdvancedBank()
 {
     RatesAdvancedMsg((char *)"Saving edited advanced rates ...", Gray); // Show sending message
     Rates_Advanced_Were_Edited = false;
+    NextionTextMissed = false;
     ReadRatesAdvanced();
+    if (RfFieldsMissed("page Rates_A_View")) { Rates_Advanced_Were_Edited = true; Hide_Advanced_Rates_Msg(); return; }   // B152
     for (uint8_t i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
     {
         Saved_Rate_Advanced_Values[i][Bank - 1] = Rate_Advanced_Values[i];
@@ -240,7 +242,9 @@ FLASHMEM void SendEditedRatesAdvanced()
     BlockBankChanges = true;
     DelayWithDog(100);                                           //  allow LOTS of time for screen to update BEFORE sending another Nextion command
     RatesAdvancedMsg((char *)"Sending edited dynamics ...", Gray); // Show sending message
+    NextionTextMissed = false;
     ReadRatesAdvanced();
+    if (RfFieldsMissed("page Rates_A_View")) { BlockBankChanges = false; Hide_Advanced_Rates_Msg(); return; }   // B152: nothing sent
     BankCheck(true, DualRateInUse, RatesAdvQueueWrite, "page Rates_A_View");   // B102: into this rates bank, or not at all (the edited flag stays until then)
 }
 #endif // RATESRF_ADVANCED_H

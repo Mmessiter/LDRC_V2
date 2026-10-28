@@ -54,7 +54,7 @@ FLASHMEM void ReadEditedRateValues()
     for (int i = 1; i < MAX_RATES_BYTES; ++i) // start at 1 because 0 is Rates Type and not yet edited here
     {
         char temp[10];
-        GetText(RatesWindows[i], temp, sizeof(temp));  // ClaudeFix-2-7-2026
+        if (GetText(RatesWindows[i], temp, sizeof(temp)) == 0) continue;   // B152: a box the screen did not answer for keeps the value in hand (NextionTextMissed: a save stops)
         Rate_Values[i] = RfByteOf((float)atof(temp) / f[i]); // DIVIDE BY factor to get byte value (B07: cut, never wrapped)
     }
 }
@@ -67,7 +67,9 @@ FLASHMEM void SaveRatesLocalBank()
     // (B08 took the saved bank's own type here - before, every local save made it "Actual". B106: the page's type, which
     // ShowRatesLocalBank set from the saved bank and the picker may have changed; one Rotorflight does not have is refused
     // by SendEditedRates. NONE (0) is kept: a never-filled bank was made "Actual" with zero rates, NONE flies 500 deg/s.)
+    NextionTextMissed = false;
     ReadEditedRateValues();
+    if (RfFieldsMissed("page RatesView")) { Rates_Were_Edited = true; HideRATESMsg(); return; }   // B152: a box unanswered: nothing saved
     for (int i = 0; i < MAX_RATES_BYTES; ++i)
     {
         Saved_Rate_Values[i][DualRateInUse - 1] = Rate_Values[i];
@@ -106,7 +108,9 @@ FLASHMEM void SendEditedRates()
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);                                  // allow LOTS of time for screen to update BEFORE sending another Nextion command
     RatesMsg((char *)"Sending edited rates ...", Gray); // Show sending message
-    ReadEditedRateValues();                             // read the edited RATES from the screen;
+    NextionTextMissed = false;
+    ReadEditedRateValues();                             // read the edited RATES from the screen
+    if (RfFieldsMissed("page RatesView")) { BlockBankChanges = false; HideRATESMsg(); return; }   // B152: a box unanswered: nothing sent
     BankCheck(true, DualRateInUse, RatesQueueWrite, "page RatesView");   // B102: into this rates bank, or not at all (the edited flag stays until then)
 }
 // ************************************************************************************************************/

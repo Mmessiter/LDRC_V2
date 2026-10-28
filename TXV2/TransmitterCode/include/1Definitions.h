@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B151 27/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B152 28/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -2177,6 +2177,8 @@ bool Reading_GOV_Config_Now = false;
 bool PIDS_Loaded = false;    // B40: the PIDs page's set came whole (or the model file's copy shows): edits may be saved
 bool GOV_Loaded = false;     // B41: the same for the Governor (bank) page
 bool RfValueWasCut = false;  // B07: a typed Rotorflight value was too big for its byte and was cut (RF_Rates.h RfByteOf)
+bool NextionTextMissed = false;     // B152: a GetText the screen never answered - a page gathering its boxes for a save must stop (RfFieldsMissed)
+uint32_t NextionReplyWaitMs = 100;  // B152: how long CollectReply waits for the screen - 400 ms round a get (GetText, getvalue), 100 otherwise
 bool HelpTookRead = false;   // B19: Help was tapped while a Rotorflight page was still reading: read again on return
 uint16_t BlockSeen = 0;   // B79: the items of the block being read that have come (transceiver.h BlockItemSeen); cleared when a block is asked for
 bool BlockShown = false;  // B81: the set came whole and the Loading message went (once per ask)

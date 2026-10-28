@@ -486,7 +486,9 @@ FLASHMEM void SaveBasics()
         MsgBox((char *)BasPageWord(), why);
         return;
     }
+    NextionTextMissed = false;
     BasGather();   // (B59) the fields first: the question is a page of its own
+    if (RfFieldsMissed(BasPageWord())) return;   // B152: a box unanswered: nothing written
     char q[180];
     const unsigned mr = BasU16(BasMotWant, 21), mm = BasU16(BasMotWant, 23);
     if (mr > mm)   // (the Goblin, 2 Sep: a backwards ratio put the governor at minimum throttle)

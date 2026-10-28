@@ -221,7 +221,7 @@ bool CollectReply(uint8_t expected, uint16_t &k)
     const uint32_t begun = millis();
     uint8_t ffs = 0;
     k = 0;
-    while ((millis() - begun) < 100)
+    while ((millis() - begun) < NextionReplyWaitMs)   // (B152: 100 ms, or 400 round a get - GetText and getvalue set it)
     {
         while (NEXTION.available())
         {
@@ -369,7 +369,10 @@ uint32_t getvalue(char *nbox)
     EndSend();
     {
         uint16_t k = 0;
-        if (!CollectReply('q', k))   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+        NextionReplyWaitMs = 400;                // (B152: as GetText - a get queued behind a page's commands is answered late, not never)
+        const bool got = CollectReply('q', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+        NextionReplyWaitMs = 100;
+        if (!got)
             TextIn[0] = 0;
     }
     if (TextIn[0] == 'q')
@@ -395,7 +398,7 @@ uint32_t GetValue(char *nbox)
     int i = 0;
     uint32_t ValueIn = getvalue(nbox);
 
-    while (ValueIn == 65535 && i < 25)
+    while (ValueIn == 65535 && i < 4)   // (B152: four asks of 400 ms, where 25 of 100 ms were)
     { // if error read again!
         DelayWithDog(10);
         ValueIn = getvalue(nbox);
@@ -438,9 +441,21 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
     // A reply is 'p' + text + FF FF FF: collect until that terminator, with
     // a timeout so a dead display can't hang us (normal replies take ~2 ms).
     {
+        // B152 (Malcolm, 28 Oct 2026, Mehul's RAW 420 took off with no aileron: "when I save the rates in the transmitter
+        // code, I get zero on roll when I read it back"): the window was 100 ms, and the first box asked for after a page's
+        // "Sending ..." message - its 13 colour changes queued ahead of the ask - was answered later than that, read as "",
+        // written as 0. Four hundred ms now. A box the screen still does not answer for sets NextionTextMissed, and a page
+        // gathering its boxes for a save stops and says so (RfFieldsMissed) instead of sending zeros. ONE ask only: a
+        // second ask would leave the first's late reply to be read as the NEXT box's answer.
         uint16_t k = 0;
-        if (!CollectReply('p', k))   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+        NextionReplyWaitMs = 400;
+        const bool got = CollectReply('p', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+        NextionReplyWaitMs = 100;
+        if (!got)
+        {
             TextIn[0] = 0;
+            NextionTextMissed = true;
+        }
     }
 
     if (TextIn[0] == 'p')
@@ -457,6 +472,19 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
     return strlen(TheText);
 }
 /*********************************************************************************************************************************/
+// B152: after a page has gathered its boxes for a save - true = the screen left one unanswered (GetText, 400 ms); the pilot
+// is told and the caller sends NOTHING. A box read as "" went to the flight controller as 0: Mehul's RAW 420 took off with no
+// aileron (28 Oct 2026) after the rates were saved from this transmitter, bank by bank.
+FLASHMEM bool RfFieldsMissed(const char *page)
+{
+    if (!NextionTextMissed)
+        return false;
+    NextionTextMissed = false;
+    PlaySound(WHAHWHAHMSG);
+    MsgBox((char *)page, (char *)"The screen did not answer for one of\r\nthe boxes, so NOTHING was sent.\r\nPlease press Save again.");
+    return true;
+}
+/*********************************************************************************************************************************/
 int GetOtherValue(char *nbox)
 {
     // don't add .val as other thingy is already there ...
@@ -471,7 +499,10 @@ int GetOtherValue(char *nbox)
     EndSend();
     {
         uint16_t k = 0;
-        if (!CollectReply('q', k))   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+        NextionReplyWaitMs = 400;                // (B152: as GetText - a get queued behind a page's commands is answered late, not never)
+        const bool got = CollectReply('q', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
+        NextionReplyWaitMs = 100;
+        if (!got)
             TextIn[0] = 0;
     }
     if (TextIn[0] == 'q')
