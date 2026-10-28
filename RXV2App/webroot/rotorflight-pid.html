@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>PIDs &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=407">
-<script src="/app.js?v=407" defer></script>
+<link rel=stylesheet href="/style.css?v=408">
+<script src="/app.js?v=408" defer></script>
 <style>
 table.pids{width:100%;border-collapse:separate;border-spacing:.3em}
 table.pids th{text-align:center;color:#3a5165;font-weight:600;padding:.4em 0}
@@ -304,7 +304,9 @@ function flashSave(html, ms) {
 function buildPayload() {
     const ids = ['r_P','r_I','r_D','r_F','p_P','p_I','p_D','p_F','y_P','y_I','y_D','y_F',
                  'b_R','b_P','b_Y','h_R','h_P'];
-    const words = ids.map(id => parseInt(document.getElementById(id).value || '0'));
+    // (0.9.909: a blank box stops the save with its name - it went to the flight controller as 0)
+    const group = { r:'Roll', p:'Pitch', y:'Yaw', b:'Boost', h:'HSI offset' }, axisOf = { R:'roll', P:'pitch', Y:'yaw' };
+    const words = ids.map(id => LDRC.numOf(id, group[id[0]] + ' ' + ((id[0] === 'b' || id[0] === 'h') ? axisOf[id[2]] : id[2])));
     const bytes = new Uint8Array(34);
     for (let i = 0; i < 17; i++) {
         bytes[i*2]     = words[i] & 0xff;
@@ -320,7 +322,8 @@ async function save() {
         {title:'Save PIDs', icon:'💾',
          yes: LDRC.replay ? 'Save to phone' : 'Save to flight controller'}))) return;
     setStatus('info', 'Writing PIDs…');
-    const bytes = buildPayload();
+    let bytes;
+    try { bytes = buildPayload(); } catch (e) { setStatus('bad', 'Not written: ' + e.message); return; }
     try {
         // Re-assert OUR bank at the instant of writing — the write lands
         // in whatever bank the FC has selected (Malcolm 2026-08-06).
@@ -360,7 +363,8 @@ async function copyTo(destIdx) {
     if (!(await LDRC.confirm('Copy current PIDs to profile ' + (destIdx + 1) + ' and switch to it?',
         {title:'Copy to profile ' + (destIdx + 1), icon:'📋', yes:'Copy + switch', kind:'warn'}))) return;
     setStatus('info', 'Copying to profile ' + (destIdx + 1) + '…');
-    const bytes = buildPayload();
+    let bytes;
+    try { bytes = buildPayload(); } catch (e) { setStatus('bad', 'Not written: ' + e.message); return; }
     try {
         await LDRC.msp(210, destIdx.toString(16).padStart(2,'0'));   // SELECT
         await LDRC.msp(202, bytesToHex(bytes));                       // SET_PID

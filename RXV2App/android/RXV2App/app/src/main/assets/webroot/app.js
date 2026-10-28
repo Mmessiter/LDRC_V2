@@ -502,6 +502,30 @@
         // localStorage name, kept in step so the next page opens there too.
         // Resolves to { bank, info, tx }: tx = the switch decided. In a
         // recording (replay) nothing is asked: the remembered bank.
+        // A BLANK BOX IS NEVER A ZERO (0.9.909, Malcolm 28 Oct 2026, Mehul's
+        // RAW 420: "I had zero aileron control ... in all four banks the gain
+        // on the aileron was zero"). Every payload builder read a box with
+        // `.value || '0'`, so a box left empty - or one a slider or a type
+        // change failed to fill - went to the flight controller as 0, and
+        // Copy to profile spread it to every bank. numOf throws instead: the
+        // page's save shows the message and writes nothing. what = the box's
+        // plain name for that message; absent, its row's label, else its id.
+        numOf(id, what) {
+            const el = document.getElementById(id);
+            const s = el ? String(el.value).trim() : '';
+            const v = s === '' ? NaN : Number(s);
+            if (!Number.isFinite(v)) {
+                let name = what;
+                if (!name && el) {
+                    const row = el.closest ? el.closest('.fldRow, .fRow, tr, .row') : null;
+                    const lab = (el.labels && el.labels[0]) || (row && row.querySelector('label, th'));
+                    if (lab) name = lab.textContent.trim();
+                }
+                throw new Error((name || id) + ' is empty: fill it in, nothing was written');
+            }
+            return v;
+        },
+
         async startBank(kind, remembered, key) {
             let info = this.bankInfo();
             try {

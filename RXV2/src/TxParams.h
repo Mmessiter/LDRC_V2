@@ -632,6 +632,17 @@ inline void writeBasicRatesToScratch() {
     pmScratch[19] = wColl[0];  pmScratch[20] = wColl[2];  pmScratch[21] = wColl[1];
 }
 
+// 0.9.909: the transmitter's rates, merged into the block - would an axis be left with no response? (ratesBlockDead,
+// MspFc.h: Mehul's RAW 420 took off with no aileron, 28 Oct 2026.) Logged; the caller aborts the write cycle.
+inline bool txRatesScratchDead() {
+    char why[32];
+    if (!ratesBlockDead(pmScratch, (uint8_t)(pmScratchLen > 255 ? 255 : pmScratchLen), why, sizeof(why))) return false;
+    char m[EventLog::MSG_LEN];
+    snprintf(m, sizeof(m), "Rates from the transmitter REFUSED: %s", why);
+    events.add(m);
+    return true;
+}
+
 // Returns false when the freshly-read block is too short to edit safely (FC
 // error / truncated response) — the caller must then ABORT the write cycle
 // rather than send an unmodified (or empty) SET + EEPROM_WRITE.
@@ -643,12 +654,14 @@ inline bool applyWriteToScratch() {
     if (pmWriteKind == WK_RATES) {
         if (pmScratchLen < 25) return false;
         writeBasicRatesToScratch();
+        if (txRatesScratchDead()) return false;   // 0.9.909: never a block with an axis at no response
     } else if (pmWriteKind == WK_RATES_ADV) {
         if (pmScratchLen < 36) return false;
         // V1 writes basic + advanced together. Write basic only if the TX actually
         // sent it this transaction (restore) — otherwise (advanced-only edit) leave
         // the FC's basic as read, so we never zero it.
         if (basicRatesPending) writeBasicRatesToScratch();
+        if (basicRatesPending && txRatesScratchDead()) return false;   // 0.9.909
         pmScratch[4]  = wResp[0]; pmScratch[10] = wResp[1]; pmScratch[16] = wResp[2]; pmScratch[22] = wResp[3];
         pmScratch[25] = wBoostGain[0]; pmScratch[26] = wBoostCutoff[0];   // Roll  (interleaved gain,cutoff)
         pmScratch[27] = wBoostGain[1]; pmScratch[28] = wBoostCutoff[1];   // Pitch

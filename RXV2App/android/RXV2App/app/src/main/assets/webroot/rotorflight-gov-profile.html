@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=407">
-<script src="/app.js?v=407" defer></script>
+<link rel=stylesheet href="/style.css?v=408">
+<script src="/app.js?v=408" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -231,10 +231,10 @@ async function load() {
 
 function buildPayload() {
     const bytes = new Uint8Array(cachedRaw);   // preserves flags bytes 15-16
-    const hs = Math.max(0, Math.min(65535, parseInt(document.getElementById('g_hs').value || '0')));
+    const hs = Math.max(0, Math.min(65535, LDRC.numOf('g_hs', 'Headspeed')));   // (0.9.909: a blank box stops the save - it went as 0)
     bytes[0] = hs & 0xff;
     bytes[1] = (hs >> 8) & 0xff;
-    const u8 = (id) => Math.max(0, Math.min(255, parseInt(document.getElementById(id).value || '0')));
+    const u8 = (id) => Math.max(0, Math.min(255, LDRC.numOf(id)));
     bytes[2]  = u8('g_gain');
     bytes[3]  = u8('g_p');
     bytes[4]  = u8('g_i');
@@ -265,7 +265,8 @@ async function save() {
         {title:'Save governor profile', icon:'💾',
          yes: LDRC.replay ? 'Save to phone' : 'Save to flight controller'}))) return;
     setStatus('info', 'Writing governor profile…');
-    const bytes = buildPayload();
+    let bytes;
+    try { bytes = buildPayload(); } catch (e) { setStatus('bad', 'Not written: ' + e.message); return; }
     try {
         // Re-assert OUR profile at the instant of writing.
         await LDRC.msp(210, currentProfile.toString(16).padStart(2,'0'));
@@ -301,7 +302,8 @@ async function copyTo(destIdx) {
     if (!(await LDRC.confirm('Copy current governor profile to profile ' + (destIdx + 1) + ' and switch to it?',
         {title:'Copy to profile ' + (destIdx + 1), icon:'📋', yes:'Copy + switch', kind:'warn'}))) return;
     setStatus('info', 'Copying to profile ' + (destIdx + 1) + '…');
-    const bytes = buildPayload();
+    let bytes;
+    try { bytes = buildPayload(); } catch (e) { setStatus('bad', 'Not written: ' + e.message); return; }
     try {
         await LDRC.msp(210, destIdx.toString(16).padStart(2,'0'));
         await LDRC.msp(149, bytesToHex(bytes));

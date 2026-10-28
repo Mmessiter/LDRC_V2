@@ -1087,6 +1087,22 @@ inline void handleMspApi() {
     // first select, re-select the page's bank after a put-back. MspFc.h.
     bankBeforeClientRequest(fn, reqBuf, reqLen);
 
+    // A rates block that would leave roll, pitch or yaw with no response is refused (0.9.909 - ratesBlockDead, MspFc.h:
+    // Mehul's RAW 420 took off with no aileron, 28 Oct 2026). The page shows the reason and writes nothing.
+    if (fn == MSP_SET_RC_TUNING && reqLen >= 19) {
+        char why[32];
+        if (ratesBlockDead(reqBuf, reqLen, why, sizeof(why))) {
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), "MSP 204 REFUSED from a page: %s", why);
+            events.add(m);
+            server.sendHeader("Cache-Control", "no-store");
+            String msg = "refused: this would set the "; msg += why;
+            msg += " and the model would not answer that stick. Fill the box in and save again.";
+            server.send(409, "text/plain", msg);
+            return;
+        }
+    }
+
     // Telemetry setup guards (0.9.563). The FC's sensor list was found
     // empty twice (2026-09-03/04, cause unknown); the next save would have
     // carried it into flash. After the yield above — each guard is its own
@@ -1173,6 +1189,20 @@ inline void handleMspApi() {
         }
     }
     if (ok) adjCacheNote(fn, reqBuf, (uint8_t)reqLen, respBuf, respLen);   // the adjustment lines as the flight controller now has them (0.9.880)
+    // Every rates and PID write on the record (0.9.909): the next "who set that to zero?" is answered by the events.
+    if (ok && fn == MSP_SET_RC_TUNING && reqLen >= 22) {
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof(m), "Rates written by a page: t%u R%u/%u/%u P%u/%u/%u Y%u/%u/%u C%u/%u/%u", reqBuf[0],
+                 reqBuf[1], reqBuf[2], reqBuf[3], reqBuf[7], reqBuf[8], reqBuf[9], reqBuf[13], reqBuf[14], reqBuf[15], reqBuf[19], reqBuf[20], reqBuf[21]);
+        events.add(m);
+    }
+    if (ok && fn == MSP_SET_PID && reqLen >= 24) {
+        char m[EventLog::MSG_LEN];
+        const uint16_t* w = (const uint16_t*)reqBuf;   // (little-endian words, as Rotorflight sends them)
+        snprintf(m, sizeof(m), "PIDs written by a page: R%u/%u/%u/%u P%u/%u/%u/%u Y%u/%u/%u/%u",
+                 w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7], w[8], w[9], w[10], w[11]);
+        events.add(m);
+    }
     if (!ok) {
         if (mspWaitRespError) { server.send(502, "text/plain", "flight controller rejected fn " + String(fn)); return; }
         server.send(504, "text/plain", "flight controller did not respond within 1200 ms"); return;

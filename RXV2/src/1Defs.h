@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.908-open-on-the-switch";
+constexpr const char* FW_VERSION = "RXV2-0.9.909-no-zero-rates";
 
 //*********************************************************************
 //  Auto-update manifest URLs

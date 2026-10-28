@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.909-no-zero-rates",
+      "url": "https://messiter.com/rxv2/release/v0.9.909/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.909/littlefs.bin",
+      "fs_md5": "0b7dd5e5832f0319e89e9b55efb81265",
+      "notes": "The receiver now refuses a rates block that would leave roll, pitch or yaw with no response, from the phone or the transmitter, and logs every rates and PID write in the events. A blank box on the PIDs, PID+, Rates and Governor pages stops the save with its name instead of writing 0. After Mehul's RAW 420 took off with no aileron on 28 October."
+    },
+    {
       "name": "RXV2-0.9.908-open-on-the-switch",
       "url": "https://messiter.com/rxv2/release/v0.9.908/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.908/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.898/littlefs.bin",
       "fs_md5": "b158805af954164c0c691f50425acaf0",
       "notes": "SBUS output now uses the standard scale (992 = 1500 us), so a flight controller on SBUS reads the same microseconds as on CRSF: centre 1500, not 1519, and full travel. Anyone flying SBUS from an RXV2 should check centre and travel on the receiver tab once."
-    },
-    {
-      "name": "RXV2-0.9.897-exact-rates-curves",
-      "url": "https://messiter.com/rxv2/release/v0.9.897/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.897/littlefs.bin",
-      "fs_md5": "b158805af954164c0c691f50425acaf0",
-      "notes": "Rates curves drawn with Rotorflight's own formulas (Shape now counts); Max Vel is the true full-stick speed; the transmitter draws the same curves (B107)."
     }
   ],
   "rotorflight": {

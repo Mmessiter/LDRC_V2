@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=407">
-<script src="/app.js?v=407" defer></script>
+<link rel=stylesheet href="/style.css?v=408">
+<script src="/app.js?v=408" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -661,8 +661,9 @@ function buildPayload() {
         for (let i = 0; i < MODEL.cols.length; i++) {
             const col = MODEL.cols[i];
             if (col.ro) continue;   // derived column (e.g. Max Vel) — never written
-            const disp = parseFloat(document.getElementById('r_' + ax.k + '_' + i).value || '0');
+            const disp = LDRC.numOf('r_' + ax.k + '_' + i, ax.k + ' ' + col.h);   // (0.9.909: a blank box stops the save - it went as 0)
             const raw  = Math.round(disp / axScale(ax, col));
+            if (!Number.isFinite(raw)) throw new Error(ax.k + ' ' + col.h + ' could not be worked out: nothing was written');
             if (col.slot === 'accel') {
                 bytes[o + 4] = raw & 0xff;
                 bytes[o + 5] = (raw >> 8) & 0xff;
@@ -674,12 +675,12 @@ function buildPayload() {
     }
     if (hasAdvanced && bytes.length >= 36) {
         for (let i = 0; i < AXES.length; i++) {
-            bytes[25 + i*2]     = parseInt(document.getElementById('a_' + AXES[i].k + '_g').value || '0');
-            bytes[25 + i*2 + 1] = parseInt(document.getElementById('a_' + AXES[i].k + '_c').value || '0');
+            bytes[25 + i*2]     = LDRC.numOf('a_' + AXES[i].k + '_g', AXES[i].k + ' boost gain');
+            bytes[25 + i*2 + 1] = LDRC.numOf('a_' + AXES[i].k + '_c', AXES[i].k + ' boost cutoff');
         }
-        bytes[33] = parseInt(document.getElementById('a_ydcg').value || '0');
-        bytes[34] = parseInt(document.getElementById('a_yddg').value || '0');
-        bytes[35] = Math.round(parseFloat(document.getElementById('a_yddf').value || '0') * 10);   // Hz → stored deci-Hz
+        bytes[33] = LDRC.numOf('a_ydcg', 'Yaw dynamic ceiling gain');
+        bytes[34] = LDRC.numOf('a_yddg', 'Yaw dynamic deadband gain');
+        bytes[35] = Math.round(LDRC.numOf('a_yddf', 'Yaw dynamic deadband filter') * 10);   // Hz → stored deci-Hz
     }
     return bytes;
 }
@@ -699,7 +700,8 @@ async function save() {
         {title:'Save Rates', icon:'💾',
          yes: LDRC.replay ? 'Save to phone' : 'Save to flight controller'}))) return;
     setStatus('info', 'Writing rates…');
-    const bytes = buildPayload();
+    let bytes;
+    try { bytes = buildPayload(); } catch (e) { setStatus('bad', 'Not written: ' + e.message); return; }
     try {
         // Re-assert OUR rate bank at the instant of writing.
         await LDRC.msp(210, (0x80 | currentProfile).toString(16).padStart(2,'0'));
@@ -737,7 +739,8 @@ async function copyTo(destIdx) {
     if (!(await LDRC.confirm('Copy current rates to profile ' + (destIdx + 1) + ' and switch to it?',
         {title:'Copy to profile ' + (destIdx + 1), icon:'📋', yes:'Copy + switch', kind:'warn'}))) return;
     setStatus('info', 'Copying to profile ' + (destIdx + 1) + '…');
-    const bytes = buildPayload();
+    let bytes;
+    try { bytes = buildPayload(); } catch (e) { setStatus('bad', 'Not written: ' + e.message); return; }
     try {
         await LDRC.msp(210, (0x80 | destIdx).toString(16).padStart(2,'0'));   // SELECT (rate)
         await LDRC.msp(204, bytesToHex(bytes));                                // SET_RC_TUNING

@@ -1018,6 +1018,27 @@ inline bool bankFnPidSide(uint8_t fn) {
            fn == MSP_GOVERNOR_PROFILE || fn == MSP_SET_GOVERNOR_PROFILE;
 }
 inline bool bankFnRateSide(uint8_t fn) { return fn == MSP_RC_TUNING || fn == MSP_SET_RC_TUNING; }
+
+// A RATES BLOCK THAT WOULD LEAVE AN AXIS WITH NO RESPONSE (0.9.909, Malcolm 28 Oct 2026, Mehul's RAW 420: "I quickly
+// realised I had zero aileron control. I landed immediately ... in all four banks the gain on the aileron was zero").
+// A box a page did not read - the transmitter's screen silent for 100 ms, a blank field on the phone - went to the
+// flight controller as 0, and Copy to profile spread it. Whatever the source, a roll, pitch or yaw rate of 0 is never
+// a tune. The block (MSP 111/204, Rotorflight 4.6): type, then six bytes an axis - rcRate, expo, rate, response time,
+// accel limit (2). Dead, per type (the app's rates model, rotorflight-rates.html modelForType): ROTORFLIGHT (6) and
+// BETAFLIGHT / RACEFLIGHT / KISS (1-3): rcRate 0; ACTUAL (4): centre AND max 0; QUICKRATES (5): either 0. NONE (0):
+// nothing to judge. why = "Roll rate to 0".
+inline bool ratesBlockDead(const uint8_t* b, uint8_t len, char* why, size_t whyLen) {
+    if (len < 19) return false;
+    const uint8_t t = b[0];
+    if (t == 0 || t > 6) return false;
+    static const char* const axis[3] = { "Roll", "Pitch", "Yaw" };
+    for (uint8_t a = 0; a < 3; ++a) {
+        const uint8_t rc = b[1 + 6 * a], rate = b[3 + 6 * a];
+        const bool dead = (t == 4) ? (rc == 0 && rate == 0) : (t == 5) ? (rc == 0 || rate == 0) : (rc == 0);
+        if (dead) { snprintf(why, whyLen, "%s rate to 0", axis[a]); return true; }
+    }
+    return false;
+}
 inline bool bankTxLive() {
     if (dongleEnabled) return true;          // unknown = assume the model's transmitter may be on: never switch banks unasked
     return rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) < 2000;
