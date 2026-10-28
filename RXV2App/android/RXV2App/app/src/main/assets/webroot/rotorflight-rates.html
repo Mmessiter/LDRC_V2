@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=405">
-<script src="/app.js?v=405" defer></script>
+<link rel=stylesheet href="/style.css?v=407">
+<script src="/app.js?v=407" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -752,10 +752,9 @@ async function copyTo(destIdx) {
     } catch (e) { setStatus('bad', 'Copy failed: ' + e.message); }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     bankInfo = LDRC.bankInfo();
     currentProfile = LDRC.bankClamp(bankInfo, 'rate', currentProfile);   // a remembered bank that certainly exists
-    LDRC.followSwitch('rate', () => currentProfile, followTx);           // the transmitter's bank switch moves the page (0.9.844)
     applyModel(modelForType(6));   // sensible default layout until load() learns the FC's actual type
     paintProfileButtons();
     // Changing the rates type (0.9.896): a question, then the new type's columns at its starting values (RATES_START).
@@ -781,6 +780,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('input', e => {
         if (e.target.matches('input, select')) LDRC.markDirty();
     });
+    // With the transmitter on, open on the bank its switch has the flight controller on (0.9.908) - then follow the switch.
+    const sb = (await LDRC.startBank('rate', currentProfile, 'rfRatesProfile')) || { bank: currentProfile, info: bankInfo, tx: false };   // (an older app.js: as remembered)
+    bankInfo = sb.info; currentProfile = sb.bank; paintProfileButtons();
+    LDRC.followSwitch('rate', () => currentProfile, followTx);           // the transmitter's bank switch moves the page (0.9.844)
     load();
 });
 </script>
@@ -798,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <p><b>Changing the type</b> puts this bank&rsquo;s rates to the new type&rsquo;s starting values, as Rotorflight&rsquo;s own Configurator does: about 240&nbsp;&deg;/s at full stick for roll and pitch, 400 for yaw, and 12.5&deg; of collective. Check them, change what you like, then Save; nothing is written before. Why not keep the numbers? Each type reads them its own way: ROTORFLIGHT&rsquo;s Rate 250 is ACTUAL&rsquo;s Centre 500 &mdash; twice as fast, and twice the collective. The transmitter&rsquo;s Rates page does the same. ACTUAL and ROTORFLIGHT are the easiest to read; the sliders work with those two and QUICKRATES. ROTORFLIGHT needs Rotorflight 2.3. <b>Max Vel</b> is read-only: the speed the type actually delivers at full stick.</p>
 <h3>Tips</h3>
 <ul>
-<li>With the transmitter on, the page follows its bank switch. Unsaved edits stay with the bank they were made on until you save or discard them.</li>
+<li>With the transmitter on, the page opens on the bank its switch is on and follows the switch from then on. Unsaved edits stay with the bank they were made on until you save or discard them.</li>
 <li>Gentle curves are calmer in hover; aggressive curves give a more responsive feel at full deflection.</li>
 <li>Test in a safe area — a rate change at high speed is more dramatic than it sounds on paper.</li>
 </ul>

@@ -40,7 +40,7 @@ function makePage(opts) {
     const answers = opts.answers || [];
     const LDRC = {
         replay: false, replayReady: Promise.resolve(), dirty: false, confirmed: [],
-        bankInfo: () => ({}), bankClamp: (i, k, v) => v || 0, bankCount: () => 6, bankRow: () => '', followSwitch() {}, fetchBanks: () => Promise.resolve({}),
+        bankInfo: () => ({}), bankClamp: (i, k, v) => v || 0, bankCount: () => 6, bankRow: () => '', followSwitch() {}, fetchBanks: () => Promise.resolve({}), startBank: async (k, r) => ({ bank: r || 0, info: {}, tx: false }),
         markStale() {}, clearStale() {}, fetchState: () => Promise.resolve({}), markDirty() { LDRC.dirty = true; }, clearDirty() { LDRC.dirty = false; },
         baseFor: (k, b, now) => now, baseNotice: () => '', relScale: (b, v) => b, relPos: () => 50, clamp5: v => v, clamp: (v) => v, endHint: () => '', showHelp() {},
         confirm: async (msg) => { LDRC.confirmed.push(msg); return answers.length ? answers.shift() : true; }, confirmLoseChanges: async () => true,

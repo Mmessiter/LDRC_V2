@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.908-open-on-the-switch",
+      "url": "https://messiter.com/rxv2/release/v0.9.908/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.908/littlefs.bin",
+      "fs_md5": "0a78a584c16f0bf3e8f67b6156fc3f9a",
+      "notes": "With the transmitter on, the tuning pages now open on the bank its switch has the flight controller on, read fresh, and keep following the switch over WiFi too. Before, a page opened on the bank it remembered and sent the flight controller there, so the switch seemed ignored until it was moved."
+    },
+    {
       "name": "RXV2-0.9.907-flight-index",
       "url": "https://messiter.com/rxv2/release/v0.9.907/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.907/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.897/littlefs.bin",
       "fs_md5": "b158805af954164c0c691f50425acaf0",
       "notes": "Rates curves drawn with Rotorflight's own formulas (Shape now counts); Max Vel is the true full-stick speed; the transmitter draws the same curves (B107)."
-    },
-    {
-      "name": "RXV2-0.9.896-rates-type-start-values",
-      "url": "https://messiter.com/rxv2/release/v0.9.896/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.896/littlefs.bin",
-      "fs_md5": "696912875a472c557fbf4c7b7063e39e",
-      "notes": "Rates type: a new type gives its starting values (as Rotorflight's Configurator), never a type Rotorflight lacks; the hello wave removed; Receiver settings: a Cells list for the receiver battery."
     }
   ],
   "rotorflight": {

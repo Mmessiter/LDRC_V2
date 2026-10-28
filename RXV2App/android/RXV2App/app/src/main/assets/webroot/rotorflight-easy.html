@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Easy tuning &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=405">
-<script src="/app.js?v=405" defer></script>
+<link rel=stylesheet href="/style.css?v=407">
+<script src="/app.js?v=407" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;gap:.6em;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -357,10 +357,14 @@ async function save() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     bankInfo = LDRC.bankInfo();
     bank = LDRC.bankClamp(bankInfo, 'pid', bank);
-    paintBanks(); load();
+    paintBanks();
+    // With the transmitter on, open on the bank its switch has the flight controller on (0.9.908).
+    const sb = (await LDRC.startBank('pid', bank, 'rfPidProfile')) || { bank: bank, info: bankInfo, tx: false };   // (an older app.js: as remembered)
+    bankInfo = sb.info; bank = sb.bank; paintBanks();
+    load();
 });
 </script>
 <template id=helpContent><h2>Easy tuning</h2>

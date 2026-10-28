@@ -476,6 +476,9 @@ inline void handleTxBanks() {
     server.send(200, "application/json", j);
 }
 inline void handleBanksJson() {
+    banks.lastPollMs = millis();                                   // a page is watching the switch (bankFollowTick, 0.9.908)
+    // ?fresh=1 (0.9.908): a page opening wants the bank the switch has the FC on NOW - MSP 101 first, when it can be asked.
+    const bool fresh = server.hasArg("fresh") && server.arg("fresh").toInt() != 0 && bankReadFreshForPage();
     String j = "{\"pid\":";  j += (int)banks.pidCount;
     j += ",\"rate\":";       j += (int)banks.rateCount;
     j += ",\"shown\":";      j += (int)fcInfo.banksShown;
@@ -487,6 +490,7 @@ inline void handleBanksJson() {
     j += ",\"fc_rate\":";    j += (banks.fcRate == 0xFF ? -1 : (int)banks.fcRate);
     j += ",\"tx\":";         j += (bankTxLive() ? "true" : "false");
     j += ",\"armed\":";      j += (fcInfo.armed ? "true" : "false");
+    j += ",\"fresh\":";      j += (fresh ? "true" : "false");          // fc_pid/fc_rate were read for this answer (0.9.908)
     // The transmitter's bank count (0.9.904), and the positions of the flight controller's selector lines as last seen
     // through this receiver; 0 = unknown.
     j += ",\"tx_banks\":";       j += (int)fcInfo.txBanks;

@@ -146,6 +146,7 @@ struct BankState {
     uint8_t  tries = 0;
     bool     txWarned = false;
     uint32_t holdSinceMs = 0, lastClientMs = 0, lastTryMs = 0;
+    uint32_t lastPollMs = 0;                       // a page last polled /api/banks.json (0.9.908: it is watching the switch)
     uint32_t holds = 0, putBacks = 0;
 };
 inline BankState banks;
@@ -1258,7 +1259,11 @@ inline bool bleHasClient();
 inline void bankFollowTick() {
     if (dongleEnabled || UsbHostMsp::cliMode) return;
     if (!fcInfo.detected || fcInfo.armed || !bankTxLive()) return;
-    const bool watched = bleHasClient() || (banks.lastClientMs && (uint32_t)(millis() - banks.lastClientMs) < 15000);
+    // Watching = a Bluetooth client, a page that spoke MSP in the last 15 s, or one that polled /api/banks.json in the
+    // last 6 s (0.9.908: over WiFi a page sitting on its bank spoke no MSP after its load, so 15 s later the switch went
+    // unread - the poll itself is the page watching; Malcolm, 28 Oct 2026, Mehul's RAW 420).
+    const bool watched = bleHasClient() || (banks.lastClientMs && (uint32_t)(millis() - banks.lastClientMs) < 15000)
+                      || (banks.lastPollMs && (uint32_t)(millis() - banks.lastPollMs) < 6000);
     if (!watched) return;
     static uint32_t lastMs = 0;
     if ((uint32_t)(millis() - lastMs) < 2000) return;
@@ -1266,6 +1271,19 @@ inline void bankFollowTick() {
     lastMs = millis();
     mspSendRequest(MSP_STATUS);
     mspProbeSentMs = millis();
+}
+
+// A PAGE OPENING ASKS WHERE THE SWITCH HAS THE FLIGHT CONTROLLER (0.9.908, Malcolm 28 Oct 2026, Mehul's RAW 420: "the
+// app was supposed to follow the bank according to where the transmitter was, but it didn't. I had to do this
+// manually"). A tuning page opened on the bank it remembered and selected it on the FC, so with the transmitter on the
+// switch's bank was overridden before the follow could see it - nothing was left to follow. /api/banks.json?fresh=1
+// now asks MSP 101 before answering, when the transmitter is on, the model disarmed and the line free; the digest fills
+// banks.fcPid/fcRate and the page opens there. False = not asked (the page falls back to what it remembered).
+inline bool bankReadFreshForPage() {
+    if (dongleEnabled || UsbHostMsp::cliMode || mspBridgeActive || bbCheckActive) return false;
+    if (!fcInfo.detected || fcInfo.armed || !bankTxLive()) return false;
+    if (txParamBusy || mspWaitFunction != 0xFF) return false;
+    return bankReadSync();
 }
 
 inline void mspFcPoll() {

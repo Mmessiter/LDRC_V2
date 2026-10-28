@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Governor (profile) &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=405">
-<script src="/app.js?v=405" defer></script>
+<link rel=stylesheet href="/style.css?v=407">
+<script src="/app.js?v=407" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -316,13 +316,16 @@ async function copyTo(destIdx) {
     } catch (e) { setStatus('bad', 'Copy failed: ' + e.message); }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     bankInfo = LDRC.bankInfo();
     currentProfile = LDRC.bankClamp(bankInfo, 'pid', currentProfile);   // a remembered bank that certainly exists
     paintProfileButtons();
     document.addEventListener('input', e => {
         if (e.target.matches('input, select')) LDRC.markDirty();
     });
+    // With the transmitter on, open on the bank its switch has the flight controller on (0.9.908).
+    const sb = (await LDRC.startBank('pid', currentProfile, 'rfPidProfile')) || { bank: currentProfile, info: bankInfo, tx: false };   // (an older app.js: as remembered)
+    bankInfo = sb.info; currentProfile = sb.bank; paintProfileButtons();
     load();
 });
 </script>

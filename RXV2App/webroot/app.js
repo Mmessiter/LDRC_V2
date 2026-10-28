@@ -489,6 +489,40 @@
             } catch (e) { return this.bankInfo(); }
         },
 
+        // WHERE A BANK PAGE OPENS (0.9.908, Malcolm 28 Oct 2026, Mehul's RAW
+        // 420: "the app was supposed to follow the bank according to where
+        // the transmitter was, but it didn't. I had to do this manually").
+        // A page opened on the bank it remembered and selected it on the
+        // flight controller (its load() does), so with the transmitter on
+        // the switch's bank was overridden before followSwitch could see
+        // it - nothing left to follow. Now: with the transmitter on and the
+        // model disarmed, the page opens on the bank the flight controller
+        // is on, read fresh (banks.json?fresh=1 asks MSP 101 first). kind
+        // 'pid' or 'rate'; remembered = the page's 0-based bank; key = its
+        // localStorage name, kept in step so the next page opens there too.
+        // Resolves to { bank, info, tx }: tx = the switch decided. In a
+        // recording (replay) nothing is asked: the remembered bank.
+        async startBank(kind, remembered, key) {
+            let info = this.bankInfo();
+            try {
+                if (this.replayReady) await this.replayReady;
+                if (!this.replay) {
+                    const r = await fetch('/api/banks.json?fresh=1', { cache: 'no-store' });
+                    if (r.ok) {
+                        const b = await r.json();
+                        if ((b.pid | 0) >= 1) { localStorage.setItem('rfBanks', JSON.stringify(b)); info = b; }
+                        const fc = kind === 'rate' ? b.fc_rate : b.fc_pid;
+                        const have = (kind === 'rate' ? b.rate : b.pid) | 0;
+                        if (b.tx && !b.armed && typeof fc === 'number' && fc >= 0 && fc < have) {
+                            if (key) { try { localStorage.setItem(key, String(fc)); } catch (e) {} }
+                            return { bank: fc, info: b, tx: true };
+                        }
+                    }
+                }
+            } catch (e) {}
+            return { bank: this.bankClamp(info, kind, remembered), info, tx: false };
+        },
+
         // FOLLOW THE TRANSMITTER'S BANK SWITCH (0.9.844, Malcolm 2026-09-24:
         // "when I switch bank, the bank does not change on the phone's
         // display. I think it should if it can"). While the transmitter is

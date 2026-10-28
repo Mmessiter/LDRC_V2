@@ -66,7 +66,8 @@ const ldrcKnown = { state: { info: { name: 'Goblin770' } }, viaBle: false, repla
     // the Bank selector's positions (0.9.904): the no-word-from-the-transmitter answer, so a page that draws the
     // selector (Switches and knobs, Transmitter channels) draws it here as it would on a phone
     selectorPositions: () => ({ options: [4, 6], locked: false, tx: 0 }), selectorCount: (i, k, r) => (r === 4 || r === 6) ? r : 4,
-    fetchBanks: async () => ({ pid: 6, rate: 6, shown: 0, tx_banks: 0 }) };
+    fetchBanks: async () => ({ pid: 6, rate: 6, shown: 0, tx_banks: 0 }),
+    startBank: async (k, r) => ({ bank: r | 0, info: { pid: 6, rate: 6, shown: 0, tx_banks: 0 }, tx: false }) };   // (0.9.908) where a bank page opens
 sandbox.LDRC = new Proxy(ldrcKnown, {
     get(t, k) { if (k in t) return t[k]; if (typeof k !== 'string') return undefined; return async () => undefined; },
     has() { return true; },
