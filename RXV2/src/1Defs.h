@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.909-no-zero-rates";
+constexpr const char* FW_VERSION = "RXV2-0.9.910-quick-follow";
 
 //*********************************************************************
 //  Auto-update manifest URLs

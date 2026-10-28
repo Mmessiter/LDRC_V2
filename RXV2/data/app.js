@@ -556,25 +556,35 @@
         // onMove(bank). The page decides: follow, or, with unsaved edits, say
         // so and stay. Nothing is asked with the transmitter off (then the
         // phone owns the bank) or in a recording.
+        // QUICKER (0.9.910, Malcolm 28 Oct 2026: "they move about 3 seconds
+        // after I move the switch. Can it be quicker?"): every 400 ms while
+        // there is a switch to follow (the transmitter on, the model
+        // disarmed), every 2 s otherwise; the receiver asks the flight
+        // controller 120 ms after it sees the switch move, so the page moves
+        // within about a second. One look at a time: the next is timed from
+        // the end of the last (and of the page's own load when it followed).
         followSwitch(kind, current, onMove) {
             let inFlight = false;
-            setInterval(async () => {
-                if (this.replay || document.hidden || inFlight) return;
-                // Never under the pilot's fingers: not while a field has the
-                // cursor, and (the page's own rule) never with unsaved edits.
-                const a = document.activeElement;
-                if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA')) return;
-                if (this.dirty) { onMove(-1); return; }   // -1: "the transmitter may have moved, but you have edits" - pages may say so, never reload
-                inFlight = true;
+            const look = async () => {
+                let next = 2000;
                 try {
+                    if (this.replay || document.hidden || inFlight) return;
+                    // Never under the pilot's fingers: not while a field has the
+                    // cursor, and (the page's own rule) never with unsaved edits.
+                    const a = document.activeElement;
+                    if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA')) return;
+                    if (this.dirty) { onMove(-1); return; }   // -1: "the transmitter may have moved, but you have edits" - pages may say so, never reload
+                    inFlight = true;
                     const r = await fetch('/api/banks.json', { cache: 'no-store' });
                     if (!r.ok) return;
                     const b = await r.json();
                     if (!b.tx || b.armed) return;
+                    next = 400;
                     const fc = kind === 'rate' ? b.fc_rate : b.fc_pid;
-                    if (typeof fc === 'number' && fc >= 0 && fc !== current()) onMove(fc);
-                } catch (e) {} finally { inFlight = false; }
-            }, 2000);
+                    if (typeof fc === 'number' && fc >= 0 && fc !== current()) await onMove(fc);
+                } catch (e) {} finally { inFlight = false; setTimeout(look, next); }
+            };
+            setTimeout(look, 400);
         },
 
         // info = what fetchBanks()/bankInfo() gave, or a whole state object.

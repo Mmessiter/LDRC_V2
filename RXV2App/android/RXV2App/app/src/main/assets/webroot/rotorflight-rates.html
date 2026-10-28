@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rates &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=408">
-<script src="/app.js?v=408" defer></script>
+<link rel=stylesheet href="/style.css?v=409">
+<script src="/app.js?v=409" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -589,7 +589,7 @@ async function followTx(idx) {
         currentProfile = idx;
         localStorage.setItem('rfRatesProfile', String(idx));
         paintProfileButtons();
-        await load();
+        await load(true);   // (0.9.910: the switch put the FC on this bank - no select, one read the fewer)
         setStatus('good', '\u2713 Following the transmitter: bank ' + (idx + 1));
     } catch (e) {} finally { following = false; }
 }
@@ -608,7 +608,7 @@ async function selectProfile(idx) {
     } catch (e) { setStatus('bad', 'Profile switch failed: ' + e.message); }
 }
 
-async function load() {
+async function load(onBank) {   // onBank (0.9.910): the FC is known to be on currentProfile already (the switch put it there) - not selected again
     LDRC.fetchBanks().then(b => { bankInfo = b; paintProfileButtons(); });
     await LDRC.replayReady;
     setStatus('info', LDRC.replay ? 'Reading from the phone…' : 'Reading rates from flight controller…');
@@ -624,7 +624,7 @@ async function load() {
     } catch (e) {}
     try {
         // Force FC to the rate profile our page is showing (0x80 | idx).
-        await LDRC.msp(210, (0x80 | currentProfile).toString(16).padStart(2,'0'));
+        if (!onBank) await LDRC.msp(210, (0x80 | currentProfile).toString(16).padStart(2,'0'));
         const bytes = hexToBytes(await LDRC.msp(111));
         const minLen = hasAdvanced ? 36 : 25;
         if (bytes.length < minLen) throw new Error('short response: ' + bytes.length);

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.910-quick-follow",
+      "url": "https://messiter.com/rxv2/release/v0.9.910/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.910/littlefs.bin",
+      "fs_md5": "fe0f44581d076b50d798141c56e38e3a",
+      "notes": "0.9.910: the app's bank pages follow the transmitter's switch within about a second (was about 3 s): the receiver asks the flight controller 120 ms after it sees the switch move and every 0.5 s while a page polls; the pages poll every 0.4 s and read without re-selecting the bank."
+    },
+    {
       "name": "RXV2-0.9.909-no-zero-rates",
       "url": "https://messiter.com/rxv2/release/v0.9.909/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.909/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.899/littlefs.bin",
       "fs_md5": "03ea2d0c02bb1e95bc23df771f2f728e",
       "notes": "Read black box: the Black box page's button now starts the read as the page opens, with a progress bar (how far, how long is left, the flights found so far) and a line saying what it is doing; the What-to-record link waits while a read runs. Over Bluetooth the phone could never start a black box read in 0.9.898: its routes were registered on the WiFi server only, so the app got 'not found'. Fixed, with a gate (dev/route_gate.js) that keeps every route on the router that serves both."
-    },
-    {
-      "name": "RXV2-0.9.898-sbus-standard-scale",
-      "url": "https://messiter.com/rxv2/release/v0.9.898/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.898/littlefs.bin",
-      "fs_md5": "b158805af954164c0c691f50425acaf0",
-      "notes": "SBUS output now uses the standard scale (992 = 1500 us), so a flight controller on SBUS reads the same microseconds as on CRSF: centre 1500, not 1519, and full travel. Anyone flying SBUS from an RXV2 should check centre and travel on the receiver tab once."
     }
   ],
   "rotorflight": {

@@ -1283,13 +1283,28 @@ inline void bankFollowTick() {
     // Watching = a Bluetooth client, a page that spoke MSP in the last 15 s, or one that polled /api/banks.json in the
     // last 6 s (0.9.908: over WiFi a page sitting on its bank spoke no MSP after its load, so 15 s later the switch went
     // unread - the poll itself is the page watching; Malcolm, 28 Oct 2026, Mehul's RAW 420).
-    const bool watched = bleHasClient() || (banks.lastClientMs && (uint32_t)(millis() - banks.lastClientMs) < 15000)
-                      || (banks.lastPollMs && (uint32_t)(millis() - banks.lastPollMs) < 6000);
+    const bool polling = banks.lastPollMs && (uint32_t)(millis() - banks.lastPollMs) < 6000;   // a page is polling /api/banks.json: it wants the switch's bank soon
+    const bool watched = bleHasClient() || (banks.lastClientMs && (uint32_t)(millis() - banks.lastClientMs) < 15000) || polling;
     if (!watched) return;
-    static uint32_t lastMs = 0;
-    if ((uint32_t)(millis() - lastMs) < 2000) return;
+    // QUICKER (0.9.910, Malcolm 28 Oct 2026: "they move about 3 seconds after I move the switch. Can it be quicker?"):
+    // the switch is a channel this receiver forwards, so a switch that moved is seen HERE before the flight controller
+    // has acted on it. Any channel 5-16 that moved more than 100 us since the last ask brings the next ask forward to
+    // 120 ms after the move (the FC takes a frame or two to move its profile); while a page is polling the ask comes
+    // every 500 ms anyway (the page polls every 400 ms); otherwise every 2 s as before. Never within the probe hold-off
+    // of a page's own reply (PROBE_HOLDOFF_MS: a request behind an unanswered one is thrown away by the FC), and never
+    // two asks within 250 ms, whatever a knob does.
+    static uint32_t lastMs = 0, movedAt = 0;
+    static uint16_t askedUs[16];
+    bool moved = false;
+    for (uint8_t i = 4; i < 16; ++i) { const int d = (int)channelMicros[i] - (int)askedUs[i]; if (d > 100 || d < -100) moved = true; }
+    if (moved && !movedAt) movedAt = millis();
+    const uint32_t gap = movedAt ? 120 : polling ? 500 : 2000;
+    const uint32_t since = (uint32_t)(millis() - (movedAt ? movedAt : lastMs));
+    if (since < gap || (uint32_t)(millis() - lastMs) < 250) return;
     if (txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;
-    lastMs = millis();
+    if (mspLastForegroundMs && (uint32_t)(millis() - mspLastForegroundMs) < PROBE_HOLDOFF_MS) return;
+    lastMs = millis(); movedAt = 0;
+    memcpy(askedUs, channelMicros, sizeof askedUs);
     mspSendRequest(MSP_STATUS);
     mspProbeSentMs = millis();
 }
