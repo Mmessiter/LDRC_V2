@@ -115,7 +115,7 @@ static void flightPoll() {
     if (flight.takeSaved()) { flightSaveWanted = true; flightSaveAt = now; }
     if (flightSaveWanted) {                                     // (a flash write stalls the chip: when the wire is quiet, and never in flight)
         if (teensyLink.running() || armedNow) flightSaveAt = now;   // (held back: the wait starts again when it may be written)
-        else if ((int32_t) (now - lastRxMs) > 300 || now - flightSaveAt > 3000) {
+        else if ((int32_t) (now - lastRxMs) > 300 || now - flightSaveAt > 30000) {   // (1.11.140: 30 s, was 3: a write under the main board's stream loses its bytes - see drawVerb)
             flightSaveWanted = false;
             flightStore();
         }

@@ -45,7 +45,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.139"
+#define SCREEN_VERSION "1.11.140"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -993,6 +993,7 @@ static Preferences prefs;
 // 1.1 ms: a preference saved during a page load mangled whatever the Teensy sent right then (its file
 // lists, its findfile question at boot). Saves wait until the link has been quiet for half a second.
 static uint32_t lastRxMs = 0;
+static bool wireQuiet(uint32_t ms) { return (int32_t) (millis() - lastRxMs) > (int32_t) ms; }   // (1.11.140) nothing from the main board for ms
 static int pendingBg = INT32_MIN, pendingVol = INT32_MIN, pendingRadios = INT32_MIN;
 static uint32_t pendingBgAt = 0, pendingVolAt = 0;         // (25 Oct) when the value last changed: written once it has rested
 // (25 Oct 2026) Every write to the flash (NVS) stalls the panel's DMA for its length - the picture slips sideways (1.11.69).
@@ -1000,7 +1001,7 @@ static uint32_t pendingBgAt = 0, pendingVolAt = 0;         // (25 Oct) when the 
 static uint32_t nvsN = 0, nvsMaxUs = 0;
 template <typename F> static void nvsQuiet(F write) { quietAtFrameEnd(); const uint32_t t0 = micros(); { Busy busy_(BUSY_NVS); write(); } const uint32_t us = micros() - t0; nvsN++; if (us > nvsMaxUs) nvsMaxUs = us; }
 static std::string pendingDoor; static bool pendingDoorSet = false;
-static uint32_t pendingSince = 0;                          // the pilot's own switches (the radios, the workshop door): written when the wire is quiet, or after 3 s, quiet or not
+static uint32_t pendingSince = 0;                          // the pilot's own switches (the radios, the workshop door): written when the wire is quiet, or after 30 s, quiet or not (1.11.140: was 3 s)
 // The page to come back to after our own restart (an update) is kept in RTC memory: it survives a restart,
 // not a power cycle, and costs no flash write. (As a preference it was only saved when the link fell
 // silent, which on a page with live telemetry is never.)
@@ -1028,7 +1029,12 @@ static void rtcGlobalNote(const std::string &key, int32_t v) {
     strlcpy(rtcGlobals[rtcGlobalN].name, key.c_str(), sizeof(RtcGlobal::name)); rtcGlobals[rtcGlobalN].val = v; ++rtcGlobalN;
 }
 static void prefsPoll() {
-    if ((pendingRadios != INT32_MIN || pendingDoorSet) && ((int32_t) (millis() - lastRxMs) > 300 || millis() - pendingSince > 3000)) {
+    // (1.11.140) A flash write masks the wire's interrupt for its whole length (the core's UART handler is not in IRAM), and the
+    // 128-byte FIFO then overflows in 1.4 ms at 921600 baud whatever its threshold: the main board's bytes of that moment
+    // are lost and two of its commands run into one (a stray line across the Rates curves page, Malcolm, 28 Oct 2026 -
+    // its dots follow the sticks, so the wire is busy as long as they move, and after 3 s this write went regardless).
+    // Now a quiet wire, or 30 s: on a page that streams without pause the loss is then a telemetry word, not a drawing.
+    if ((pendingRadios != INT32_MIN || pendingDoorSet) && (wireQuiet(300) || millis() - pendingSince > 30000)) {
         if (pendingRadios != INT32_MIN) { if (prefs.getBool("radios", true) != (pendingRadios == 1)) nvsQuiet([&] { prefs.putBool("radios", pendingRadios == 1); }); pendingRadios = INT32_MIN; }
         if (pendingDoorSet) { pendingDoorSet = false; nvsQuiet([&] { if (pendingDoor.empty()) { if (prefs.isKey("door")) prefs.remove("door"); } else prefs.putString("door", pendingDoor.c_str()); }); }
     }
@@ -2075,6 +2081,36 @@ static int splitArgs(const std::string &args, std::string out[], int maxN) {   /
     for (int i = 0; i < n; ++i) { size_t a = out[i].find_first_not_of(' '), b = out[i].find_last_not_of(' '); out[i] = a == std::string::npos ? "" : out[i].substr(a, b - a + 1); }
     return n;
 }
+// (1.11.140, Malcolm, 28 Oct 2026, a photo of the Rates curves page: "Just a couple of stray lines outside the graph on
+// this page" - one from the plot's corner off the bottom of the screen, one across the legend.) The main board draws
+// with whole numbers inside the screen, five of them to a line. A command that is not that is two of its commands run
+// into one: a flash write masks the wire's interrupt for its whole length (the core's UART handler is not in IRAM) and
+// the 128-byte FIFO then overflows in 1.4 ms at 921600 baud, whatever its threshold (setup). Such a command is dropped
+// and counted (/status "drawbad" and "odd", the text at /odd): a missing piece of a curve, never a line across the page.
+// The writes that could land under the main board's stream wait for a quiet wire (prefsPoll, flight_device.h, loop).
+static uint32_t drawDropped = 0;
+static bool plainInt(const std::string &t, long lo, long hi) {   // digits only (a leading minus allowed), within lo..hi
+    if (t.empty() || t.size() > 6) return false;
+    size_t i = t[0] == '-' ? 1 : 0; if (i >= t.size()) return false;
+    for (; i < t.size(); ++i) if (!isdigit((unsigned char) t[i])) return false;
+    const long v = atol(t.c_str()); return v >= lo && v <= hi;
+}
+static bool colourToken(const std::string &t) {                 // a number, or a name colourOf() knows (letters only)
+    if (plainInt(t, 0, 65535)) return true;
+    if (t.empty()) return false;
+    for (char ch : t) if (!isalpha((unsigned char) ch)) return false;
+    return true;
+}
+static bool drawSane(const std::string a[], int n, int need) {  // exactly need args: coordinates within a screen's reach, the last a colour
+    if (n != need) return false;
+    for (int i = 0; i + 1 < need; ++i) if (!plainInt(a[i], -64, 1024)) return false;
+    return colourToken(a[need - 1]);
+}
+static bool drawDrop(const std::string &cmd) {
+    drawDropped++; badCount++;
+    oddTrace += "draw:" + cmd.substr(0, 60) + " | "; if (oddTrace.size() > 400) oddTrace.erase(0, oddTrace.size() - 400);
+    return true;
+}
 static bool drawVerb(const std::string &cmd) {
     const size_t sp = cmd.find(' '); if (sp == std::string::npos) return false;
     const std::string verb = cmd.substr(0, sp);
@@ -2082,6 +2118,9 @@ static bool drawVerb(const std::string &cmd) {
     if (noDraw || loadingPage) return true;
     std::string a[12]; const int n = splitArgs(cmd.substr(sp + 1), a, 12);
     auto I = [&](int i) { return i < n ? atoi(a[i].c_str()) : 0; };
+    if (verb == "line" || verb == "fill" || verb == "draw") { if (!drawSane(a, n, 5)) return drawDrop(cmd); }
+    else if (verb == "cir" || verb == "cirs") { if (!drawSane(a, n, 4)) return drawDrop(cmd); }
+    else if (verb == "pic") { if (n != 3 || !plainInt(a[0], -64, 1024) || !plainInt(a[1], -64, 1024) || !plainInt(a[2], 0, 9999)) return drawDrop(cmd); }
     if (verb == "line" && n >= 5) {
         const int x1 = I(0), y1 = I(1), x2 = I(2), y2 = I(3), bx = min(x1, x2), by = min(y1, y2), bw = abs(x2 - x1) + 1, bh = abs(y2 - y1) + 1;
         gfx->drawLine(x1, y1, x2, y2, colourOf(a[4]));
@@ -2726,6 +2765,7 @@ static void webBegin() {
         out += ",\"board\":\"" + std::string(board->name) + "\",\"flash_mb\":" + std::to_string((unsigned) (flashChipBytes >> 20)) + ",\"image_mb\":" + std::to_string((unsigned) (flashImageBytes >> 20))
              + ",\"slot\":" + std::to_string((unsigned) boardSlotBytes()) + ",\"build\":\"" + (BUILD_FULL ? "full" : "standard") + "\"";   // (1.11.111) which board this is (its flash chip), what the firmware was built for, the slot the next firmware goes in
         out += ",\"crash\":" + crashJson();                     // (1.11.15) the last crash's summary from the core dump in flash, if there is one
+        out += ",\"drawbad\":" + std::to_string((unsigned long) drawDropped);   // (1.11.140) drawing commands dropped as two run into one (bytes lost on the wire); their text at /odd
         { char q[340]; snprintf(q, sizeof(q), ",\"quiet\":{\"frames\":%lu,\"frame_us\":%lu,\"n\":%lu,\"late\":%lu,\"over\":%lu,\"wait_ms\":%lu,\"copy_us\":%lu,\"copy_max\":%lu,\"draw_us\":%lu,\"draw_max\":%lu,\"kept\":%lu,\"full\":%lu,\"warmed\":%lu,\"step_max\":%lu,\"stores\":%lu,\"store_max\":%lu}",
                                 (unsigned long) frameEnds, (unsigned long) frameUs, (unsigned long) quietN, (unsigned long) quietLateN, (unsigned long) quietOverN, (unsigned long) quietWaitMs,
                                 (unsigned long) quietCopyUs, (unsigned long) quietCopyMax, (unsigned long) quietDrawUs, (unsigned long) quietDrawMax,
@@ -3634,7 +3674,7 @@ void loop() {
     { Busy b(BUSY_FLIGHT); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); } { Busy b(BUSY_FILM); filmPoll(); } { Busy b(BUSY_WIFI); blPoll(); blePoll(); } { Busy b(BUSY_CLI); cliPoll(); } PHASE(0)   // (25 Oct evening: Busy tags = who slipped the panel, /perf "slipw")
     { Busy b(BUSY_AUDIO); audioFill(); if (!teensyLink.running() && !(benchSkip & 4)) audioWarm(); } PHASE(1)
     { Busy b(BUSY_SD); packTick(!teensyLink.running() && (int32_t) (now - lastRxMs) >= 100 && now - lastPresentMs >= 300 && !flyingNow()); }   // (1.11.138) the card against the pack, a file at a time between the front page's clock ticks
-    { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running()) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } if (stripArmed && now > 20000 && !teensyLink.running()) { stripArmed = false; nvsQuiet([&] { prefs.putInt("striparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
+    { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running() && (wireQuiet(300) || now > 90000)) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } if (stripArmed && now > 20000 && !teensyLink.running() && (wireQuiet(300) || now > 90000)) { stripArmed = false; nvsQuiet([&] { prefs.putInt("striparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
     { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && (clipDropOne() || bgEvictOne())) psramEvictions++; } }   // (1.11.132/133: clips first) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
     { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)
     { Busy b(BUSY_TIMERS); pollTimers(); } PHASE(4)
