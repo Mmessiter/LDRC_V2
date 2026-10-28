@@ -207,13 +207,13 @@ void ClearMostParameters()
     LastShowTime = 0;
     TotalGoodPackets = 0;
     RecentGoodPacketsCount = 0;
-    RecentPacketsLost = 0;
     DontChangePipeAddress = false;
     UsingDefaultPipeAddress = true;
     VersionsCompared = false;
     LogLineNumber = 0;
     RXSuccessfulPackets = 0;
-    TotalLostPackets = 0;
+    TotalLostPackets += RecentPacketsLost;   // B155: the packets that failed in the two seconds before the model was given up are LOST packets: banked, not wiped
+    RecentPacketsLost = 0;                   // (and nothing is counted while the model is gone: FailedPacket counts only with the green LED)
     TotalPacketsAttempted = 0;
 
     if (CurrentView == FRONTVIEW)
@@ -2696,18 +2696,22 @@ void UpdateOneSwitchView()
 
 /*********************************************************************************************************************************/
 
-void ZeroDataScreen()
-{ // ZERO Those parameters that are zeroable
-
-    TotalGoodPackets = 0;
-    RecentPacketsLost = 0;
-    TotalLostPackets = 0;
+void ZeroGapStats()
+{ // B155: the comms gaps alone (leaving the Rotorflight menu: its edits pause the main board, and those pauses are not the link's)
     GapLongest = 0;
     GapSum = 0;
     GapAverage = 0;
     GapCount = 0;
     GapStart = 0;
     ThisGap = 0;
+}
+void ZeroDataScreen()
+{ // ZERO Those parameters that are zeroable
+
+    TotalGoodPackets = 0;
+    RecentPacketsLost = 0;
+    TotalLostPackets = 0;
+    ZeroGapStats();
     RXMAXModelAltitude = 0;
     MaxRateOfClimb = 0;
     RXModelAltitude = 0;

@@ -229,8 +229,13 @@ void CheckInactivityTimeout()
 FASTRUN void FailedPacket()
 {
     RecordsPacketSuccess(0); // Record a failure
-    if (!ReconnectingNow)
-        ++RecentPacketsLost; // this is to keep track of events when receiver is off
+    // B155 (Malcolm, 28 Oct 2026: "zero packets lost all day, which doesn't seem possible"): a packet that failed all its
+    // retries WHILE THE LINK WAS UP (the green LED) is a lost packet, every one of them; the thousands that fail while
+    // the model is off or out of reach are the outage, told by the gaps, not counted here. (The old test, !ReconnectingNow,
+    // was always true: RecordsPacketSuccess had just cleared it - and the total was wiped two seconds into every outage,
+    // and on leaving the Rotorflight menu, so the day always read 0.)
+    if (LedWasGreen)
+        ++RecentPacketsLost;
     Reconnected = false;
     ReconnectingNow = true;
     LastPacketSentTime = 0; // Force a new packet to be sent immediately

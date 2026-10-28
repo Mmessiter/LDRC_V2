@@ -3,13 +3,18 @@ model reports. Look at it after a flight, before you switch off.||
 'Clear' sets the counts back to zero: lost packets, the comms|
 gaps (and the 'Gaps ...' page), the frame rates, and the GPS|
 page's maximum speed and distance.|
-They also start again a few seconds after each connection, and|
-when you press 'OK' on the 'Rotorflight' page.|
+The frame rates start again at each connection. 'OK' on the|
+'Rotorflight' page clears the comms gaps only (its edits pause|
+the transmitter). Lost packets are kept until 'Clear' or power|
+off, through every reconnection.|
 'Gaps ...' shows how long each reconnection took.|
 'GPS ...' opens the GPS page.||
 THE LINK:|
 Average and current frame rate: packets received each second.|
-Lost data packets: packets that did not arrive.|
+Lost data packets: packets the model never acknowledged, even|
+after the radio's own retries, while the link was up. Zero is|
+normal near the model. An outage is not counted here (nothing|
+can arrive then): see the gaps.|
 Longest comms gap: the most milliseconds between losing a data|
 packet and being connected again. Below about 250 (a quarter of|
 a second) all should be well; normally it is well below 100.|

@@ -85,7 +85,7 @@ FLASHMEM void StartRFSettingsView()
 // **********************************************************************************************************/
 FLASHMEM void RotorFlightEnd() // OK on the menu: to the front page (B56: the fields are on the settings page; EndRFSettingsView reads them)
 {
-    ZeroDataScreen();        // clear the screen data because editing Rotorflight parameters may have created misleading comms gaps
+    ZeroGapStats();          // clear the comms gaps: editing Rotorflight parameters may have created misleading ones (B155: the gaps only - the lost packets and the rest stay)
     GotoFrontView();
 }
 FLASHMEM void RFSettingsGather() // B99: the settings page's fields read back and the model saved (its OK, and the way on to Model basics)

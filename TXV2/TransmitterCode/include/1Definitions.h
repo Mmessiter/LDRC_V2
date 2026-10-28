@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B154 28/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B155 28/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -822,6 +822,7 @@ void PerfWriteReport(bool keepCopy); // Perf.h: /PERF.TXT, when the file link op
 const char *PerfHelloText();
 void ShowServoPos();
 void ZeroDataScreen();
+void ZeroGapStats();                          // B155: the comms gaps alone (main.cpp)
 void RedLedOn();
 int InStrng(char *text1, char *text2);
 void ReadCheckSum32();
