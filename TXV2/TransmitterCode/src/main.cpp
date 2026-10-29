@@ -327,7 +327,7 @@ void GreenLedOn()
             PlaySound(CONNECTEDMSG);
             if (Connect_MMmsg) // this is set when Modelmatch is executed during binding.
             {
-                DelaySimple(1000);        // wait a second before playing the message
+                DelayWithDog(1000);       // wait a second before playing the message (B156: packets keep going meanwhile - DelaySimple was a blind second on every reconnection)
                 Force_Early_Sound = true; // Force sound to play
                 PlaySound(Connect_MMmsg); // play the message that was set during ModelMatch  ("Model Found!" or "Model matched!" or "Model not found!")
                 Connect_MMmsg = 0;        // reset the message to be played later
@@ -2827,7 +2827,11 @@ FLASHMEM void ReadNewSwitchFunction()
 
     if (SwitchEditNumber >= 1 && SwitchEditNumber <= 8) // (B32: eight)
     {
-        SwitchReversed[SwitchEditNumber - 1] = GetValue(OneSwitchViewc_revd);
+        {
+            const uint32_t gv = GetValue(OneSwitchViewc_revd);
+            if (gv != 65535)   // B156: a reply that never came (65535) must not reverse a switch - the safety switch least of all
+                SwitchReversed[SwitchEditNumber - 1] = gv;
+        }
         if (SwitchEditNumber == 2)
             SendValue(Progress, 95);
     }
@@ -3089,7 +3093,11 @@ void SaveFailSafeChannels()
     {
         if (InStrng(fs[i], chgs)) // if this channel has been changed
         {
-            FailSafeChannel[i] = GetValue(fs[i]);
+            {
+                const uint32_t gv = GetValue(fs[i]);
+                if (gv != 65535)   // B156: a reply that never came is not a failsafe setting
+                    FailSafeChannel[i] = gv;
+            }
         }
         SendValue(Progress, i * (100 / 16));
     }
@@ -3174,7 +3182,11 @@ void ReadSpeedsScreen(uint8_t bk, bool FromPage)
     {
         if (InStrng(ns[i], chgs)) // if this channel has been changed
         {
-            ServoSpeed[bk][i] = GetValue(ns[i]);
+            {
+                const uint32_t gv = GetValue(ns[i]);
+                if (gv != 65535)   // B156: a reply that never came is not a servo speed
+                    ServoSpeed[bk][i] = gv;
+            }
         }
         SendValue(Progress, i * (100 / 16));
     }
@@ -4245,7 +4257,11 @@ FASTRUN void ButtonWasPressed()
             SendCommand(ProgressStart);
             for (int i = 0; i < 16; ++i)
             {
-                FailSafeChannel[i] = GetValue(fs[i]);
+                {
+                    const uint32_t gv = GetValue(fs[i]);
+                    if (gv != 65535)   // B156: a reply that never came is not a failsafe setting
+                        FailSafeChannel[i] = gv;
+                }
                 SendValue(Progress, i * 100 / 16);
             }
             SendValue(Progress, 100);
@@ -4752,7 +4768,11 @@ FASTRUN void ButtonWasPressed()
         { // Mix number OR a parameter has changed
             CurrentView = MIXESVIEW;
             uint8_t ThisMixNumber = MixNumber; // save it
-            MixNumber = GetValue(MixesView_MixNumber);
+            {
+                const uint32_t gv = GetValue(MixesView_MixNumber);
+                if (gv != 65535)   // B156: a reply that never came is not a mix number (it indexes the mixes)
+                    MixNumber = gv;
+            }
             if (LastMixNumber != MixNumber) // Did number change?
             {
                 SendCommand(invisb1);
@@ -5101,8 +5121,13 @@ bool CheckModelName()
     if (NEXTION.available())
         return false; // ClaudeFix-14-7-2026 a button press is waiting -- let it be handled before polling
 
-    ModelNumber = GetValue(MMems) + 1;
-    FileNumberInView = GetValue(Mfiles);
+    {
+        const uint32_t mm = GetValue(MMems), mf = GetValue(Mfiles);
+        if (mm == 65535 || mf == 65535)   // B156: a reply that never came is not a model number
+            return false;
+        ModelNumber = mm + 1;
+        FileNumberInView = mf;
+    }
     if (FileNumberInView != LastFileInView)
     {
         ShowFileNumber();

@@ -395,15 +395,11 @@ uint32_t GetValue(char *nbox)
 {
     CRUMB(CRUMB_GETVALUE); // This function calls the function above until it returns no error
 
-    int i = 0;
-    uint32_t ValueIn = getvalue(nbox);
-
-    while (ValueIn == 65535 && i < 4)   // (B152: four asks of 400 ms, where 25 of 100 ms were)
-    { // if error read again!
-        DelayWithDog(10);
-        ValueIn = getvalue(nbox);
-        ++i;
-    }
+    uint32_t ValueIn = getvalue(nbox);   // B156: ONE ask of 400 ms, as GetText since B152 - a second ask would leave the first's late
+                                         // reply to be read as the NEXT box's answer (box N+1 = box N: plausible, and undetectable)
+    if (ValueIn == 65535)
+        NextionTextMissed = true;   // B156: as GetText - a page gathering its boxes for a save checks RfFieldsMissed and sends NOTHING
+                                    // (the PIDs and governor pages took 65535 as the value: 255 in a byte, 65535 in a word)
     return ValueIn;
 }
 

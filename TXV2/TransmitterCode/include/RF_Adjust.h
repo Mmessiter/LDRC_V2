@@ -380,6 +380,10 @@ FLASHMEM static bool AdjRowsProblem(const AdjRow *R, int nr, char *buf, size_t l
         {
             if (r.v[1] <= r.v[0]) { snprintf(buf, len, "%d. %s:\r\nthe value at the right end must be above\r\nthe one at the left (Rotorflight counts low\r\nto high: reverse the channel if the knob\r\ngoes the other way).", i + 1, name); return true; }
         }
+        else   // B156: a nudge's bounds likewise (0 and 0 would hold the setting at 0 in flight)
+        {
+            if (r.v[1] <= r.v[0]) { snprintf(buf, len, "%d. %s:\r\nthe highest value must be above the lowest.", i + 1, name); return true; }
+        }
     }
     return false;
 }
@@ -1095,7 +1099,9 @@ FLASHMEM void SaveAdjustments()
     if (!AdjHave || AdjStep_ != ADJ_IDLE) return;
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page AdjustView", why); AdjHead(); AdjShow(); return; }
+    NextionTextMissed = false;
     AdjGather();
+    if (RfFieldsMissed("page AdjustView")) { AdjHead(); AdjShow(); return; }   // B156: a box unanswered: nothing written (a missed end went as 0)
     { char problem[240]; if (AdjRowsProblem(AdjRows, AdjN, problem, sizeof(problem))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page AdjustView", problem); AdjHead(); AdjShow(); return; } }
     AdjLinesToWrite(AdjWritten);
     AdjLineAt = 0; AdjTries = 0;

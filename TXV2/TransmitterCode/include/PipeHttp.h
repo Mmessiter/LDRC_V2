@@ -166,6 +166,7 @@ FLASHMEM static void BankCheckTick()
     if (n < 26) { BankCheckRefuse("Not saved: the flight controller did\r\nnot say which bank it is on.\r\nNothing was written. Try again."); return; }
     FcPidBank = (b[23] & 0x0F) + 1; FcRateBank = (b[25] & 0x0F) + 1;
     FcBankShow();
+    if (b[6] & 1) { BankCheckRefuse("Not saved: the flight controller says\r\nit is ARMED. Nothing was written."); return; }   // B156: its own word, a moment before the write
     const int fc = BcRates ? FcRateBank : FcPidBank;
     if (fc == BcWant) { BcStep = 0; BcThen(); return; }
     char m[170];

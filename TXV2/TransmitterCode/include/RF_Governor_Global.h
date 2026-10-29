@@ -322,7 +322,9 @@ FLASHMEM void SaveToLocalGovGLOBAL() // "Save FC to SD" button
         return;
     
     const bool edited = GOVS_GLOBAL_Were_Edited; // B47: a copy on the card is not a save to the model
+    NextionTextMissed = false;
     LoadGovConfigWritePayload();
+    if (RfFieldsMissed("page RFGovViewGlbl")) return;   // B156: a box unanswered (GetValue 65535): nothing kept
     if (GovChoiceBad(GovWritePayload, "Not kept")) // B103
         return;
     ShowGOVConfigMsg((char *)"Keeping a copy on the card ...", Gray);
@@ -422,7 +424,15 @@ FLASHMEM void SendEditedGovConfigValues()
         return;
     }
 
+    if (!AllGlobalConfigBytesReceived())   // B156: the boxes were zeroed for the read: a Save before it is whole would send mode OFF and spool-up 0
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RFGovViewGlbl", (char *)"Not saved: the governor settings have\r\nnot all arrived yet. Wait, then Save.");
+        return;
+    }
+    NextionTextMissed = false;
     LoadGovConfigWritePayload();
+    if (RfFieldsMissed("page RFGovViewGlbl")) return;   // B156: a box unanswered (GetValue 65535): nothing sent
     if (GovChoiceBad(GovWritePayload, "Not saved")) // B103
         return;
     PlaySound(BEEPMIDDLE);

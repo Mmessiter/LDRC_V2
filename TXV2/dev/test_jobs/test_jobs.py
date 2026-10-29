@@ -23,6 +23,8 @@ prog = r'''
 #include <algorithm>
 #define DMAMEM
 #define FLASHMEM
+static bool NextionTextMissed = false;   // (B156: every box answers here; dev/test_missed_reply has the misses)
+static bool RfFieldsMissed(const char *) { const bool m = NextionTextMissed; NextionTextMissed = false; return m; }
 #define PROGMEM
 #define WHAHWHAHMSG 1
 #define BEEPCOMPLETE 2

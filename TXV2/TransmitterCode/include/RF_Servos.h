@@ -212,7 +212,9 @@ FLASHMEM void EndServoView() // OK
 {
     if (Servo_Was_Edited)
     {
+        NextionTextMissed = false;
         ServoGather(); // (B59) before the question's page takes the fields away
+        if (RfFieldsMissed("page ServoView")) return;   // B156: a box unanswered: the page is not left (a missed centre, 750 us, would have been shown and then saved)
         if (!RfSaveFirst("page ServoView", "The edited servo values are", ServoSaveNow, EndServoView, &Servo_Was_Edited)) return;   // B102
     }
     ServoStep = SRV_IDLE;
@@ -264,7 +266,9 @@ FLASHMEM void SaveServo()
         MsgBox((char *)"page ServoView", why);
         return;
     }
+    NextionTextMissed = false;
     ServoGather();
+    if (RfFieldsMissed("page ServoView")) return;   // B156: a box unanswered: nothing written (a missed centre went as 750 us)
     uint8_t body[1 + SERVO_BYTES];
     body[0] = (uint8_t)ServoAt;
     memcpy(body + 1, ServoWant, SERVO_BYTES);

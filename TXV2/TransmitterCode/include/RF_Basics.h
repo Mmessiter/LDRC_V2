@@ -398,7 +398,9 @@ FLASHMEM void EndBasicsView() // OK on any of the four pages: back to the menu
     EscCalStop();   // (B100: a throttle hold on page 4 let go first)
     if (Bas_Was_Edited)
     {
+        NextionTextMissed = false;
         BasGather();   // (B59) before the question's page takes the fields away
+        if (RfFieldsMissed(BasPageWord())) return;   // B156: a box unanswered: the page is not left
         if (!RfSaveFirst(BasPageWord(), "The edited basics are", BasSaveNow, EndBasicsView, &Bas_Was_Edited)) return;   // B102
     }
     BasStep = BAS_IDLE;
@@ -407,7 +409,9 @@ FLASHMEM void EndBasicsView() // OK on any of the four pages: back to the menu
 }
 FLASHMEM void StartBasics2View() // Next > on page 1: the gear ratios
 {
+    NextionTextMissed = false;
     BasGather();
+    if (RfFieldsMissed(BasPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page Basics2View");
     CurrentView = BASICS2VIEW;
     BasPageHead();
@@ -415,7 +419,9 @@ FLASHMEM void StartBasics2View() // Next > on page 1: the gear ratios
 }
 FLASHMEM void EndBasics2View() // < Previous on page 2
 {
+    NextionTextMissed = false;
     BasGather();
+    if (RfFieldsMissed(BasPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page BasicsView");
     CurrentView = BASICSVIEW;
     BasPageHead();
@@ -433,7 +439,9 @@ FLASHMEM void StartBasics3View() // Next > on page 2: the ports
 {
     char why[120];
     if (BasPortsNeedModel(why, sizeof(why))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)BasPageWord(), why); return; }
+    NextionTextMissed = false;
     BasGather();
+    if (RfFieldsMissed(BasPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page PortsView");
     CurrentView = PORTSVIEW;
     BasPageHead();

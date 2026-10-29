@@ -85,7 +85,10 @@ void CheckSelectedRatesMode()
     char rate[] = "rate";
     static uint8_t lastbank = 0;
 
-    uint8_t rateMode = GetValue(rate);
+    const uint32_t gvRate = GetValue(rate);
+    if (gvRate == 65535)   // B156: a reply that never came is not a rate
+        return;
+    uint8_t rateMode = gvRate;
     if ((rateMode != DualRateRate[Bank - 1]) || (Bank != lastbank)) // if the rate has changed
     {
         TextIn[4] = rateMode;

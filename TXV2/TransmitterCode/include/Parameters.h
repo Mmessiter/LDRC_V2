@@ -146,7 +146,7 @@ bool ModelSeemsArmed(char *why, size_t n)
     const bool inRange = ArmingChannel >= 1 && ArmingChannel <= CHANNELSUSED;
     const bool managed = RotorFlight_V && inRange && !BindingEnabled && !BuddyPupilOnWireless;
     const uint16_t v = inRange ? SendBuffer[ArmingChannel - 1] : 0;
-    const bool armed = managed ? Armed : (v >= 1800);
+    const bool armed = managed ? !SafetyON : (v >= 1800);   // B156: the switch itself (Armed is set only when the switch CHANGES: a power-up with the safety off left it false)
     if (!armed)
         return false;
     if (managed)

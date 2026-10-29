@@ -455,7 +455,9 @@ FLASHMEM void SaveTravel()
 }
 FLASHMEM void StartTravel2View() // Next > on page 1 (and < Previous on page 3, B66)
 {
+    NextionTextMissed = false;
     TravGather();
+    if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page Travel2View");
     CurrentView = TRAVEL2VIEW;
     TravPageHead();
@@ -463,7 +465,9 @@ FLASHMEM void StartTravel2View() // Next > on page 1 (and < Previous on page 3, 
 }
 FLASHMEM void EndTravel2View() // < Previous on page 2
 {
+    NextionTextMissed = false;
     TravGather();
+    if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page TravelView");
     CurrentView = TRAVELVIEW;
     TravPageHead();
@@ -472,7 +476,9 @@ FLASHMEM void EndTravel2View() // < Previous on page 2
 FLASHMEM void StartTravel3View() // Next > on page 2 (B66); < Previous on page 4 (B98)
 {
     if (BenchHeld) { if (TravStep == TRV_IDLE) BenchRelease(BENCH_AFTER_PREV); return; }   // B98: the swash let go first; back here once it is
+    NextionTextMissed = false;
     TravGather();
+    if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page Travel3View");
     CurrentView = TRAVEL3VIEW;
     TravPageHead();
@@ -481,7 +487,9 @@ FLASHMEM void StartTravel3View() // Next > on page 2 (B66); < Previous on page 4
 // ---------------------------------------------------------------- B98: the bench measure (page 4)
 FLASHMEM void StartTravel4View() // Next > on page 3
 {
+    NextionTextMissed = false;
     TravGather();
+    if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page Travel4View");
     CurrentView = TRAVEL4VIEW;
     TravPageHead();

@@ -416,15 +416,15 @@ FLASHMEM void Collect_data_from_dialog() // and close it
     if (LocalBank < 1 || LocalBank > BanksCount())
         LocalBank = 1; // ClaudeFix-2-7-2026 Saved_* arrays are [BANKS_USED]; a comms error returns 65535 (B130: 1 .. 6 with Six banks)
     Which_Params = 0;
-    if (GetValue((char *)"sw0"))
+    if (GetValue((char *)"sw0") == 1)   // B156: a reply that never came (65535) is not a tick
         Which_Params |= DO_PIDS;
-    if (GetValue((char *)"sw1"))
+    if (GetValue((char *)"sw1") == 1)
         Which_Params |= DO_PIDS_ADVANCED;
-    if (GetValue((char *)"sw2"))
+    if (GetValue((char *)"sw2") == 1)
         Which_Params |= DO_RATES;
-    if (GetValue((char *)"sw3"))
+    if (GetValue((char *)"sw3") == 1)
         Which_Params |= DO_RATES_ADVANCED;
-    if (GetValue((char *)"sw4") && (RotorFlight_Version > 2.25)) // floats might not be exactly 2.2 or 2.3
+    if (GetValue((char *)"sw4") == 1 && (RotorFlight_Version > 2.25)) // floats might not be exactly 2.2 or 2.3
         Which_Params |= DO_GOV_PROFILES;
     SelectedItemCount = CountSelectedParams(Which_Params);
     if (SelectedItemCount > 0)

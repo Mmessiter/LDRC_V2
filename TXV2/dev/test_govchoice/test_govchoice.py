@@ -39,6 +39,9 @@ static int checks = 0, fails = 0;
 static std::map<std::string, long> values; static std::vector<std::string> cmds; static std::vector<int> sounds, queued;
 static int boxes = 0, questions = 0, saves = 0; static std::string lastBox; static bool live = true, armed = false;
 static uint32_t GetValue(char *n) { return values.count(n) ? (uint32_t) values[n] : 0; }
+static bool NextionTextMissed = false;   // (B156: a box the screen never answered - here every box answers; dev/test_missed_reply has the misses)
+static bool AllGlobalConfigBytesReceived() { return true; }   // (B156: the whole set is in, here)
+static bool RfFieldsMissed(const char *) { const bool m = NextionTextMissed; NextionTextMissed = false; return m; }
 static void SendValue(char *n, int v) { values[n] = v; }
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void PlaySound(int s) { sounds.push_back(s); }

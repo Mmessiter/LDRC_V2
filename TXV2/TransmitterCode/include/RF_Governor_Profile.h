@@ -47,7 +47,9 @@ FLASHMEM void ShowLocalGovBank()
 FLASHMEM void SaveToLocalGovBank()
 {
     ShowGOVMsg((char *)"Saving governor values ...", Gray);
+    NextionTextMissed = false;
     LoadGovWritePayload(); // read from Nextion into GovWritePayload[]
+    if (RfFieldsMissed("page RFGovView")) { HideGOVMsg(); return; }   // B156: a box unanswered (GetValue 65535): nothing kept
 
     // Copy into saved array for current bank
     for (int i = 0; i < GOV_PROFILE_PAYLOAD_SIZE; ++i)
@@ -346,7 +348,9 @@ FLASHMEM void SendEditedGovValues()
 
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);
+    NextionTextMissed = false;
     LoadGovWritePayload(); // read all 14 profile fields from Nextion (now: what the screen shows is what goes)
+    if (RfFieldsMissed("page RFGovView")) return;   // B156: a box unanswered (GetValue 65535: head speed 65535, a byte 255): nothing sent
     ShowGOVMsg((char *)"Saving governor values ...", Gray);
     BlockBankChanges = true;
     BankCheck(false, Bank, GovQueueWrite, "page RFGovView");   // B102: into this bank, or not at all (PipeHttp.h)

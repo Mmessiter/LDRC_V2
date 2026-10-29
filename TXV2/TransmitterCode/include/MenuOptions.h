@@ -747,8 +747,13 @@ void EndBuddyView()
     char cb2[] = "cb2";
     char Prompt[] = "Middle and Up both give control\r\nto the instructor (Master).\r\nKeep these switch positions?";
 
-    BuddyPupilOnWireless = GetValue(BuddyP);
-    BuddyMasterOnWireless = GetValue(BuddyM);
+    {
+        const uint32_t p = GetValue(BuddyP), m = GetValue(BuddyM);   // B156: a reply that never came (65535) changes nothing
+        if (p != 65535)
+            BuddyPupilOnWireless = p;
+        if (m != 65535)
+            BuddyMasterOnWireless = m;
+    }
     WirelessBuddy = BuddyPupilOnWireless || BuddyMasterOnWireless;
     if (WirelessBuddy)
         FHSS_data::PaceMaker = 5; // only 200 HZ for Buddy
