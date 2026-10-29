@@ -30,4 +30,22 @@ Before flying, check on the bench that the swash moves the|
 right way for each stick.||
 SWASH TRIMS (%):|
 Roll, Pitch and Collective trim: small corrections that level|
-the swash (-100 to 100, one decimal).|
+the swash (-100 to 100, one decimal; 1 = 1% of servo throw).||
+LEVEL THE SWASH BY A TEST LIFT-OFF:|
+A swash levelled on the bench is seldom quite level, and the|
+air shows it. In still air, lift off gently with the aileron|
+and elevator sticks untouched. A level swash climbs straight|
+up. A new model heads off forwards, backwards or sideways|
+until you correct it.|
+Land. Move the trim of that axis a little (Pitch for forwards|
+or backwards, Roll for sideways; 2 or 3 at a time), save, and|
+lift off again. Heading off faster? Go the other way. Repeat|
+until it climbs straight.|
+A faint drift to one side is normal: the tail rotor's own|
+thrust pushes the whole model that way. Leave it be.|
+Trim here, not with the transmitter's trims or the servo|
+centres. A trim here is a fixed tilt of the swash, which the|
+flight controller never sees: on the ground its corrections|
+drain away, so at lift-off the swash sits where these trims|
+put it. A mis-trim tips the model before the flight controller|
+catches it, and it then holds that lean, not the level.|

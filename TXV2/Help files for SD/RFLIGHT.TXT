@@ -7,6 +7,8 @@ Set it up with the phone app: 'Rotorflight', 'Wizards',|
 'New helicopter' takes you through every step.|
 Or do the basics here: 'Settings ...', then|
 'First-time basics ...'.|
+Once it flies, level the swash by a test lift-off: see SWASH|
+TRIMS in the help of 'Travel extents ...'.|
 Only putting Rotorflight onto the flight controller needs a|
 computer, with Rotorflight's Configurator.||
 BEFORE YOU START:|
