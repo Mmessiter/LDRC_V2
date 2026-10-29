@@ -48,6 +48,10 @@ to the screen's card first.|
 It updates the transmitter and its screen only.|
 The button is greyed out while a model is connected.|
 Switch the model off and wait a minute.|
+At power-up on a WiFi it knows, with no model connected, the|
+transmitter looks for a newer version by itself. If there is|
+one, it says so along the top of the screen for a few seconds.|
+Nothing is installed until you press 'Install now' here.|
 The safety must be on (with no safety switch: the motor off).|
 Firmware that reads a model's settings differently is not kept:|
 the old firmware comes back by itself, and the screen says so.|

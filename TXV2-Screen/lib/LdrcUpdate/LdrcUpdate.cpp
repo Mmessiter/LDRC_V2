@@ -225,7 +225,7 @@ Updater::Updater(UpdateHost &host, LinkMaster &link, const std::string &latestUr
       teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), freshCount_(0), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
       listStep_(0), at_(0), sub_(0), tries_(0), fetchTotal_(0), fetchDone_(0), fetchCount_(0), fetchIndex_(0), fetchBegan_(0), leftAt_(0), leftSecs_(-1), leftShown_(-1),
       placed_(0), trialSeen_(0), keptFiles_(0), stTeensyThere_(false), stTeensyChanged_(false), stScreenFw_(false), stFiles_(0), stKept_(0), trialStep_(0), resultGood_(false),
-      rxFlow_(false), rxHave_(0), rxLatest_(0), rxPhaseSeen_(0), rxNewsAt_(0), rxQuietTotal_(0), again_(false) {}
+      rxFlow_(false), quiet_(false), quietOutcome_(0), newsPending_(false), rxHave_(0), rxLatest_(0), rxPhaseSeen_(0), rxNewsAt_(0), rxQuietTotal_(0), again_(false) {}
 
 void Updater::note(const std::string &line) {
     log_.push_back(line);
@@ -234,6 +234,7 @@ void Updater::note(const std::string &line) {
     host_.appendText(LOG_FILE, (when.empty() ? std::string() : when + "  ") + line + "\n");
 }
 void Updater::show(UpdView::Kind kind, const std::string &title) {
+    if (quiet_) { note("quiet look: ends at \"" + title + "\""); quietEnd(3); return; }   // (1.11.141) a look nobody asked for puts up no panel
     const uint32_t s = view_.serial + 1;
     view_ = UpdView(); view_.kind = kind; view_.title = title; view_.serial = s;
     shownAt_ = host_.ms(); shownFlying_ = flyingNow() != UpdateHost::FLY_NO;
@@ -262,6 +263,7 @@ void Updater::line(const std::string &text) { view_.lines.push_back(oneLine(text
 void Updater::row(const std::string &what, const std::string &now, const std::string &next) { UpdRow r; r.what = what; r.now = now; r.next = next; view_.rows.push_back(r); changed(); }
 void Updater::buttons(const std::string &b1, const std::string &b2) { if (view_.button1 == b1 && view_.button2 == b2) return; view_.button1 = b1; view_.button2 = b2; changed(); }
 void Updater::setLine(size_t index, const std::string &text) {
+    if (quiet_) return;
     if (view_.lines.size() <= index) view_.lines.resize(index + 1);
     if (view_.lines[index] == text) return;
     view_.lines[index] = text; changed();
@@ -269,6 +271,7 @@ void Updater::setLine(size_t index, const std::string &text) {
 void Updater::bar(uint32_t done, uint32_t total) { view_.bar = true; view_.barDone = done > total ? total : done; view_.barTotal = total; }
 void Updater::message(const std::string &title, const std::string &l1, const std::string &l2) {
     note(title + (l1.empty() ? "" : ": " + l1) + (l2.empty() ? "" : " " + l2));
+    if (quiet_) { quietEnd(3); return; }          // (1.11.141) the quiet look: the log has it, the pilot is not troubled
     show(UpdView::NOTE, title);
     if (!l1.empty()) line(l1);
     if (!l2.empty()) line(l2);
@@ -409,6 +412,24 @@ void Updater::begin() {
     show(UpdView::BUSY, "Checking for an update"); line("Joining the WiFi"); buttons("Cancel", "");
     phase_ = P_WIFI; since_ = host_.ms();
 }
+// (1.11.141) The quiet look at power-up: begin() without the panel and without asking for the WiFi (it is up already, or
+// there is no look), straight to the release description; the Teensy is asked as ever; decide() says what it found through
+// quietOutcome() and news(). No fresh start for a look nobody asked for: a restart of the screen unasked would be a surprise.
+bool Updater::beginQuiet() {
+    if (phase_ != P_IDLE || showing() || link_.running() || host_.busy() || host_.exists(STATE_FILE)) return false;
+    if (flyingNow() != UpdateHost::FLY_NO || !host_.wifiUp()) return false;
+    choosing_ = false; again_ = false; freshDone_ = true;
+    { const size_t cut = latestUrl_.rfind('/'); recentUrl_ = latestUrl_.substr(0, cut + 1) + "recent.txt"; }
+    note("---- quiet look at power-up (screen " + host_.screenVersion() + ")");
+    descrUrl_ = latestUrl_; freshUrl_.clear(); freshChoosing_ = false;
+    quiet_ = true; quietOutcome_ = 0;
+    fetchAsked(latestUrl_); phase_ = P_LATEST;
+    return true;
+}
+void Updater::quietEnd(int outcome) {
+    quiet_ = false; quietOutcome_ = outcome;
+    phase_ = P_IDLE; waiting_ = false; changing_ = false; linkWanted_ = false;
+}
 // The memory is in pieces (after a Bluetooth session it is: 7 Oct 2026, four updates in a row stopped at "fetching
 // screen.bin, no connection to messiter.com (-1, -0x7F00) [largest 17396]" - mbedTLS could not get its two 16 kB
 // buffers for a fresh connection, and nothing but a restart puts the memory back together). So: the screen restarts
@@ -492,6 +513,17 @@ void Updater::decide() {
     stRelease_ = rel_.name; stTeensy_ = teensyFw_; stTeensyThere_ = teensyThere_; stTeensyChanged_ = false;
     stFrom_ = host_.screenVersion(); stTo_ = needScreenFw_ ? sfw.version : host_.screenVersion(); stScreenFw_ = false; stFiles_ = 0; stKept_ = 0;
     stSettings_.clear(); stWarn_.clear(); mustSee_ = false;
+    if (quiet_) {   // (1.11.141) the look at power-up: a word along the top of the screen, or nothing
+        if (!needTeensyFw_ && !needTeensyFiles_ && !needScreenFw_ && !needScreenFiles_) { note("quiet look: up to date (release " + rel_.name + ")"); quietEnd(1); return; }
+        std::string what;
+        if (needTeensyFw_) what += " transmitter " + rel_.teensy.version;
+        if (needScreenFw_) what += std::string(what.empty() ? "" : ",") + " screen " + screenPart().version;
+        if (needTeensyFiles_) what += std::string(what.empty() ? "" : ",") + " help files";
+        if (needScreenFiles_) what += std::string(what.empty() ? "" : ",") + " screen files";
+        note("quiet look: update available, release " + rel_.name + ":" + what);
+        news_ = "Update ready: Transmitter setup > Transmitter updates"; newsPending_ = true;
+        quietEnd(2); return;
+    }
     if (!needTeensyFw_ && !needTeensyFiles_ && !needScreenFw_ && !needScreenFiles_) {
         freshKind_.clear();
         note(choosing_ ? "that version is the one installed (" + rel_.name + ")" : "up to date (release " + rel_.name + ")");

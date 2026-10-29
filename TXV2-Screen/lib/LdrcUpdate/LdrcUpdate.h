@@ -172,6 +172,13 @@ public:
     void resume();                                // once, at start-up: unfinished business, or firmware on trial
     void poll();                                  // call often
     void press(int button);                       // 1 or 2
+    // (1.11.141) The quiet look at power-up (Malcolm, 29 Oct 2026: "Mehul is unlikely to remember to check for updates"):
+    // the same check as begin(), with no panel - only on a WiFi already joined, with no model connected. quietOutcome():
+    // 0 none or under way, 1 up to date, 2 something newer (news() has the words, once), 3 could not look (ask again later).
+    // Nothing is installed by it: the pilot's own press does that.
+    bool beginQuiet();
+    int quietOutcome() const { return quietOutcome_; }
+    bool news(std::string &out) { if (!newsPending_) return false; out = news_; newsPending_ = false; return true; }
 
     bool showing() const { return view_.kind != UpdView::NONE; }
     bool idle() const { return phase_ == P_IDLE; }
@@ -300,6 +307,8 @@ private:
     // the receiver's update
     std::string rxManifestUrl_;
     bool rxFlow_;                                 // the receiver's flow is running: a connected model is expected, not a bar
+    bool quiet_; int quietOutcome_; bool newsPending_; std::string news_;   // (1.11.141) the quiet look at power-up
+    void quietEnd(int outcome);
     uint32_t rxHave_, rxLatest_;                  // release numbers: the receiver's, and messiter.com's latest
     std::string rxLatestName_, rxNotes_;
     int rxPhaseSeen_; uint32_t rxNewsAt_;

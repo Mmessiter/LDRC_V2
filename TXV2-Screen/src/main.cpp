@@ -45,7 +45,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.140"
+#define SCREEN_VERSION "1.11.141"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2727,7 +2727,7 @@ static bool doorPass(bool changes) {
 static void doorOn(const char *path, HTTPMethod method, std::function<void()> fn) {
     web.on(path, method, [fn, method]() { if (doorPass(method != HTTP_GET)) fn(); });
 }
-static void banner(const char *msg);
+static void banner(const char *msg, uint32_t ms = 2000);
 // Open on the network we are on (and on no other), or shut. Remembered in the chip: the firmware that follows this
 // one finds the door as it was left. (A bench build answers on every network whatever this says, but keeps it all
 // the same: the door can be opened from the Mac BEFORE the transmitter updates itself to the published firmware.)
@@ -3423,11 +3423,11 @@ static void netDot(bool force = false) {
 // Two seconds of text along the top, then the page repaints that strip. Navy with white text, like every message of
 // the screen's own ("that should be your default for system messages, removing the white over black": Malcolm, 30-9-2026).
 static const int BANNER_H = 34;
-static void banner(const char *msg) {
+static void banner(const char *msg, uint32_t ms) {   // (1.11.141: for how long - the update notice stays twenty seconds)
     gfx->fillRect(0, 0, W, BANNER_H, OUR_PANEL); gfx->drawFastHLine(0, BANNER_H - 1, W, OUR_INK);
     gfx->startWrite(); drawGlyphs(max(12, (W - textWidth(2, msg)) / 2), 5, 2, OUR_INK, msg); gfx->endWrite();   // (centred, as every title and message of the screen's)
     memoTouched(0, 0, W, BANNER_H); dirty(0, 0, W, BANNER_H); damage(0, 0, W, BANNER_H);
-    bannerUntil = millis() + 2000;
+    bannerUntil = millis() + ms;
 }
 static void applyRadios(const char *why) {
     const bool want = (radiosOn || updWifi || picWifi) && tx.radiosAllowed();

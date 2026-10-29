@@ -611,6 +611,23 @@ static void updPoll() {
     if (updRequested) { updRequested = false; if (!wifiPage.showing()) updater.begin(); }
     if (rxUpdRequested) { rxUpdRequested = false; if (!wifiPage.showing()) updater.beginReceiver(); }
     updater.poll();
+    // (1.11.141) Malcolm, 29 Oct 2026: "Mehul is unlikely to remember to check for updates ... if the transmitter boots up and is
+    // able to connect to Wi-Fi (suggesting it is at home) then if an update is available, we should notify the user." Once per
+    // power-up, half a minute in - the main board up, the WiFi joined, no model connected, nothing else going on - a quiet
+    // look at messiter.com. Something newer is said along the top of the screen for twenty seconds, with a chime; nothing is
+    // installed. Could not look (a model came on, the site did not answer): again a minute later, five times at most.
+    {
+        static uint32_t quietAt = 0; static int quietTries = 0; static bool quietDone = false;
+        const uint32_t now = millis();
+        if (!quietDone && now > 30000 && now - quietAt > 60000 && quietTries < 5 && updater.idle() && !updater.showing() && !wifiPage.showing() && !pageNames.empty() && updHost.wifiUp() && flyingNow() == 0 && !updBusy) {
+            quietAt = now; quietTries++;
+            updater.beginQuiet();
+        }
+        const int o = updater.quietOutcome();
+        if (o == 1 || o == 2) quietDone = true;
+        std::string n;
+        if (updater.news(n)) { banner(n.c_str(), 20000); audioStart(17, false); }
+    }
     const ldrc::UpdView &v = updater.view();
     const bool up = v.kind != ldrc::UpdView::NONE && topReady();
     const uint32_t barKey = v.barTotal ? (uint32_t) ((uint64_t) 1000 * min(v.barDone, v.barTotal) / v.barTotal) : 0;
