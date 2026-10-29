@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Travel extents &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=409">
-<script src="/app.js?v=409" defer></script>
+<link rel=stylesheet href="/style.css?v=410">
+<script src="/app.js?v=410" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -90,7 +90,7 @@ input:disabled{background:#eee;color:#999}
         <div class=fldRow><label data-help="Fine swash levelling at centre stick — tips the swash a touch left/right.">Roll trim (%)</label>       <input type=number id=t_trR step=0.1 min=-25 max=25></div>
         <div class=fldRow><label data-help="Fine swash levelling at centre stick — tips the swash a touch fore/aft.">Pitch trim (%)</label>      <input type=number id=t_trP step=0.1 min=-25 max=25></div>
         <div class=fldRow><label data-help="Centres a blade pitch that is not exactly 0° at mid-stick.">Collective trim (%)</label> <input type=number id=t_trC step=0.1 min=-25 max=25></div>
-        <p class=cardNote>Levelling corrections, in percent of servo throw. Cures a steady hover drift.</p>
+        <p class=cardNote>Levelling corrections, in percent of servo throw. Best set by a test lift-off in still air: see Help.</p>
     </div>
 
     <div class=card>
@@ -503,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <p><b>Gains</b> make the degrees MEAN degrees: the gain scales how far the swash really moves per commanded degree. If a pitch gauge reads less than the limit says (6&deg; real when 14&deg; is commanded), multiply the gain by the ratio (&times;14/6). Direction is preserved &mdash; only the amount changes. Roll and pitch cyclic gains are separate, so you can even the two axes up: gauge reads 8&deg; roll but 10&deg; pitch? Lower the pitch gain by 8&frasl;10 (or raise roll by 10&frasl;8) until both match. Re-measure after saving; if the reading stops growing, the servo travel is the ceiling &mdash; stop and investigate before forcing it.</p>
 <p><b>A gain a long way from 100 %</b> is a warning sign. If the first hover had far too little collective, the temptation is to raise this gain &mdash; but the usual cause is a small collective <i>rate</i> (6&deg; instead of 12&deg;) on the Rates page. Cure it there, and keep the gain honest, or every bank with a normal rate will drive the swash into its stops, and rescue and the governor&rsquo;s collective compensation (which also work in degrees) get double what they ask for.</p>
 <p><b>Trims</b> are small levelling corrections for the swashplate, in percent of servo throw (Rotorflight&rsquo;s own unit for these). Use them to cure a steady hover drift once the mechanical setup is close. The collective trim also centres a blade pitch that isn&rsquo;t 0&deg; at mid-stick.</p>
+<p><b>Level the swash by a test lift-off.</b> A swash levelled on the bench is seldom quite level, and the air shows it. In still air, lift off gently with the aileron and elevator sticks untouched. A level swash climbs straight up; a new model heads off forwards, backwards or sideways until you correct it. Land, move the trim of that axis a little (Pitch trim for forwards or backwards, Roll trim for sideways; 2 or 3 at a time), Save, and lift off again. Heading off faster? Go the other way. Repeat until it climbs straight. A faint drift to one side is normal &mdash; the tail rotor&rsquo;s own thrust pushes the whole model that way; leave it be. Trim here, not with the transmitter&rsquo;s trims or the servo centres: a trim here is a fixed tilt of the swash, which the flight controller never sees. On the ground its corrections drain away, so at lift-off the swash sits where these trims put it; a mis-trim tips the model before the flight controller catches it, and it then holds that lean, not the level.</p>
 <p><b>Tail</b> is degrees of authority each way, named by the rudder stick &mdash; matched to how these transmitters are rigged. On a motorised tail it is throttle range instead. If a differently-rigged model reads swapped, say so.</p>
 <h3>Control sense</h3>
 <p>Tick a box if that control moves the wrong way. It reverses the control only &mdash; the servos and the other two controls are untouched, so it is safe to use after the mechanics are set. Check all three on the bench before flying: sticks and swash must agree.</p>

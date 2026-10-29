@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.911-liftoff-note",
+      "url": "https://messiter.com/rxv2/release/v0.9.911/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.911/littlefs.bin",
+      "fs_md5": "c0c4957dcf4739f1a43f444a514329ec",
+      "notes": "Help: how to level the swash by a test lift-off in still air - a new paragraph in the Travel extents help, a line under its swash trims, and the New helicopter wizard's last step. A swash levelled on the bench is seldom quite level; a new model heads off at lift-off until the swash trims are right. No firmware change."
+    },
+    {
       "name": "RXV2-0.9.910-quick-follow",
       "url": "https://messiter.com/rxv2/release/v0.9.910/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.910/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.900/littlefs.bin",
       "fs_md5": "e35c6cec6e6d95cfff24dde81f8ef617",
       "notes": "The Rescue page names the rescue switch's channel as the Switches page does: AUX 5 is channel 10, not 9 (AUX 1 is channel 6)."
-    },
-    {
-      "name": "RXV2-0.9.899-read-black-box-now",
-      "url": "https://messiter.com/rxv2/release/v0.9.899/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.899/littlefs.bin",
-      "fs_md5": "03ea2d0c02bb1e95bc23df771f2f728e",
-      "notes": "Read black box: the Black box page's button now starts the read as the page opens, with a progress bar (how far, how long is left, the flights found so far) and a line saying what it is doing; the What-to-record link waits while a read runs. Over Bluetooth the phone could never start a black box read in 0.9.898: its routes were registered on the WiFi server only, so the app got 'not found'. Fixed, with a gate (dev/route_gate.js) that keeps every route on the router that serves both."
     }
   ],
   "rotorflight": {
