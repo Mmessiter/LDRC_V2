@@ -215,6 +215,16 @@ inline bool ratesAdvWriteReq = false;   // advanced (ID 16); + basic too if basi
 // an advanced-only EDIT (basic NOT sent → preserve the FC's basic, don't zero it).
 inline bool basicRatesPending = false;
 inline bool pidWriteReq      = false;   // PIDs (ID 11)
+// 0.9.912: a write is two or three packets; the LAST one triggers it. A trigger whose earlier batch never arrived (a lost
+// packet, a receiver restarted between them) would write whatever the staging arrays held - zeros after boot. Each batch
+// sets its bit; the trigger needs them all, then clears them.
+enum : uint16_t { TB_RATES13 = 1, TB_RATES14 = 2, TB_ADV17 = 4, TB_PID10 = 8, TB_ADV19 = 16, TB_ADV20 = 32, TB_GOV29 = 64, TB_CFG31 = 128, TB_CFG32 = 256 };
+inline uint16_t txBatch = 0;
+inline bool txBatchHas(uint16_t need, const char* what) {
+    if ((txBatch & need) == need) return true;
+    char m[EventLog::MSG_LEN]; snprintf(m, sizeof(m), "TX %s write DROPPED: an earlier batch never arrived (have %u, need %u)", what, (unsigned)txBatch, (unsigned)need); events.add(m);
+    return false;
+}
 inline bool advPidWriteReq   = false;   // advanced PID (ID 21)
 inline bool govProfileWriteReq = false; // governor profile (ID 30)
 inline bool govConfigWriteReq  = false; // governor config (ID 33)
@@ -518,6 +528,7 @@ inline void txParamsWords(const uint16_t* w) {
 
         // ---- RATES write ----
         case PID_RATES_FIRST7:                  // 13 — type + Roll + Pitch (C,Max,Expo)
+            txBatch |= TB_RATES13;
             wRatesType = (uint8_t)w[1];
             wRoll[0]  = (uint8_t)w[2]; wRoll[1]  = (uint8_t)w[3]; wRoll[2]  = (uint8_t)w[4];
             wPitch[0] = (uint8_t)w[5]; wPitch[1] = (uint8_t)w[6]; wPitch[2] = (uint8_t)w[7];
@@ -527,11 +538,17 @@ inline void txParamsWords(const uint16_t* w) {
             wYaw[0]  = (uint8_t)w[1]; wYaw[1]  = (uint8_t)w[2]; wYaw[2]  = (uint8_t)w[3];
             wColl[0] = (uint8_t)w[4]; wColl[1] = (uint8_t)w[5]; wColl[2] = (uint8_t)w[6];
             basicRatesPending = true;
-            if (!w[7] && writeTrigFresh(0)) { ratesWriteReq = true; linkStats.paramOps++; }
+            txBatch |= TB_RATES14;
+            if (!w[7]) {
+                if (txBatchHas(TB_RATES13, "rates") && writeTrigFresh(0)) { ratesWriteReq = true; linkStats.paramOps++; }
+                else basicRatesPending = false;
+                txBatch &= ~(TB_RATES13 | TB_RATES14);
+            }
             break;
 
         // ---- ADVANCED RATES write: FIRST_7=ID17, SECOND_8=ID16 (16 triggers combined write) ----
         case PID_RATES_ADV_FIRST7:              // 17
+            txBatch |= TB_ADV17;
             wResp[0] = (uint8_t)w[1]; wResp[1] = (uint8_t)w[2]; wResp[2] = (uint8_t)w[3]; wResp[3] = (uint8_t)w[4];
             wBoostGain[0] = (uint8_t)w[5]; wBoostGain[1] = (uint8_t)w[6]; wBoostGain[2] = (uint8_t)w[7];
             break;
@@ -540,28 +557,35 @@ inline void txParamsWords(const uint16_t* w) {
             wBoostCutoff[0] = (uint8_t)w[2]; wBoostCutoff[1] = (uint8_t)w[3];
             wBoostCutoff[2] = (uint8_t)w[4]; wBoostCutoff[3] = (uint8_t)w[5];
             wYawDyn[0] = (uint8_t)w[6]; wYawDyn[1] = (uint8_t)w[7]; wYawDyn[2] = (uint8_t)w[8];
-            if (writeTrigFresh(1)) { ratesAdvWriteReq = true; linkStats.paramOps++; }
+            if (txBatchHas((uint16_t)(TB_ADV17 | (basicRatesPending ? (TB_RATES13 | TB_RATES14) : 0)), "dynamics") && writeTrigFresh(1)) { ratesAdvWriteReq = true; linkStats.paramOps++; }
+            else basicRatesPending = false;
+            txBatch &= ~(TB_ADV17 | TB_RATES13 | TB_RATES14);
             break;
 
         // ---- PID write: FIRST_6=ID10, SECOND_11=ID11 (11 triggers write). 16-bit values. ----
         case PID_PID_FIRST6:                    // 10 — All_PIDs[0..5]
+            txBatch |= TB_PID10;
             for (uint8_t i = 0; i < 6; ++i) wPid[i] = w[i + 1];
             break;
         case PID_PID_SECOND11:                  // 11 — All_PIDs[6..16], then write
             for (uint8_t i = 0; i < 11; ++i) wPid[i + 6] = w[i + 1];
-            if (writeTrigFresh(2)) { pidWriteReq = true; linkStats.paramOps++; }
+            if (txBatchHas(TB_PID10, "PID") && writeTrigFresh(2)) { pidWriteReq = true; linkStats.paramOps++; }
+            txBatch &= ~TB_PID10;
             break;
 
         // ---- ADVANCED PID write: 3 batches into wAdvPid[26]; ID 21 triggers ----
         case PID_PID_ADV_FIRST9:                // 19 — bytes 0..8
+            txBatch |= TB_ADV19;
             for (uint8_t i = 0; i < 9; ++i) wAdvPid[i] = (uint8_t)w[i + 1];
             break;
         case PID_PID_ADV_SECOND9:               // 20 — bytes 9..17
+            txBatch |= TB_ADV20;
             for (uint8_t i = 0; i < 9; ++i) wAdvPid[i + 9] = (uint8_t)w[i + 1];
             break;
         case PID_PID_ADV_THIRD8:                // 21 — bytes 18..25, then write
             for (uint8_t i = 0; i < 8; ++i) wAdvPid[i + 18] = (uint8_t)w[i + 1];
-            if (writeTrigFresh(3)) { advPidWriteReq = true; linkStats.paramOps++; }
+            if (txBatchHas(TB_ADV19 | TB_ADV20, "PID+") && writeTrigFresh(3)) { advPidWriteReq = true; linkStats.paramOps++; }
+            txBatch &= ~(TB_ADV19 | TB_ADV20);
             break;
 
         // ---- GOVERNOR (RF 2.3+ only) ----
@@ -587,19 +611,19 @@ inline void txParamsWords(const uint16_t* w) {
             break;
         }
         case PID_GOV_WR_PROFILE1:               // 29 — profile bytes 1..11
-            if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 1] = (uint8_t)w[i + 1];
+            if (govSupported()) { txBatch |= TB_GOV29; for (uint8_t i = 0; i < 11; ++i) govWrite[i + 1] = (uint8_t)w[i + 1]; }
             break;
         case PID_GOV_WR_PROFILE2:               // 30 — profile bytes 12..17, then write
-            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 12] = (uint8_t)w[i + 1]; if (writeTrigFresh(4)) { govProfileWriteReq = true; linkStats.paramOps++; } }
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 12] = (uint8_t)w[i + 1]; if (txBatchHas(TB_GOV29, "governor profile") && writeTrigFresh(4)) { govProfileWriteReq = true; linkStats.paramOps++; } txBatch &= ~TB_GOV29; }
             break;
         case PID_GOV_WR_CONFIG1:                // 31 — config bytes 18..28
-            if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 18] = (uint8_t)w[i + 1];
+            if (govSupported()) { txBatch |= TB_CFG31; for (uint8_t i = 0; i < 11; ++i) govWrite[i + 18] = (uint8_t)w[i + 1]; }
             break;
         case PID_GOV_WR_CONFIG2:                // 32 — config bytes 29..39
-            if (govSupported()) for (uint8_t i = 0; i < 11; ++i) govWrite[i + 29] = (uint8_t)w[i + 1];
+            if (govSupported()) { txBatch |= TB_CFG32; for (uint8_t i = 0; i < 11; ++i) govWrite[i + 29] = (uint8_t)w[i + 1]; }
             break;
         case PID_GOV_WR_CONFIG3:                // 33 — config bytes 40..45, then write
-            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; if (writeTrigFresh(5)) { govConfigWriteReq = true; linkStats.paramOps++; } }
+            if (govSupported()) { for (uint8_t i = 0; i < 6; ++i) govWrite[i + 40] = (uint8_t)w[i + 1]; if (txBatchHas(TB_CFG31 | TB_CFG32, "governor config") && writeTrigFresh(5)) { govConfigWriteReq = true; linkStats.paramOps++; } txBatch &= ~(TB_CFG31 | TB_CFG32); }
             break;
         case PID_BLUETOOTH_WANTED:              // 36 — a Version 2 transmitter's screen wants to join us over Bluetooth (0.9.875)
             // The transmitter asks only while its Rotorflight menu is open and it is on the ground by its own rule, and
@@ -674,6 +698,7 @@ inline bool applyWriteToScratch() {
             pmScratch[i * 2]     = (uint8_t)(wPid[i] & 0xFF);
             pmScratch[i * 2 + 1] = (uint8_t)(wPid[i] >> 8);
         }
+        { char why[48]; if (pidBlockDead(pmScratch, (uint8_t)pmScratchLen, why, sizeof why)) { char m[EventLog::MSG_LEN]; snprintf(m, sizeof m, "TX PID write REFUSED: %s", why); events.add(m); return false; } }   // 0.9.912
     } else if (pmWriteKind == WK_PID_ADV) {
         if (pmScratchLen < 43) return false;
         for (uint8_t i = 0; i < 26; ++i) pmScratch[ADV_PID_MAP[i]] = wAdvPid[i];   // scatter back
@@ -686,6 +711,7 @@ inline bool applyWriteToScratch() {
         pmScratch[12] = govWrite[10]; pmScratch[13] = govWrite[11]; // Max/Min throttle
         pmScratch[14] = govWrite[12];                               // Fallback_Drop
         pmScratch[15] = govWrite[16]; pmScratch[16] = govWrite[17]; // Flags lo/hi
+        { char why[48]; if (govProfileDead(pmScratch, (uint8_t)pmScratchLen, why, sizeof why)) { char m[EventLog::MSG_LEN]; snprintf(m, sizeof m, "TX governor write REFUSED: %s", why); events.add(m); return false; } }   // 0.9.912
     } else if (pmWriteKind == WK_GOV_CONFIG) {
         if (pmScratchLen < 33) return false;          // govWrite[18..41] → MSP config order (rest preserved; write keeps the FC's own length)
         // 0.9.893: the two choices only from Rotorflight 2.3's lists - it keeps any byte it is sent, then calls its settings

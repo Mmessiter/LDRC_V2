@@ -195,6 +195,10 @@ node dev/diff_test.js | tail -1 | grep -q "ALL PASS" || die "dev/diff_test.js fa
 ok "diff_test"
 node dev/ratestype_test.js | tail -1 | grep -q "ALL PASS" || die "dev/ratestype_test.js failed - run it to see why"
 ok "ratestype_test"
+node dev/save_test.js | tail -1 | grep -q "ALL PASS" || die "dev/save_test.js failed - run it to see why"
+ok "save_test (every save page: round trip, blank box, refused write, short block)"
+python3 dev/deadblock_test.py | tail -1 | grep -q "ALL PASS" || die "dev/deadblock_test.py failed - run it to see why"
+ok "deadblock_test (rates, PID and governor blocks the receiver refuses)"
 # Every page against a real recording, as the app's review serves it (0.9.839).
 # The recording is personal data: gitignored under dev/private/, so this gate
 # runs only where one exists (Malcolm's Mac) and is skipped elsewhere.

@@ -1039,6 +1039,29 @@ inline bool ratesBlockDead(const uint8_t* b, uint8_t len, char* why, size_t whyL
     }
     return false;
 }
+// 0.9.912 (the review the day after): the same for PIDs and the governor profile, which the phone's pages and the
+// transmitter's words both write, and which Rotorflight stores unchecked. PIDs (MSP 112/202, 17 words low byte first:
+// P I D F for roll, pitch, yaw, then boost x3, HSI offset x2): an axis with P, I and F all 0 has no response; a gain
+// over 1000 is beyond Rotorflight's range (a word of 65535 from a reply that never came). Governor profile (MSP 148/149):
+// a head speed under 100 or over 50000 is no head speed; a max throttle under 10 % never spools.
+inline bool pidBlockDead(const uint8_t* b, uint8_t len, char* why, size_t whyLen) {
+    if (len < 24) return false;
+    static const char* const axis[3] = { "Roll", "Pitch", "Yaw" };
+    for (uint8_t a = 0; a < 3; ++a) {
+        uint16_t g[4];
+        for (uint8_t k = 0; k < 4; ++k) g[k] = (uint16_t)(b[(a * 4 + k) * 2] | (b[(a * 4 + k) * 2 + 1] << 8));
+        for (uint8_t k = 0; k < 4; ++k) if (g[k] > 1000) { snprintf(why, whyLen, "%s %c gain to %u", axis[a], "PIDF"[k], (unsigned)g[k]); return true; }
+        if (g[0] == 0 && g[1] == 0 && g[3] == 0) { snprintf(why, whyLen, "%s P, I and F gains to 0", axis[a]); return true; }
+    }
+    return false;
+}
+inline bool govProfileDead(const uint8_t* b, uint8_t len, char* why, size_t whyLen) {
+    if (len < 13) return false;
+    const uint16_t hs = (uint16_t)(b[0] | (b[1] << 8));
+    if (hs < 100 || hs > 50000) { snprintf(why, whyLen, "head speed to %u", (unsigned)hs); return true; }
+    if (b[12] < 10) { snprintf(why, whyLen, "max throttle to %u %%", (unsigned)b[12]); return true; }
+    return false;
+}
 inline bool bankTxLive() {
     if (dongleEnabled) return true;          // unknown = assume the model's transmitter may be on: never switch banks unasked
     return rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) < 2000;
@@ -1124,6 +1147,11 @@ inline void bankBeforeClientRequest(uint8_t fn, const uint8_t* data, uint8_t len
     const bool needPid  = pidSide  && banks.clientPid  != 0xFF && banks.fcPid  != banks.clientPid;
     const bool needRate = rateSide && banks.clientRate != 0xFF && banks.fcRate != banks.clientRate;
     if (!needPid && !needRate) return;
+    if (bankTxLive()) {   // 0.9.912: the transmitter's switch owns the banks - a re-select here would fly the phone's bank under a switch set elsewhere
+        static uint32_t lastSaid = 0;
+        if ((uint32_t)(now - lastSaid) > 10000) { lastSaid = now; events.add("Bank re-select for the phone skipped: the transmitter is on, its switch owns the banks"); }
+        return;
+    }
     bankOpenHold();
     char m[EventLog::MSG_LEN];
     snprintf(m, sizeof(m), "Bank re-selected for the phone before MSP %u:%s%s", fn,

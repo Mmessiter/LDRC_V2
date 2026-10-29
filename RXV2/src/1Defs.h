@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.911-liftoff-note";
+constexpr const char* FW_VERSION = "RXV2-0.9.912-safety-review";
 
 //*********************************************************************
 //  Auto-update manifest URLs

@@ -297,6 +297,10 @@ inline void handleFcWake() {
             "{\"ok\":false,\"err\":\"a flight controller is already talking — wake is only for silent factory-fresh boards\"}");
         return;
     }
+    if (fcInfo.armed || (armingChannel >= 1 && armingChannel <= 16 && lastRxArmUs > 1500) || (rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000)) {
+        server.send(409, "application/json", "{\"ok\":false,\"err\":\"not with a transmitter on or the model armed - wake is for a silent board on the bench\"}");   // 0.9.912
+        return;
+    }
     const uint8_t mask[4] = { 0x08, 0x04, 0x00, 0x00 };   // RX_SERIAL | TELEMETRY, LE
     // Blind by nature (a silent FC answers nothing), so no ACK waits — but
     // the gaps between the three frames keep the channel stream flowing
@@ -1087,6 +1091,45 @@ inline void handleMspApi() {
     // first select, re-select the page's bank after a put-back. MspFc.h.
     bankBeforeClientRequest(fn, reqBuf, reqLen);
 
+    // 0.9.912: Rotorflight reads a fixed number of bytes for these and fills the rest from whatever its buffer held, so a
+    // short block (an older backup replayed, a page that read nothing) is refused before it goes. The pages and the
+    // transmitter always send at least this much.
+    {
+        uint8_t need = 0;
+        switch (fn) {
+        case MSP_SET_PID: need = 24; break;               // 202: P I D F for three axes
+        case MSP_SET_RC_TUNING: need = 25; break;         // 204
+        case MSP_SET_PID_PROFILE: need = 33; break;       // 95
+        case MSP_SET_GOVERNOR_PROFILE: need = 13; break;  // 149: head speed .. max throttle
+        case 147: need = 28; break;                       // rescue profile
+        case 43: need = 19; break;                        // mixer config
+        default: break;
+        }
+        if (need && reqLen < need) {
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), "MSP %u REFUSED from a page: %u bytes, the flight controller reads %u", fn, (unsigned)reqLen, (unsigned)need);
+            events.add(m);
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(409, "text/plain", "refused: this block is shorter than the flight controller reads - it would fill the rest with rubbish. Read the page again, then save.");
+            return;
+        }
+    }
+    // The same for PIDs and the governor profile (0.9.912, pidBlockDead / govProfileDead in MspFc.h): an axis with no
+    // response, a gain beyond Rotorflight's range, a head speed that is none, a max throttle that never spools.
+    if ((fn == MSP_SET_PID && reqLen >= 24) || (fn == MSP_SET_GOVERNOR_PROFILE && reqLen >= 13)) {
+        char why[48];
+        const bool dead = fn == MSP_SET_PID ? pidBlockDead(reqBuf, reqLen, why, sizeof(why)) : govProfileDead(reqBuf, reqLen, why, sizeof(why));
+        if (dead) {
+            char m[EventLog::MSG_LEN];
+            snprintf(m, sizeof(m), "MSP %u REFUSED from a page: %s", fn, why);
+            events.add(m);
+            server.sendHeader("Cache-Control", "no-store");
+            String msg = "refused: this would set the "; msg += why;
+            msg += ". Check the boxes and save again.";
+            server.send(409, "text/plain", msg);
+            return;
+        }
+    }
     // A rates block that would leave roll, pitch or yaw with no response is refused (0.9.909 - ratesBlockDead, MspFc.h:
     // Mehul's RAW 420 took off with no aileron, 28 Oct 2026). The page shows the reason and writes nothing.
     if (fn == MSP_SET_RC_TUNING && reqLen >= 19) {
@@ -2292,10 +2335,13 @@ inline void rxUpdStep() {
             }
             return;
         }
-        // The last look before anything is touched: the flight controller's own word.
-        if (fcInfo.armed && fcInfo.armedMs && (uint32_t)(now - fcInfo.armedMs) < 5000) {
+        // The last look before anything is touched: the flight controller's own word - and the transmitter's last word
+        // (0.9.912: MSP polling stops in flight, so fcInfo.armed can be stale; a model whose last packet said ARMED is in an
+        // outage, not quiet for an update - an order accepted on the ground, then a take-off and a 2 s gap, must not start it).
+        const bool lastWordArmed = armingChannel >= 1 && armingChannel <= 16 && lastRxArmUs > 1500;
+        if (lastWordArmed || (fcInfo.armed && fcInfo.armedMs && (uint32_t)(now - fcInfo.armedMs) < 5000)) {
             rxUpdState = RXU_REFUSED_ARMED; rxUpdOrderedMs = now;
-            events.add("Receiver update: the flight controller says ARMED - nothing changed");
+            events.add(lastWordArmed ? "Receiver update: the transmitter's last word was ARMED - nothing changed" : "Receiver update: the flight controller says ARMED - nothing changed");
             return;
         }
         rxUpdState  = RXU_WORKING;
@@ -4068,6 +4114,18 @@ inline void registerWebRoutes() {
     // parameter packets the radio link carried, as plain words - "id,w1,w2,...,w11" - into the same code (TxParams.h
     // txParamsWords), and the block being read as the ack payload would carry it.
     server.on("/api/txparams", HTTP_POST, []() {
+        {   // 0.9.912: the same door as /api/msp - nothing of this touches the flight controller while the model is armed
+            const bool fcArmed = fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000;
+            const bool armLink = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
+            const bool linkArmed = armLink && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
+            const bool lastWordArmed = armingChannel >= 1 && armingChannel <= 16 && lastRxArmUs > 1500;
+            if (fcArmed || linkArmed || lastWordArmed) {
+                static uint32_t lastSaid = 0;
+                if ((uint32_t)(millis() - lastSaid) > 10000) { lastSaid = millis(); events.add("Transmitter words refused: model is ARMED"); }
+                server.send(409, "text/plain", "ARMED - configuration is locked in flight. Disarm first.");
+                return;
+            }
+        }
         const String body = server.hasArg("plain") ? server.arg("plain") : server.arg("w");
         uint16_t w[24] = {0}; int n = 0; const char* p = body.c_str();
         while (*p && n < 12) { char* e = nullptr; const long v = strtol(p, &e, 10); if (e == p) break; w[n++] = (uint16_t)(v & 0xFFF); p = (*e == ',') ? e + 1 : e; }

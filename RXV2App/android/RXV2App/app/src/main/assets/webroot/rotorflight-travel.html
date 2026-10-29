@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Travel extents &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=410">
-<script src="/app.js?v=410" defer></script>
+<link rel=stylesheet href="/style.css?v=411">
+<script src="/app.js?v=411" defer></script>
 <style>
 .fldRow{display:flex;justify-content:space-between;align-items:center;
         padding:.45em .7em;background:#f2f6f8;border-radius:8px;margin:.25em 0}
@@ -263,7 +263,7 @@ async function load() {
 // Patch ONLY the fields this page owns into copies of the cached raw blocks —
 // every byte we don't edit goes back exactly as it was read.
 function buildPayloads() {
-    const num = (id) => parseFloat(document.getElementById(id).value || '0') || 0;
+    const num = (id) => LDRC.numOf(id);   // (0.9.912: a blank box stops the save - it went as 0: a cyclic gain or a limit of 0)
     const cfg = new Uint8Array(cachedCfg);
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -321,7 +321,8 @@ async function save() {
             ? {title:'Save travel extents', icon:'💾', yes:'Save to phone'}
             : {title:'Save travel extents', icon:'📐', yes:'Save', kind:'warn'}))) return;
     setStatus('info', 'Writing mixer limits…');
-    const { cfg, ins } = buildPayloads();
+    let cfg, ins;
+    try { ({ cfg, ins } = buildPayloads()); } catch (e) { setStatus('bad', e.message); return; }   // (0.9.912: a blank box: said, nothing written)
     try {
         await LDRC.msp(43, bytesToHex(cfg));                       // SET_MIXER_CONFIG
         for (const idx of [1, 2, 3, 4]) {                          // SET_MIXER_INPUT — one frame each

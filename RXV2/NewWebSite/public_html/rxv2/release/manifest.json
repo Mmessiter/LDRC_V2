@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.912-safety-review",
+      "url": "https://messiter.com/rxv2/release/v0.9.912/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.912/littlefs.bin",
+      "fs_md5": "1d761d02ea9f599b483f26ed76315383",
+      "notes": "Safety review, the day after the zero-rate save: the Rescue, Travel extents, Filters, First-time basics and Governor pages refuse a blank box (it went to the flight controller as 0). The receiver now refuses a PID or governor block that would leave an axis with no response or a head speed that is none, any block shorter than the flight controller reads, and a transmitter save whose first packet never arrived; it no longer re-selects a phone's bank while the transmitter's switch owns the banks, refuses the transmitter's words while the model is armed, and never starts a receiver update when the last packet heard said armed. New gates: save_test (every save page in node) and deadblock_test."
+    },
+    {
       "name": "RXV2-0.9.911-liftoff-note",
       "url": "https://messiter.com/rxv2/release/v0.9.911/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.911/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.901/littlefs.bin",
       "fs_md5": "0798e7a5d0809b0adba7f2a10ca823a7",
       "notes": "Bluetooth update from a phone: an install no longer fails with 'cannot be converted to JSONObject'. The apps read every reply header as a header, so a reply cut short or sent twice can no longer be taken for the body of the next one; the Android app keeps one Bluetooth link only (two made every reply arrive twice) and logs what the link did (Send debug data on the Help page, and a note on a failed install); the receiver's reply pump stops cleanly when a fresh request arrives mid-reply."
-    },
-    {
-      "name": "RXV2-0.9.900-rescue-channel",
-      "url": "https://messiter.com/rxv2/release/v0.9.900/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.900/littlefs.bin",
-      "fs_md5": "e35c6cec6e6d95cfff24dde81f8ef617",
-      "notes": "The Rescue page names the rescue switch's channel as the Switches page does: AUX 5 is channel 10, not 9 (AUX 1 is channel 6)."
     }
   ],
   "rotorflight": {

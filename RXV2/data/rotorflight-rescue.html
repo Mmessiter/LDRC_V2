@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rescue &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=410">
-<script src="/app.js?v=410" defer></script>
+<link rel=stylesheet href="/style.css?v=411">
+<script src="/app.js?v=411" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -164,12 +164,13 @@ async function load(){
 
 function buildPayload(){
     const b=new Uint8Array(cachedRaw);
-    const u8=(id,mn,mx)=>Math.max(mn,Math.min(mx,parseInt($(id).value||'0')));
-    const t10=(id)=>Math.max(0,Math.min(250,Math.round(parseFloat($(id).value||'0')*10)));
+    // (0.9.912: a blank box stops the save - LDRC.numOf throws "Not written: ... is empty"; it went as 0: a rescue that does nothing)
+    const u8=(id,mn,mx)=>Math.max(mn,Math.min(mx,Math.round(LDRC.numOf(id))));
+    const t10=(id)=>Math.max(0,Math.min(250,Math.round(LDRC.numOf(id)*10)));
     b[0]=u8('r_mode',0,2); b[1]=u8('r_flip',0,1); b[2]=u8('r_flipg',5,250); b[3]=u8('r_levelg',5,250);
     b[4]=t10('r_put'); b[5]=t10('r_ct'); b[6]=t10('r_ft'); b[7]=t10('r_et');
     wrU16(b,8,u8('r_puc',0,1000)); wrU16(b,10,u8('r_cc',0,1000)); wrU16(b,12,u8('r_hc',0,1000));
-    wrU16(b,14,Math.round(parseFloat($('r_ha').value||'0')*100));
+    wrU16(b,14,Math.round(LDRC.numOf('r_ha')*100));
     wrU16(b,16,u8('r_ap',0,10000)); wrU16(b,18,u8('r_ai',0,10000)); wrU16(b,20,u8('r_ad',0,10000));
     wrU16(b,22,u8('r_maxc',1,1000)); wrU16(b,24,u8('r_msr',1,1000)); wrU16(b,26,u8('r_msa',1,10000));
     return b;
@@ -183,7 +184,8 @@ async function save(){
         : 'Write this Rescue setup to the flight controller (bank '+(currentBank+1)+')?',
         {title:'Save Rescue',icon:'🛟',yes:LDRC.replay?'Save to phone':'Save to flight controller'})))return;
     setStatus('info','Writing Rescue…');
-    const bytes=buildPayload();
+    let bytes;
+    try{ bytes=buildPayload(); } catch(e){ setStatus('bad', e.message); return; }   // (0.9.912: a blank box: said, nothing written)
     try{
         await LDRC.msp(210, currentBank.toString(16).padStart(2,'0'));
         await LDRC.msp(147, bytesToHex(bytes));   // MSP_SET_RESCUE_PROFILE

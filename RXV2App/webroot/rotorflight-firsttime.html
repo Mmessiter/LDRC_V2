@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>First-time basics &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=410">
-<script src="/app.js?v=410" defer></script>
+<link rel=stylesheet href="/style.css?v=411">
+<script src="/app.js?v=411" defer></script>
 <script src="/gear.js?v=4" defer></script>
 <style>
 .gHintRow{font-size:.84em;line-height:1.35;margin:-.15em 0 .45em}
@@ -267,12 +267,14 @@ async function saveMotor(){
     w[8]=parseInt($('m_proto').value);
     w[9]=r[10]; w[10]=r[11];          // pwm rate unchanged
     w[11]=r[12];                      // unsynced unchanged
-    const poles=Math.max(2,Math.min(64,parseInt($('m_poles').value||'2')));
+    let poles;
+    try { poles=Math.max(2,Math.min(64,Math.round(LDRC.numOf('m_poles')))); } catch(e){ setStatus('bad', e.message); return; }   // (0.9.912: a blank box: said, nothing written - it went as 2 poles)
     w[12]=poles; w[13]=r[14]; w[14]=r[15]; w[15]=r[16];
     w.set(r.slice(17,21),16);         // rpm LPFs unchanged
     // Decimals allowed in the boxes (1 : 10.2) - gear.js scales them to the whole-number pair the FC stores.
-    const toPair=(a,b)=>(window.LDRCGear&&LDRCGear.pair(a,b))||[parseInt(a)||1,parseInt(b)||1];
-    const mg=toPair($('m_mgN').value,$('m_mgD').value), tg=toPair($('m_tgN').value,$('m_tgD').value);
+    const toPair=(a,b)=>{ const p=window.LDRCGear&&LDRCGear.pair(a,b); if(!p) throw new Error('Not written: a gear ratio box is empty or not a number'); return p; };   // (0.9.912: no 1:1 from a blank)
+    let mg, tg;
+    try { mg=toPair($('m_mgN').value,$('m_mgD').value); tg=toPair($('m_tgN').value,$('m_tgD').value); } catch(e){ setStatus('bad', e.message); return; }
     wrU16(w,20,mg[0]); wrU16(w,22,mg[1]);
     wrU16(w,24,tg[0]); wrU16(w,26,tg[1]);
     const e=new Uint8Array(escRaw); e[0]=parseInt($('e_proto').value);
