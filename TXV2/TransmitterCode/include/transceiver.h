@@ -133,6 +133,15 @@ FASTRUN void ProcessRecentCommsGap() // When we know there is time, process a re
         ThisGap = 0; // ignore any gaps when in PID view
         return;
     }
+    if (GapStartedUnlinked)
+    { // B157 (Malcolm, 30 Oct 2026: "odd data on the telemetry screen when not even connected" - longest gap 109657, average
+      // 3458, frame rate 1, packets 0): a gap that began with NO LINK UP is not a gap in the link - it is the wait for the
+      // first contact after power-up, or a stray acknowledgement of a reconnect ping from some other receiver in range
+      // (the LED stayed red). Not counted, not logged.
+        GapStartedUnlinked = false;
+        ThisGap = 0;
+        return;
+    }
     if (GapPardonUntilMs && (millis() < GapPardonUntilMs))
     { // RXV2 announced a flight-save flash write (ack item 38): the gap is
       // expected ground housekeeping — excluded from all statistics, but
@@ -205,6 +214,7 @@ void CheckGap()
         // Armed state as the gap BEGINS (a real in-flight loss followed by a
         // quick disarm must still count).
         GapStartedDisarmed = RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16 && !Armed;
+        GapStartedUnlinked = !LedWasGreen; // B157: a gap is a loss of a link that was UP when it began
     }
     else
     {

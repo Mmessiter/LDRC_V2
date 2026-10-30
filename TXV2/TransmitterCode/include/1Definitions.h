@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B156 29/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B157 30/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -255,6 +255,7 @@ uint32_t PhoneEpochAtMs = 0;    // millis() at capture, for staleness correction
 // as excused, so the averages describe the LINK, not the housekeeping.
 uint32_t GapPardonUntilMs = 0;
 bool GapStartedDisarmed = false; // Rotorflight arming in use and DISARMED when the current gap began = a ground gap
+bool GapStartedUnlinked = false; // B157: no link up (the LED not green) when the current gap began = not a gap in the link at all
 
 #define PARAMETERS_MAX_ID 36 // Max types of parameters packet to send  ... might increase.
 

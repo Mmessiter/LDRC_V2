@@ -1402,11 +1402,16 @@ void RationaliseBuddy()
 void GetFrameRate()
 {
     CRUMB(CRUMB_FRAMERATE); // This function calculates the frame rate and the average frame rate
-    if (RecentGoodPacketsCount)
+    if (!LedWasGreen)
+        PacketsPerSecond = 0; // B157: no link, no frame rate (a stray acknowledgement of a reconnect ping is not a frame)
+    else if (RecentGoodPacketsCount)
         PacketsPerSecond = RecentGoodPacketsCount;
     RecentGoodPacketsCount = 0;
-    TotalFrameRate += PacketsPerSecond;
-    AverageFrameRate = TotalFrameRate / ++FrameRateCounter;
+    if (LedWasGreen)
+    { // B157: the average is of the link's seconds alone
+        TotalFrameRate += PacketsPerSecond;
+        AverageFrameRate = TotalFrameRate / ++FrameRateCounter;
+    }
     if (CurrentView == FRONTVIEW && LedWasGreen)
     { // V1B B26: the front screen's "Frame rate" box (Malcolm, 4-10-2026). The front page has no such box: the 5-inch
       // screen keeps the value all the same, and its own front screen reads it. Once a second, while a model is connected.
