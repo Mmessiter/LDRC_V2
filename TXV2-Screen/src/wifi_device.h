@@ -72,9 +72,40 @@ static volatile int wifiBadKey = 0, wifiExpired = 0, wifiNoAp = 0;   // why the 
 static int wifiAutoStep = 0; static uint32_t wifiAutoAt = 0, wifiBeganAt = 0, wifiLookAt = 0;
 static std::string wifiTrying;                                  // the network asked for last, by the page or by ourselves
 
+// (1.11.147) THE RADIO'S DIARY: every drop with the driver's reason and the signal at that moment, every join with the
+// access point's address and channel, in /status "wifi" (30 Oct 2026: Malcolm's screen said "Joined: House" with full
+// bars while it was on no network the Mac could see - a second House access point, or a dead network stack? - and
+// nothing on the screen could say which; the boot log is full by 20 s). The marks are made in the driver's event task:
+// numbers only, no logging there.
+struct WifiMark { uint32_t ms; uint8_t ev; uint8_t reason; int8_t rssi; uint8_t ch; uint8_t bssid[6]; };   // ev: 1 joined (an IP came), 2 dropped, 3 the IP was lost
+static WifiMark wifiMarks[12]; static volatile uint32_t wifiMarkN = 0;   // the last twelve, round and round
+static volatile uint32_t wifiDrops = 0, wifiJoins = 0;
+static void wifiMark(uint8_t ev, uint8_t reason, int8_t rssi, const uint8_t *bssid) {
+    WifiMark &m = wifiMarks[wifiMarkN % 12];
+    m.ms = millis(); m.ev = ev; m.reason = reason; m.rssi = rssi; m.ch = (uint8_t) WiFi.channel();
+    if (bssid) memcpy(m.bssid, bssid, 6); else memset(m.bssid, 0, 6);
+    wifiMarkN = wifiMarkN + 1;
+}
+static std::string wifiDiagJson() {                             // the tail of /status "wifi": the access point now, the counts, the diary
+    char b[160];
+    snprintf(b, sizeof b, ",\"bssid\":\"%s\",\"ch\":%d,\"ip\":\"%s\",\"gw\":\"%s\",\"joins\":%lu,\"drops\":%lu,\"log\":[",
+             WiFi.BSSIDstr().c_str(), (int) WiFi.channel(), WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str(), (unsigned long) wifiJoins, (unsigned long) wifiDrops);
+    std::string out = b;
+    const uint32_t n = wifiMarkN, from = n > 12 ? n - 12 : 0;
+    for (uint32_t i = from; i < n; ++i) {                       // [ms, ev, reason, rssi, channel, the access point's last three bytes]
+        const WifiMark &m = wifiMarks[i % 12]; char e[80];
+        snprintf(e, sizeof e, "%s[%lu,%u,%u,%d,%u,\"%02x%02x%02x\"]", i > from ? "," : "", (unsigned long) m.ms, m.ev, m.reason, (int) m.rssi, m.ch, m.bssid[3], m.bssid[4], m.bssid[5]);
+        out += e;
+    }
+    out += "]";
+    return out;
+}
 static void wifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+    if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) { wifiJoins = wifiJoins + 1; wifiMark(1, 0, (int8_t) WiFi.RSSI(), WiFi.BSSID()); return; }
+    if (event == ARDUINO_EVENT_WIFI_STA_LOST_IP) { wifiMark(3, 0, (int8_t) WiFi.RSSI(), nullptr); return; }
     if (event != ARDUINO_EVENT_WIFI_STA_DISCONNECTED) return;
     const int why = info.wifi_sta_disconnected.reason;
+    wifiDrops = wifiDrops + 1; wifiMark(2, (uint8_t) why, info.wifi_sta_disconnected.rssi, info.wifi_sta_disconnected.bssid);
     if (why == 202) wifiBadKey += 2;                            // authentication failed: the password
     else if (why == 15 || why == 204) wifiBadKey++;             // a handshake that timed out: the password - or a weak signal, so it takes two of them
     else if (why == 2) wifiExpired++;                           // authentication expired: the password, or a weak signal

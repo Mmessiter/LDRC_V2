@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.146"
+#define SCREEN_VERSION "1.11.147"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2939,6 +2939,7 @@ static uint32_t quietUntil = 0; static bool quietBacklightOff = false, quietWifi
 static File uploadFile; static bool uploadGood = false; static uint32_t uploadBytes = 0;
 
 static std::string psramJson();                        // (1.11.132) defined after the device headers (it names their buffers)
+static std::string wifiDiagJson();                     // (1.11.147) wifi_device.h, included later: the access point, the IP, the drops and joins
 static std::string iramJson();                         // (1.11.137) likewise
 static bool filmProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN);   // (26 Oct evening, bench) src/film_device.h: a film played from the bench, stopped, its frames through the flip or not
 static void webBegin() {
@@ -2953,7 +2954,7 @@ static void webBegin() {
         out += ",\"stack\":{\"loop\":" + std::to_string((unsigned) uxTaskGetStackHighWaterMark(NULL)) + ",\"ble\":" + std::to_string(bleStackSpare()) + "}";   // (1.11.8) the least each task's stack has ever had to spare, in bytes
         out += ",\"largest\":" + std::to_string((unsigned) ESP.getMaxAllocHeap()) + ",\"rssi\":" + std::to_string((int) WiFi.RSSI());   // (1.11.11) the largest piece of free memory (a TLS connection wants ~45 kB), and the WiFi signal
         { std::string s = WiFi.SSID().c_str(), d = doorSsid; for (auto *t : {&s, &d}) for (auto &c : *t) if (c == '"' || c == '\\') c = '\'';
-          out += ",\"wifi\":{\"st\":" + std::to_string((int) WiFi.status()) + ",\"up\":" + (wifiUpNow() ? "true" : "false") + ",\"ssid\":\"" + s + "\",\"door_ssid\":\"" + d + "\"}"; }   // (1.11.139) the library's status (3 = joined) beside the driver's account, and the two names the door compares
+          out += ",\"wifi\":{\"st\":" + std::to_string((int) WiFi.status()) + ",\"up\":" + (wifiUpNow() ? "true" : "false") + ",\"ssid\":\"" + s + "\",\"door_ssid\":\"" + d + "\"" + wifiDiagJson() + "}"; }   // (1.11.139) the library's status (3 = joined) beside the driver's account, and the two names the door compares; (1.11.147) the access point, the IP, the drops and joins (wifi_device.h)
         out += ",\"board\":\"" + std::string(board->name) + "\",\"flash_mb\":" + std::to_string((unsigned) (flashChipBytes >> 20)) + ",\"image_mb\":" + std::to_string((unsigned) (flashImageBytes >> 20))
              + ",\"slot\":" + std::to_string((unsigned) boardSlotBytes()) + ",\"build\":\"" + (BUILD_FULL ? "full" : "standard") + "\"";   // (1.11.111) which board this is (its flash chip), what the firmware was built for, the slot the next firmware goes in
         out += ",\"crash\":" + crashJson();                     // (1.11.15) the last crash's summary from the core dump in flash, if there is one
