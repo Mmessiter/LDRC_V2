@@ -147,6 +147,14 @@ static void wifiStart() {                                      // the radio come
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(!(updWifi && bleIsOff()));                 // (1.11.20) awake only when Bluetooth is down
     WiFi.setAutoReconnect(true);
+    // (1.11.148) THE STRONGEST ACCESS POINT OF THE NAME, not the first one heard. The driver's default is a "fast scan": it
+    // joins the first access point it finds with the name as it goes up the channels. In a house with a mesh (30 Oct 2026:
+    // Malcolm's five Deco nodes all called House) his transmitter in the sitting room sat on the bedroom's node at -62 dBm,
+    // channel by channel the first to answer, while the desk twin a yard away sat on the sitting room's node at -35: pushes
+    // failed, updates needed a second go, the link dropped and the screen looked "Joined" while unreachable. Every channel
+    // is scanned and the strongest taken (a second or two more at a join; the same on a single router).
+    WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+    WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
     wifiAutoStep = 0;
 }
 // The radio goes off (the motor, the safety, the pilot's switch). A look that was under way is over, and the

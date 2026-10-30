@@ -53,6 +53,8 @@ struct Preferences {
 enum wl_status_t { WL_NO_SHIELD = 255, WL_IDLE_STATUS = 0, WL_NO_SSID_AVAIL = 1, WL_SCAN_COMPLETED = 2, WL_CONNECTED = 3, WL_CONNECT_FAILED = 4, WL_CONNECTION_LOST = 5, WL_DISCONNECTED = 6 };
 enum wifi_auth_mode_t { WIFI_AUTH_OPEN = 0, WIFI_AUTH_WPA2_PSK = 3 };
 enum wifi_mode_t { WIFI_OFF = 0, WIFI_STA = 1 };
+enum wifi_scan_method_t { WIFI_FAST_SCAN = 0, WIFI_ALL_CHANNEL_SCAN = 1 };                    // (1.11.148)
+enum wifi_sort_method_t { WIFI_CONNECT_AP_BY_SIGNAL = 0, WIFI_CONNECT_AP_BY_SECURITY = 1 };
 enum { WIFI_IF_STA = 0 }; enum { ESP_OK = 0 }; typedef int esp_err_t;
 enum wifi_storage_t { WIFI_STORAGE_FLASH = 0, WIFI_STORAGE_RAM = 1 };
 // The pilot's colours (main.cpp: theme.panel() and so on): navy and white, as on a screen that has not been told otherwise
@@ -62,9 +64,13 @@ enum wifi_storage_t { WIFI_STORAGE_FLASH = 0, WIFI_STORAGE_RAM = 1 };
 #define OUR_SOFT ((uint16_t) 0xC618)
 #define WIFI_SCAN_RUNNING (-1)
 #define WIFI_SCAN_FAILED (-2)
-enum arduino_event_id_t { ARDUINO_EVENT_WIFI_SCAN_DONE = 1, ARDUINO_EVENT_WIFI_STA_START, ARDUINO_EVENT_WIFI_STA_STOP, ARDUINO_EVENT_WIFI_STA_CONNECTED, ARDUINO_EVENT_WIFI_STA_DISCONNECTED, ARDUINO_EVENT_WIFI_STA_GOT_IP };
+enum arduino_event_id_t { ARDUINO_EVENT_WIFI_SCAN_DONE = 1, ARDUINO_EVENT_WIFI_STA_START, ARDUINO_EVENT_WIFI_STA_STOP, ARDUINO_EVENT_WIFI_STA_CONNECTED, ARDUINO_EVENT_WIFI_STA_DISCONNECTED, ARDUINO_EVENT_WIFI_STA_GOT_IP, ARDUINO_EVENT_WIFI_STA_LOST_IP };
 typedef arduino_event_id_t WiFiEvent_t;
-struct WiFiEventInfo_t { struct { int reason; } wifi_sta_disconnected; };
+struct WiFiEventInfo_t { struct { int reason; int8_t rssi = 0; uint8_t bssid[6] = { 0, 0, 0, 0, 0, 0 }; } wifi_sta_disconnected; };   // (1.11.147) the driver's rssi and bssid at a drop, for the radio's diary
+struct IPAddress {                                       // (1.11.147) as the library's: the first octet in the lowest byte
+    uint32_t v = 0; IPAddress() {} explicit IPAddress(uint32_t a) : v(a) {}
+    String toString() const { char b[20]; snprintf(b, sizeof b, "%u.%u.%u.%u", (unsigned) (v & 255), (unsigned) ((v >> 8) & 255), (unsigned) ((v >> 16) & 255), (unsigned) (v >> 24)); return String(b); }
+};
 struct wifi_config_t { struct { uint8_t ssid[32]; uint8_t password[64]; } sta; };
 
 struct SimAp { std::string ssid; int rssi; bool locked; std::string pass; bool weak = false, hidden = false; };   // weak: heard, but every handshake times out; hidden: not in a look's results, joinable all the same (a phone's hotspot, a look that missed it)
@@ -141,7 +147,7 @@ struct SimWiFi {
                 if (reason == 8) { } else if (firstConnect) { firstConnect = false; again = true; } else if (autoReconnect_ && reconnectable(reason)) again = true; else if (reason == 203) status_ = WL_CONNECT_FAILED;
                 if (again) { disconnect(); begin(); }
             }
-            if (user && e.id == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) { WiFiEventInfo_t info; info.wifi_sta_disconnected.reason = e.reason; user((WiFiEvent_t) e.id, info); }
+            if (user && (e.id == ARDUINO_EVENT_WIFI_STA_DISCONNECTED || e.id == ARDUINO_EVENT_WIFI_STA_GOT_IP)) { WiFiEventInfo_t info; info.wifi_sta_disconnected.reason = e.reason; info.wifi_sta_disconnected.rssi = (int8_t) conRssi; memcpy(info.wifi_sta_disconnected.bssid, bssid_, 6); user((WiFiEvent_t) e.id, info); }   // (1.11.147) the joins too: the radio's diary marks them
         }
         delivering = false;
     }
@@ -150,6 +156,9 @@ struct SimWiFi {
     bool mode(wifi_mode_t m) { if (m == WIFI_STA) drvStart(); else drvStop(); return true; }
     bool setSleep(bool s) { sleep_ = s; return true; }
     bool setAutoReconnect(bool a) { autoReconnect_ = a; return true; }
+    int scanMethod_ = 0, sortMethod_ = 0;                        // (1.11.148) WIFI_ALL_CHANNEL_SCAN + WIFI_CONNECT_AP_BY_SIGNAL: the strongest access point of the name
+    void setScanMethod(int m) { scanMethod_ = m; }
+    void setSortMethod(int m) { sortMethod_ = m; }
     void onEvent(void (*cb)(WiFiEvent_t, WiFiEventInfo_t)) { user = cb; }
     wl_status_t status() { return status_; }
     wl_status_t begin(const char *ssid, const char *pass = nullptr) {
@@ -167,6 +176,13 @@ struct SimWiFi {
     bool disconnect(bool wifioff = false, bool = false) { if (!started) return false; drvDisconnect(); if (wifioff) drvStop(); return true; }
     String SSID() { return st == CONNECTED || (st == CONNECTING && assoc) ? String(conSsid) : String(); }
     int RSSI() { return st == CONNECTED ? conRssi : 0; }
+    // (1.11.147) the access point and the addresses, for the radio's diary (one make-believe access point on channel 3)
+    uint8_t bssid_[6] = { 0xAE, 0x19, 0x21, 0xF3, 0x21, 0x09 };
+    int channel() { return st == CONNECTED ? 3 : 0; }
+    uint8_t *BSSID() { return bssid_; }
+    String BSSIDstr() { return st == CONNECTED ? String("AE:19:21:F3:21:09") : String(); }
+    IPAddress localIP() { return st == CONNECTED ? IPAddress(0x4101A8C0u) : IPAddress(); }     // 192.168.1.65
+    IPAddress gatewayIP() { return st == CONNECTED ? IPAddress(0xFE01A8C0u) : IPAddress(); }   // 192.168.1.254
     // ---- library: WiFiScan.cpp 57-171
     int16_t scanNetworks(bool, bool, bool, uint32_t maxMs) {
         if (bitScanning) return WIFI_SCAN_RUNNING;
