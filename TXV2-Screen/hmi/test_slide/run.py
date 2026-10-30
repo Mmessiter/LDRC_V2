@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""(1.11.142) The slide text under a finger draws the same pixels as a full redraw.
+"""(1.11.142/144) The slide text through the slab - under a finger (slideDrag) and in an ordinary redraw (slideFill) - draws the same pixels as the old full redraw.
 
 slideDrag (src/main.cpp) letters the help/log viewer's box through a slab of internal RAM; drawTextIn is the old way. Both
 are rendered on the Mac with the screen's own code (hmi/render_host): for every scroll offset V the box is first drawn the
@@ -51,20 +51,21 @@ def main():
         cmds += setup
         cmds.append('LogText.txt="' + '\\r\\n'.join(text) + '"')
         for v in offsets:
-            cmds.append('LogText.val_y=%d' % v); cmds.append('@shot %s_std_%d' % (name, v))
+            cmds.append('@slidefill 0'); cmds.append('LogText.val_y=%d' % v); cmds.append('@shot %s_std_%d' % (name, v))   # the reference: drawTextIn
             for a in (0, 999999, 24):                       # from the top, from the very end (clamped), from one line down
                 if a == v: continue
-                cmds.append('LogText.val_y=%d' % a); cmds.append('@slide LogText %d' % v); cmds.append('@shot %s_fast_%d_from_%d' % (name, v, a))
-                shots.append((name, v, a))
+                cmds.append('@slidefill 0'); cmds.append('LogText.val_y=%d' % a)
+                cmds.append('@slide LogText %d' % v); cmds.append('@shot %s_fast_%d_from_%d' % (name, v, a)); shots.append((name, v, a, 'fast'))
+                cmds.append('@slidefill 1'); cmds.append('LogText.val_y=%d' % a); cmds.append('LogText.val_y=%d' % v); cmds.append('@shot %s_fill_%d_from_%d' % (name, v, a)); shots.append((name, v, a, 'fill'))
     cf = os.path.join(out, 'cmds.txt'); open(cf, 'w').write('\n'.join(cmds) + '\n')
     r = subprocess.run([RENDER, SD, cf, out + '/'], capture_output=True, text=True)
     if r.returncode: sys.exit(r.stdout[-2000:] + r.stderr[-2000:] + '\ntest_slide: the renderer failed')
     fallbacks = [l for l in r.stdout.splitlines() if l.startswith('@slide') and l.endswith('fallback')]
     checks = fails = 0
-    for name, v, a in shots:
+    for name, v, a, how in shots:
         checks += 1
         ref = open(os.path.join(out, '%s_std_%d.ppm' % (name, v)), 'rb').read()
-        got = open(os.path.join(out, '%s_fast_%d_from_%d.ppm' % (name, v, a)), 'rb').read()
+        got = open(os.path.join(out, '%s_%s_%d_from_%d.ppm' % (name, how, v, a)), 'rb').read()
         if ref != got:
             fails += 1
             hdr = ref.find(b'255\n') + 4
@@ -72,7 +73,7 @@ def main():
             where = ''
             if diff:
                 px = (diff[0] - hdr) // 3; where = ' first at x %d y %d' % (px % 800, px // 800)
-            print('FAIL %s: dragged to %d from %d differs from a full draw at %d%s' % (name, v, a, v, where))
+            print('FAIL %s: %s to %d from %d differs from the old full draw at %d%s' % (name, 'dragged' if how == 'fast' else 'slab-filled', v, a, v, where))
     for l in fallbacks: print('FAIL ' + l + ' (the slab path was not taken)'); fails += 1
     checks += 1 if not fallbacks else 0
     print('test_slide: %d checks, %d failures (%d pictures in %s)' % (checks, fails, len(shots), out))

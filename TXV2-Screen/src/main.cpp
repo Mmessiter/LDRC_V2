@@ -45,7 +45,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.143"
+#define SCREEN_VERSION "1.11.144"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1251,6 +1251,99 @@ static void drawTextIn(int x, int y, int w, int h, int font, uint16_t col, const
     gfx->endWrite();
     clipX0 = 0; clipY0 = 0; clipX1 = W; clipY1 = H;
 }
+// (1.11.142-144) THE SLIDE TEXT THROUGH A SLAB. The help/log viewer's box (747 x 370) is lettered eight rows at a time in
+// a slab of the chip's own RAM - the background, then the glyphs with drawGlyphs' eight-shade table - and each slab is
+// written ONCE into the PSRAM: the canvas (slideFill: every ordinary redraw), or, under a finger on the twin, the spare
+// panel buffer that is then flipped to (slideDrag, after redraw()). A stale canvas band (the rotation, canvasEnsureRows) is
+// caught up here by its margins only: the box's own rows and columns are about to be written whole. hmi/test_slide proves
+// both against drawTextIn, pixel for pixel. The words of a slide text are shown when their position follows (the main
+// board sends LogText.txt, waits 50 ms, then LogText.val_y: drawn at once they appeared at the top first, then jumped).
+static uint16_t *slideSlab = nullptr; static const int SLIDE_ROWS = 8;   // (= the rotation's bands)
+static bool slideDragging = false;                          // a finger is on the text: the slab is kept between steps
+static bool slideFillOn = true;                             // (the host tests: 0 = the old way, the reference the slab is proved against)
+static uint32_t slideN = 0, slideFlipN = 0, slideWaitN = 0, slideUs = 0, slideUsMax = 0, slideDebtUs = 0, slideFillN = 0, slideFillUs = 0;   // (/perf "slide")
+static std::string slideTxtPending; static uint32_t slideTxtAt = 0;   // the slide text whose words changed and whose position is yet to come
+struct SlideBox { int ix, iy, iw, ih, x0, y0, x1, y1, cw; };   // the inner box (inside the border), and its part on the screen
+static bool slideBox(const Comp &c, SlideBox &b) {
+    const int bw = c.borderw;
+    b.ix = c.x + bw; b.iy = c.y + bw; b.iw = c.w - 2 * bw; b.ih = c.h - 2 * bw;
+    b.x0 = max(0, b.ix); b.y0 = max(0, b.iy); b.x1 = min((int) W, b.ix + b.iw); b.y1 = min((int) H, b.iy + b.ih); b.cw = b.x1 - b.x0;
+    return b.x1 > b.x0 && b.y1 > b.y0;
+}
+static bool slideSlabGet() { if (!slideSlab) slideSlab = (uint16_t *) heap_caps_malloc((size_t) W * SLIDE_ROWS * 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); return slideSlab != nullptr; }
+static void slideSlabFree() { if (slideSlab && !slideDragging) { free(slideSlab); slideSlab = nullptr; } }   // (12.8 kB of internal RAM: the update page's secure connection wants every byte)
+static void slideDone() { slideDragging = false; slideSlabFree(); }   // the finger is up
+static inline void slideSpan(uint16_t *dst, const uint16_t *src, int row, int a, int b) { if (b > a) memcpy(dst + row * W + a, src + row * W + a, (b - a) * 2); }
+static void slideLut(const Comp &c, uint16_t *lut) { const uint16_t bg = (uint16_t) c.bco, ink = inkOf(c); lut[0] = bg; for (int a = 1; a < 8; ++a) lut[a] = a >= 7 ? ink : blend565(bg, ink, a); }
+// The rows [r0, r1) of the box rendered into the slab: the background, then every line that crosses them, letter by letter,
+// clipped to the box - the pixels drawGlyphs puts there on one colour.
+static void slideBand(const SlideBox &b, const TextLayout &L, const uint16_t *lut, int font, int fi, int xcen, int r0, int r1) {
+    const NextionFont *f = fontFor(font); const int rows = r1 - r0, cw = b.cw; const uint16_t bg = lut[0];
+    { uint32_t *p = (uint32_t *) slideSlab; const uint32_t v = (uint32_t) bg << 16 | bg; for (int i = 0, n = (rows * cw + 1) / 2; i < n; ++i) p[i] = v; }
+    int ly = L.ty;
+    for (const auto &line : L.lines) {
+        if (ly < r1 && ly + L.fh > r0 && !line.empty()) {
+            int pen = textLineX(L, b.ix, b.iw, font, xcen, line);
+            const int ra = max(r0, ly), rb = min(r1, ly + L.fh);
+            for (unsigned char ch : line) {
+                if (ch < f->first || ch > f->last) continue;
+                const NextionGlyph &g = f->glyphs[ch - f->first];
+                const int gw = g.bitmap_width, rowBytes = (gw + 1) / 2, gx = pen - g.kern_left;
+                const uint8_t *src = aaBits[fi] + aaOffset[fi][ch - f->first];
+                const int ca = max(0, b.x0 - gx), cb = min(gw, b.x1 - gx);   // the glyph's columns inside the box
+                for (int row = ra; row < rb; ++row) {
+                    const uint8_t *r = src + (row - ly) * rowBytes; uint16_t *d = slideSlab + (row - r0) * cw;
+                    for (int col = ca; col < cb; ++col) { const int a = (col & 1) ? (r[col >> 1] & 15) : (r[col >> 1] >> 4); if (a) d[gx - b.x0 + col] = lut[a]; }
+                }
+                pen += g.width;
+            }
+        }
+        ly += L.fh;
+    }
+}
+// The canvas's band, caught up from the buffer on show (the rotation) but for the box's rows [r0, r1) and columns, which
+// are about to be written whole: the margins and the rows outside the box, not the whole 12.8 kB.
+static void slideEnsureBand(int band, const SlideBox &box, int r0, int r1) {
+    if (!(canvasStale & (1ull << band)) || !pageFb) return;
+    if (dcTx) { canvasEnsureRows(band << 3, 8); return; }   // (the DMA copy, when it is on, may have left the canvas's lines stale in the cache: the usual way, whole)
+    const uint16_t *from = flipFb[flipShown];
+    if (!from || from == pageFb) return;
+    const int b0 = band << 3, b1 = min((int) H, b0 + 8);
+    for (int r = b0; r < b1; ++r) {
+        if (r >= r0 && r < r1) { slideSpan(pageFb, from, r, 0, box.x0); slideSpan(pageFb, from, r, box.x1, W); }
+        else slideSpan(pageFb, from, r, 0, W);
+    }
+    canvasStale &= ~(1ull << band); canvasEnsureN++;
+}
+// The whole slide text drawn (drawComp): the border by gfx, the inner box through the slab into the canvas. false: not this
+// way - the old code draws it (a see-through box, a font without its smooth table, no slab, a layer's canvas).
+static bool slideFill(Comp &c) {
+    if (!slideFillOn || c.sta != 1 || !pageFb || fbNow != pageFb) return false;
+    const int fi = fontIdx(c.font); if (!aaBits[fi]) return false;
+    SlideBox b; const bool any = slideBox(c, b);
+    if (any && !slideSlabGet()) return false;
+    const uint32_t t0 = micros();
+    const int bw = c.borderw;
+    if (bw > 0) {                                           // the border's ring, as the fill of the whole box did it
+        gfx->fillRect(c.x, c.y, c.w, bw, c.bco); gfx->fillRect(c.x, c.y + c.h - bw, c.w, bw, c.bco);
+        gfx->fillRect(c.x, c.y + bw, bw, c.h - 2 * bw, c.bco); gfx->fillRect(c.x + c.w - bw, c.y + bw, bw, c.h - 2 * bw, c.bco);
+    }
+    drawFrame(c, c.bco, false);
+    if (any) {
+        const TextLayout L = textLayout(b.ix, b.iy, b.iw, b.ih, c.font, c.txt, c.xcen, c.ycen, c.isbr != 0, c.scroll, -1);
+        uint16_t lut[8]; slideLut(c, lut);
+        for (int r0 = b.y0; r0 < b.y1; ) {
+            const int band = r0 >> 3, r1 = min(b.y1, (band + 1) << 3);
+            slideBand(b, L, lut, c.font, fi, c.xcen, r0, r1);
+            slideEnsureBand(band, b, r0, r1);
+            for (int row = r0; row < r1; ++row) memcpy(pageFb + row * W + b.x0, slideSlab + (row - r0) * b.cw, b.cw * 2);
+            r0 = r1;
+        }
+    }
+    slideSlabFree();
+    slideFillN++; slideFillUs += micros() - t0;
+    return true;
+}
 // A TextSelect is the Nextion's cyclic spinner: the options (hig px each) slide through a selection
 // band in the middle of the box — two lines in pco1 when dis is set — and whatever sits in the band is
 // the value, drawn in pco2. Sliding turns the wheel; it settles on a row when the finger lifts.
@@ -1444,6 +1537,7 @@ static void drawComp(Comp &c) {
     if (t == "textselect") { drawList(c); return; }
     if (t == "combobox") { drawCombo(c); return; }
     if (t == "sltext") {                                    // slide text: the help/log viewer, val_y pixels scrolled
+        if (slideFill(c)) return;                           // (1.11.144) through the slab, as a drag draws it
         if (c.sta == 1) gfx->fillRect(c.x, c.y, c.w, c.h, c.bco); else restoreUnder(c);
         drawFrame(c, c.bco, false);
         const int bw = c.borderw;
@@ -1689,23 +1783,14 @@ static void redraw(Comp &c) {
 // in the canvas (553 kB of PSRAM), some 900 letters blended into it pixel by pixel, and the box copied to the panel's
 // buffer - three walks through the PSRAM, each with the panel's own reads in its way. On the 16 MB twin that was the
 // best part of 100 ms a step, and the text moved in jerks (Malcolm, 30 Oct 2026: "while sliding the finger it doesn't
-// scroll smoothly"). Now a step draws the text's inner box through a slab of the chip's own RAM, eight rows at a time:
-// the slab is filled and lettered in internal memory (fast, no bus), then written ONCE into the PSRAM - and on the twin
-// straight into the buffer on show, the canvas's bands marked stale so that the rotation's own catch-up
-// (canvasEnsureRows) copies them back when it next comes to them, and the spare's debt noted (flipStale). The same
-// pixels as a full redraw: hmi/test_slide proves it against drawTextIn, offset by offset. The frame and whatever lies
-// around the text are not touched - a drag moves only the text.
+// scroll smoothly"). Now a step goes through the slab (above), written once.
 // (1.11.143) ... and WITHOUT A TEAR. 1.11.142 wrote the step straight into the buffer the panel was scanning: a frame caught
-// part-way showed the box half old, half new - Malcolm's "occasional flickers during scrolling". The old path had been
-// clean because its big change went through the page flip. So now, on the twin, each step is written into the SPARE
-// buffer (nobody is looking at it) and the panel is flipped to it at the frame end: a frame is all old or all new. What
-// the spare lacked of the page (flipStale: everything, after a rotation; the box, after each step) is copied from the
-// buffer on show first, outside the box - the box is written whole. After the flip the buffer that was on show is the
-// spare, short of this one step (flipStale = the box), and the canvas's bands of the box are marked stale unless the
-// canvas has newer rows waiting there (slideFlipDone). One flip a frame paces the steps: ~34 a second at most.
-static uint16_t *slideSlab = nullptr; static const int SLIDE_ROWS = 8;   // (= the rotation's bands: a band marked stale was written whole, or not at all)
-static uint32_t slideN = 0, slideFlipN = 0, slideWaitN = 0, slideUs = 0, slideUsMax = 0, slideDebtUs = 0;   // (/perf "slide")
-static void slideDone() { if (slideSlab) { free(slideSlab); slideSlab = nullptr; } }   // the finger is up: the slab's 12.8 kB of internal RAM back (the update page's secure connection wants every byte of it)
+// part-way showed the box half old, half new - Malcolm's "occasional flickers during scrolling". So, on the twin, each
+// step is written into the SPARE buffer (nobody is looking at it) and the panel is flipped to it at the frame end: a
+// frame is all old or all new. What the spare lacked of the page (flipStale: everything, after a rotation; the box, after
+// each step) is copied from the buffer on show first, outside the box - the box is written whole. After the flip the
+// buffer that was on show is the spare, short of this one step (flipStale = the box), and the canvas's bands of the box
+// are marked stale unless the canvas has newer rows waiting there (slideFlipDone). One flip a frame paces the steps.
 static void slideFlipDone() {                              // (flipTick: a flip completed) the canvas lags the buffer on show in the box's bands
     if (!slideStaleWait) return;
     bool waiting = false;                                  // a change of the canvas waiting to be shown in those rows: the catch-up would undo it - the canvas stays as it is
@@ -1713,16 +1798,19 @@ static void slideFlipDone() {                              // (flipTick: a flip 
     if (!waiting) canvasStale |= slideStaleWait;
     slideStaleWait = 0;
 }
-static inline void slideSpan(uint16_t *dst, const uint16_t *src, int row, int a, int b) { if (b > a) memcpy(dst + row * W + a, src + row * W + a, (b - a) * 2); }
+// (1.11.144) The words of a slide text are drawn when their position follows (setInt val_y clears the wait), or 120 ms on.
+static void slideTxtTick(bool now) {
+    if (slideTxtPending.empty() || (!now && millis() - slideTxtAt < 120)) return;
+    Comp *c = find(slideTxtPending); slideTxtPending.clear();
+    if (c) redraw(*c);
+}
 static int slideDrag(Comp &c, int want) {                  // 1: drawn at `want`; 0: not this way - the caller sets the scroll and redraws as before; -1: not yet (a flip in flight), ask again next pass
     if (loadingPage || noDraw) { c.scroll = want; return 1; }
-    if (c.type != "sltext" || c.sta != 1 || !c.vis || !pageFb) return 0;
+    if (c.type != "sltext" || c.sta != 1 || !c.vis || !pageFb || fbNow != pageFb) return 0;
     const int fi = fontIdx(c.font); if (!aaBits[fi]) return 0;   // (the 1-bit letters go through gfx: the old path)
-    const int bw = c.borderw, ix = c.x + bw, iy = c.y + bw, iw = c.w - 2 * bw, ih = c.h - 2 * bw;
-    const int x0 = max(0, ix), y0 = max(0, iy), x1 = min((int) W, ix + iw), y1 = min((int) H, iy + ih);
-    if (x1 <= x0 || y1 <= y0) { c.scroll = want; return 1; }
+    SlideBox b; if (!slideBox(c, b)) { c.scroll = want; return 1; }
     const int idx = indexOf(c);
-    for (int j = idx + 1; j < (int) page.comps.size(); ++j) if (showsIn(page.comps[j], ix, iy, iw, ih)) return 0;   // something is drawn over it: the old path repaints that too
+    for (int j = idx + 1; j < (int) page.comps.size(); ++j) if (showsIn(page.comps[j], b.ix, b.iy, b.iw, b.ih)) return 0;   // something is drawn over it: the old path repaints that too
     // The twin: the rotation on (a canvas apart from the two panel buffers), the step written into the spare and flipped to.
     const bool twin = flipOk && canvas->lazy && flipFb[flipSpare] && flipFb[flipShown] && flipFb[flipSpare] != flipFb[flipShown] && flipFb[flipSpare] != pageFb && flipFb[flipShown] != pageFb;
     if (twin) {
@@ -1730,15 +1818,12 @@ static int slideDrag(Comp &c, int want) {                  // 1: drawn at `want`
         if (flipPending || flipComposing) { slideWaitN++; return -1; }
         if (dirtyN) { presentDirty(true); if (dirtyN) { slideWaitN++; return -1; } }   // nothing of the canvas may be left waiting: the spare is brought up from the buffer on show
     }
-    if (!slideSlab) slideSlab = (uint16_t *) heap_caps_malloc((size_t) W * SLIDE_ROWS * 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    if (!slideSlab) return 0;
+    if (!slideSlabGet()) return 0;
+    slideDragging = true; slideTxtPending.clear();         // (words that were waiting for their position are drawn here, where the finger has them)
     c.scroll = want;
     const uint32_t t0 = micros();
-    const TextLayout L = textLayout(ix, iy, iw, ih, c.font, c.txt, c.xcen, c.ycen, c.isbr != 0, c.scroll, -1);
-    const NextionFont *f = fontFor(c.font);
-    const uint16_t bg = (uint16_t) c.bco, ink = inkOf(c);
-    uint16_t lut[8]; lut[0] = bg; for (int a = 1; a < 8; ++a) lut[a] = a >= 7 ? ink : blend565(bg, ink, a);   // (as drawGlyphs: the eight shades of a letter on one colour)
-    const int cw = x1 - x0;
+    const TextLayout L = textLayout(b.ix, b.iy, b.iw, b.ih, c.font, c.txt, c.xcen, c.ycen, c.isbr != 0, c.scroll, -1);
+    uint16_t lut[8]; slideLut(c, lut);
     uint16_t *spare = twin ? flipFb[flipSpare] : nullptr; const uint16_t *shown = twin ? flipFb[flipShown] : nullptr;
     if (twin) {
         if (spareHoldsFlight) { spareHoldsFlight = false; if (topCanvas) topCanvas->track = false; flipStale = { 0, 0, (int16_t) W, (int16_t) H }; flipStaleRow = 0; }   // (a kept flight composite: this use of the spare claims it, as a big change would)
@@ -1746,7 +1831,7 @@ static int slideDrag(Comp &c, int want) {                  // 1: drawn at `want`
             const uint32_t d0 = micros();
             const int rx0 = max(0, (int) flipStale.x), rx1 = min((int) W, flipStale.x + flipStale.w), ry0 = max(0, (int) flipStale.y), ry1 = min((int) H, flipStale.y + flipStale.h);
             for (int r = ry0; r < ry1; ++r) {
-                if (r >= y0 && r < y1) { slideSpan(spare, shown, r, rx0, min(rx1, x0)); slideSpan(spare, shown, r, max(rx0, x1), rx1); }
+                if (r >= b.y0 && r < b.y1) { slideSpan(spare, shown, r, rx0, min(rx1, b.x0)); slideSpan(spare, shown, r, max(rx0, b.x1), rx1); }
                 else slideSpan(spare, shown, r, rx0, rx1);
                 if (((r - ry0) & 7) == 7 || r == ry1 - 1) { const int first = r - ((r - ry0) & 7); if (rx1 > rx0) wbPaced((uint32_t) (spare + first * W + rx0), (uint32_t) (((r - first) * W + (rx1 - rx0)) * 2)); }
             }
@@ -1754,44 +1839,24 @@ static int slideDrag(Comp &c, int want) {                  // 1: drawn at `want`
         }
     }
     uint64_t stale = 0;
-    for (int r0 = y0; r0 < y1; ) {
-        const int b = r0 >> 3, r1 = min(y1, (b + 1) << 3), rows = r1 - r0;
-        { uint32_t *p = (uint32_t *) slideSlab; const uint32_t v = (uint32_t) bg << 16 | bg; for (int i = 0, n = (rows * cw + 1) / 2; i < n; ++i) p[i] = v; }   // the background
-        int ly = L.ty;
-        for (const auto &line : L.lines) {                 // every line that crosses these rows, letter by letter, clipped to the box
-            if (ly < r1 && ly + L.fh > r0 && !line.empty()) {
-                int pen = textLineX(L, ix, iw, c.font, c.xcen, line);
-                const int ra = max(r0, ly), rb = min(r1, ly + L.fh);
-                for (unsigned char ch : line) {
-                    if (ch < f->first || ch > f->last) continue;
-                    const NextionGlyph &g = f->glyphs[ch - f->first];
-                    const int gw = g.bitmap_width, rowBytes = (gw + 1) / 2, gx = pen - g.kern_left;
-                    const uint8_t *src = aaBits[fi] + aaOffset[fi][ch - f->first];
-                    const int ca = max(0, x0 - gx), cb = min(gw, x1 - gx);   // the glyph's columns inside the box
-                    for (int row = ra; row < rb; ++row) {
-                        const uint8_t *r = src + (row - ly) * rowBytes; uint16_t *d = slideSlab + (row - r0) * cw;
-                        for (int col = ca; col < cb; ++col) { const int a = (col & 1) ? (r[col >> 1] & 15) : (r[col >> 1] >> 4); if (a) d[gx - x0 + col] = lut[a]; }
-                    }
-                    pen += g.width;
-                }
-            }
-            ly += L.fh;
-        }
-        const bool over = twin && presentArea(x0, r0, cw, rows).over;   // (the rows under our layer: a help page's buttons share the box's first rows)
+    for (int r0 = b.y0; r0 < b.y1; ) {
+        const int band = r0 >> 3, r1 = min(b.y1, (band + 1) << 3), rows = r1 - r0;
+        slideBand(b, L, lut, c.font, fi, c.xcen, r0, r1);
+        const bool over = twin && presentArea(b.x0, r0, b.cw, rows).over;   // (the rows under our layer: a help page's buttons share the box's first rows)
         if (!twin || over) {                               // the canvas: the 4 MB boards (shown by present, as before); on the twin the rows composed with the layer into the spare
-            canvasEnsureRows(r0, rows);                    // (its rows caught up first, as every write into the canvas does)
-            for (int row = r0; row < r1; ++row) memcpy(pageFb + row * W + x0, slideSlab + (row - r0) * cw, cw * 2);
-            if (twin) copyRows(spare, x0, r0, cw, rows, true); else dirty(x0, r0, cw, rows);
+            slideEnsureBand(band, b, r0, r1);
+            for (int row = r0; row < r1; ++row) memcpy(pageFb + row * W + b.x0, slideSlab + (row - r0) * b.cw, b.cw * 2);
+            if (twin) copyRows(spare, b.x0, r0, b.cw, rows, true); else dirty(b.x0, r0, b.cw, rows);
         } else {                                           // the twin: into the spare, whole bands, to be caught up by the canvas once shown
-            for (int row = r0; row < r1; ++row) memcpy(spare + row * W + x0, slideSlab + (row - r0) * cw, cw * 2);
-            wbPaced((uint32_t) (spare + r0 * W + x0), (uint32_t) (((rows - 1) * W + cw) * 2)); stale |= 1ull << b;
+            for (int row = r0; row < r1; ++row) memcpy(spare + row * W + b.x0, slideSlab + (row - r0) * b.cw, b.cw * 2);
+            wbPaced((uint32_t) (spare + r0 * W + b.x0), (uint32_t) (((rows - 1) * W + b.cw) * 2)); stale |= 1ull << band;
         }
         r0 = r1;
     }
-    memoTouched(x0, y0, cw, y1 - y0);
+    memoTouched(b.x0, b.y0, b.cw, b.y1 - b.y0);
     if (twin) {                                            // the flip: at the frame end the panel scans the spare; the buffer that was on show becomes the spare, short of the box
-        slideStaleWait = stale; slideStaleY0 = y0; slideStaleY1 = y1;
-        flipBig = { (int16_t) x0, (int16_t) y0, (int16_t) cw, (int16_t) (y1 - y0) };
+        slideStaleWait = stale; slideStaleY0 = b.y0; slideStaleY1 = b.y1;
+        flipBig = { (int16_t) b.x0, (int16_t) b.y0, (int16_t) b.cw, (int16_t) (b.y1 - b.y0) };
         flipAskedMs = millis(); flipPending = true; flipRotating = false; flipKept = false; flipFrom = flipShown; flipWant = flipSpare;
         slideFlipN++;
     }
@@ -1900,7 +1965,7 @@ struct Host : public NextionHost {
         }
         else if (attr == "x") { repaintHole(c->x, c->y, c->w, c->h); c->x = v; } else if (attr == "y") { repaintHole(c->x, c->y, c->w, c->h); c->y = v; }
         else if (attr == "w") c->w = v; else if (attr == "h") c->h = v; else if (attr == "pic") c->pic = v; else if (attr == "pic2") c->pic2 = v; else if (attr == "font") c->font = v;
-        else if (attr == "val_y") c->scroll = c->type == "sltext" ? constrain((int) v, 0, (int) getInt(pg, nm, "maxval_y")) : max(0, (int) v);   // (1.11.96) never past the text: a sum on the main board's side once scrolled the log 96 px beyond its last line, and the box showed blank
+        else if (attr == "val_y") { c->scroll = c->type == "sltext" ? constrain((int) v, 0, (int) getInt(pg, nm, "maxval_y")) : max(0, (int) v); if (c->type == "sltext") slideTxtPending.clear(); }   // (1.11.96) never past the text: a sum on the main board's side once scrolled the log 96 px beyond its last line, and the box showed blank. (1.11.144: the position the words were waiting for)
         else if (attr == "en") { c->en = v; paint = false; } else if (attr == "tim") { c->tim = v; paint = false; }
         else if (c->type == "rangebar") { auto it = c->extra.find(attr); if (it != c->extra.end() && it->second == v && !c->damaged) { perfSkipped++; return; } c->extra[attr] = v; }   // (a divider, the marker, the kind: the bar is drawn again)
         else { c->extra[attr] = v; paint = false; }
@@ -1942,6 +2007,7 @@ struct Host : public NextionHost {
         if (!c->damaged && c->txt == s && c->type != "sltext") { perfSkipped++; return; }   // (1.11.120: a picture named again is not read off the card again - the main board names the model's picture at every entry to the Models page, right after the page that drew it)
         c->txt = s; if (c->type == "sltext") c->scroll = 0;
         if (c->type == "external picture") picsLaterDrop(nm);   // (drawn now with its new name: not again after the rotation)
+        if (c->type == "sltext") { slideTxtPending = c->name; slideTxtAt = millis(); return; }   // (1.11.144) drawn when its position follows (the main board sends val_y 50 ms after the words), or 120 ms on - not at the top first
         redraw(*c);
     }
     void send(const uint8_t *b, size_t n) override {
@@ -2932,7 +2998,7 @@ static void webBegin() {
                               (unsigned long) frameEnds, (unsigned long) frameUs);   // (frame_ends grows 23 a second once the hook works, 34.6 on the twin; frame_us ~43090, ~28920 on the twin)
         perfCmds = perfHandleUs = perfPresentN = perfPresentUs = perfPresentPx = perfFillFull = perfFillInc = perfSkipped = perfLoopMaxMs = 0; perfRxMax = 0;
         std::string out = b; out.pop_back();
-        { char s[128]; snprintf(s, sizeof(s), ",\"slide\":{\"n\":%lu,\"flips\":%lu,\"waits\":%lu,\"us\":%lu,\"max_us\":%lu,\"debt_us\":%lu}", (unsigned long) slideN, (unsigned long) slideFlipN, (unsigned long) slideWaitN, (unsigned long) slideUs, (unsigned long) slideUsMax, (unsigned long) slideDebtUs); out += s; slideN = slideFlipN = slideWaitN = slideUs = slideUsMax = slideDebtUs = 0; }   // (1.11.142) the slide text's drag steps: drawn, flipped to (the twin), put off for a flip in flight, their time, the spare's debt
+        { char s[160]; snprintf(s, sizeof(s), ",\"slide\":{\"n\":%lu,\"flips\":%lu,\"waits\":%lu,\"us\":%lu,\"max_us\":%lu,\"debt_us\":%lu,\"fills\":%lu,\"fill_us\":%lu}", (unsigned long) slideN, (unsigned long) slideFlipN, (unsigned long) slideWaitN, (unsigned long) slideUs, (unsigned long) slideUsMax, (unsigned long) slideDebtUs, (unsigned long) slideFillN, (unsigned long) slideFillUs); out += s; slideN = slideFlipN = slideWaitN = slideUs = slideUsMax = slideDebtUs = slideFillN = slideFillUs = 0; }   // (1.11.142) the slide text's drag steps: drawn, flipped to (the twin), put off for a flip in flight, their time, the spare's debt
         out += ",\"max_us\":{";
         for (int i = 0; i < 7; ++i) { char e[40]; snprintf(e, sizeof(e), "%s\"%s\":%lu", i ? "," : "", phaseName[i], (unsigned long) phaseMax[i]); out += e; phaseMax[i] = 0; }
         out += "},";
@@ -3809,7 +3875,7 @@ void loop() {
     { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && (clipDropOne() || bgEvictOne())) psramEvictions++; } }   // (1.11.132/133: clips first) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
     { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)
     { Busy b(BUSY_TIMERS); pollTimers(); } PHASE(4)
-    presentDirty(touchPainted); touchPainted = false; PHASE(5)   // a finger's feedback is shown at once; the Teensy's at the end of its burst
+    slideTxtTick(false); presentDirty(touchPainted); touchPainted = false; PHASE(5)   // a finger's feedback is shown at once; the Teensy's at the end of its burst (1.11.144: a slide text's words 120 ms on if their position never came)
     { Busy b(BUSY_WIFI); netPoll(); } PHASE(6)
     #undef PHASE
 }

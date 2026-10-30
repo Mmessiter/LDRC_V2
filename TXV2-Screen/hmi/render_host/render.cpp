@@ -178,7 +178,8 @@ int main(int argc, char **argv) {
     while (fgets(line, sizeof(line), in)) {
         std::string s = line; while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
         if (s.empty() || s[0] == '#') continue;
-        if (s.rfind("@shot ", 0) == 0) { if (!shot(argv[3] + s.substr(6) + ".ppm")) { fprintf(stderr, "render: cannot write %s\n", (argv[3] + s.substr(6)).c_str()); return 1; } shots++; continue; }
+        if (s.rfind("@slidefill ", 0) == 0) { slideFillOn = s[11] == '1'; continue; }   // (1.11.144) 0: the slide text drawn the old way (hmi/test_slide's reference)
+        if (s.rfind("@shot ", 0) == 0) { slideTxtTick(true); if (!shot(argv[3] + s.substr(6) + ".ppm")) { fprintf(stderr, "render: cannot write %s\n", (argv[3] + s.substr(6)).c_str()); return 1; } shots++; continue; }
         if (s.rfind("@model ", 0) == 0) { txStatus = (s[7] == '1' ? TX_MODEL : 0) | (txStatus > 0 ? (txStatus & TX_RADIOS_OFF) : 0); continue; }
         if (s.rfind("@flying ", 0) == 0) { if (txStatus < 0) txStatus = 0; txStatus = s[8] == '1' ? (txStatus | TX_RADIOS_OFF) : (txStatus & ~TX_RADIOS_OFF); tx.armed = s[8] == '1'; continue; }
         if (s.rfind("@flightsetup ", 0) == 0) { flightShot(s.substr(13), true); continue; }
