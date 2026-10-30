@@ -191,7 +191,8 @@ int main(int argc, char **argv) {
             char nm[64] = ""; int v = 0;
             if (sscanf(s.c_str() + 7, "%63s %d", nm, &v) != 2) { fprintf(stderr, "render: @slide NAME VAL\n"); return 1; }
             Comp *c = find(nm); if (!c) { fprintf(stderr, "render: @slide: no %s\n", nm); return 1; }
-            c->scroll = v; const bool ok = slideDrag(*c); printf("@slide %s %d -> %s\n", nm, v, ok ? "slab" : "fallback");
+            const int r = slideDrag(*c, v); if (r == 0) c->scroll = v;   // (1.11.143: the drag sets the scroll itself when it draws; 0 = the old path would)
+            printf("@slide %s %d -> %s\n", nm, v, r > 0 ? "slab" : r == 0 ? "fallback" : "wait");
             continue;
         }
         if (s.rfind("@compint ", 0) == 0) {                // "@compint NAME FIELD VAL": a component's xcen, ycen, isbr or borderw, for the tests (then redrawn)
