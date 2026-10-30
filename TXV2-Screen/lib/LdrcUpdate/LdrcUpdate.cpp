@@ -569,7 +569,11 @@ bool Updater::textArrived() {
     if (host_.busy()) { if (now - since_ > 60000) { host_.stopWork(); message("messiter.com did not answer", "Check the WiFi, then try again."); } return false; }
     const Work &w = host_.done();
     if (w.ok) return true;
-    note("asking messiter.com: " + w.error + (textTries_ < 3 ? " (it is asked again)" : ""));
+    note("asking messiter.com: " + w.error + (textTries_ < 3 && !(quiet_ && w.memory) ? " (it is asked again)" : ""));
+    // (1.11.146) The quiet look and no memory for the connection: one ask, and that is the end of it for this power-up - no
+    // restart (nobody asked for the look), no second try (30 Oct 2026: a twin asked twenty times over, its internal RAM down
+    // to 120 bytes each time, and its WiFi fell off under it).
+    if (quiet_ && w.memory) { note("quiet look: the screen is short of memory for the secure connection - not again this power-up"); quietEnd(4); return false; }
     if (flyingNow() != UpdateHost::FLY_NO) { notNow(); return false; }
     if ((phase_ == P_LATEST || phase_ == P_DESCR) && freshForMemory(w)) return false;
     if (textTries_ >= 3 && freshDone_ && !textRound2_) {   // (1.11.130) a run that began from a fresh start: the WiFi has only just joined (26 Oct: three asks within seconds, all "no connection"; asked again half a minute later it answered) - a longer breath, then three tries more

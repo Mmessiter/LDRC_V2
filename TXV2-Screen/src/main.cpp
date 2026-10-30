@@ -38,6 +38,7 @@
 #include "tooth_icon.h"
 #include <esp_partition.h>
 #include "board.h"                                      // (1.11.111) which of the two boards this is: the pins that differ, the update slot
+#include "tls_memory.h"                                 // (1.11.146) the secure connection's ~70 kB come from the PSRAM, not the internal RAM
 
 #ifndef NEXTION_BAUD
 #define NEXTION_BAUD 921600
@@ -45,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.145"
+#define SCREEN_VERSION "1.11.146"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2970,6 +2971,7 @@ static void webBegin() {
         out += ",\"sd_gone\":" + std::to_string((unsigned long) sdGoneMs);   // (1.11.138) when the card stopped answering and was given up (0: never)
         out += ","; out += packJson();                    // (1.11.138) the pack: pages, fonts and sounds in the chip's flash (16 MB boards)                    // (1.11.137) the chip's own RAM and our holders of it
         out += ","; out += psramJson();                   // (1.11.132) the PSRAM's holders: largest free block, resident pictures of the most allowed, the floor's evictions, the layer, the model picture, the film
+        out += ","; out += tlsJson();                     // (1.11.146) the secure connection's memory: from the PSRAM, held now and at most, refused
         { char q[200]; snprintf(q, sizeof(q), ",\"film\":{\"pictures\":%lu,\"skipped\":%lu,\"decode_us\":%lu,\"decode_max\":%lu,\"fade_steps\":%lu,\"fade_max\":%lu}",
                                 (unsigned long) filmPictures, (unsigned long) filmSkipped, (unsigned long) filmDecodeUs, (unsigned long) filmDecodeMax, (unsigned long) filmFadeSteps, (unsigned long) filmFadeMax); out += q; }   // (1.11.85) the last film: pictures shown, missed, decode time   // (1.11.67) the front screen's switch in the panel's quiet time; (1.11.68) shown as kept, drawn whole, drawn ahead, the longest piece
         { char q[480]; snprintf(q, sizeof(q), ",\"flip\":{\"why\":\"%s\",\"n\":%lu,\"shown\":%u,\"compose_max\":%lu,\"wait_max\":%lu,\"syncs\":%lu,\"rests\":%lu,\"rot\":%lu,\"stale\":%d,\"ensured\":%lu,\"fspare\":%d,\"fshown\":%d,\"last\":{\"draw\":%lu,\"compose\":%lu,\"shown\":%lu,\"sd\":%lu,\"parse\":%lu,\"pre\":%lu,\"bg\":%lu,\"comps\":%lu,\"text\":[%lu,%lu],\"pic\":[%lu,%lu],\"other\":[%lu,%lu]}}",
@@ -3736,6 +3738,7 @@ static std::string psramJson() {
     return b;
 }
 void setup() {
+    tlsMemoryBegin();                                      // (1.11.146) FIRST: mbedTLS draws on the PSRAM from here on (src/tls_memory.h)
     Serial.setRxBufferSize(32768);                        // BEFORE begin(): set afterwards it stayed at 256 bytes and telemetry bursts overran it
     Serial.begin(NEXTION_BAUD);
     esp_log_set_vprintf(sysLogHook);                      // 1.11.5: the system's own error lines come to us, not to the main board

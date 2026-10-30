@@ -52,14 +52,21 @@ static bool updAsk(const std::string &url, int &len, std::string &err) {
     if (code != 200) {
         char why[96] = ""; const int tls = updTls->lastError(why, sizeof why);
         if (code > 0) { char b[48]; snprintf(b, sizeof b, "messiter.com answered %d", code); err = b; }
-        else if (tls == -0x2700) err = "the certificate of messiter.com was not accepted";      // MBEDTLS_ERR_X509_CERT_VERIFY_FAILED
+        else if (tls == -0x2700) {                                                              // MBEDTLS_ERR_X509_CERT_VERIFY_FAILED
+            // (1.11.146) mbedTLS says "verify failed" when it could not even PARSE the chain for want of memory (Mehul's twin,
+            // 30 Oct: the quiet look at power-up "not accepted" twenty times over, the internal RAM down to 120 bytes). Its
+            // memory is the PSRAM's now (src/tls_memory.h); should the pool be short, that is said, and the certificate is
+            // blamed only when the memory was there.
+            if (tlsRoom() < 70000) { char b[72]; snprintf(b, sizeof b, "the screen is short of memory for the secure connection [room %u]", (unsigned) tlsRoom()); err = b; updNoMemory = true; }
+            else err = "the certificate of messiter.com was not accepted";
+        }
         else {
             err = "no connection to messiter.com"; if (tls) { char b[64]; snprintf(b, sizeof b, " (%d, -0x%04X)", code, (unsigned) -tls); err += b; } else { char b[24]; snprintf(b, sizeof b, " (%d)", code); err += b; }
-            updNoMemory = tls == -0x7F00 || ESP.getMaxAllocHeap() < 40000;   // MBEDTLS_ERR_SSL_ALLOC_FAILED: the updater restarts the screen once for this (1.11.32)
+            updNoMemory = tls == -0x7F00 || tlsRoom() < 40000;   // MBEDTLS_ERR_SSL_ALLOC_FAILED: the updater restarts the screen once for this (1.11.32); (1.11.146) the room is the PSRAM's, not the internal RAM's
             // 1.11.11 (Malcolm, 7 Oct: "could not join the Wi-Fi usefully until I had switched the transmitter off and on",
             // twice): a TLS connection wants some 45 kB of memory in one piece; after a Bluetooth session there may not be.
             // The numbers go into the message, so the next time says which it was.
-            { char b[64]; snprintf(b, sizeof b, " [heap %u, largest %u, rssi %d]", (unsigned) ESP.getFreeHeap(), (unsigned) ESP.getMaxAllocHeap(), (int) WiFi.RSSI()); err += b; }
+            { char b[80]; snprintf(b, sizeof b, " [heap %u, largest %u, tls room %u, rssi %d]", (unsigned) ESP.getFreeHeap(), (unsigned) ESP.getMaxAllocHeap(), (unsigned) tlsRoom(), (int) WiFi.RSSI()); err += b; }
         }
         updHangUp();
         return false;
@@ -624,7 +631,7 @@ static void updPoll() {
             updater.beginQuiet();
         }
         const int o = updater.quietOutcome();
-        if (o == 1 || o == 2) quietDone = true;
+        if (o == 1 || o == 2 || o == 4) quietDone = true;   // (1.11.146) 4: short of memory for the secure connection - not again this power-up (the twin thrashed twenty times before)
         std::string n;
         if (updater.news(n)) { banner(n.c_str(), 20000); audioStart(17, false); }
     }

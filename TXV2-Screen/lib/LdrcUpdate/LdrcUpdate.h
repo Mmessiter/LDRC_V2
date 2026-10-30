@@ -174,7 +174,8 @@ public:
     void press(int button);                       // 1 or 2
     // (1.11.141) The quiet look at power-up (Malcolm, 29 Oct 2026: "Mehul is unlikely to remember to check for updates"):
     // the same check as begin(), with no panel - only on a WiFi already joined, with no model connected. quietOutcome():
-    // 0 none or under way, 1 up to date, 2 something newer (news() has the words, once), 3 could not look (ask again later).
+    // 0 none or under way, 1 up to date, 2 something newer (news() has the words, once), 3 could not look (ask again later),
+    // 4 (1.11.146) no memory for the secure connection: one ask, no restart, not again this power-up.
     // Nothing is installed by it: the pilot's own press does that.
     bool beginQuiet();
     int quietOutcome() const { return quietOutcome_; }
