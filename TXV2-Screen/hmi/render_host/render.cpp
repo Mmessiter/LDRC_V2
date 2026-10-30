@@ -187,6 +187,23 @@ int main(int argc, char **argv) {
         if (s == "@appearance") { appearanceShot(); continue; }
         if (s.rfind("@pong ", 0) == 0) { pongShot(s.substr(6)); continue; }
         if (s == "@colours" || s.rfind("@colours ", 0) == 0) { coloursShot(s.size() > 9 ? s.substr(9) : std::string()); continue; }
+        if (s.rfind("@slide ", 0) == 0) {                  // (1.11.142) "@slide NAME VAL": the slide text dragged to VAL, through the slab (hmi/test_slide)
+            char nm[64] = ""; int v = 0;
+            if (sscanf(s.c_str() + 7, "%63s %d", nm, &v) != 2) { fprintf(stderr, "render: @slide NAME VAL\n"); return 1; }
+            Comp *c = find(nm); if (!c) { fprintf(stderr, "render: @slide: no %s\n", nm); return 1; }
+            c->scroll = v; const bool ok = slideDrag(*c); printf("@slide %s %d -> %s\n", nm, v, ok ? "slab" : "fallback");
+            continue;
+        }
+        if (s.rfind("@compint ", 0) == 0) {                // "@compint NAME FIELD VAL": a component's xcen, ycen, isbr or borderw, for the tests (then redrawn)
+            char nm[64] = "", fld[16] = ""; int v = 0;
+            if (sscanf(s.c_str() + 9, "%63s %15s %d", nm, fld, &v) != 3) { fprintf(stderr, "render: @compint NAME FIELD VAL\n"); return 1; }
+            Comp *c = find(nm); if (!c) { fprintf(stderr, "render: @compint: no %s\n", nm); return 1; }
+            const std::string F = fld;
+            if (F == "xcen") c->xcen = v; else if (F == "ycen") c->ycen = v; else if (F == "isbr") c->isbr = v; else if (F == "borderw") c->borderw = v;
+            else { fprintf(stderr, "render: @compint: no field %s\n", fld); return 1; }
+            redraw(*c);
+            continue;
+        }
         if (s[0] == '@' && ownCommand(s)) continue;
         handle(unescape(s));
     }

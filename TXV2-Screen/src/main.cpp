@@ -45,7 +45,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.141"
+#define SCREEN_VERSION "1.11.142"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1203,37 +1203,47 @@ static std::string inkOf(const std::string &s) { size_t e = s.find_last_not_of('
 // cutInset >= 0: a single line too wide for its box ends in "..." rather than in half a letter (screen 1.5.6, Malcolm's
 // pages at night: a long model name, the owner's name); the frame's width is kept clear. -1: clipped, as the Nextion does.
 static int frameWidth(const Comp &c) { return c.style == 1 ? max(1, c.borderw) : (c.style >= 2 && c.style <= 4) ? 2 : c.style == 5 ? MSGBOX_RING + MSGBOX_FRAME : 0; }
-static void drawTextIn(int x, int y, int w, int h, int font, uint16_t col, const std::string &s, int xcen, int ycen, bool wrap = false, int offY = 0, int cutInset = -1) {
-    if (s.empty()) return;
-    const int fh = fontHeight(font), pad = 2;
-    std::vector<std::string> lines = textLines(s, font, w, wrap);
+// (1.11.142) The lines of a text in its box and where they go, laid out as the Nextion does: one place for drawTextIn and
+// for the slide text under a finger (slideDrag), so that the two can only ever draw the same pixels.
+struct TextLayout { std::vector<std::string> lines; int fh = 0, bx = 0, ty = 0; };   // the lines; a line's height; the block's x; the first line's y, scrolled
+static const int TEXT_PAD = 2;
+static TextLayout textLayout(int x, int y, int w, int h, int font, const std::string &s, int xcen, int ycen, bool wrap, int offY, int cutInset) {
+    TextLayout L;
+    L.fh = fontHeight(font);
+    L.lines = textLines(s, font, w, wrap);
     // The Nextion lays the lines out as ONE BLOCK: lines left-aligned inside it, the block centred (or
     // not) in the box, and a block too tall or too wide for the box starts from the top / the left — the
     // switches page's six-line note shows its first four lines, not its middle four.
     // Blank lines at the END of the text do not count (the trim-direction boxes hold one line and up to four
     // blank ones: the V1 centres that one line in each box).
-    while (lines.size() > 1 && lines.back().find_first_not_of(" \t") == std::string::npos) lines.pop_back();
-    if (cutInset >= 0 && lines.size() == 1) {
-        std::string ink = inkOf(lines[0]); const int room = w - 2 * cutInset - (xcen == 1 ? 0 : pad);   // (the room the words have: all of it when centred, after the margin otherwise)
-        if (textWidth(font, ink) > room) { while (!ink.empty() && textWidth(font, ink + "...") > room) ink.pop_back(); lines[0] = inkOf(ink) + "..."; }
+    while (L.lines.size() > 1 && L.lines.back().find_first_not_of(" \t") == std::string::npos) L.lines.pop_back();
+    if (cutInset >= 0 && L.lines.size() == 1) {
+        std::string ink = inkOf(L.lines[0]); const int room = w - 2 * cutInset - (xcen == 1 ? 0 : TEXT_PAD);   // (the room the words have: all of it when centred, after the margin otherwise)
+        if (textWidth(font, ink) > room) { while (!ink.empty() && textWidth(font, ink + "...") > room) ink.pop_back(); L.lines[0] = inkOf(ink) + "..."; }
     }
-    const int th = (int) lines.size() * fh;
+    const int th = (int) L.lines.size() * L.fh;
     // Centred words are centred by their ink: trailing spaces do not push them aside (the Teensy pads "Not used" with
     // nine spaces on the switches page, which put it 31 px left of the middle).
-    int bw = 0; for (auto &line : lines) bw = max(bw, textWidth(font, xcen == 1 ? inkOf(line) : line));
-    int bx = xcen == 1 ? x + (w - bw) / 2 : xcen == 2 ? x + w - bw - pad : x + pad;
+    int bw = 0; for (auto &line : L.lines) bw = max(bw, textWidth(font, xcen == 1 ? inkOf(line) : line));
+    int bx = xcen == 1 ? x + (w - bw) / 2 : xcen == 2 ? x + w - bw - TEXT_PAD : x + TEXT_PAD;
     if (bx < x) bx = x;
     int ty = ycen == 1 ? y + (h - th) / 2 : ycen == 2 ? y + h - th - 1 : y + 1;
     if (ty < y) ty = y;
-    ty -= offY;
+    L.bx = bx; L.ty = ty - offY;
+    return L;
+}
+static int textLineX(const TextLayout &L, int x, int w, int font, int xcen, const std::string &line) {   // where a line starts: right-aligned lines each by their own width
+    return xcen == 2 ? max(x, x + w - textWidth(font, line) - TEXT_PAD) : L.bx;
+}
+static void drawTextIn(int x, int y, int w, int h, int font, uint16_t col, const std::string &s, int xcen, int ycen, bool wrap = false, int offY = 0, int cutInset = -1) {
+    if (s.empty()) return;
+    const TextLayout L = textLayout(x, y, w, h, font, s, xcen, ycen, wrap, offY, cutInset);
     clipX0 = max(0, x); clipY0 = max(0, y); clipX1 = min(W, x + w); clipY1 = min(H, y + h);
     gfx->startWrite();
-    for (auto &line : lines) {
-        if (ty + fh > y && ty < y + h && !line.empty()) {
-            const int tx = xcen == 2 ? max(x, x + w - textWidth(font, line) - pad) : bx;
-            drawGlyphs(tx, ty, font, col, line);
-        }
-        ty += fh;
+    int ty = L.ty;
+    for (auto &line : L.lines) {
+        if (ty + L.fh > y && ty < y + h && !line.empty()) drawGlyphs(textLineX(L, x, w, font, xcen, line), ty, font, col, line);
+        ty += L.fh;
     }
     gfx->endWrite();
     clipX0 = 0; clipY0 = 0; clipX1 = W; clipY1 = H;
@@ -1671,6 +1681,79 @@ static void redraw(Comp &c) {
         const int nx = min(x, lx), ny = min(y, ly); w = max(x + w, lx + lw) - nx; h = max(y + h, ly + lh) - ny; x = nx; y = ny;
     }
     memoTouched(x, y, w, h); dirty(x, y, w, h);
+}
+// (1.11.142) A SLIDE TEXT UNDER A FINGER. Dragging the help/log viewer redrew its whole box for every step: the box filled
+// in the canvas (553 kB of PSRAM), some 900 letters blended into it pixel by pixel, and the box copied to the panel's
+// buffer - three walks through the PSRAM, each with the panel's own reads in its way. On the 16 MB twin that was the
+// best part of 100 ms a step, and the text moved in jerks (Malcolm, 30 Oct 2026: "while sliding the finger it doesn't
+// scroll smoothly"). Now a step draws the text's inner box through a slab of the chip's own RAM, eight rows at a time:
+// the slab is filled and lettered in internal memory (fast, no bus), then written ONCE into the PSRAM - and on the twin
+// straight into the buffer on show, the canvas's bands marked stale so that the rotation's own catch-up
+// (canvasEnsureRows) copies them back when it next comes to them, and the spare's debt noted (flipStale). The same
+// pixels as a full redraw: hmi/test_slide proves it against drawTextIn, offset by offset. The frame and whatever lies
+// around the text are not touched - a drag moves only the text.
+static uint16_t *slideSlab = nullptr; static const int SLIDE_ROWS = 8;   // (= the rotation's bands: a band marked stale was written whole, or not at all)
+static uint32_t slideN = 0, slideDirectN = 0, slideUs = 0, slideUsMax = 0;   // (/perf "slide")
+static void slideDone() { if (slideSlab) { free(slideSlab); slideSlab = nullptr; } }   // the finger is up: the slab's 12.8 kB of internal RAM back (the update page's secure connection wants every byte of it)
+static bool slideDrag(Comp &c) {                           // true: drawn (or nothing to draw); false: not this way - redraw(c) as before
+    if (loadingPage || noDraw) return true;
+    if (c.type != "sltext" || c.sta != 1 || !c.vis || !pageFb) return false;
+    const int fi = fontIdx(c.font); if (!aaBits[fi]) return false;   // (the 1-bit letters go through gfx: the old path)
+    const int bw = c.borderw, ix = c.x + bw, iy = c.y + bw, iw = c.w - 2 * bw, ih = c.h - 2 * bw;
+    const int x0 = max(0, ix), y0 = max(0, iy), x1 = min((int) W, ix + iw), y1 = min((int) H, iy + ih);
+    if (x1 <= x0 || y1 <= y0) return true;
+    const int idx = indexOf(c);
+    for (int j = idx + 1; j < (int) page.comps.size(); ++j) if (showsIn(page.comps[j], ix, iy, iw, ih)) return false;   // something is drawn over it: the old path repaints that too
+    if (!slideSlab) slideSlab = (uint16_t *) heap_caps_malloc((size_t) W * SLIDE_ROWS * 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!slideSlab) return false;
+    const uint32_t t0 = micros();
+    const TextLayout L = textLayout(ix, iy, iw, ih, c.font, c.txt, c.xcen, c.ycen, c.isbr != 0, c.scroll, -1);
+    const NextionFont *f = fontFor(c.font);
+    const uint16_t bg = (uint16_t) c.bco, ink = inkOf(c);
+    uint16_t lut[8]; lut[0] = bg; for (int a = 1; a < 8; ++a) lut[a] = a >= 7 ? ink : blend565(bg, ink, a);   // (as drawGlyphs: the eight shades of a letter on one colour)
+    // The twin (the rotation: a canvas apart from the buffer on show, caught up band by band), between page changes: the
+    // bands straight into the buffer on show. A band with our layer over it (a help page's buttons share the box's first
+    // rows) goes through the canvas as ever: present composes page and layer. First, nothing of the canvas may still be
+    // waiting to be shown in any row: the catch-up from the buffer on show would undo it.
+    const bool directOk = flipOk && !flipPending && !flipComposing && canvas->lazy && flipFb[flipShown] && flipFb[flipShown] != pageFb;
+    if (directOk && dirtyN) { presentDirty(true); if (dirtyN) return false; }
+    uint16_t *shown = directOk ? flipFb[flipShown] : nullptr;
+    const int cw = x1 - x0; bool anyDirect = false;
+    for (int r0 = y0; r0 < y1; ) {
+        const int b = r0 >> 3, r1 = min(y1, (b + 1) << 3), rows = r1 - r0;
+        { uint32_t *p = (uint32_t *) slideSlab; const uint32_t v = (uint32_t) bg << 16 | bg; for (int i = 0, n = (rows * cw + 1) / 2; i < n; ++i) p[i] = v; }   // the background
+        int ly = L.ty;
+        for (const auto &line : L.lines) {                 // every line that crosses these rows, letter by letter, clipped to the box
+            if (ly < r1 && ly + L.fh > r0 && !line.empty()) {
+                int pen = textLineX(L, ix, iw, c.font, c.xcen, line);
+                const int ra = max(r0, ly), rb = min(r1, ly + L.fh);
+                for (unsigned char ch : line) {
+                    if (ch < f->first || ch > f->last) continue;
+                    const NextionGlyph &g = f->glyphs[ch - f->first];
+                    const int gw = g.bitmap_width, rowBytes = (gw + 1) / 2, gx = pen - g.kern_left;
+                    const uint8_t *src = aaBits[fi] + aaOffset[fi][ch - f->first];
+                    const int ca = max(0, x0 - gx), cb = min(gw, x1 - gx);   // the glyph's columns inside the box
+                    for (int row = ra; row < rb; ++row) {
+                        const uint8_t *r = src + (row - ly) * rowBytes; uint16_t *d = slideSlab + (row - r0) * cw;
+                        for (int col = ca; col < cb; ++col) { const int a = (col & 1) ? (r[col >> 1] & 15) : (r[col >> 1] >> 4); if (a) d[gx - x0 + col] = lut[a]; }
+                    }
+                    pen += g.width;
+                }
+            }
+            ly += L.fh;
+        }
+        const bool direct = shown && !presentArea(x0, r0, cw, rows).over;
+        uint16_t *dst = direct ? shown : pageFb;
+        if (!direct) canvasEnsureRows(r0, rows);           // (drawing into the canvas: its rows caught up first, as every write does)
+        for (int row = r0; row < r1; ++row) memcpy(dst + row * W + x0, slideSlab + (row - r0) * cw, cw * 2);
+        if (direct) { wbPaced((uint32_t) (dst + r0 * W + x0), (uint32_t) (((rows - 1) * W + cw) * 2)); canvasStale |= 1ull << b; anyDirect = true; }
+        else dirty(x0, r0, cw, rows);
+        r0 = r1;
+    }
+    memoTouched(x0, y0, cw, y1 - y0);
+    if (anyDirect) { flipStale = rectJoin(flipStale, { (int16_t) x0, (int16_t) y0, (int16_t) cw, (int16_t) (y1 - y0) }); flipStaleRow = 0; slideDirectN++; }   // (the spare's debt: the next compose covers it)
+    const uint32_t us = micros() - t0; slideN++; slideUs += us; if (us > slideUsMax) slideUsMax = us;
+    return true;
 }
 static void needRedraw() { for (auto &c : page.comps) if (!c.need.empty() && c.vis) redraw(c); }
 static void drawPicsLater() { if (benchSkip & 1) { picsLater.clear(); return; } std::vector<std::string> names; names.swap(picsLater); for (auto &nm : names) if (Comp *c = find(nm)) redraw(*c); }   // (1.11.120: after the rotation)
@@ -2645,10 +2728,10 @@ static void pollTouch() {
         if (abs(dy) > 8) dragged = true;
         if (dragged) {
             const int want = c.type == "sltext" ? constrain(dragS0 - dy, 0, (int) host.getInt("", c.name, "maxval_y")) : listWrap(c, dragS0 - dy);
-            if (want != c.scroll && now - lastDragDraw > 40) { c.scroll = want; lastDragDraw = now; redraw(c); }
+            if (want != c.scroll && now - lastDragDraw > 40) { c.scroll = want; lastDragDraw = now; if (!slideDrag(c)) redraw(c); }   // (1.11.142) the text through the slab; a list as before
         }
     } else if (up) {
-        down = false; lastRelease = now;
+        down = false; lastRelease = now; slideDone();         // (1.11.142: the slide text's slab given back)
         host.sys["tch2"] = lastX; host.sys["tch3"] = lastY; host.sys["tch0"] = 0; host.sys["tch1"] = 0;   // the curve page reads where the finger lifted
         if (held >= 0 && held < (int) page.comps.size()) {
             Comp &c = page.comps[held]; c.pressed = false;   // (a switch, dual-state button, checkbox or radio changed as the finger landed, above)
@@ -2802,7 +2885,9 @@ static void webBegin() {
                               (unsigned long) perfFillFull, (unsigned long) perfFillInc, (unsigned long) perfSkipped, perfRxMax, (unsigned long) perfLoopMaxMs, (unsigned long) badCount,
                               (unsigned long) frameEnds, (unsigned long) frameUs);   // (frame_ends grows 23 a second once the hook works, 34.6 on the twin; frame_us ~43090, ~28920 on the twin)
         perfCmds = perfHandleUs = perfPresentN = perfPresentUs = perfPresentPx = perfFillFull = perfFillInc = perfSkipped = perfLoopMaxMs = 0; perfRxMax = 0;
-        std::string out = b; out.pop_back(); out += ",\"max_us\":{";
+        std::string out = b; out.pop_back();
+        { char s[96]; snprintf(s, sizeof(s), ",\"slide\":{\"n\":%lu,\"direct\":%lu,\"us\":%lu,\"max_us\":%lu}", (unsigned long) slideN, (unsigned long) slideDirectN, (unsigned long) slideUs, (unsigned long) slideUsMax); out += s; slideN = slideDirectN = slideUs = slideUsMax = 0; }   // (1.11.142) the slide text's drag steps
+        out += ",\"max_us\":{";
         for (int i = 0; i < 7; ++i) { char e[40]; snprintf(e, sizeof(e), "%s\"%s\":%lu", i ? "," : "", phaseName[i], (unsigned long) phaseMax[i]); out += e; phaseMax[i] = 0; }
         out += "},";
         out += dmaPerfJson();                              // (25 Oct) the panel's DMA: frames met late = the picture slipped
