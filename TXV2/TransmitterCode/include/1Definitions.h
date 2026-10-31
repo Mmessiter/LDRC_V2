@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B162 31/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B163 31/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1206,6 +1206,8 @@ uint16_t ReadAFewLines();
 void LogVIEWNew();
 File OpenTextFileForReading();
 void StartLogFileView();
+extern bool TextInWasStashed;          // B163: Nextion.h - TextIn came from PendingEvent
+void NoteLogOpener(const char *what); // B163: LogFiles.h - today's log asked for by a frame: which, from which page, as the log's own last line
 void LogTotalRXGoodPackets();
 void LogTotalRXGoodPackets();
 void LogTotalPacketsAttempted();

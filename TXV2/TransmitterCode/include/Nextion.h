@@ -151,6 +151,7 @@ void SendOtherValue(char *nbox, int value)
 // (Return-code debris -- 0x01/0x1A + FF FF FF -- is non-printable and still dropped.)
 char PendingEvent[128];
 uint16_t PendingEventLen = 0;
+bool TextInWasStashed = false; // B163: the frame in TextIn came from PendingEvent (set aside by a get window or a send), not a read of the port
 
 void StashPrintableBytes(const char *src, uint16_t len)
 {
@@ -299,10 +300,12 @@ bool GetButtonPress()
         memcpy(TextIn, PendingEvent, PendingEventLen);
         TextIn[PendingEventLen] = 0;
         PendingEventLen = 0;
+        TextInWasStashed = true; // (B163)
         return true;
     }
     if (NEXTION.available())
     {
+        TextInWasStashed = false;
         if (NEXTION.peek() == 0xA5)
         {   // V1B: A5 5A begins a frame of the screen's file link (LinkMode.h), which must never be read as a touch.
             // A5 alone begins the touch code 128+37: that one is put back together and handled as ever.

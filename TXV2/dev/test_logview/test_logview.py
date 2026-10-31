@@ -29,6 +29,7 @@ FAKE_DEFS = r'''
 #define FASTRUN
 #define MAXFILELEN (1024 * 3)
 #define LOGVIEW 23
+#define MODELSVIEW 5
 #define FILE_READ 0
 #define FILE_WRITE 1
 struct FakeFs { std::map<std::string, std::string> files; };
@@ -57,7 +58,7 @@ extern char TextFileName[40]; extern char pLogView[];
 void ShowLogFileNew(uint16_t LinesCounter); uint16_t ReadAFewLines(); void LogVIEWNew();
 void SendOtherValue(char *nbox, int value); int GetIntFromTextIn(uint8_t offset); void SendText(char *tbox, char *NewWord);
 void SendText1(char *tbox, char *NewWord); void SendCommand(char *tbox); int InStrng(char *text1, char *text2);
-void DelayWithDog(uint32_t HowLong); File OpenTextFileForReading(); void KickTheDog(); void CloseLogFile(); void ClearFilesList(); void MakeTextFileName();
+void DelayWithDog(uint32_t HowLong); File OpenTextFileForReading(); void KickTheDog(); void CloseLogFile(); void ClearFilesList(); void MakeTextFileName(); void NoteLogOpener(const char *what);
 '''
 
 PROG = r'''
@@ -92,7 +93,7 @@ void SendOtherValue(char *nbox, int value) {
 }
 int GetIntFromTextIn(uint8_t offset) { return offset == 4 ? boxY : offset == 8 ? boxMax() : 0; }   // the release: val_y then maxval_y
 int InStrng(char *text1, char *text2) { return strstr(text2, text1) != nullptr; }
-void DelayWithDog(uint32_t) {} void KickTheDog() {} void ClearFilesList() {} void MakeTextFileName() {}
+void DelayWithDog(uint32_t) {} void KickTheDog() {} void ClearFilesList() {} void MakeTextFileName() {} void NoteLogOpener(const char *) {}   // (B163)
 File OpenTextFileForReading() { File f = SD.open("/log/SOURCE", FILE_READ); if (f) LogFileOpen = true; return f; }
 void CloseLogFile() { if (LogFileOpen) LogFileNumber.close(); LogFileOpen = false; }
 

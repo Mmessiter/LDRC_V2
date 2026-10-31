@@ -474,6 +474,11 @@ FLASHMEM uint16_t ReadAFewLines()
 
 FLASHMEM void StartLogFileView() // This is the entry point
 {
+    if (CurrentView == MODELSVIEW)
+    {   // B163: the Models page has no Log button - a code 18 there is a frame misread, noted in the log and not obeyed
+        NoteLogOpener("code 18 ignored");
+        return;
+    }
     strcpy(TextFileName, "");
     LogVIEWNew();
 }
@@ -488,6 +493,8 @@ FLASHMEM void LogVIEWNew() // Start log screen
     char nolog[] = "No log yet today.\r\nA log begins when a model connects."; // B159: said instead of "File not found: /log/..." when today's log was asked for and there is none
     const bool chosen = ReadingaFile;                                         // (a file picked from the list, as against today's log)
 
+    if (!TextFileName[0])
+        NoteLogOpener("opened"); // B163: today's log, asked for by a frame: which, and from which page - the log's own last line
     SendCommand(pLogView); // Show the right view
     FinalReadStartLine = 0xFFFF;
     CurrentView = LOGVIEW;

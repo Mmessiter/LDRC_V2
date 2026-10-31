@@ -637,6 +637,11 @@ def source_checks():
     chk('void GetReturnCode(char *tbox)\n{\n    CRUMB(CRUMB_RETURNCODE);' in nx and 'StashPendingEventBytes();\n}' in nx and "first == 'p' || (first == 'q' && n == 5)" in nx, 'B162 GetReturnCode keeps a press instead of draining it; a late reply is debris')
     ld = src('include/LogFilesDisplay.h')
     chk('Help text not on the card: ' in ld and 'WrapCopyRefused = true;' in ld and 'DelayWithDog(20);\n        ViewingWrappedCopy = MakeWrappedCopy();' in ld, 'B162 a help text that will not open says so (not "No log yet today"), after one more try')
+    # B163 (31 Oct 2026): today's log, when a frame asks for it, records which frame from which page as its own last line; a code 18 on the Models page is ignored
+    lf = src('include/LogFiles.h')
+    chk('FLASHMEM void NoteLogOpener(const char *what)' in lf and 'TextInWasStashed ? "set aside" : "read"' in lf and 'LogText(line, strlen(line), true);' in lf, 'B163 the log says which frame opened it')
+    chk('if (!TextFileName[0])\n        NoteLogOpener("opened");' in ld and 'if (CurrentView == MODELSVIEW)\n    {   // B163' in ld and 'NoteLogOpener("code 18 ignored");' in ld, 'B163 today\'s log notes its opener; a log-view code on the Models page is ignored')
+    chk('TextInWasStashed = true; // (B163)' in nx and 'TextInWasStashed = false;' in nx, 'B163 GetButtonPress says whether the frame was set aside or read')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

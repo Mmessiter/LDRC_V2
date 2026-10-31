@@ -28,7 +28,7 @@ prog = r'''
 #define CRUMB_GETVALUE 0
 #define CRUMB_GETTEXT 0
 char TextIn[MAXTEXTIN + 2];
-char PendingEvent[128]; uint16_t PendingEventLen = 0;
+char PendingEvent[128]; uint16_t PendingEventLen = 0; bool TextInWasStashed = false;   // (B163)
 uint32_t NextionReplyWaitMs = 100; bool NextionTextMissed = false;   // (B152)
 static uint32_t fakeMs = 1000, fakeUs = 0;
 static uint32_t millis() { return fakeMs; }

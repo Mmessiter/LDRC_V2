@@ -265,6 +265,26 @@ FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp)
 }
 
 // ************************************************************************
+// B163 (Malcolm, 31 Oct 2026, the yellow transmitter: the Models page's Help still opened TODAY'S LOG after B162, title
+// 31-10-26.LOG): no path from that button to the log is in sight (the Help word opens only a whole NAME.TXT since B160;
+// today's log is asked for by code 18, the Log button of Model setup alone, or a file list). So the log itself records
+// what asked for it: the page, the frame (16 bytes, hex) and whether the frame was read from the port or set aside.
+FLASHMEM void NoteLogOpener(const char *what)
+{
+    char line[128];
+    char hex[52];
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < 16; ++i)
+    {
+        snprintf(hex + n, 4, "%02X ", (uint8_t)TextIn[i]);
+        n += 3;
+    }
+    hex[n] = 0;
+    snprintf(line, sizeof(line), "Log view %s on page %u by the frame %s(%s) B163", what, (unsigned)CurrentView, hex, TextInWasStashed ? "set aside" : "read");
+    LogText(line, strlen(line), true);
+}
+
+// ************************************************************************
 FASTRUN void LogMinGap()
 {
     char TheText[] = "Minimum logged gap: ";
