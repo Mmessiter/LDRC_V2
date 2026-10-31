@@ -621,6 +621,10 @@ def source_checks():
         ts = open(os.path.join(scr, 'lib', 'LdrcUpdate', 'TxState.h')).read(); fl = open(os.path.join(scr, 'lib', 'LdrcFlight', 'LdrcFlight.cpp')).read()
         chk('TX_BINDING = 64' in ts and 'binding = (bits & TX_BINDING) != 0;' in ts, 'B95 the screen reads bit 64')
         chk('if (src.binding()) return "BINDING ENABLED";' in fl, 'B95 every defined front screen says BINDING ENABLED')
+    # B157/B158 (30-31 Oct 2026): the comms-gap statistics keep to drop-outs of a link that was UP and SURVIVED
+    tr = src('include/transceiver.h'); mc = src('src/main.cpp')
+    chk('GapStartedUnlinked = !LedWasGreen;' in tr and 'if (GapStartedUnlinked)' in tr, 'B157 a gap that began with no link up is not counted')
+    chk('ClearMostParameters();\n    // B158' in mc and '    GapStart = 0;\n    ThisGap = 0;\n    LedWasRed = true;' in mc, 'B158 a gap that becomes a lost link is dropped at RedLedOn, never closed by the next model')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

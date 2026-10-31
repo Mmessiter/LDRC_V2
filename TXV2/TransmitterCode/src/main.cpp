@@ -287,6 +287,13 @@ void RedLedOn() // heer
     SendText((char *)"Owner", TxName); // Put owner name back
     First_RPM_Data = true;             // ready to start RPM data ...
     ClearMostParameters();
+    // B158 (31 Oct 2026): a gap that becomes a LOST LINK is not a comms gap. It used to stay open until the next
+    // successful packet - the same model after a battery change, or the NEXT model switched on minutes later - and
+    // was then logged as the day's longest gap (109657 ms and the like). The loss itself is told above (Disconnected,
+    // the log) and the return by GreenLedOn (Connected): the gap statistics keep to the drop-outs the link survived,
+    // under RED_LED_ON_TIME. (ZeroGapStats clears the same two.)
+    GapStart = 0;
+    ThisGap = 0;
     LedWasRed = true;
     EnsureMotorIsOff();
     if (wasGreen) RfModelGone();   // B90: a Rotorflight page in view goes over to the backup file (PipeHttp.h)

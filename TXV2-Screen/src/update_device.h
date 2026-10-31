@@ -252,44 +252,50 @@ static void updFlash(ldrc::Work &w) {
     }
     w.error = first.empty() || first == why ? why + (first.empty() ? "" : ", twice") : "first " + first + ", then " + why;
 }
+// (1.11.150) The task lives for ONE job and then goes. Its 24 kB stack is the chip's internal RAM - the pool the WiFi's
+// receive buffers must come from (30 Oct: Malcolm's transmitter "joined" yet deaf, 12 kB free in 2.8 kB pieces) - and
+// a task kept waiting between jobs held it from the quiet look at power-up to the power-off. updStackLeast: the least
+// the stack had to spare, by the kind of job (text, file, check, flash), for /update/status "stack_free".
+static volatile uint32_t updStackLeast[4] = { 0, 0, 0, 0 };
 static void updTask(void *) {
-    for (;;) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if (!updBusy) continue;
-        ldrc::Work w;
-        // The card's driver and the flash wait in loops that do not sleep: a long file, or the card counting its
-        // free space for the first time, can keep this core's idle task from running for more than the five
-        // seconds its watchdog allows - and the screen would restart in the middle of an update.
-        disableCore0WDT();
-        switch (updJob.kind) {
-        case 1: updFetchText(w); break;
-        case 2: updFetchFile(w); break;
-        case 3: updCheckFile(w); break;
-        case 4: updFlash(w); break;
-        default: w.error = "no such job"; break;
-        }
-        if (updStop && !w.ok) w.error = "cancelled";
-        if (!w.ok && updNoMemory && !updStop) w.memory = true;
-        if (sdOk && (!updFreeKnown || updJob.kind == 2)) {
-            const uint32_t asking = millis();
-            const uint64_t total = SD.totalBytes(), used = SD.usedBytes();
-            if (total > 0 && used <= total) { updFreeKb = (uint32_t) ((total - used) / 1024); updFreeKnown = true; }      // (a card that answers nothing is asked again)
-            if (updJob.kind == 2) updFreeMs += millis() - asking;
-        }
-        enableCore0WDT();
-        updWork = w;
-        updBusy = false;                                   // last: the result is complete before anyone may read it
+    ldrc::Work w;
+    // The card's driver and the flash wait in loops that do not sleep: a long file, or the card counting its
+    // free space for the first time, can keep this core's idle task from running for more than the five
+    // seconds its watchdog allows - and the screen would restart in the middle of an update.
+    disableCore0WDT();
+    switch (updJob.kind) {
+    case 1: updFetchText(w); break;
+    case 2: updFetchFile(w); break;
+    case 3: updCheckFile(w); break;
+    case 4: updFlash(w); break;
+    default: w.error = "no such job"; break;
     }
+    if (updStop && !w.ok) w.error = "cancelled";
+    if (!w.ok && updNoMemory && !updStop) w.memory = true;
+    if (sdOk && (!updFreeKnown || updJob.kind == 2)) {
+        const uint32_t asking = millis();
+        const uint64_t total = SD.totalBytes(), used = SD.usedBytes();
+        if (total > 0 && used <= total) { updFreeKb = (uint32_t) ((total - used) / 1024); updFreeKnown = true; }      // (a card that answers nothing is asked again)
+        if (updJob.kind == 2) updFreeMs += millis() - asking;
+    }
+    enableCore0WDT();
+    { const uint32_t spare = uxTaskGetStackHighWaterMark(nullptr); const int k = updJob.kind >= 1 && updJob.kind <= 4 ? updJob.kind - 1 : 0;
+      if (!updStackLeast[k] || spare < updStackLeast[k]) updStackLeast[k] = spare; }
+    updWork = w;
+    updTaskHandle = nullptr;                               // (the next job makes a task of its own; nobody asks this one anything again)
+    updBusy = false;                                       // last: the result is complete before anyone may read it
+    vTaskDelete(nullptr);                                  // and the stack goes back to the pool (core 0's idle task frees it)
 }
 static void updStart(int kind, const std::string &url, const std::string &local, uint32_t size, uint32_t crc, size_t maxBytes) {
     if (updBusy) return;
     if (!updBuf) updBuf = (uint8_t *) psMallocRoom(UPD_BUF);
-    if (!updTaskHandle) xTaskCreatePinnedToCore(updTask, "update", 24576, nullptr, 1, &updTaskHandle, 0);
-    if (!updBuf || !updTaskHandle) { updWork = ldrc::Work(); updWork.error = "the screen is out of memory"; return; }
+    if (!updBuf) { updWork = ldrc::Work(); updWork.error = "the screen is out of memory"; return; }
     updJob.kind = kind; updJob.url = url; updJob.local = local; updJob.size = size; updJob.crc = crc; updJob.maxBytes = maxBytes;
     updWork = ldrc::Work(); updProgress = 0; updStop = false;
-    updBusy = true;
-    xTaskNotifyGive(updTaskHandle);
+    updBusy = true;                                        // before the task exists: it reads the job, and clears this itself when done
+    if (xTaskCreatePinnedToCore(updTask, "update", 24576, nullptr, 1, &updTaskHandle, 0) != pdPASS) {
+        updTaskHandle = nullptr; updBusy = false; updWork.error = "the screen is out of memory";   // (24 kB of internal RAM in one piece: the fresh start is for this)
+    }
 }
 
 // ------------------------------------------------------------------ the machine, as the updater sees it
@@ -681,7 +687,7 @@ static void updWeb() {
         out += "],\"warning\":\"" + esc(v.warning) + "\",\"buttons\":[\"" + esc(v.button1) + "\",\"" + esc(v.button2) + "\",\"" + esc(v.button3) + "\"]";
         char n[220]; snprintf(n, sizeof n, ",\"bar\":[%lu,%lu],\"left_s\":%ld,\"working\":%s,\"trial\":%s,\"busy\":%s,\"free_kb\":%lu,\"stack_free\":%lu,\"log\":[", (unsigned long) v.barDone, (unsigned long) v.barTotal, (long) updater.secondsLeft(),
                               updater.working() ? "true" : "false", updHost.onTrial() ? "true" : "false", updBusy ? "true" : "false", web.arg("free") == "1" ? (unsigned long) updHost.freeKb() : 0ul,
-                              updTaskHandle ? (unsigned long) uxTaskGetStackHighWaterMark(updTaskHandle) : 0ul);      // the least the download task's stack has ever had to spare
+                              (unsigned long) [] { uint32_t m = 0; for (int k = 0; k < 4; ++k) if (updStackLeast[k] && (!m || updStackLeast[k] < m)) m = updStackLeast[k]; return m; } ());      // (1.11.150) the least any job's task stack had to spare (the task is gone between jobs: never asked live from this core)
         out += n;
         const auto &log = updater.log();
         for (size_t i = 0; i < log.size(); ++i) out += std::string(i ? "," : "") + "\"" + esc(log[i]) + "\"";
