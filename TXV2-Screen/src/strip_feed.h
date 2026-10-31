@@ -33,13 +33,13 @@
 #include "rom/cache.h"
 
 static const int STRIP_L = 4;                            // lines a strip (4: 6.4 kB a slot, 19.2 kB of internal RAM in all - 8 lines took 38 kB and left the films and TLS short)
-static const int STRIP_K = 3;                            // slots in the ring (must divide the 60 strips of a frame)
+static const int STRIP_K = 3;                            // slots in the ring (must divide the 120 strips of a frame). (31 Oct 2026, bench: 6 slots - the feeder five slots / 1.2 ms ahead instead of two / 480 us - changed NOTHING: 2 late strips and 4 whole-frame holds a minute all the same, so the stalls are longer than that or not the bus; back to 3 and its 19 kB)
 static const int STRIP_N = 480 / STRIP_L;                // strips a frame
 static const size_t STRIP_BYTES = (size_t) 800 * STRIP_L * 2;   // 12,800
 static const int STRIP_NODES = 2;                        // descriptors a slot: 3200 bytes = 2 lines each (a node holds 4095 at most)
 static const size_t STRIP_NODE_BYTES = STRIP_BYTES / STRIP_NODES;
 
-static uint8_t *stripBuf[STRIP_K] = { nullptr, nullptr, nullptr };
+static uint8_t *stripBuf[STRIP_K] = {};
 static FlipNode *stripNodes = nullptr;                   // the panel's ring: STRIP_K * STRIP_NODES nodes, closed
 static gdma_channel_handle_t sfTx = nullptr, sfRx = nullptr; static int sfTxCh = -1, sfRxCh = -1;
 static dma_descriptor_t *sfTxD = nullptr, *sfRxD = nullptr;
@@ -52,22 +52,38 @@ static const uint16_t *volatile stripNextFb = nullptr;   // the next frame's (la
 static volatile uint8_t stripNextIdx = 0;
 static volatile bool sfBusy = false;                     // a fill is running
 static volatile bool sfFilled[STRIP_K] = { true, true, true };
-static volatile int sfQSlot[STRIP_K]; static const uint16_t *volatile sfQSrc[STRIP_K]; static volatile int sfQn = 0, sfQi = 0;   // fills waiting (the pair takes one at a time)
+static volatile int sfQSlot[STRIP_K]; static const uint16_t *volatile sfQSrc[STRIP_K]; static volatile int sfQT[STRIP_K]; static volatile int sfQn = 0, sfQi = 0;   // fills waiting (the pair takes one at a time); sfQT: the strip's number (1.11.156: the window)
+static SlideWin winCur = { false, 0, 0, 0 };            // (1.11.156) the window as this frame's strips see it: copied from main.cpp's winNext at the frame's first strip
 static volatile int sfSlot = -1;                         // the slot being filled
 static volatile uint32_t stripFills = 0, stripLate = 0, stripQMax = 0, stripEofs = 0, stripFrames = 0, stripResyncs = 0, stripDrops = 0, stripFillUsMax = 0, sfStartUs = 0;
 // (1.11.152) A late strip is a band repeated for one pass - a flicker the eye sees. By what the loop was doing at that
 // moment (busy_what.h), and the last eight with their time: 31 Oct, the yellow transmitter's scrolling session showed
 // strips late 7 and Malcolm "just a few flickers" - the same number; which activity it is decides the next cure.
 static volatile uint32_t stripLateBy[BUSY_N] = { 0 };
-struct StripLateMark { uint8_t what; uint32_t ms; uint32_t seen; };
+struct StripLateMark { uint8_t what; uint32_t ms; uint32_t seen; uint8_t phase; };   // (1.11.155) phase: the scroll step's phase (main.cpp slidePhase)
 static StripLateMark stripLateLog[8]; static volatile uint32_t stripLateLogN = 0;
 
 // The fill of one slot from the PSRAM: STRIP_NODES descriptor pairs, both channels reset and started by the registers (IRAM).
-static void IRAM_ATTR sfStart(int slot, const uint16_t *src) {
+static void IRAM_ATTR sfStart(int slot, const uint16_t *src, int t) {
+    // (1.11.156) THE WINDOW: a strip whose rows fall in the window's box takes those rows from the ring, at this frame's
+    // offset, a descriptor a row; every other strip is two descriptors of two rows from the frame buffer, as before.
+    const int r0 = t * STRIP_L;
+    if (winCur.on && winRing && r0 < winCur.y1 && r0 + STRIP_L > winCur.y0) {
+        for (int i = 0; i < STRIP_L; ++i) {
+            const int r = r0 + i; const bool last = i == STRIP_L - 1;
+            const uint16_t *rs = (r >= winCur.y0 && r < winCur.y1) ? winRing + (size_t) ((winCur.top + (r - winCur.y0)) & (WIN_ROWS - 1)) * 800 : src + (size_t) i * 800;
+            sfTxD[i].dw0.size = 1600; sfTxD[i].dw0.length = 1600; sfTxD[i].dw0.suc_eof = last; sfTxD[i].dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_DMA;
+            sfTxD[i].buffer = (void *) rs; sfTxD[i].next = last ? nullptr : &sfTxD[i + 1];
+        }
+    } else {
+        for (int i = 0; i < STRIP_NODES; ++i) {
+            const bool last = i == STRIP_NODES - 1;
+            sfTxD[i].dw0.size = STRIP_NODE_BYTES; sfTxD[i].dw0.length = STRIP_NODE_BYTES; sfTxD[i].dw0.suc_eof = last; sfTxD[i].dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_DMA;
+            sfTxD[i].buffer = (void *) ((const uint8_t *) src + i * STRIP_NODE_BYTES); sfTxD[i].next = last ? nullptr : &sfTxD[i + 1];
+        }
+    }
     for (int i = 0; i < STRIP_NODES; ++i) {
         const bool last = i == STRIP_NODES - 1;
-        sfTxD[i].dw0.size = STRIP_NODE_BYTES; sfTxD[i].dw0.length = STRIP_NODE_BYTES; sfTxD[i].dw0.suc_eof = last; sfTxD[i].dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_DMA;
-        sfTxD[i].buffer = (void *) ((const uint8_t *) src + i * STRIP_NODE_BYTES); sfTxD[i].next = last ? nullptr : &sfTxD[i + 1];
         sfRxD[i].dw0.size = STRIP_NODE_BYTES; sfRxD[i].dw0.length = 0; sfRxD[i].dw0.suc_eof = 0; sfRxD[i].dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_DMA;
         sfRxD[i].buffer = stripBuf[slot] + i * STRIP_NODE_BYTES; sfRxD[i].next = last ? nullptr : &sfRxD[i + 1];
     }
@@ -76,17 +92,17 @@ static void IRAM_ATTR sfStart(int slot, const uint16_t *src) {
     gdma_ll_rx_set_desc_addr(&GDMA, sfRxCh, (uint32_t) sfRxD); gdma_ll_rx_start(&GDMA, sfRxCh);
     gdma_ll_tx_set_desc_addr(&GDMA, sfTxCh, (uint32_t) sfTxD); gdma_ll_tx_start(&GDMA, sfTxCh);
 }
-static void IRAM_ATTR sfQueue(int slot, const uint16_t *src) {
-    if (!sfBusy) { sfStart(slot, src); return; }
+static void IRAM_ATTR sfQueue(int slot, const uint16_t *src, int t) {
+    if (!sfBusy) { sfStart(slot, src, t); return; }
     if (sfQn >= STRIP_K) { stripDrops++; return; }        // (cannot happen with three slots; counted if it does)
-    const int at = (sfQi + sfQn) % STRIP_K; sfQSlot[at] = slot; sfQSrc[at] = src; sfQn = sfQn + 1;
+    const int at = (sfQi + sfQn) % STRIP_K; sfQSlot[at] = slot; sfQSrc[at] = src; sfQT[at] = t; sfQn = sfQn + 1;
     if ((uint32_t) sfQn > stripQMax) stripQMax = sfQn;
 }
 static bool IRAM_ATTR sfOnRxEof(gdma_channel_handle_t, gdma_event_data_t *, void *) {   // a fill done
     const uint32_t us = (uint32_t) esp_timer_get_time() - sfStartUs; if (us > stripFillUsMax) stripFillUsMax = us;
     if (sfSlot >= 0) sfFilled[sfSlot] = true;
     sfBusy = false; stripFills = stripFills + 1;
-    if (sfQn > 0) { const int slot = sfQSlot[sfQi]; const uint16_t *src = sfQSrc[sfQi]; sfQi = (sfQi + 1) % STRIP_K; sfQn = sfQn - 1; sfStart(slot, src); }
+    if (sfQn > 0) { const int slot = sfQSlot[sfQi]; const uint16_t *src = sfQSrc[sfQi]; const int t = sfQT[sfQi]; sfQi = (sfQi + 1) % STRIP_K; sfQn = sfQn - 1; sfStart(slot, src, t); }
     return false;
 }
 // The panel's DMA at the end of a slot: strip s shown; that slot gets strip s + 3 - of this frame, or of the next frame's
@@ -110,15 +126,18 @@ static void IRAM_ATTR stripOnLcdEof() {                   // (dma_watch.h dispat
     int t = s + STRIP_K; const uint16_t *fb = stripFrameFb;
     if (t >= STRIP_N) {
         t -= STRIP_N;
-        if (t == 0) { const uint8_t w = flipWant; stripNextFb = flipFb[w] ? flipFb[w] : stripFrameFb; stripNextIdx = flipFb[w] ? w : flipShown; }
+        if (t == 0) {
+            const uint8_t w = flipWant; stripNextFb = flipFb[w] ? flipFb[w] : stripFrameFb; stripNextIdx = flipFb[w] ? w : flipShown;
+            winCur.on = winNext.on; if (winCur.on) { winCur.top = winNext.top; winCur.y0 = winNext.y0; winCur.y1 = winNext.y1; }   // (1.11.156) the window's offset for the whole of the next frame
+        }
         fb = stripNextFb ? stripNextFb : stripFrameFb;
     }
     if (!sfFilled[slot]) {                                 // (its fill was not done by the time the panel came round: a band repeated)
         stripLate++;
         const uint8_t w = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1; stripLateBy[w] = stripLateBy[w] + 1;
-        StripLateMark &m = stripLateLog[stripLateLogN % 8]; m.what = w; m.ms = (uint32_t) (esp_timer_get_time() / 1000); m.seen = busySeen; stripLateLogN = stripLateLogN + 1;
+        StripLateMark &m = stripLateLog[stripLateLogN % 8]; m.what = w; m.ms = (uint32_t) (esp_timer_get_time() / 1000); m.seen = busySeen; m.phase = slidePhase; stripLateLogN = stripLateLogN + 1;
     }
-    if (fb) sfQueue(slot, fb + (size_t) t * STRIP_L * 800);
+    if (fb) sfQueue(slot, fb + (size_t) t * STRIP_L * 800, t);
     if (s == STRIP_N - 1) {
         stripFrames = stripFrames + 1;
         if (stripNextFb) { stripFrameFb = stripNextFb; if (flipShown != stripNextIdx) { flipShown = stripNextIdx; flipDoneN++; } }
@@ -182,7 +201,7 @@ static bool stripBegin() {
     if (!ringOn || !ringDma || !flipNodes) { stripWhy = "no ring"; return false; }
     for (int i = 0; i < STRIP_K; ++i) if (!stripBuf[i] && !(stripBuf[i] = (uint8_t *) heap_caps_aligned_alloc(64, STRIP_BYTES, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL))) { stripWhy = "no internal RAM"; return false; }
     if (!stripNodes && !(stripNodes = (FlipNode *) heap_caps_calloc(STRIP_K * STRIP_NODES, sizeof(FlipNode), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL))) { stripWhy = "no nodes"; return false; }
-    if (!sfTxD && !(sfTxD = (dma_descriptor_t *) heap_caps_calloc(STRIP_NODES, sizeof(dma_descriptor_t), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL))) { stripWhy = "no descriptors"; return false; }
+    if (!sfTxD && !(sfTxD = (dma_descriptor_t *) heap_caps_calloc(STRIP_L, sizeof(dma_descriptor_t), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL))) { stripWhy = "no descriptors"; return false; }   // (1.11.156: a descriptor a row for the window's strips)
     if (!sfRxD && !(sfRxD = (dma_descriptor_t *) heap_caps_calloc(STRIP_NODES, sizeof(dma_descriptor_t), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL))) { stripWhy = "no descriptors"; return false; }
     for (int k = 0; k < STRIP_K; ++k) for (int i = 0; i < STRIP_NODES; ++i) {
         FlipNode &n = stripNodes[k * STRIP_NODES + i];
@@ -224,6 +243,6 @@ static void stripJson(std::string &out) {                // (/status "strips")
     for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) stripLateBy[i]); out += e; }
     out += "],\"late_log\":[";
     const uint32_t n = stripLateLogN, from = n > 8 ? n - 8 : 0;
-    for (uint32_t i = from; i < n; ++i) { const StripLateMark &m = stripLateLog[i % 8]; char e[48]; snprintf(e, sizeof e, "%s[%u,%lu,%lu]", i > from ? "," : "", (unsigned) m.what, (unsigned long) m.ms, (unsigned long) m.seen); out += e; }
+    for (uint32_t i = from; i < n; ++i) { const StripLateMark &m = stripLateLog[i % 8]; char e[56]; snprintf(e, sizeof e, "%s[%u,%lu,%lu,%u]", i > from ? "," : "", (unsigned) m.what, (unsigned long) m.ms, (unsigned long) m.seen, (unsigned) m.phase); out += e; }   // [tag, ms, seen, slide phase]
     out += "]}";
 }

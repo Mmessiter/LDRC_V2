@@ -44,9 +44,20 @@ static uint32_t wbPieceBytes = 256, wbGapUs = 8, wbCleanCy = 0;   // (bench: /st
 // cycle count of each call, against wbCleanCy (0 = a breath after every piece; calibrated on the bench with /perf "wb":
 // pieces, slow, cy_min, cy_max - /stall?kind=wbtime on a clean canvas gives the clean cost, present&kb=480 the dirty one).
 static volatile uint32_t wbPieces = 0, wbSlow = 0, wbCyMin = 0xFFFFFFFF, wbCyMax = 0;
+// (31 Oct 2026) WITH THE STRIPS ON the panel reads internal RAM, but the feeder's DMA reads the PSRAM - 6.4 kB every 240 us -
+// and a long write-back starves it: the bench showed every repeated band and lost frame of a scroll OUTSIDE the slide's own
+// rows (which write back 1.5 kB at a time): in the canvas catch-up (12.8 kB a band) and in present's write-back of a dirty
+// box (hundreds of kB in one call). So with the strips on too a long write-back goes in pieces, with a breath between
+// (bench: /stall?kind=wbspiece&kb=bytes, kind=wbsgap&kb=us).
+static uint32_t wbStripPiece = 1024, wbStripGapUs = 10;
 static inline void wbPaced(uint32_t addr, uint32_t len) {
     Busy busy_(BUSY_WB);
-    if (!board->psramRestUs || stripOn || len <= 2 * wbPieceBytes) { Cache_WriteBack_Addr(addr, len); return; }
+    if (!board->psramRestUs || len <= 2 * wbPieceBytes) { Cache_WriteBack_Addr(addr, len); return; }
+    if (stripOn) {
+        if (len <= 2 * wbStripPiece) { Cache_WriteBack_Addr(addr, len); return; }
+        for (uint32_t off = 0; off < len; off += wbStripPiece) { const uint32_t n = len - off < wbStripPiece ? len - off : wbStripPiece; Cache_WriteBack_Addr(addr + off, n); wbPieces++; if (wbStripGapUs) delayMicroseconds(wbStripGapUs); }
+        return;
+    }
     for (uint32_t off = 0; off < len; off += wbPieceBytes) {
         const uint32_t n = len - off < wbPieceBytes ? len - off : wbPieceBytes;
         const uint32_t c0 = xthal_get_ccount();

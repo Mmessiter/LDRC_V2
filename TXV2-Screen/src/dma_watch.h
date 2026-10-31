@@ -52,7 +52,7 @@ static const uint32_t BUSY_MOVERS = (1u << 1) | (1u << 2) | (1u << 3) | (1u << 4
 static volatile uint32_t slipwPos[BUSY_N] = { 0 }, slipwFr[BUSY_N] = { 0 }, slipwIdlePos = 0, slipwIdleFr = 0;
 static volatile uint32_t dmaProbePos = 0, dmaProbeFr = 0; static volatile int32_t dmaProbeMax = 0;   // (26 Oct, bench) a /stall probe's own frames: the excess summed, their number, the worst
 static volatile uint32_t dmaHuge = 0, dmaHugeAll = 0;    // (1.11.128) EOF gaps of 60 ms and more, or 20 ms over the base: a frame the panel's DMA was held from for longer than a slip - the counters above never saw these (the DMA copy of 1.11.126)
-struct SlipW { uint16_t us; uint8_t what; uint32_t seen; uint32_t ms; };
+struct SlipW { uint16_t us; uint8_t what; uint32_t seen; uint32_t ms; uint8_t phase; };   // (1.11.155) phase: the scroll step's phase at that moment (main.cpp slidePhase)
 static SlipW slipwLog[SLIPW_LOG]; static volatile int slipwLogN = 0;
 static void IRAM_ATTR stripOnLcdEof();                   // (26 Oct evening) src/strip_feed.h: every slot's EOF while the strips run
 static void IRAM_ATTR dmaOnEofFrame();
@@ -64,7 +64,7 @@ static void IRAM_ATTR slipwLogAdd(uint16_t us, uint8_t what, uint32_t seen, uint
     if (slipwLogN < SLIPW_LOG) at = (int) slipwLogN++;
     else { int least = 0; for (int i = 1; i < SLIPW_LOG; ++i) if (slipwLog[i].us < slipwLog[least].us) least = i; if (us > slipwLog[least].us) at = least; }
     if (at < 0) return;
-    SlipW &e = slipwLog[at]; e.us = us; e.what = what; e.seen = seen; e.ms = ms;
+    SlipW &e = slipwLog[at]; e.us = us; e.what = what; e.seen = seen; e.ms = ms; e.phase = slidePhase;
 }
 static void IRAM_ATTR dmaOnEofFrame() {
     const uint32_t now = (uint32_t) esp_timer_get_time();
@@ -153,7 +153,7 @@ static std::string slipwPerfJson() {                     // the /perf block; the
     for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwSeenN[i]); out += e; }
     out += "],\"log\":[";
     const int n = slipwLogN < SLIPW_LOG ? slipwLogN : SLIPW_LOG;
-    for (int i = 0; i < n; ++i) { char e[56]; snprintf(e, sizeof e, "%s[%u,%u,%lu,%lu]", i ? "," : "", (unsigned) slipwLog[i].us, (unsigned) slipwLog[i].what, (unsigned long) slipwLog[i].seen, (unsigned long) slipwLog[i].ms); out += e; }
+    for (int i = 0; i < n; ++i) { char e[64]; snprintf(e, sizeof e, "%s[%u,%u,%lu,%lu,%u]", i ? "," : "", (unsigned) slipwLog[i].us, (unsigned) slipwLog[i].what, (unsigned long) slipwLog[i].seen, (unsigned long) slipwLog[i].ms, (unsigned) slipwLog[i].phase); out += e; }   // [us, tag, seen, ms, slide phase]
     out += "],\"pos\":[";
     for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) slipwPos[i]); out += e; }
     out += "],\"fr\":[";

@@ -18,10 +18,13 @@ static inline uint32_t millis() { return hostClockMs; }
 static inline uint32_t micros() { return hostClockMs * 1000; }
 static inline void *ps_malloc(size_t n) { return malloc(n); }
 static int stripWant = 0; static bool stripOn = false, stripArm = false, ringOn = false; static inline bool stripBegin() { return false; }   // (26 Oct evening: the strips - none on the Mac)
+static volatile bool sfBusy = false; static volatile uint8_t slidePhase = 0;   // (31 Oct: the feeder's fill in flight, and the scroll step's phase - none on the Mac)
+struct SlideWin { volatile bool on; volatile int top, y0, y1; }; static SlideWin winNext = { false, 0, 0, 0 }; static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // (1.11.156: the window - the strips are off on the Mac, so it never opens)
 static bool stripStopWanted = false; static inline void stripRelease() {}   // (the strips stand down for the update page - none on the Mac)
 static bool updShowing();                                        // (own.h defines it: the update page)
 static inline bool clipDropOne() { return false; }                 // (1.11.133: the screen lets a cached sound clip go for room; none here)
 static inline void *heap_caps_malloc(size_t n, unsigned) { return malloc(n); }   // (1.11.120: the picture's slab buffer, internal memory on the screen)
+static inline void *heap_caps_aligned_alloc(size_t, size_t n, unsigned) { return malloc(n); }   // (1.11.156: the window's ring)
 #define MALLOC_CAP_INTERNAL 0
 #define MALLOC_CAP_8BIT 0
 #define MALLOC_CAP_SPIRAM 0                                 // (1.11.137: PsAlloc, the kept store and the page parse in the PSRAM)

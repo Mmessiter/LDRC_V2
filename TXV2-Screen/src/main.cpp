@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.154"
+#define SCREEN_VERSION "1.11.156"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -146,6 +146,35 @@ struct RgbPanelTag { typedef esp_rgb_panel_t *Arduino_ESP32RGBPanel::*type; frie
 template struct PanelRob<RgbPanelTag, &Arduino_ESP32RGBPanel::_rgb_panel>;
 #include "quiet_time.h"                                // (the quiet time's sums and jobs, host-tested: hmi/test_quiet)
 #include "page_flip.h"                                 // (1.11.115: the twin's two panel buffers)
+// (1.11.155) Two more instruments for the last flickers (31 Oct 2026: 2-3 bands repeated and 3-8 frames lost a minute of
+// scrolling, unmoved by any pacing). slidePhase: which phase of a scroll step was running when a band was late or a frame
+// lost - 0 none, 1 waiting for a flip/present, 2 the spare's debt, 3 rendering into the canvas, 4 into the spare, 5 the
+// canvas caught up (copyRows), 6 a band made sure of. Part: the longest single run of each named part of a pass since the
+// last /perf read ("parts"), with a count of runs over 5 ms - the network pass has a 70 ms stall once a minute, unplaced.
+static volatile uint8_t slidePhase = 0;
+// (1.11.156) THE WINDOW: smooth scrolling of a text box on the twin. A drag step used to letter all 348 rows of the box
+// again and copy them into the PSRAM (29 + 18 ms of a 61 ms step: two frames, so the words froze and jumped under the
+// finger). Now the box's rows live in a RING of full screen rows in the PSRAM, and the strips' feeder (strip_feed.h)
+// reads the box's rows from the ring at an offset instead of from the frame buffer: a step letters only the few NEW rows
+// into the ring and moves the offset - the feeder latches the offset at a frame's first strip, so no frame is torn.
+// The page's own buffers keep the box as it was when the window began; when the window ends (the page goes, a panel
+// comes, the strips stop) the box is drawn into them again first, the same picture. Not on the 4 MB boards (no strips).
+struct SlideWin { volatile bool on; volatile int top, y0, y1; };
+static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
+static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
+struct PartMax { const char *name; uint32_t us, over5; };
+static PartMax partMax[24]; static int partN = 0;
+static void partNote(const char *name, uint32_t us) {
+    for (int i = 0; i < partN; ++i) if (partMax[i].name == name) { if (us > partMax[i].us) partMax[i].us = us; if (us > 5000) partMax[i].over5++; return; }
+    if (partN < 24) { partMax[partN].name = name; partMax[partN].us = us; partMax[partN].over5 = us > 5000 ? 1 : 0; partN++; }
+}
+struct Part { const char *n; uint32_t t0; explicit Part(const char *name) : n(name), t0(micros()) {} ~Part() { partNote(n, micros() - t0); } };
+static std::string partsJson() {                       // the /perf block; the window starts again
+    std::string out = ",\"parts\":{";
+    bool first = true;
+    for (int i = 0; i < partN; ++i) { if (partMax[i].us < 1000) { partMax[i].us = 0; partMax[i].over5 = 0; continue; } char e[64]; snprintf(e, sizeof e, "%s\"%s\":[%lu,%lu]", first ? "" : ",", partMax[i].name, (unsigned long) partMax[i].us, (unsigned long) partMax[i].over5); out += e; first = false; partMax[i].us = 0; partMax[i].over5 = 0; }
+    return out + "}";
+}
 #include "dma_watch.h"                                 // (25 Oct 2026: the panel's DMA met its EOF late = the picture slipped; /perf "dma")
 #include "frame_ring.h"                                // (25 Oct 2026: the frames chained by the hardware, no restart by software; /status "ring")
 #include "dma_copy.h"                                  // (26 Oct 2026, bench: a GDMA memory-to-memory copy into the panel's buffers - no cache write-backs; /stall m2m, m2mrows, lcdpri)
@@ -1267,6 +1296,7 @@ static void drawTextIn(int x, int y, int w, int h, int font, uint16_t col, const
 static uint16_t slideRow[W];
 static bool slideFillOn = true;                             // (the host tests: 0 = the old way, the reference the slab is proved against)
 static uint32_t slideN = 0, slideFlipN = 0, slideWaitN = 0, slideUs = 0, slideUsMax = 0, slideDebtUs = 0, slideFillN = 0, slideFillUs = 0;   // (/perf "slide")
+static uint32_t slideRenderUs = 0, slideCopyUs = 0, slideWbUs = 0;   // (31 Oct 2026) where a step's rows spend their time: lettering, the copy into the PSRAM, the write-back
 static std::string slideTxtPending; static uint32_t slideTxtAt = 0;   // the slide text whose words changed and whose position is yet to come
 struct SlideBox { int ix, iy, iw, ih, x0, y0, x1, y1, cw; };   // the inner box (inside the border), and its part on the screen
 static bool slideBox(const Comp &c, SlideBox &b) {
@@ -1276,7 +1306,16 @@ static bool slideBox(const Comp &c, SlideBox &b) {
     return b.x1 > b.x0 && b.y1 > b.y0;
 }
 static void slideDone() {}                                  // the finger is up (1.11.142-144 gave a heap slab back here; the row is static now)
-static inline void slideBreath(int row) { if (board->psramRestUs && (row & 3) == 3) delayMicroseconds(20); }   // (the twin) a gap in our stream for the strips' feeder: every FOUR rows (1.11.154: every eight gave the feeder a chance only every ~200 us against its 240 us slot - the session of 31 Oct had 6 of its 7 late strips under a write-back; ~1 ms more a step)
+// (the twin) a gap in our stream for the strips' feeder: every FOUR rows (1.11.154: every eight gave the feeder a chance only
+// every ~200 us against its 240 us slot - the session of 31 Oct had 6 of its 7 late strips under a write-back; ~1 ms more a
+// step). Bench knobs (/stall?kind=breath&kb=rows, kind=yield&kb=us): how often, and whether a row first waits for a fill of
+// the feeder's that is in flight (sfBusy: its DMA reads the PSRAM our rows are written to) - up to `yield` us.
+static int slideBreathEvery = 4; static uint32_t slideYieldUs = 0;
+static inline void slideBreath(int row) {
+    if (!board->psramRestUs) return;
+    if (slideYieldUs) { const uint32_t t0 = micros(); while (sfBusy && micros() - t0 < slideYieldUs) { } }
+    if ((row % slideBreathEvery) == slideBreathEvery - 1) delayMicroseconds(20);
+}
 static inline void slideSpan(uint16_t *dst, const uint16_t *src, int row, int a, int b) { if (b > a) memcpy(dst + row * W + a, src + row * W + a, (b - a) * 2); }
 static void slideLut(const Comp &c, uint16_t *lut) { const uint16_t bg = (uint16_t) c.bco, ink = inkOf(c); lut[0] = bg; for (int a = 1; a < 8; ++a) lut[a] = a >= 7 ? ink : blend565(bg, ink, a); }
 // One row of the box rendered into slideRow: the background, then the row's share of the line that crosses it, letter by
@@ -1318,10 +1357,22 @@ static void slideEnsureBand(int band, const SlideBox &box, int r0, int r1) {
 }
 // The whole slide text drawn (drawComp): the border by gfx, the inner box through the slab into the canvas. false: not this
 // way - the old code draws it (a see-through box, a font without its smooth table, no slab, a layer's canvas).
+// (1.11.156) the window: its state here, before the fill path that uses it; the functions below slideFill
+static int indexOf(const Comp &c); static void redraw(Comp &c);   // (defined later)
+static int winScroll = 0; static std::string winComp; static uint32_t winTxtHash = 0, winAt = 0; static bool winFlushing = false;
+static uint32_t winPrimeN = 0, winStepN = 0, winPrimeUs = 0, winStepUs = 0, winRowsN = 0;   // (/perf "win")
+static uint32_t winHash(const std::string &s) { uint32_t h = 2166136261u; for (unsigned char c : s) { h ^= c; h *= 16777619u; } return h ^ (uint32_t) s.size(); }
+static bool winCapable(const Comp &c, const SlideBox &b); static bool winPrime(Comp &c, const SlideBox &b, int want); static bool winStep(Comp &c, const SlideBox &b, int want);
 static bool slideFill(Comp &c) {
     if (!slideFillOn || c.sta != 1 || !pageFb || fbNow != pageFb) return false;
     const int fi = fontIdx(c.font); if (!aaBits[fi]) return false;
     SlideBox b; const bool any = slideBox(c, b);
+    if (any && winNext.on && !winFlushing && winComp == c.name && winCapable(c, b)) {   // (1.11.156) the window stays the picture: the Teensy's new words go into the ring (in place), its val_y is a step
+        const uint32_t w0 = micros();
+        if (winHash(c.txt) != winTxtHash) winPrime(c, b, c.scroll); else winStep(c, b, c.scroll);
+        slideFillN++; slideFillUs += micros() - w0;
+        return true;
+    }
     const uint32_t t0 = micros();
     const int bw = c.borderw;
     if (bw > 0) {                                           // the border's ring, as the fill of the whole box did it
@@ -1341,6 +1392,59 @@ static bool slideFill(Comp &c) {
     }
     slideFillN++; slideFillUs += micros() - t0;
     return true;
+}
+// ---- the window (1.11.156; the ring and SlideWin are declared with the instruments, above the includes, for the feeder)
+static bool winCapable(const Comp &c, const SlideBox &b) {
+    if (!stripOn || !pageFb || fbNow != pageFb || topOn || loadingPage || noDraw || b.y1 - b.y0 > WIN_ROWS - 32) return false;
+    if (!winRing) { winRing = (uint16_t *) heap_caps_aligned_alloc(64, (size_t) WIN_ROWS * W * 2, MALLOC_CAP_SPIRAM); if (!winRing) return false; }
+    const int idx = indexOf(c);
+    for (int j = idx + 1; j < (int) page.comps.size(); ++j) {   // a component drawn AFTER the box that shares its rows (a button beside it): the ring's one row of margins could not serve every row. What lies behind the box (the page's card) is the same in every row.
+        const Comp &o = page.comps[j];
+        if (o.vis && o.type != "variable" && o.y < b.y1 && o.y + o.h > b.y0) return false;
+    }
+    return true;
+}
+static void winRow(const SlideBox &b, const TextLayout &L, const uint16_t *lut, const Comp &c, int fi, int i, int R) {   // screen row b.y0 + i of the window into ring row R: the margins from the page's middle row of the box (the card's corners differ by a pixel or two in the first and last rows), the box lettered
+    uint16_t *dst = winRing + (size_t) R * W; const uint16_t *m = pageFb + (size_t) ((b.y0 + b.y1) / 2) * W;
+    if (b.x0 > 0) memcpy(dst, m, (size_t) b.x0 * 2);
+    if (b.x1 < (int) W) memcpy(dst + b.x1, m + b.x1, (size_t) (W - b.x1) * 2);
+    slideRowRender(b, L, lut, c.font, fi, c.xcen, b.y0 + i); memcpy(dst + b.x0, slideRow, (size_t) b.cw * 2);
+    Cache_WriteBack_Addr((uint32_t) dst, W * 2);
+}
+static bool winPrime(Comp &c, const SlideBox &b, int want) {   // the whole box into the ring (~50 ms): the first step, or new words (in place, at the same offset: the same lines, no change to see)
+    const uint32_t t0 = micros(); const int rows = b.y1 - b.y0, fi = fontIdx(c.font);
+    const TextLayout L = textLayout(b.ix, b.iy, b.iw, b.ih, c.font, c.txt, c.xcen, c.ycen, c.isbr != 0, want, -1);
+    uint16_t lut[8]; slideLut(c, lut);
+    const bool was = winNext.on && winComp == c.name; const int top = was ? winNext.top : 0;
+    for (int i = 0; i < rows; ++i) { winRow(b, L, lut, c, fi, i, (top + i) & (WIN_ROWS - 1)); slideBreath(i); }
+    if (!was) { winNext.top = top; winNext.y0 = b.y0; winNext.y1 = b.y1; winNext.on = true; }
+    winScroll = want; winComp = c.name; winTxtHash = winHash(c.txt); c.scroll = want; winAt = millis();
+    winPrimeN++; winPrimeUs += micros() - t0;
+    return true;
+}
+static bool winStep(Comp &c, const SlideBox &b, int want) {      // the step: only the rows that come into view are lettered; the offset moves at the next frame
+    const int rows = b.y1 - b.y0, d = want - winScroll;
+    if (d == 0) { c.scroll = want; return true; }
+    if (d >= WIN_ROWS - rows || -d >= WIN_ROWS - rows) return winPrime(c, b, want);   // (a jump: the new rows would overlap the ones on show)
+    const uint32_t t0 = micros(); const int fi = fontIdx(c.font);
+    const TextLayout L = textLayout(b.ix, b.iy, b.iw, b.ih, c.font, c.txt, c.xcen, c.ycen, c.isbr != 0, want, -1);
+    uint16_t lut[8]; slideLut(c, lut);
+    const int top = winNext.top, newTop = (top + d) & (WIN_ROWS - 1);
+    if (d > 0) for (int i = rows - d; i < rows; ++i) winRow(b, L, lut, c, fi, i, (newTop + i) & (WIN_ROWS - 1));
+    else for (int i = 0; i < -d; ++i) winRow(b, L, lut, c, fi, i, (newTop + i) & (WIN_ROWS - 1));
+    winNext.top = newTop; winScroll = want; c.scroll = want; winAt = millis();
+    winStepN++; winStepUs += micros() - t0; winRowsN += d > 0 ? d : -d;
+    return true;
+}
+static void winOff(bool flush) {                                  // the window ends: with flush, its picture goes into the page's own buffers first (the same pixels: nothing to see)
+    if (!winNext.on) return;
+    if (flush && !loadingPage) { Comp *c = find(winComp); if (c && c->type == "sltext") { c->scroll = winScroll; winFlushing = true; redraw(*c); presentDirty(true); winFlushing = false; } }
+    winNext.on = false; winComp.clear();
+}
+static void winPoll() {                                           // every pass: the window outlives nothing it should not
+    if (!winNext.on) return;
+    if (!stripOn || topOn || loadingPage) { winOff(true); return; }
+    Comp *c = find(winComp); if (!c || !c->vis || c->type != "sltext") winOff(false);
 }
 // A TextSelect is the Nextion's cyclic spinner: the options (hig px each) slide through a selection
 // band in the middle of the box — two lines in pco1 when dis is set — and whatever sits in the band is
@@ -1804,14 +1908,23 @@ static void slideTxtTick(bool now) {
 }
 static int slideDrag(Comp &c, int want) {                  // 1: drawn at `want`; 0: not this way - the caller sets the scroll and redraws as before; -1: not yet (a flip in flight), ask again next pass
     if (loadingPage || noDraw) { c.scroll = want; return 1; }
+    struct SlidePhaseReset { ~SlidePhaseReset() { slidePhase = 0; } } slidePhaseReset_;   // (1.11.155) the phase for the hold and late-strip logs, cleared on every way out
     if (c.type != "sltext" || c.sta != 1 || !c.vis || !pageFb || fbNow != pageFb) return 0;
     const int fi = fontIdx(c.font); if (!aaBits[fi]) return 0;   // (the 1-bit letters go through gfx: the old path)
     SlideBox b; if (!slideBox(c, b)) { c.scroll = want; return 1; }
     const int idx = indexOf(c);
     for (int j = idx + 1; j < (int) page.comps.size(); ++j) if (showsIn(page.comps[j], b.ix, b.iy, b.iw, b.ih)) return 0;   // something is drawn over it: the old path repaints that too
+    if (winCapable(c, b)) {                                 // (1.11.156) THE WINDOW: the feeder shows the box from the ring; a step letters only its new rows
+        const uint32_t w0 = micros();
+        if (winNext.on && winComp == c.name) winStep(c, b, want); else winPrime(c, b, want);
+        memoTouched(b.x0, b.y0, b.cw, b.y1 - b.y0);
+        const uint32_t us = micros() - w0; slideN++; slideUs += us; if (us > slideUsMax) slideUsMax = us;
+        return 1;
+    }
     // The twin: the rotation on (a canvas apart from the two panel buffers), the step written into the spare and flipped to.
     const bool twin = flipOk && canvas->lazy && flipFb[flipSpare] && flipFb[flipShown] && flipFb[flipSpare] != flipFb[flipShown] && flipFb[flipSpare] != pageFb && flipFb[flipShown] != pageFb;
     if (twin) {
+        slidePhase = 1;
         flipTick();                                        // (a flip that has completed is taken in here, not a pass later)
         if (flipPending || flipComposing) { slideWaitN++; return -1; }
         if (dirtyN) { presentDirty(true); if (dirtyN) { slideWaitN++; return -1; } }   // nothing of the canvas may be left waiting: the spare is brought up from the buffer on show
@@ -1825,6 +1938,7 @@ static int slideDrag(Comp &c, int want) {                  // 1: drawn at `want`
     if (twin) {
         if (spareHoldsFlight) { spareHoldsFlight = false; if (topCanvas) topCanvas->track = false; flipStale = { 0, 0, (int16_t) W, (int16_t) H }; flipStaleRow = 0; }   // (a kept flight composite: this use of the spare claims it, as a big change would)
         if (flipStale.w > 0 && flipStale.h > 0) {         // the spare's debt, from the buffer on show, outside the box
+            slidePhase = 2;
             const uint32_t d0 = micros();
             const int rx0 = max(0, (int) flipStale.x), rx1 = min((int) W, flipStale.x + flipStale.w), ry0 = max(0, (int) flipStale.y), ry1 = min((int) H, flipStale.y + flipStale.h);
             for (int r = ry0; r < ry1; ++r) {
@@ -1841,11 +1955,22 @@ static int slideDrag(Comp &c, int want) {                  // 1: drawn at `want`
         const int band = r0 >> 3, r1 = min(b.y1, (band + 1) << 3), rows = r1 - r0;
         const bool over = twin && presentArea(b.x0, r0, b.cw, rows).over;   // (the rows under our layer: a help page's buttons share the box's first rows)
         if (!twin || over) {                               // the canvas: the 4 MB boards (shown by present, as before); on the twin the rows composed with the layer into the spare
-            slideEnsureBand(band, b, r0, r1);
-            for (int row = r0; row < r1; ++row) { slideRowRender(b, L, lut, c.font, fi, c.xcen, row); memcpy(pageFb + row * W + b.x0, slideRow, b.cw * 2); slideBreath(row); }
-            if (twin) copyRows(spare, b.x0, r0, b.cw, rows, true); else dirty(b.x0, r0, b.cw, rows);
+            slidePhase = 6; slideEnsureBand(band, b, r0, r1);
+            slidePhase = 3; for (int row = r0; row < r1; ++row) {
+                const uint32_t t0 = micros(); slideRowRender(b, L, lut, c.font, fi, c.xcen, row);
+                const uint32_t t1 = micros(); memcpy(pageFb + row * W + b.x0, slideRow, b.cw * 2);
+                const uint32_t t2 = micros(); slideRenderUs += t1 - t0; slideCopyUs += t2 - t1;
+                slideBreath(row);
+            }
+            slidePhase = 5; if (twin) copyRows(spare, b.x0, r0, b.cw, rows, true); else dirty(b.x0, r0, b.cw, rows);
         } else {                                           // the twin: into the spare, whole bands, to be caught up by the canvas once shown
-            for (int row = r0; row < r1; ++row) { slideRowRender(b, L, lut, c.font, fi, c.xcen, row); memcpy(spare + row * W + b.x0, slideRow, b.cw * 2); wbPaced((uint32_t) (spare + row * W + b.x0), (uint32_t) (b.cw * 2)); slideBreath(row); }
+            slidePhase = 4; for (int row = r0; row < r1; ++row) {
+                const uint32_t t0 = micros(); slideRowRender(b, L, lut, c.font, fi, c.xcen, row);
+                const uint32_t t1 = micros(); memcpy(spare + row * W + b.x0, slideRow, b.cw * 2);
+                const uint32_t t2 = micros(); wbPaced((uint32_t) (spare + row * W + b.x0), (uint32_t) (b.cw * 2));
+                const uint32_t t3 = micros(); slideRenderUs += t1 - t0; slideCopyUs += t2 - t1; slideWbUs += t3 - t2;
+                slideBreath(row);
+            }
             stale |= 1ull << band;
         }
         r0 = r1;
@@ -2108,6 +2233,7 @@ static void saverApply(Page &np) {
 }
 static bool loadPage(const std::string &name) {
     auto it = pageIds.find(name); if (it == pageIds.end() || !assetsOk()) return false;
+    winOff(false);                                          // (1.11.156) the window goes with its page (the feeder stops reading the ring at the next frame, long before the new page is shown)
     pageT0 = millis() ? millis() : 1; pageDrawMs = pageComposeMs = pageShownMs = 0;   // (1.11.116) timed: /status "flip" "last"
     // (the screen saver's memory: taken as the screen blanks, used only by the restore that follows it)
     const bool restoring = !saverPage.empty() && page.name == "BlankView" && name == saverPage;
@@ -2373,7 +2499,10 @@ static void heapAccount(const char *verb, int32_t delta) {
 struct HeapWatch { const char *v; uint32_t h0; explicit HeapWatch(const char *verb) : v(verb), h0((uint32_t) heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) {} ~HeapWatch() { heapAccount(v, (int32_t) heap_caps_get_free_size(MALLOC_CAP_INTERNAL) - (int32_t) h0); } };
 static std::string heapByJson() {
     std::string out = "\"by\":[";
-    for (int i = 0; i < heapByN; ++i) { char e[64]; snprintf(e, sizeof e, "%s[\"%s\",%ld,%ld,%lu]", i ? "," : "", heapBy[i].verb, (long) heapBy[i].lost, (long) heapBy[i].gained, (unsigned long) heapBy[i].n); out += e; }
+    for (int i = 0; i < heapByN; ++i) {
+        char v[14]; for (size_t k = 0; k < sizeof v; ++k) { const char ch = heapBy[i].verb[k]; v[k] = (ch && ((unsigned char) ch < 32 || ch == '"' || ch == '\\')) ? '?' : ch; if (!ch) break; }   // (a command's head may begin with a tab: not in JSON)
+        char e[64]; snprintf(e, sizeof e, "%s[\"%s\",%ld,%ld,%lu]", i ? "," : "", v, (long) heapBy[i].lost, (long) heapBy[i].gained, (unsigned long) heapBy[i].n); out += e;
+    }
     return out + "]";
 }
 static void handle(const std::string &cmd) {
@@ -2697,7 +2826,7 @@ static void breathe() {
 }
 
 // ------------------------------------------------------------------ touch
-static uint32_t fakeTouchUntil = 0; static int fakeX = 0, fakeY = 0;   // POST /tap?x=&y=: a finger from the Mac
+static uint32_t fakeTouchUntil = 0, fakeTouchFrom = 0, fakeDurMs = 120, fakeGapMs = 0, fakeNextAt = 0, fakeFillMs = 0, fakeFillAt = 0; static int fakeX = 0, fakeY = 0, fakeX2 = 0, fakeY2 = 0, fakeRep = 0; static bool fakeReadI2c = false;   // i2c=1: the touch chip is read over I2C during the fake press too, as it is under a real finger (the bench's last difference from a hand)   // fill: every so many ms the LogText's words are re-sent through handle() with the first line moved to the end - what the Teensy does as a scroll moves (the "fills")   // POST /tap?x=&y=[&x2=&y2=][&ms=][&rep=&gap=]: a finger from the Mac (31 Oct: its drag from x,y to x2,y2 over ms, and rep more swipes back and forth gap ms apart - all from ONE request, since every request costs the loop ~70 ms)
 static void closeCombo(Comp &c) {                        // put back whatever the list covered
     if (!c.open) return;
     c.open = false;
@@ -2748,7 +2877,24 @@ static void pollTouch() {
     const uint32_t now = millis();
     if (teensyLink.linkOpen() && (!topOn || topWho == 3)) return;   // the Teensy is serving files: a touch must not put bytes among the frames (our own pages send none; the link's panel has no buttons)
     bool pressed;
-    if ((int32_t) (fakeTouchUntil - now) > 0) { pressed = true; x[0] = fakeX; y[0] = fakeY; }
+    if (fakeFillMs && (fakeRep > 0 || (int32_t) (fakeTouchUntil - now) > 0) && now - fakeFillAt >= fakeFillMs) {   // (bench) the Teensy's window of words again, rotated by a line
+        fakeFillAt = now;
+        for (auto &c : page.comps) if (c.type == "sltext" && c.txt.size() > 40) {
+            const size_t nl = c.txt.find("\r\n"); std::string t = nl == std::string::npos ? c.txt : c.txt.substr(nl + 2) + "\r\n" + c.txt.substr(0, nl);
+            handle(c.name + ".txt=\"" + t + "\""); break;
+        }
+    }
+    if ((int32_t) (fakeTouchUntil - now) <= 0 && fakeRep > 0 && (int32_t) (now - fakeNextAt) >= 0) {   // the next swipe of the series: back the other way
+        fakeRep--; const int tx0 = fakeX, ty0 = fakeY; fakeX = fakeX2; fakeY = fakeY2; fakeX2 = tx0; fakeY2 = ty0;
+        fakeTouchFrom = now; fakeTouchUntil = now + fakeDurMs; fakeNextAt = fakeTouchUntil + fakeGapMs;
+    }
+    if ((int32_t) (fakeTouchUntil - now) > 0) {
+        if (fakeReadI2c && touchOk) { int16_t rx[2], ry[2]; touch.getPoint(rx, ry, 2); }   // (bench) the real read, its result ignored
+        pressed = true;
+        const uint32_t span = fakeTouchUntil - fakeTouchFrom, gone = now - fakeTouchFrom;   // (the fake finger moves evenly from x,y to x2,y2)
+        x[0] = (int16_t) (span ? fakeX + (int32_t) (fakeX2 - fakeX) * (int32_t) gone / (int32_t) span : fakeX);
+        y[0] = (int16_t) (span ? fakeY + (int32_t) (fakeY2 - fakeY) * (int32_t) gone / (int32_t) span : fakeY);
+    }
     else pressed = touchOk && touch.getPoint(x, y, 2) > 0;
     // Hold the top-left corner for 1.5 s: radios on/off (a bench control, remembered across power cycles).
     // Hold the top-RIGHT corner for 3 s: the workshop door, open or shut on the network we are on.
@@ -2861,7 +3007,7 @@ static void pollTouch() {
     } else if (pressed && down && held >= 0 && held < (int) page.comps.size() && scrollable(page.comps[held])) {
         Comp &c = page.comps[held]; lastY = y[0];               // the finger drags the list / the text
         const int dy = y[0] - dragY0;
-        if (abs(dy) > 8) dragged = true;
+        if (abs(dy) > (c.type == "sltext" ? 3 : 8)) dragged = true;   // (1.11.156; Malcolm, 31 Oct: "the scroll starts after the finger has slid a few mms") a text follows from the third pixel; a list keeps its eight (a tap must not turn its wheel)
         if (dragged) {
             const int want = c.type == "sltext" ? constrain(dragS0 - dy, 0, (int) host.getInt("", c.name, "maxval_y")) : listWrap(c, dragS0 - dy);
             if (want != c.scroll && now - lastDragDraw > (c.type == "sltext" ? 30 : 40)) {   // (1.11.142) the text through the slab (1.11.143: and flipped to, one step a frame); a list as before
@@ -3027,13 +3173,15 @@ static void webBegin() {
                               (unsigned long) frameEnds, (unsigned long) frameUs);   // (frame_ends grows 23 a second once the hook works, 34.6 on the twin; frame_us ~43090, ~28920 on the twin)
         perfCmds = perfHandleUs = perfPresentN = perfPresentUs = perfPresentPx = perfFillFull = perfFillInc = perfSkipped = perfLoopMaxMs = 0; perfRxMax = 0;
         std::string out = b; out.pop_back();
-        { char s[160]; snprintf(s, sizeof(s), ",\"slide\":{\"n\":%lu,\"flips\":%lu,\"waits\":%lu,\"us\":%lu,\"max_us\":%lu,\"debt_us\":%lu,\"fills\":%lu,\"fill_us\":%lu}", (unsigned long) slideN, (unsigned long) slideFlipN, (unsigned long) slideWaitN, (unsigned long) slideUs, (unsigned long) slideUsMax, (unsigned long) slideDebtUs, (unsigned long) slideFillN, (unsigned long) slideFillUs); out += s; slideN = slideFlipN = slideWaitN = slideUs = slideUsMax = slideDebtUs = slideFillN = slideFillUs = 0; }   // (1.11.142) the slide text's drag steps: drawn, flipped to (the twin), put off for a flip in flight, their time, the spare's debt
+        { char s[240]; snprintf(s, sizeof(s), ",\"slide\":{\"n\":%lu,\"flips\":%lu,\"waits\":%lu,\"us\":%lu,\"max_us\":%lu,\"debt_us\":%lu,\"fills\":%lu,\"fill_us\":%lu,\"render_us\":%lu,\"copy_us\":%lu,\"wb_us\":%lu}", (unsigned long) slideN, (unsigned long) slideFlipN, (unsigned long) slideWaitN, (unsigned long) slideUs, (unsigned long) slideUsMax, (unsigned long) slideDebtUs, (unsigned long) slideFillN, (unsigned long) slideFillUs, (unsigned long) slideRenderUs, (unsigned long) slideCopyUs, (unsigned long) slideWbUs); out += s; slideN = slideFlipN = slideWaitN = slideUs = slideUsMax = slideDebtUs = slideFillN = slideFillUs = slideRenderUs = slideCopyUs = slideWbUs = 0; }   // (1.11.142) the slide text's drag steps: drawn, flipped to (the twin), put off for a flip in flight, their time, the spare's debt
         out += ",\"max_us\":{";
         for (int i = 0; i < 7; ++i) { char e[40]; snprintf(e, sizeof(e), "%s\"%s\":%lu", i ? "," : "", phaseName[i], (unsigned long) phaseMax[i]); out += e; phaseMax[i] = 0; }
         out += "},";
         out += dmaPerfJson();                              // (25 Oct) the panel's DMA: frames met late = the picture slipped
         out += ringPerfJson();
         out += slipwPerfJson();
+        out += partsJson();                                // (1.11.155) the longest run of each part of a pass, and how many over 5 ms
+        { char s[160]; snprintf(s, sizeof s, ",\"win\":{\"on\":%d,\"primes\":%lu,\"prime_us\":%lu,\"steps\":%lu,\"step_us\":%lu,\"rows\":%lu}", winNext.on ? 1 : 0, (unsigned long) winPrimeN, (unsigned long) winPrimeUs, (unsigned long) winStepN, (unsigned long) winStepUs, (unsigned long) winRowsN); out += s; winPrimeN = winPrimeUs = winStepN = winStepUs = winRowsN = 0; }   // (1.11.156) the window: whole boxes lettered, steps and their rows
         { char e[120]; snprintf(e, sizeof(e), ",\"wb\":{\"pieces\":%lu,\"slow\":%lu,\"cy_min\":%lu,\"cy_max\":%lu,\"clean_cy\":%lu}", (unsigned long) wbPieces, (unsigned long) wbSlow, (unsigned long) (wbCyMin == 0xFFFFFFFF ? 0 : wbCyMin), (unsigned long) wbCyMax, (unsigned long) wbCleanCy); out += e; wbPieces = wbSlow = 0; wbCyMin = 0xFFFFFFFF; wbCyMax = 0; }   // (25 Oct 21:00) the write-back pieces this window                            // (25 Oct evening) the slips by what the loop was doing (busy_what.h)                             // (25 Oct evening) the ring this window: re-syncs, skips, the DMA's furthest descriptor, both latenesses' worst, the EOF offsets' span
         { char e[60]; snprintf(e, sizeof(e), ",\"nvs\":{\"writes\":%lu,\"max_us\":%lu}", (unsigned long) nvsN, (unsigned long) nvsMaxUs); out += e; nvsN = nvsMaxUs = 0; }
         { char e[120]; snprintf(e, sizeof(e), ",\"slips\":{\"n\":%lu,\"max_us\":%lu,\"sum_us\":%lu,\"huge\":%lu,\"gap_base\":%lu}", (unsigned long) dmaSlips, (unsigned long) dmaSlipMax, (unsigned long) dmaSlipSum, (unsigned long) dmaHuge, (unsigned long) dmaGapBase); out += e; dmaSlips = dmaSlipMax = dmaSlipSum = dmaHuge = 0; }   // (25 Oct) the slip counter (dma_watch.h), this window; huge (1.11.128): frames the panel was held for 20 ms and more
@@ -3101,6 +3249,10 @@ static void webBegin() {
         else if (kind == "pacepx") { if (kb >= 400 && kb <= 64000) paceQuantumPx = (uint32_t) kb; us = paceQuantumPx; }   // (26 Oct) the pacing's burst between rests, in pixels (src/psram_pace.h)
         else if (kind == "sync") { flipSyncOn = kb != 0; flipStaleRow = 0; us = flipSyncOn; }   // (26 Oct) the spare's eager catch-up after a flip: 1 = as before, 0 = left stale until the next compose
         else if (kind == "rest") { if (kb >= 0 && kb <= 20000) paceRestOverride = (uint32_t) kb; us = paceRestOverride ? paceRestOverride : board->psramRestUs; }   // (26 Oct) the pacing's rest after each quantum, us (0 = the board's)
+        else if (kind == "breath") { if (kb >= 1 && kb <= 64) slideBreathEvery = kb; us = (uint32_t) slideBreathEvery; }   // (31 Oct, bench) the slide's breath every N rows
+        else if (kind == "yield") { if (kb >= 0 && kb <= 1000) slideYieldUs = (uint32_t) kb; us = slideYieldUs; }         // (31 Oct, bench) a row waits up to N us for the feeder's fill in flight
+        else if (kind == "wbspiece") { if (kb >= 256) wbStripPiece = (uint32_t) kb; us = wbStripPiece; }                 // (31 Oct, bench) with the strips on: a write-back's piece, bytes (psram_pace.h)
+        else if (kind == "wbsgap") { if (kb >= 0 && kb <= 1000) wbStripGapUs = (uint32_t) kb; us = wbStripGapUs; }       // (31 Oct, bench) ... and the breath after each piece, us
         else ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra);   // (26 Oct) m2m, m2mp, m2mrows, wbnop, lcdpri, dcstat - or an unknown kind (src/dma_copy.h)
         char b[460]; snprintf(b, sizeof b, "{\"kind\":\"%s\",\"kb\":%d,\"us\":%lu,\"ok\":%d,\"slips\":%lu,\"huge\":%lu,\"pos\":%lu,\"fr\":%lu,\"dmax\":%ld%s}", kind.c_str(), kb, (unsigned long) us, ok ? 1 : 0,
                  (unsigned long) (dmaSlipsAll - slips0), (unsigned long) (dmaHugeAll - huge0), (unsigned long) dmaProbePos, (unsigned long) dmaProbeFr, (long) dmaProbeMax, extra);
@@ -3129,7 +3281,11 @@ static void webBegin() {
     });
     doorOn("/tap", HTTP_POST, []() {                    // /tap?x=&y=[&ms=] : press there for ms (default 120), then release
         fakeX = web.arg("x").toInt(); fakeY = web.arg("y").toInt();
-        fakeTouchUntil = millis() + (web.hasArg("ms") ? web.arg("ms").toInt() : 120);
+        fakeX2 = web.hasArg("x2") ? web.arg("x2").toInt() : fakeX; fakeY2 = web.hasArg("y2") ? web.arg("y2").toInt() : fakeY;
+        fakeDurMs = web.hasArg("ms") ? (uint32_t) web.arg("ms").toInt() : 120;
+        fakeTouchFrom = millis(); fakeTouchUntil = fakeTouchFrom + fakeDurMs;
+        fakeRep = web.hasArg("rep") ? web.arg("rep").toInt() : 0; fakeGapMs = web.hasArg("gap") ? (uint32_t) web.arg("gap").toInt() : 0; fakeNextAt = fakeTouchUntil + fakeGapMs;
+        fakeFillMs = web.hasArg("fill") ? (uint32_t) web.arg("fill").toInt() : 0; fakeFillAt = millis(); fakeReadI2c = web.arg("i2c") == "1";
         web.send(200, "text/plain", "ok");
     });
     doorOn("/bootlog", HTTP_GET, []() { web.send(200, "text/plain", bootLog.c_str()); });
@@ -3710,19 +3866,19 @@ static void timePoll() {
 }
 static void netPoll() {
     static uint32_t downSince = 0;
-    quietPoll();
-    { const char *why = tx.tick(millis() - bootMs); if (why) applyRadios(why); }
+    { Part p("quiet"); quietPoll(); }
+    { Part p("tick"); const char *why = tx.tick(millis() - bootMs); if (why) applyRadios(why); }
     if (bannerUntil && (int32_t) (millis() - bannerUntil) >= 0) { bannerUntil = 0; restoreRect(0, 0, W, BANNER_H); for (auto &c : page.comps) if (c.y < BANNER_H) drawComp(c); memoTouched(0, 0, W, BANNER_H); dirty(0, 0, W, BANNER_H); netDot(true); }
-    if (!radiosLive) { netDot(); return; }
+    if (!radiosLive) { Part p("dot"); netDot(); return; }
     if (quietActive && quietWifiOff) return;
-    netDot();
+    { Part p("dot"); netDot(); }
     if (WiFi.status() != WL_CONNECTED) {
         otaReady = false;
         if (!downSince) downSince = millis();
-        if (!wifiPage.showing()) wifiAuto();                  // (while the WiFi page shows, the pilot chooses)
+        if (!wifiPage.showing()) { Part p("wauto"); wifiAuto(); }   // (while the WiFi page shows, the pilot chooses)
         return;
     }
-    if (downSince || !otaReady) wifiJoined();
+    if (downSince || !otaReady) { Part p("joined"); wifiJoined(); }
     downSince = 0;
     if (!otaReady) {                                        // (the handlers are made ONCE: every web.on() is a new one, and they were made afresh at every join)
         static bool made = false, otaBegun = false;
@@ -3732,9 +3888,9 @@ static void netPoll() {
         otaListening = otaBegun;
         if (!made) { made = true; webBegin(); } else web.begin();
     }
-    if (otaListening && doorOpen() && !updChanging() && !flyingNow()) ArduinoOTA.handle();   // (not while "Check for update" is changing something, and never in flight)
-    web.handleClient();
-    timePoll();
+    if (otaListening && doorOpen() && !updChanging() && !flyingNow()) { Part p("ota"); ArduinoOTA.handle(); }   // (not while "Check for update" is changing something, and never in flight)
+    { Part p("web"); web.handleClient(); }
+    { Part p("time"); timePoll(); }
 }
 
 #include "update_device.h"
@@ -3906,7 +4062,7 @@ void loop() {
     { Busy b(BUSY_SD); packTick(!teensyLink.running() && (int32_t) (now - lastRxMs) >= 100 && now - lastPresentMs >= 300 && !flyingNow()); }   // (1.11.138) the card against the pack, a file at a time between the front page's clock ticks
     { Busy b(BUSY_PREFS); if (!teensyLink.running()) prefsPoll(); if (xipArmed && now > 20000 && !teensyLink.running() && (wireQuiet(300) || now > 90000)) { xipArmed = false; nvsQuiet([&] { prefs.putInt("xiparm", 0); }); } if (stripArmed && now > 20000 && !teensyLink.running() && (wireQuiet(300) || now > 90000)) { stripArmed = false; nvsQuiet([&] { prefs.putInt("striparm", 0); }); } } PHASE(2)   // (1.11.131) 20 s up with the code in the PSRAM: no strike for this start
     { static uint32_t floorAt = 0; if (now - floorAt > 500) { floorAt = now; if (ESP.getFreePsram() < PSRAM_FLOOR && (clipDropOne() || bgEvictOne())) psramEvictions++; } }   // (1.11.132/133: clips first) the PSRAM floor: under half a megabyte free, a resident picture not on show is given up (the code lives in the PSRAM since 1.11.131; twin #2 was seen at 71 kB free after its update)
-    { Busy b(BUSY_TOUCH); pollTouch(); } PHASE(3)
+    { Busy b(BUSY_TOUCH); winPoll(); pollTouch(); } PHASE(3)
     { Busy b(BUSY_TIMERS); pollTimers(); } PHASE(4)
     slideTxtTick(false); presentDirty(touchPainted); touchPainted = false; PHASE(5)   // a finger's feedback is shown at once; the Teensy's at the end of its burst (1.11.144: a slide text's words 120 ms on if their position never came)
     { Busy b(BUSY_WIFI); netPoll(); } PHASE(6)

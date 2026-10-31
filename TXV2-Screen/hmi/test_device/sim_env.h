@@ -295,6 +295,7 @@ static void presentDirty() { if (!anyDirty) return; anyDirty = false; fieldOnGla
 // ------------------------------------------------------------------ the rest of main.cpp that the header leans on
 static uint32_t lastRxMs = 0;
 static std::vector<std::string> blogLines; static void blog(const char *tag, const std::string &what) { blogLines.push_back(std::string(tag) + " " + what.substr(0, 60)); }
+struct Part { explicit Part(const char *) {} };   // (1.11.155) main.cpp's part timer: nothing to time on the Mac
 static bool radiosOn = true, radiosLive = true, updWifi = false, otaReady = false;
 static ldrc::TxState tx;                                          // (main.cpp's)
 static bool &armedNow = tx.armed; static int &txStatus = tx.status; static bool &radioHeld = tx.held;

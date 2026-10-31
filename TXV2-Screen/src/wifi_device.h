@@ -458,8 +458,8 @@ static void wifiTouchCancel() { wifiPage.cancelTouch(); }   // (B59) a corner he
 static void wifiPoll() {
     static uint32_t drawnLayout = 0, lastPoke = 0; static bool wasUp = false; static std::map<int, uint32_t> drawn;
     if (wifiRequested && !radioHeld) { wifiRequested = false; if (!updShowing() && !wifiPage.showing()) { wifiTouchedAt = millis(); wifiPage.open(); } }   // (in the first seconds the radio waits for the main board's word: so does the page)
-    wifiPage.poll();
-    if (!teensyLink.running()) wifiStorePoll();                 // (a flash write stalls the chip: not while files travel on the wire)
+    { Part p("wpage"); wifiPage.poll(); }
+    if (!teensyLink.running()) { Part p("wstore"); wifiStorePoll(); }   // (a flash write stalls the chip: not while files travel on the wire)
     if (wifiPage.showing() && !topReady()) wifiPage.close();     // no memory for its layer: a page nobody can see or close must not hold the radio
     const bool up = wifiPage.showing() && !updShowing() && topReady();
     if (up) {
