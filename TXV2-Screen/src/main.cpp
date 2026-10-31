@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.153"
+#define SCREEN_VERSION "1.11.154"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1276,7 +1276,7 @@ static bool slideBox(const Comp &c, SlideBox &b) {
     return b.x1 > b.x0 && b.y1 > b.y0;
 }
 static void slideDone() {}                                  // the finger is up (1.11.142-144 gave a heap slab back here; the row is static now)
-static inline void slideBreath(int row) { if (board->psramRestUs && (row & 7) == 7) delayMicroseconds(20); }   // (the twin) a gap in our stream for the strips' feeder, every eight rows
+static inline void slideBreath(int row) { if (board->psramRestUs && (row & 3) == 3) delayMicroseconds(20); }   // (the twin) a gap in our stream for the strips' feeder: every FOUR rows (1.11.154: every eight gave the feeder a chance only every ~200 us against its 240 us slot - the session of 31 Oct had 6 of its 7 late strips under a write-back; ~1 ms more a step)
 static inline void slideSpan(uint16_t *dst, const uint16_t *src, int row, int a, int b) { if (b > a) memcpy(dst + row * W + a, src + row * W + a, (b - a) * 2); }
 static void slideLut(const Comp &c, uint16_t *lut) { const uint16_t bg = (uint16_t) c.bco, ink = inkOf(c); lut[0] = bg; for (int a = 1; a < 8; ++a) lut[a] = a >= 7 ? ink : blend565(bg, ink, a); }
 // One row of the box rendered into slideRow: the background, then the row's share of the line that crosses it, letter by
@@ -2388,7 +2388,12 @@ static void handle(const std::string &cmd) {
     if (cmd.rfind("ldrcpipe ", 0) == 0) { blePipeCommand(cmd.substr(9)); return; }   // the main board's Bluetooth pipe to the receiver (src/ble_device.h, 1.11.1)
     if (cmd.rfind("ldrctx ", 0) == 0) { bleTxCommand(cmd.substr(7)); return; }
     if (cmd.rfind("ldrcreq ", 0) == 0) { bleHttpCommand(cmd.substr(8)); return; }   // (1.11.18) the main board asks the receiver something over the pipe   // the main board's Pong, once a frame: ours to draw (src/pong_device.h), before the script sees it as a system variable
-    recent[recentN++ % 64] = cmd;
+    // (1.11.154) THE DRAIN OF THE INTERNAL RAM, found by the accounting of 1.11.153 on the yellow transmitter's scrolling
+    // session (31 Oct: "txt>1k" lost 42876 bytes in 62 commands, nothing given back): this ring of the last 64 commands
+    // kept each one WHOLE - the log viewer's window of words is 1-3 kB, a std::string slot never gives capacity back, and
+    // after a scroll the ring held up to 64 x 3 kB of the chip's own RAM: the "joined but deaf" WiFi, the 12 kB heap in
+    // 2.8 kB pieces, the fresh starts before a check. The first 80 characters say what the command was.
+    recent[recentN++ % 64].assign(cmd, 0, cmd.size() > 80 ? 80 : cmd.size());
     if (cmd.rfind("Ch", 0) != 0 && cmd.rfind("J", 0) != 0 && cmd.rfind("TXBV", 0) != 0 && cmd.rfind("RXBV", 0) != 0 && cmd.rfind("vis Warning", 0) != 0) blog("<", cmd);
 #ifdef EMU_ECHO
     Serial.printf("[%lu:%s]\n", (unsigned long) cmdCount, cmd.c_str());
