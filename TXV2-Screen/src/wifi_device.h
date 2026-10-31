@@ -86,6 +86,9 @@ static void wifiMark(uint8_t ev, uint8_t reason, int8_t rssi, const uint8_t *bss
     if (bssid) memcpy(m.bssid, bssid, 6); else memset(m.bssid, 0, 6);
     wifiMarkN = wifiMarkN + 1;
 }
+struct WifiNode { std::string ssid; uint8_t bssid[6]; int ch; int rssi; };   // (1.11.151) an access point heard by a look, of a network we know (see below)
+static std::vector<WifiNode> wifiNodes; static uint32_t wifiNodesAt = 0; static std::string wifiBy;
+static std::string wifiNodesText(const std::string &ssid);
 static std::string wifiDiagJson() {                             // the tail of /status "wifi": the access point now, the counts, the diary
     char b[160];
     snprintf(b, sizeof b, ",\"bssid\":\"%s\",\"ch\":%d,\"ip\":\"%s\",\"gw\":\"%s\",\"joins\":%lu,\"drops\":%lu,\"log\":[",
@@ -98,6 +101,8 @@ static std::string wifiDiagJson() {                             // the tail of /
         out += e;
     }
     out += "]";
+    // (1.11.151) how the network in hand was asked for, and every node of it the last look heard (with the look's age)
+    out += ",\"by\":\"" + wifiBy + "\",\"nodes\":\"" + wifiNodesText(WiFi.SSID().c_str()) + "\",\"nodes_age\":" + std::to_string(wifiNodesAt ? (millis() - wifiNodesAt) / 1000 : 0);
     return out;
 }
 static void wifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
@@ -111,18 +116,49 @@ static void wifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     else if (why == 2) wifiExpired++;                           // authentication expired: the password, or a weak signal
     else if (why == 201) wifiNoAp++;                            // no such network in range
 }
+// (1.11.151) THE NODE IS CHOSEN BY THE SCREEN. On a mesh (Malcolm's five Deco nodes, all called House) the driver's own
+// choice was not to be trusted even with WIFI_ALL_CHANNEL_SCAN + BY_SIGNAL (1.11.148): on 31 Oct the yellow transmitter,
+// restarted in the sitting room, joined the Bedroom 1 node at -69 dBm with the sitting room's at -51 a yard away, and
+// a 2.3 MB update stalled to death on it; a forced new look put it right at once. The driver's connect-scan dwells
+// ~120 ms a channel, and a mesh node slow with its probe answer is simply not seen. So: every look (300 ms a channel:
+// beacons and all) remembers EVERY access point heard of the networks we know, and a join of a name the last look
+// (within a minute) saw is asked of its strongest access point by BSSID and channel - the driver then scans for
+// nothing. A name the look did not show is asked by name as before (a phone's hotspot answers a direct call). The
+// nodes heard go to the boot log and to /status wifi "nodes"; "by" says how the network in hand was asked for.
+// (WifiNode, wifiNodes, wifiNodesAt and wifiBy are declared above wifiDiagJson, which reports them.)
+static std::string wifiNodeTail(const uint8_t *b) { char t[8]; snprintf(t, sizeof t, "%02x%02x%02x", b[3], b[4], b[5]); return t; }
+static const WifiNode *wifiStrongestNode(const std::string &ssid) {
+    if (!wifiNodesAt || millis() - wifiNodesAt > 60000) return nullptr;
+    const WifiNode *best = nullptr;
+    for (auto &w : wifiNodes) if (ldrc::wifiSameName(w.ssid, ssid) && (!best || w.rssi > best->rssi)) best = &w;
+    return best;
+}
+static std::string wifiNodesText(const std::string &ssid) {        // "f32109 -51 ch5, 4b9d3a -69 ch6"
+    std::string s;
+    for (auto &w : wifiNodes) if (ldrc::wifiSameName(w.ssid, ssid)) s += (s.empty() ? "" : ", ") + wifiNodeTail(w.bssid) + " " + std::to_string(w.rssi) + " ch" + std::to_string(w.ch);
+    return s;
+}
 static void wifiBeginWith(const std::string &ssid, const std::string &pass) {
     const bool was = WiFi.status() == WL_CONNECTED;
     WiFi.disconnect();
     wifiBadKey = 0; wifiExpired = 0; wifiNoAp = 0; wifiTrying = ssid; wifiBeganAt = millis();
-    const wl_status_t said = pass.empty() ? WiFi.begin(ssid.c_str()) : WiFi.begin(ssid.c_str(), pass.c_str());
+    const WifiNode *node = wifiStrongestNode(ssid);
+    wifiBy = node ? "node " + wifiNodeTail(node->bssid) : "name";
+    blog("wifi", node ? "asking " + ldrc::wifiShown(ssid) + " by node: " + wifiNodesText(ssid) : "asking " + ldrc::wifiShown(ssid) + " by name");   // (the strongest first; a boot log line holds 60 characters, /status wifi "nodes" the lot)
+    const wl_status_t said = node ? WiFi.begin(ssid.c_str(), pass.empty() ? nullptr : pass.c_str(), node->ch, node->bssid)
+                                  : pass.empty() ? WiFi.begin(ssid.c_str()) : WiFi.begin(ssid.c_str(), pass.c_str());
     if (was && said == WL_CONNECTED) esp_wifi_connect();        // the library's status had not caught up with our disconnect(): asked for the network in hand, it asks the radio for nothing
 }
 static void wifiCollect(int n, std::vector<ldrc::WifiNet> &out) {
     out.clear();
+    wifiNodes.clear(); wifiNodesAt = millis();                       // (1.11.151) every access point heard of a network we know
     for (int i = 0; i < n && i < 40; ++i) {
         ldrc::WifiNet net; net.ssid = WiFi.SSID(i).c_str(); net.rssi = WiFi.RSSI(i); net.locked = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
-        if (!net.ssid.empty()) out.push_back(net);
+        if (net.ssid.empty()) continue;
+        out.push_back(net);
+        bool known = false; for (auto &kn : wifiKnown) if (ldrc::wifiSameName(kn.ssid, net.ssid)) known = true;
+        const uint8_t *b = known ? WiFi.BSSID(i) : nullptr;
+        if (b) { WifiNode w; w.ssid = net.ssid; memcpy(w.bssid, b, 6); w.ch = (int) WiFi.channel(i); w.rssi = net.rssi; wifiNodes.push_back(w); }
     }
     WiFi.scanDelete();
 }
@@ -170,12 +206,27 @@ static void wifiStop() { WiFi.disconnect(true); WiFi.mode(WIFI_OFF); WifiLookOve
 // name, before the one that keeps failing is tried again - a quick look misses networks, and a phone's hotspot
 // answers a direct call when it is on. Each step goes in the boot log.
 static bool wifiTriedAlready(const std::string &ssid) { for (auto &t : wifiTried) if (ldrc::wifiSameName(t, ssid)) return true; return false; }
+// A look is in: the best network we know that has not had its turn is tried (by its strongest node, wifiBeginWith);
+// one we know that the look did not show is tried all the same; when each has had its turn, from the best again.
+static void wifiChoose(std::vector<ldrc::WifiNet> &seen, uint32_t now) {
+    { std::string what; for (auto &kn : wifiKnown) { int rssi = 0; bool in = false; for (auto &n : seen) if (ldrc::wifiSameName(kn.ssid, n.ssid)) { in = true; rssi = n.rssi; } what += (what.empty() ? "" : ", ") + ldrc::wifiShown(kn.ssid) + (in ? " " + std::to_string(rssi) : " not seen"); }
+      blog("wifi", "auto: look: " + what); }
+    std::vector<ldrc::WifiNet> others;
+    for (auto &n : seen) if (!wifiTriedAlready(n.ssid)) others.push_back(n);
+    std::string ssid; int k = ldrc::wifiBest(wifiKnown, others, ssid);
+    if (k < 0) for (size_t i = 0; i < wifiKnown.size(); ++i) if (!wifiTriedAlready(wifiKnown[i].ssid)) { k = (int) i; ssid = wifiKnown[i].ssid; blog("wifi", "auto: " + ldrc::wifiShown(ssid) + " not seen: trying it all the same"); break; }   // (the newest first)
+    if (k < 0) { wifiTried.clear(); k = ldrc::wifiBest(wifiKnown, seen, ssid); }      // each has had its turn: from the best again
+    if (k >= 0) { wifiTried.push_back(ssid); blog("wifi", "auto: trying " + ldrc::wifiShown(ssid)); wifiBeginWith(ssid, wifiKnown[k].pass); wifiAutoStep = 1; } else wifiAutoStep = 3;
+    wifiAutoAt = now;
+}
 static void wifiAuto() {
     const uint32_t now = millis();
     if (wifiKnown.empty()) return;
     switch (wifiAutoStep) {
     case 0:
         wifiTried.clear(); wifiTried.push_back(wifiKnown[0].ssid);
+        // (1.11.151) a look first, unless one is fresh: the newest network we know is then asked of its strongest node
+        if ((!wifiNodesAt || now - wifiNodesAt > 60000) && wifiLook(true)) { blog("wifi", "auto: a look first, for the strongest node"); wifiAutoStep = 5; wifiAutoAt = now; return; }
         blog("wifi", "auto: trying " + ldrc::wifiShown(wifiKnown[0].ssid));
         wifiBeginWith(wifiKnown[0].ssid, wifiKnown[0].pass); wifiAutoAt = now; wifiAutoStep = 1;
         return;
@@ -190,15 +241,18 @@ static void wifiAuto() {
         if (st == 0) return;
         if (st < 0) { wifiAutoStep = 3; wifiAutoAt = now; return; }
         std::vector<ldrc::WifiNet> seen; wifiCollect(WiFi.scanComplete(), seen);
-        { std::string what; for (auto &kn : wifiKnown) { int rssi = 0; bool in = false; for (auto &n : seen) if (ldrc::wifiSameName(kn.ssid, n.ssid)) { in = true; rssi = n.rssi; } what += (what.empty() ? "" : ", ") + ldrc::wifiShown(kn.ssid) + (in ? " " + std::to_string(rssi) : " not seen"); }
-          blog("wifi", "auto: look: " + what); }
-        std::vector<ldrc::WifiNet> others;
-        for (auto &n : seen) if (!wifiTriedAlready(n.ssid)) others.push_back(n);
-        std::string ssid; int k = ldrc::wifiBest(wifiKnown, others, ssid);
-        if (k < 0) for (size_t i = 0; i < wifiKnown.size(); ++i) if (!wifiTriedAlready(wifiKnown[i].ssid)) { k = (int) i; ssid = wifiKnown[i].ssid; blog("wifi", "auto: " + ldrc::wifiShown(ssid) + " not seen: trying it all the same"); break; }   // (the newest first)
-        if (k < 0) { wifiTried.clear(); k = ldrc::wifiBest(wifiKnown, seen, ssid); }      // each has had its turn: from the best again
-        if (k >= 0) { wifiTried.push_back(ssid); blog("wifi", "auto: trying " + ldrc::wifiShown(ssid)); wifiBeginWith(ssid, wifiKnown[k].pass); wifiAutoStep = 1; } else wifiAutoStep = 3;
-        wifiAutoAt = now;
+        wifiChoose(seen, now);
+        return;
+    }
+    case 5: {   // (1.11.151) the look before the first try is in
+        const int st = wifiLookState();
+        if (st == 0) return;
+        std::vector<ldrc::WifiNet> seen; if (st > 0) wifiCollect(WiFi.scanComplete(), seen);
+        bool otherKnownSeen = false;
+        for (auto &n : seen) for (size_t i = 1; i < wifiKnown.size(); ++i) if (ldrc::wifiSameName(wifiKnown[i].ssid, n.ssid)) otherKnownSeen = true;
+        if (!wifiStrongestNode(wifiKnown[0].ssid) && otherKnownSeen) { wifiChoose(seen, now); return; }   // the newest is not here and another we know is: no blind try of the newest first
+        blog("wifi", "auto: trying " + ldrc::wifiShown(wifiKnown[0].ssid));
+        wifiBeginWith(wifiKnown[0].ssid, wifiKnown[0].pass); wifiAutoAt = now; wifiAutoStep = 1;
         return;
     }
     default:
@@ -267,7 +321,7 @@ struct ScreenWifi : public ldrc::WifiHost {
     bool armedBySafety() override { return txStatus >= 0 && (txStatus & TX_SAFETY_DEFINED); }
     bool radioOn() override { return radiosOn; }
     void radioSwitch(bool on) override { setRadios(on); }
-    void scanStart() override { looking = radiosLive && wifiLook(); }
+    void scanStart() override { looking = radiosLive && (wifiLook() || wifiLook(true)); }   // (1.11.151) the pilot's own look wins over a join attempt in progress (the radio refuses a look while joining)
     int scanState() override { return looking ? wifiLookState() : -1; }
     void scanResults(std::vector<ldrc::WifiNet> &out) override { const int n = WiFi.scanComplete(); if (n >= 0) wifiCollect(n, out); else out.clear(); looking = false; }
     void join(const std::string &ssid, const std::string &pass) override { asked = ssid; if (radiosLive) wifiBeginWith(ssid, pass); }

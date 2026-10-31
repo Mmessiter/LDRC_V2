@@ -73,7 +73,8 @@ struct IPAddress {                                       // (1.11.147) as the li
 };
 struct wifi_config_t { struct { uint8_t ssid[32]; uint8_t password[64]; } sta; };
 
-struct SimAp { std::string ssid; int rssi; bool locked; std::string pass; bool weak = false, hidden = false; };   // weak: heard, but every handshake times out; hidden: not in a look's results, joinable all the same (a phone's hotspot, a look that missed it)
+struct SimAp { std::string ssid; int rssi; bool locked; std::string pass; bool weak = false, hidden = false;    // weak: heard, but every handshake times out; hidden: not in a look's results, joinable all the same (a phone's hotspot, a look that missed it)
+               uint8_t bssid[6] = { 0xAE, 0x19, 0x21, 0xF3, 0x21, 0x09 }; int ch = 3; bool shy = false; };   // (1.11.151) shy: slow with its probe answer - a look (300 ms a channel) hears its beacons, the driver's own quick connect-scan does not
 struct SimWiFi {
     // the air, and what the OLD firmware's driver left in its own store (nvs.net80211)
     std::vector<SimAp> air; std::string driverNvsSsid, driverNvsPass;
@@ -83,6 +84,7 @@ struct SimWiFi {
     // driver
     bool started = false; enum { IDLE, CONNECTING, CONNECTED } st = IDLE;
     std::string cfgSsid, cfgPass, conSsid; int conRssi = 0; uint32_t outAt = 0, ipAt = 0; int outcome = 0;
+    bool cfgBssidSet = false; uint8_t cfgBssid[6] = { 0, 0, 0, 0, 0, 0 }; int32_t cfgCh = 0; int conCh = 3; long beginsByNode = 0;   // (1.11.151) a join asked by address
     bool drvScanning = false; uint32_t scanEnd = 0; std::vector<SimAp> found, results;
     // library
     wl_status_t status_ = WL_NO_SHIELD; bool persistent_ = true, autoReconnect_ = true, firstConnect = true, sleep_ = true;
@@ -100,16 +102,28 @@ struct SimWiFi {
     void drvStop() { if (!started) return; if (drvScanning) { drvScanning = false; if (scanDoneOnStop) { results.clear(); post(ARDUINO_EVENT_WIFI_SCAN_DONE); } } st = IDLE; started = false; post(ARDUINO_EVENT_WIFI_STA_STOP); }
     bool assoc = false;
     void drvDisconnect() { if (st != IDLE) { st = IDLE; assoc = false; conSsid.clear(); post(ARDUINO_EVENT_WIFI_STA_DISCONNECTED, 8); } }
+    // (1.11.151) Asked by name, the driver takes the strongest access point of the name that answered its quick scan (a
+    // shy one is not among them: what the real driver did on 31 Oct 2026, taking the bedroom's node at -69 with the sitting
+    // room's at -51); asked by address it takes that one, shy or not, or finds no network (201) when it is not there.
+    const SimAp *pick(const std::string &ssid) const {
+        const SimAp *b = nullptr;
+        for (auto &a : air) {
+            if (a.ssid != ssid) continue;
+            if (cfgBssidSet) { if (memcmp(a.bssid, cfgBssid, 6) == 0) return &a; continue; }
+            if (!a.shy && (!b || a.rssi > b->rssi)) b = &a;
+        }
+        return b;
+    }
     bool drvConnect() {
         if (st == CONNECTING) return false;
         if (st == CONNECTED) return true;
-        st = CONNECTING; const SimAp *ap = strongest(cfgSsid);
+        st = CONNECTING; const SimAp *ap = pick(cfgSsid);
         if (!ap || (ap->locked && cfgPass.empty()) || (!ap->locked && !cfgPass.empty())) { outcome = 201; outAt = simNow + 2400; }
         else if (ap->locked && ap->pass != cfgPass) { outcome = 15; outAt = simNow + 4000; }
         else if (ap->weak) { outcome = 15; outAt = simNow + 4000; }                   // too weak to finish the handshake, every time
         else if (stumble > 0) { stumble--; outcome = 15; outAt = simNow + 4000; }      // the right password, a weak signal: the handshake times out
-        else { outcome = 1; outAt = simNow + 1200; ipAt = simNow + 2000; conRssi = ap->rssi; }
-        say("radio: trying \"" + cfgSsid + "\"");
+        else { outcome = 1; outAt = simNow + 1200; ipAt = simNow + 2000; conRssi = ap->rssi; memcpy(bssid_, ap->bssid, 6); conCh = ap->ch; }
+        say("radio: trying \"" + cfgSsid + "\"" + (cfgBssidSet ? " by its address" : ""));
         return true;
     }
     bool drvScan() {
@@ -161,13 +175,15 @@ struct SimWiFi {
     void setSortMethod(int m) { sortMethod_ = m; }
     void onEvent(void (*cb)(WiFiEvent_t, WiFiEventInfo_t)) { user = cb; }
     wl_status_t status() { return status_; }
-    wl_status_t begin(const char *ssid, const char *pass = nullptr) {
-        begins++;
+    wl_status_t begin(const char *ssid, const char *pass = nullptr) { return begin(ssid, pass, 0, nullptr); }
+    wl_status_t begin(const char *ssid, const char *pass, int32_t channel, const uint8_t *bssid, bool = true) {   // (1.11.151) by address too: WiFiSTA.cpp sets or clears bssid_set
+        begins++; if (bssid) beginsByNode++;
         if (!started) drvStart();
         if (!ssid || !*ssid || strlen(ssid) > 32) return WL_CONNECT_FAILED;
         if (pass && strlen(pass) > 64) return WL_CONNECT_FAILED;
         const std::string s = ssid, p = pass ? pass : "";
-        if (s != cfgSsid || p != cfgPass) { drvDisconnect(); cfgSsid = s; cfgPass = p; }
+        const bool sameNode = cfgBssidSet == (bssid != nullptr) && (!bssid || memcmp(cfgBssid, bssid, 6) == 0);
+        if (s != cfgSsid || p != cfgPass || !sameNode) { drvDisconnect(); cfgSsid = s; cfgPass = p; cfgBssidSet = bssid != nullptr; if (bssid) memcpy(cfgBssid, bssid, 6); cfgCh = channel; }
         else if (status() == WL_CONNECTED) { connectsSkipped++; say("library: begin() of the network in hand, status still says CONNECTED: no connect is made"); return WL_CONNECTED; }
         if (!drvConnect()) return WL_CONNECT_FAILED;
         return status();
@@ -177,10 +193,12 @@ struct SimWiFi {
     String SSID() { return st == CONNECTED || (st == CONNECTING && assoc) ? String(conSsid) : String(); }
     int RSSI() { return st == CONNECTED ? conRssi : 0; }
     // (1.11.147) the access point and the addresses, for the radio's diary (one make-believe access point on channel 3)
-    uint8_t bssid_[6] = { 0xAE, 0x19, 0x21, 0xF3, 0x21, 0x09 };
-    int channel() { return st == CONNECTED ? 3 : 0; }
+    uint8_t bssid_[6] = { 0xAE, 0x19, 0x21, 0xF3, 0x21, 0x09 };    // the access point joined (1.11.151: the one picked, drvConnect)
+    int channel() { return st == CONNECTED ? conCh : 0; }
     uint8_t *BSSID() { return bssid_; }
-    String BSSIDstr() { return st == CONNECTED ? String("AE:19:21:F3:21:09") : String(); }
+    String BSSIDstr() { if (st != CONNECTED) return String(); char b[20]; snprintf(b, sizeof b, "%02X:%02X:%02X:%02X:%02X:%02X", bssid_[0], bssid_[1], bssid_[2], bssid_[3], bssid_[4], bssid_[5]); return String(b); }
+    uint8_t *BSSID(int i) { return i >= 0 && i < (int) results.size() && i < scanCount ? results[i].bssid : nullptr; }   // (1.11.151) a look's access points, address and channel
+    int32_t channel(int i) { return i >= 0 && i < (int) results.size() && i < scanCount ? results[i].ch : 0; }
     IPAddress localIP() { return st == CONNECTED ? IPAddress(0x4101A8C0u) : IPAddress(); }     // 192.168.1.65
     IPAddress gatewayIP() { return st == CONNECTED ? IPAddress(0xFE01A8C0u) : IPAddress(); }   // 192.168.1.254
     // ---- library: WiFiScan.cpp 57-171
