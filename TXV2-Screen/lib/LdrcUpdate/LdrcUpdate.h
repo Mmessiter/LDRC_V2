@@ -301,6 +301,7 @@ private:
     std::string keepDir_; size_t keptFiles_;
     // after a restart
     std::string stRelease_, stTeensy_, stFrom_, stTo_; bool stTeensyThere_, stTeensyChanged_, stScreenFw_; int stFiles_, stKept_;
+    std::string stNotes_;                         // (1.11.149) the release's one line of notes: what the update did, for the last panel
     std::string stSettings_;                      // how the new firmware reads the model's settings: "same", "unknown", or "" (no new firmware)
     std::vector<std::string> stWarn_;             // what was NOT copied of the pilot's files, for the last panel
     int trialStep_;

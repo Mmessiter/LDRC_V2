@@ -321,6 +321,7 @@ std::string Updater::remoteOf(const Item &it) const {
 std::string Updater::stateText(const std::string &stage) const {
     std::string s = "stage=" + stage + "\n";
     s += "release=" + stRelease_ + "\n";
+    s += "notes=" + stNotes_ + "\n";                           // (1.11.149) one line, for the last panel after the restart
     s += "teensy=" + stTeensy_ + "\n";
     s += std::string("teensy_there=") + (stTeensyThere_ ? "1" : "0") + "\n";
     s += std::string("teensy_changed=") + (stTeensyChanged_ ? "1" : "0") + "\n";
@@ -374,10 +375,13 @@ void Updater::fail(const std::string &stage, const std::string &why) {
 void Updater::finishGood() {
     std::vector<std::string> lines;
     host_.tidy(std::string(STAGING, strlen(STAGING) - 1));   // whatever earlier attempts fetched and this one did not need
-    if (stKept_ > 0) lines.push_back("Your models, settings and logs were copied first: " + num((uint32_t) stKept_) + " files.");
+    // (1.11.149; Malcolm, 31 Oct 2026) What the release did, in the words it was published with - not that the pilot's
+    // files were copied first and the settings are read as before: those are taken for granted (the count of files
+    // copied stays in the state file and the log). What must still be said follows: whatever was NOT copied, and a
+    // comparison of the settings that could not be made.
+    if (!stNotes_.empty()) lines.push_back(stNotes_);
     for (size_t i = 0; i < stWarn_.size() && i < 4; ++i) lines.push_back(sentence(stWarn_[i]));
-    if (stSettings_ == "same") lines.push_back("The new firmware reads your settings exactly as the old one did.");   // (one line)
-    else if (stSettings_ == "unknown") lines.push_back("How the new firmware reads your model's settings could not be compared with the old one. Check the controls before flying.");
+    if (stSettings_ == "unknown") lines.push_back("How the new firmware reads your model's settings could not be compared with the old one. Check the controls before flying.");
     result(true, "Update complete", lines);
 }
 
@@ -510,7 +514,7 @@ void Updater::decide() {
     if (wantFull() && !rel_.screenFull.present && rel_.screen.present) note("this release has no firmware for a 16 MB screen: the screen keeps " + host_.screenVersion());
     std::string mark; host_.readText(SCREEN_MARK, mark, 64);
     needScreenFiles_ = rel_.screenFiles.present && (again_ || trim(mark) != hex8(rel_.screenFiles.crc));
-    stRelease_ = rel_.name; stTeensy_ = teensyFw_; stTeensyThere_ = teensyThere_; stTeensyChanged_ = false;
+    stRelease_ = rel_.name; stNotes_ = rel_.notes; stTeensy_ = teensyFw_; stTeensyThere_ = teensyThere_; stTeensyChanged_ = false;
     stFrom_ = host_.screenVersion(); stTo_ = needScreenFw_ ? sfw.version : host_.screenVersion(); stScreenFw_ = false; stFiles_ = 0; stKept_ = 0;
     stSettings_.clear(); stWarn_.clear(); mustSee_ = false;
     if (quiet_) {   // (1.11.141) the look at power-up: a word along the top of the screen, or nothing
@@ -964,7 +968,7 @@ void Updater::resume() {
         note("---- screen firmware " + host_.screenVersion() + " has started for the first time: on trial (the news of the last update waits)");
         return;
     }
-    stRelease_ = valueOf(text, "release"); stTeensy_ = valueOf(text, "teensy");
+    stRelease_ = valueOf(text, "release"); stNotes_ = valueOf(text, "notes"); stTeensy_ = valueOf(text, "teensy");
     stTeensyThere_ = valueOf(text, "teensy_there") == "1"; stTeensyChanged_ = valueOf(text, "teensy_changed") == "1";
     stFrom_ = valueOf(text, "screen_from"); stTo_ = valueOf(text, "screen_to"); stScreenFw_ = valueOf(text, "screen_fw") == "1";
     stFiles_ = atoi(valueOf(text, "files").c_str());
