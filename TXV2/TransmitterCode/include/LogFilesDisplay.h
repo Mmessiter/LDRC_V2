@@ -482,6 +482,8 @@ FLASHMEM void LogVIEWNew() // Start log screen
     char fnf[] = "File not found: ";
     char LogText[] = "LogText"; // the label on the Nextion screen
     char fbuffer[60];
+    char nolog[] = "No log yet today.\r\nA log begins when a model connects."; // B159: said instead of "File not found: /log/..." when today's log was asked for and there is none
+    const bool chosen = ReadingaFile;                                         // (a file picked from the list, as against today's log)
 
     SendCommand(pLogView); // Show the right view
     FinalReadStartLine = 0xFFFF;
@@ -503,9 +505,14 @@ FLASHMEM void LogVIEWNew() // Start log screen
     {
         LogFileOpen = false;
         ShowLogFileNew(6);
-        strcpy(fbuffer, fnf);
-        strcat(fbuffer, TextFileName);
-        SendText(LogText, fbuffer);
+        if (!chosen)
+            SendText(LogText, nolog); // B159
+        else
+        {
+            strcpy(fbuffer, fnf);
+            strcat(fbuffer, TextFileName);
+            SendText(LogText, fbuffer);
+        }
     }
     CloseLogFile();
     SendOtherValue(Current_Y_Nextion_Label, 0);

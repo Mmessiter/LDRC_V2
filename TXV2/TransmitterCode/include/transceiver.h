@@ -1040,6 +1040,13 @@ void GetModelsMacAddress()
 
     if (BuddyPupilOnWireless)
         return; //  Don't do this if we are a pupil
+    // B159 (Malcolm, 31 Oct 2026: in the log view with no model connected, "model not found" and a jump to the front
+    // screen). While we only ping for our model, TryOtherPipe tries the DEFAULT pipe too, and a receiver of someone
+    // else's in range may answer there with ITS identity: it is not a model to match, nor one to offer to save ("AMS is
+    // on and model's ID was not found! Save this ID?" - whose OK or Cancel lands on the front screen). An identity
+    // heard on the default pipe counts only while the pilot is binding.
+    if (UsingDefaultPipeAddress && !BindingEnabled)
+        return;
     const uint8_t half = AckPayload.Ack_Payload_byte[0];
     if (half > 1)
         return;
