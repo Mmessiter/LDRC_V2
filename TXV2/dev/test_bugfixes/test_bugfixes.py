@@ -642,6 +642,7 @@ def source_checks():
     chk('FLASHMEM void NoteLogOpener(const char *what)' in lf and 'TextInWasStashed ? "set aside" : "read"' in lf and 'LogText(line, strlen(line), true);' in lf, 'B163 the log says which frame opened it')
     chk('if (!TextFileName[0])\n        NoteLogOpener("opened");' in ld and 'if (CurrentView == MODELSVIEW)\n    {   // B163' in ld and 'NoteLogOpener("code 18 ignored");' in ld, 'B163 today\'s log notes its opener; a log-view code on the Models page is ignored')
     chk('TextInWasStashed = true; // (B163)' in nx and 'TextInWasStashed = false;' in nx, 'B163 GetButtonPress says whether the frame was set aside or read')
+    chk('(uint8_t)TextIn[0] == 0x92 && CurrentView == RXSETUPVIEW)\n        return; // B164' in lf, 'B164 the Log button of Model setup is not noted in the log; anything else that opens today\'s log still is')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

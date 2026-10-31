@@ -272,6 +272,8 @@ FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp)
 FLASHMEM void NoteLogOpener(const char *what)
 {
     char line[128];
+    if (strcmp(what, "opened") == 0 && (uint8_t)TextIn[0] == 0x92 && CurrentView == RXSETUPVIEW)
+        return; // B164: the Log button of Model setup (code 18, page 31) is the ordinary way in - Malcolm's own presses filled the log with these lines (31 Oct 2026, 19:46: "I hit log not help")
     char hex[52];
     uint8_t n = 0;
     for (uint8_t i = 0; i < 16; ++i)
