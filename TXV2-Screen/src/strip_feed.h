@@ -55,6 +55,12 @@ static volatile bool sfFilled[STRIP_K] = { true, true, true };
 static volatile int sfQSlot[STRIP_K]; static const uint16_t *volatile sfQSrc[STRIP_K]; static volatile int sfQn = 0, sfQi = 0;   // fills waiting (the pair takes one at a time)
 static volatile int sfSlot = -1;                         // the slot being filled
 static volatile uint32_t stripFills = 0, stripLate = 0, stripQMax = 0, stripEofs = 0, stripFrames = 0, stripResyncs = 0, stripDrops = 0, stripFillUsMax = 0, sfStartUs = 0;
+// (1.11.152) A late strip is a band repeated for one pass - a flicker the eye sees. By what the loop was doing at that
+// moment (busy_what.h), and the last eight with their time: 31 Oct, the yellow transmitter's scrolling session showed
+// strips late 7 and Malcolm "just a few flickers" - the same number; which activity it is decides the next cure.
+static volatile uint32_t stripLateBy[BUSY_N] = { 0 };
+struct StripLateMark { uint8_t what; uint32_t ms; uint32_t seen; };
+static StripLateMark stripLateLog[8]; static volatile uint32_t stripLateLogN = 0;
 
 // The fill of one slot from the PSRAM: STRIP_NODES descriptor pairs, both channels reset and started by the registers (IRAM).
 static void IRAM_ATTR sfStart(int slot, const uint16_t *src) {
@@ -107,7 +113,11 @@ static void IRAM_ATTR stripOnLcdEof() {                   // (dma_watch.h dispat
         if (t == 0) { const uint8_t w = flipWant; stripNextFb = flipFb[w] ? flipFb[w] : stripFrameFb; stripNextIdx = flipFb[w] ? w : flipShown; }
         fb = stripNextFb ? stripNextFb : stripFrameFb;
     }
-    if (!sfFilled[slot]) stripLate++;                      // (its fill was not done by the time the panel came round: a band repeated)
+    if (!sfFilled[slot]) {                                 // (its fill was not done by the time the panel came round: a band repeated)
+        stripLate++;
+        const uint8_t w = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1; stripLateBy[w] = stripLateBy[w] + 1;
+        StripLateMark &m = stripLateLog[stripLateLogN % 8]; m.what = w; m.ms = (uint32_t) (esp_timer_get_time() / 1000); m.seen = busySeen; stripLateLogN = stripLateLogN + 1;
+    }
     if (fb) sfQueue(slot, fb + (size_t) t * STRIP_L * 800);
     if (s == STRIP_N - 1) {
         stripFrames = stripFrames + 1;
@@ -209,4 +219,11 @@ static void stripJson(std::string &out) {                // (/status "strips")
              stripOn ? 1 : 0, stripWhy, stripWant, (unsigned long) stripStrikes, (unsigned long) stripStops, (unsigned long) stripFrames, (unsigned long) stripFills, (unsigned long) stripLate, (unsigned long) stripDrops, (unsigned long) stripQMax, (unsigned long) stripFillUsMax,
              (unsigned long) stripResyncs, (unsigned long) stripResyncSkips, (unsigned long) stripEofs, (unsigned long) stripFixes, sfTxCh, sfRxCh);
     out += b;
+    out.pop_back();                                        // (1.11.152) the late strips by what the loop was doing (busy_what.h's numbers), and the last eight [what, ms, seen]
+    out += ",\"late_by\":[";
+    for (int i = 0; i < BUSY_N; ++i) { char e[16]; snprintf(e, sizeof e, "%s%lu", i ? "," : "", (unsigned long) stripLateBy[i]); out += e; }
+    out += "],\"late_log\":[";
+    const uint32_t n = stripLateLogN, from = n > 8 ? n - 8 : 0;
+    for (uint32_t i = from; i < n; ++i) { const StripLateMark &m = stripLateLog[i % 8]; char e[48]; snprintf(e, sizeof e, "%s[%u,%lu,%lu]", i > from ? "," : "", (unsigned) m.what, (unsigned long) m.ms, (unsigned long) m.seen); out += e; }
+    out += "]}";
 }

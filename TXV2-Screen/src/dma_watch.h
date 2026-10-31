@@ -57,6 +57,15 @@ static SlipW slipwLog[SLIPW_LOG]; static volatile int slipwLogN = 0;
 static void IRAM_ATTR stripOnLcdEof();                   // (26 Oct evening) src/strip_feed.h: every slot's EOF while the strips run
 static void IRAM_ATTR dmaOnEofFrame();
 static bool IRAM_ATTR dmaOnEof(gdma_channel_handle_t, gdma_event_data_t *, void *) { if (stripOn) stripOnLcdEof(); else dmaOnEofFrame(); return false; }   // (the one callback the driver allows: taken at boot, dispatched here)
+// (1.11.152) The log keeps the 24 BIGGEST slips of the window, not the first 24: on 31 Oct the first 24 were 7-11 us
+// noise under BUSY_TOUCH while the 3 ms ones under BUSY_WIFI and the 29 ms one under BUSY_LINK came later and were lost.
+static void IRAM_ATTR slipwLogAdd(uint16_t us, uint8_t what, uint32_t seen, uint32_t ms) {
+    int at = -1;
+    if (slipwLogN < SLIPW_LOG) at = (int) slipwLogN++;
+    else { int least = 0; for (int i = 1; i < SLIPW_LOG; ++i) if (slipwLog[i].us < slipwLog[least].us) least = i; if (us > slipwLog[least].us) at = least; }
+    if (at < 0) return;
+    SlipW &e = slipwLog[at]; e.us = us; e.what = what; e.seen = seen; e.ms = ms;
+}
 static void IRAM_ATTR dmaOnEofFrame() {
     const uint32_t now = (uint32_t) esp_timer_get_time();
     if (dmaEofUs) {
@@ -64,7 +73,7 @@ static void IRAM_ATTR dmaOnEofFrame() {
         if (gap < dmaGapMin) dmaGapMin = gap; if (gap > dmaGapMax) dmaGapMax = gap;
         if (gap >= 60000 && gap < 2000000) {           // (1.11.128) two frames and more between EOFs: the panel held, not a stopped engine (ringTick restarts that after 150 ms)
             dmaHuge++; dmaHugeAll++;
-            if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = 65535; e.what = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1; e.seen = busySeen; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }   // (us 65535 = a gap of 60 ms and more; the gap itself in dmaGapMax)
+            slipwLogAdd(65535, busyWhat < BUSY_N ? busyWhat : BUSY_N - 1, busySeen, now / 1000);   // (us 65535 = a gap of 60 ms and more; the gap itself in dmaGapMax)
         }
         if (gap > 20000 && gap < 60000) {              // (a frame's gap - 28.9 ms on the twin, 43.1 on the CrowPanel - not a stopped engine's or a restart's)
             if (!dmaGapBase16) { dmaGapBase16 = gap * 16; dmaGapBase = gap; }
@@ -84,7 +93,7 @@ static void IRAM_ATTR dmaOnEofFrame() {
                     const uint8_t w = busyWhat < BUSY_N ? busyWhat : BUSY_N - 1;
                     slipwN[w]++; slipwSum[w] += (uint32_t) d;
                     for (int i = 0; i < BUSY_N; ++i) if (seen & (1u << i)) slipwSeenN[i]++;
-                    if (slipwLogN < SLIPW_LOG) { SlipW &e = slipwLog[slipwLogN]; e.us = (uint16_t) (d > 65534 ? 65534 : d); e.what = w; e.seen = seen; e.ms = now / 1000; slipwLogN = slipwLogN + 1; }
+                    slipwLogAdd((uint16_t) (d > 65534 ? 65534 : d), w, seen, now / 1000);
                 }
                 if (d > (int32_t) DMA_SLIP_US && d < 20000) { const uint32_t s = (uint32_t) d; dmaSlips++; dmaSlipsAll++; dmaSlipSum += s; if (s > dmaSlipMax) dmaSlipMax = s; }   // (a whole frame more is an EOF interrupt missed, not a slip)
                 if (d >= 20000) { dmaHuge++; dmaHugeAll++; }   // (1.11.128) ... or the panel held for most of a frame: counted apart, no longer dropped

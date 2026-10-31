@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.151"
+#define SCREEN_VERSION "1.11.153"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2356,8 +2356,33 @@ static bool drawVerb(const std::string &cmd) {
 // ------------------------------------------------------------------ Nextion serial protocol (the Teensy side)
 static void reply(uint8_t code) { const uint8_t f[4] = { code, 0xFF, 0xFF, 0xFF }; Serial.write(f, 4); }
 static void splitRef(const std::string &ref, std::string &pg, std::string &nm) { size_t d = ref.find('.'); if (d == std::string::npos) { pg = ""; nm = ref; } else { pg = ref.substr(0, d); nm = ref.substr(d + 1); } }
+// (1.11.152) WHO TAKES THE INTERNAL RAM. The yellow transmitter's scrolling session of 31 Oct took it from 105 kB free
+// to 30 kB and never gave it back, in a few big steps with the count of blocks unchanged: something grows in place. The
+// free internal heap is measured around every command handled (by its head: "LogText.txt", "page", "val_y" ...) and
+// around the slide steps, the web server and the updater; what was lost and gained is summed by name for /status iram
+// "by" - the holder names itself.
+struct HeapBy { char verb[14]; int32_t lost, gained; uint32_t n; };
+static HeapBy heapBy[24]; static int heapByN = 0;
+static void heapAccount(const char *verb, int32_t delta) {
+    int k = -1;
+    for (int i = 0; i < heapByN; ++i) if (strncmp(heapBy[i].verb, verb, sizeof heapBy[i].verb - 1) == 0) { k = i; break; }
+    if (k < 0) { if (heapByN >= (int) (sizeof heapBy / sizeof heapBy[0])) k = heapByN - 1; else { k = heapByN++; strncpy(heapBy[k].verb, verb, sizeof heapBy[k].verb - 1); heapBy[k].verb[sizeof heapBy[k].verb - 1] = 0; heapBy[k].lost = heapBy[k].gained = 0; heapBy[k].n = 0; } }   // (the last slot takes the overflow)
+    if (delta < 0) heapBy[k].lost -= delta; else heapBy[k].gained += delta;
+    heapBy[k].n++;
+}
+struct HeapWatch { const char *v; uint32_t h0; explicit HeapWatch(const char *verb) : v(verb), h0((uint32_t) heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) {} ~HeapWatch() { heapAccount(v, (int32_t) heap_caps_get_free_size(MALLOC_CAP_INTERNAL) - (int32_t) h0); } };
+static std::string heapByJson() {
+    std::string out = "\"by\":[";
+    for (int i = 0; i < heapByN; ++i) { char e[64]; snprintf(e, sizeof e, "%s[\"%s\",%ld,%ld,%lu]", i ? "," : "", heapBy[i].verb, (long) heapBy[i].lost, (long) heapBy[i].gained, (unsigned long) heapBy[i].n); out += e; }
+    return out + "]";
+}
 static void handle(const std::string &cmd) {
     Busy busy_(BUSY_HANDLE);
+    char head[14]; { size_t i = 0; for (; i < sizeof head - 1 && i < cmd.size() && cmd[i] != '=' && cmd[i] != ' '; ++i) head[i] = cmd[i]; head[i] = 0; }
+    // (1.11.152/153) by the property, not the component ("txt", "val", "page", "vis" ...: twenty names, not hundreds), and a
+    // long text apart ("txt>1k": the log viewer's window of words)
+    const char *propAt = strchr(head, '.'); char key[14]; snprintf(key, sizeof key, "%s%s", propAt ? propAt + 1 : head, cmd.size() > 1024 ? ">1k" : "");
+    HeapWatch heapWatch_(key);
     cmdCount++;
     if (cmd.rfind("pong=", 0) == 0) { pongCommand(cmd.substr(5)); return; }
     if (cmd.rfind("ldrcpipe ", 0) == 0) { blePipeCommand(cmd.substr(9)); return; }   // the main board's Bluetooth pipe to the receiver (src/ble_device.h, 1.11.1)
@@ -2835,7 +2860,7 @@ static void pollTouch() {
         if (dragged) {
             const int want = c.type == "sltext" ? constrain(dragS0 - dy, 0, (int) host.getInt("", c.name, "maxval_y")) : listWrap(c, dragS0 - dy);
             if (want != c.scroll && now - lastDragDraw > (c.type == "sltext" ? 30 : 40)) {   // (1.11.142) the text through the slab (1.11.143: and flipped to, one step a frame); a list as before
-                const int r = c.type == "sltext" ? slideDrag(c, want) : 0;
+                const int r = c.type == "sltext" ? [&]() { HeapWatch hw("slide"); return slideDrag(c, want); } () : 0;   // (1.11.152: the slide steps' take of the internal RAM, /status iram "by")
                 if (r == 0) { c.scroll = want; lastDragDraw = now; redraw(c); } else if (r > 0) lastDragDraw = now;
             }
         }
@@ -3729,7 +3754,10 @@ static std::string iramJson() {
              (unsigned) hi.total_free_bytes, (unsigned) hi.total_allocated_bytes, (unsigned) hi.largest_free_block, (unsigned) hi.allocated_blocks, (unsigned) hi.free_blocks, (unsigned) hi.minimum_free_bytes,
              (unsigned) kept.size(), (unsigned) keptTxts, (unsigned) keptBytes, (unsigned) pageInfo.size(), (unsigned) infoBytes, (unsigned) touchLog.size(), (unsigned) bootLog.size(), (unsigned) radioLog.size(),
              (unsigned) page.comps.size(), (unsigned) scaledGlyphs.size());
-    return b;
+    std::string out = b; out.pop_back();                   // (1.11.152) + who took it: [name, bytes lost, bytes gained, times]
+    size_t txtCap = 0; for (auto &c : page.comps) txtCap += c.txt.capacity();
+    out += ",\"comps_txt_cap\":" + std::to_string((unsigned) txtCap) + "," + heapByJson() + "}";
+    return out;
 }
 static std::string psramJson() {
     char b[300];
@@ -3867,7 +3895,7 @@ void loop() {
     lastLoop = now;
     uint32_t t = micros(), u;
     #define PHASE(i) u = micros(); if (u - t > phaseMax[i]) phaseMax[i] = u - t; t = u;
-    { Busy b(BUSY_SERIAL); pumpSerial(); } { Busy b(BUSY_LINK); linkPoll(); updPoll(); } { Busy b(BUSY_WIFI); wifiPoll(); } { Busy b(BUSY_PICS); picPoll(); }
+    { Busy b(BUSY_SERIAL); HeapWatch hw("serial"); pumpSerial(); } { Busy b(BUSY_LINK); HeapWatch hw("link+upd"); linkPoll(); updPoll(); } { Busy b(BUSY_WIFI); HeapWatch hw("wifi+web"); wifiPoll(); } { Busy b(BUSY_PICS); HeapWatch hw("pics"); picPoll(); }   // (1.11.152: each pass's take of the internal RAM by part, /status iram "by"; "serial" holds the commands' own entries too)
     { Busy b(BUSY_FLIGHT); flightPoll(); coloursPoll(); appearancePoll(); pongPoll(); } { Busy b(BUSY_FILM); filmPoll(); } { Busy b(BUSY_WIFI); blPoll(); blePoll(); } { Busy b(BUSY_CLI); cliPoll(); } PHASE(0)   // (25 Oct evening: Busy tags = who slipped the panel, /perf "slipw")
     { Busy b(BUSY_AUDIO); audioFill(); if (!teensyLink.running() && !(benchSkip & 4)) audioWarm(); } PHASE(1)
     { Busy b(BUSY_SD); packTick(!teensyLink.running() && (int32_t) (now - lastRxMs) >= 100 && now - lastPresentMs >= 300 && !flyingNow()); }   // (1.11.138) the card against the pack, a file at a time between the front page's clock ticks
