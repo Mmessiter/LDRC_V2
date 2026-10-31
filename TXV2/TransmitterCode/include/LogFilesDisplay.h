@@ -276,6 +276,7 @@ FLASHMEM bool WrapNow(uint16_t ColumnIndex, uint8_t LastChar)
 // numbering is stable forever. Log files (short lines) pass through unchanged.
 
 char WrappedFileName[] = "/WRAP.TMP";
+static bool WrapCopyRefused = false; // B162: MakeWrappedCopy found the text but the card would not take /WRAP.TMP (as against the text not found)
 bool ViewingWrappedCopy = false;
 
 FLASHMEM bool MakeWrappedCopy()
@@ -287,6 +288,7 @@ FLASHMEM bool MakeWrappedCopy()
     int n;
 
     ViewFileSize = 0;
+    WrapCopyRefused = false;
     File src = OpenTextFileForReading(); // the real file (TextFileName, with its /help/ or /log/ path)
     if (!src)
     {
@@ -299,6 +301,7 @@ FLASHMEM bool MakeWrappedCopy()
     {
         src.close();
         LogFileOpen = false;
+        WrapCopyRefused = true;
         return false;
     }
     while ((n = src.read(in, sizeof(in))) > 0)
@@ -495,6 +498,11 @@ FLASHMEM void LogVIEWNew() // Start log screen
         SeekPosition[i] = 0; // clear all seekpositions
     StartReadLine = 0;
     ViewingWrappedCopy = MakeWrappedCopy(); // pre-wrap into /WRAP.TMP — display then only splits on '|'
+    if (!ViewingWrappedCopy)
+    {   // B162: once more before giving up - a card busy for a moment
+        DelayWithDog(20);
+        ViewingWrappedCopy = MakeWrappedCopy();
+    }
     if (ViewingWrappedCopy)
         LogFileNumber = OpenViewFile();
     if (ViewingWrappedCopy && LogFileNumber)
@@ -505,7 +513,16 @@ FLASHMEM void LogVIEWNew() // Start log screen
     {
         LogFileOpen = false;
         ShowLogFileNew(6);
-        if (!chosen)
+        if (WrapCopyRefused)
+            SendText(LogText, (char *)"The card would not take a file.\r\nPlease press the button again."); // B162
+        else if (InStrng((char *)".TXT", TextFileName))
+        {   // B162: a help text (SendHelp) that is not on the card says so - "No log yet today" was said here (B159), which
+            // read as the log opening in place of the help
+            strcpy(fbuffer, "Help text not on the card: ");
+            strcat(fbuffer, TextFileName);
+            SendText(LogText, fbuffer);
+        }
+        else if (!chosen)
             SendText(LogText, nolog); // B159
         else
         {

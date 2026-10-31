@@ -632,6 +632,11 @@ def source_checks():
     # B161 (31 Oct 2026): announcements are no longer muted while the Models page shows (a rule from the original Nextion)
     ut = src('include/Utilities.h')
     chk('CurrentView == MODELSVIEW && id != CLICKONE' not in ut and 'snprintf(cmd, sizeof(cmd), "play 0,%u,0", id)' in ut, 'B161 PlaySound plays on every page, the Models page included')
+    # B162 (31 Oct 2026): the screen's codes and words carry no terminator - a press glued to a get's reply is split from it, a press during a send is kept, a help text that will not open says so
+    chk("if (expected == 'q' && k >= 9 && TextIn[k - 8] == 'q')" in nx and 'memmove(TextIn, TextIn + k - 8, 8);' in nx, 'B162 the reply collector splits a glued press from a value reply')
+    chk('void GetReturnCode(char *tbox)\n{\n    CRUMB(CRUMB_RETURNCODE);' in nx and 'StashPendingEventBytes();\n}' in nx and "first == 'p' || (first == 'q' && n == 5)" in nx, 'B162 GetReturnCode keeps a press instead of draining it; a late reply is debris')
+    ld = src('include/LogFilesDisplay.h')
+    chk('Help text not on the card: ' in ld and 'WrapCopyRefused = true;' in ld and 'DelayWithDog(20);\n        ViewingWrappedCopy = MakeWrappedCopy();' in ld, 'B162 a help text that will not open says so (not "No log yet today"), after one more try')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

@@ -3,6 +3,7 @@
 reply frame by frame and keep the touch words that arrive in between - StashFrame, StashPendingEventBytes, CollectReply,
 getvalue, GetButtonPress - compiled on the Mac over a fake serial port. The case that found it (8 Oct 2026): the Models
 page's Receive code (C1 00 00 00) landing just ahead of a "get MMems.val" reply was lost, so Receive had to be pressed again.
+B160/B162 (31 Oct 2026): the Help button's word, and a press glued to a get's reply (the screen's bursts carry no terminator).
    python3 dev/test_nextion/test_nextion.py"""
 import os, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,7 +14,8 @@ def fn(sig):
     return m.group(0)
 parts = [fn('void StashFrame(const uint8_t *f, uint16_t n)'), fn('void StashPendingEventBytes()'), fn('bool CollectReply(uint8_t expected, uint16_t &k)'),
          fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('uint32_t getvalue(char *nbox)'),
-         fn('bool HelpNameWhole(const char *name)'), fn('bool HelpNameFrom(char *name)')]   # (B160)
+         fn('bool HelpNameWhole(const char *name)'), fn('bool HelpNameFrom(char *name)'),   # (B160)
+         fn('void GetReturnCode(char *tbox)')]   # (B162: keeps a press that arrives during a send)
 prog = r'''
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +46,7 @@ struct FakeSerial {
     int read() { pump(); if (in.empty()) return -1; uint8_t b = in.front(); in.pop_front(); return b; }
     int peek() { pump(); return in.empty() ? -1 : in.front(); }
     void feedRaw(const char *w) { for (const char *p = w; *p; ++p) in.push_back((uint8_t) *p); }                      // a touch word as the screen sends it: no terminator
+    void feedRawL(const char *w) { for (const char *p = w; *p; ++p) onGet.push_back((uint8_t) *p); }                 // (B162) ... landing inside the next get's window, ahead of the reply
     void feedLate(const char *w, uint32_t afterUs) { lateAt = nowUs() + afterUs; for (const char *p = w; *p; ++p) late.push_back((uint8_t) *p); }
     void print(const char *s) { out += s; if (strncmp(s, "get ", 4) == 0) { for (uint8_t b : onGet) in.push_back(b); onGet.clear(); } }
     void write(uint8_t b) { out.push_back((char) b); }
@@ -121,6 +124,32 @@ int main() {
     NEXTION.feedRaw("HelpView:"); CHECK(GetButtonPress());
     NEXTION.later = false; NEXTION.feed({0xC1, 0, 0, 0}); NEXTION.later = true;
     CHECK(!HelpNameFrom(name) && NEXTION.available() == 4); CHECK(pendingCode7() == 65);
+    // --- B162 (31 Oct 2026, the yellow transmitter: Help still opened "No log yet today" after B160): the screen's button
+    // codes and words carry NO terminator (its print sends the raw bytes), so a press inside a get window is glued to the reply ---
+    NEXTION.later = true;
+    // 18. the Help word glued to the reply: the value is read, and the word comes whole
+    NEXTION.feedRawL("HelpView:MODELS.TXT"); NEXTION.feedQ(5);
+    CHECK(getvalue(nbox) == 5); CHECK(GetButtonPress() && strcmp(TextIn, "HelpView:MODELS.TXT") == 0 && HelpNameFrom(name) && strcmp(name, "MODELS.TXT") == 0);
+    // 19. a 7-bit code glued to the reply: both kept
+    NEXTION.feed({128 + 65, 0, 0, 0}); NEXTION.feedQ(6);
+    CHECK(getvalue(nbox) == 6); CHECK(pendingCode7() == 65);
+    // 20. a 24-bit code glued to the reply (lost until now: the stash knew a 24-bit code only as exactly 4 bytes)
+    NEXTION.feed({0, 94, 0, 0}); NEXTION.feedQ(7);
+    CHECK(getvalue(nbox) == 7); CHECK(GetButtonPress() && TextIn[0] == 0 && (uint8_t) TextIn[1] == 94); CHECK(!GetButtonPress());
+    // 21. a value of 'q' (113) in the reply, behind a word: the split still falls at the reply's own q
+    NEXTION.feedRawL("Export"); NEXTION.feedQ(113);
+    CHECK(getvalue(nbox) == 113); CHECK(GetButtonPress() && strcmp(TextIn, "Export") == 0);
+    // 22. a reply alone, as ever; and a code AFTER it still waits in the port
+    NEXTION.feedQ(8); NEXTION.feedCode7(65); CHECK(getvalue(nbox) == 8); CHECK(pendingCode7() == 65); CHECK(!GetButtonPress());
+    // 23. the name with a reply's bytes on its tail (a frame stashed whole by an older collector): cut at .TXT
+    NEXTION.feedRaw("HelpView:MODELS.TXTq\x05"); CHECK(GetButtonPress()); CHECK(HelpNameFrom(name) && strcmp(name, "MODELS.TXT") == 0);
+    // 24. GetReturnCode: a press that arrives while a command is being sent is kept, not drained ...
+    NEXTION.later = false;
+    NEXTION.feedRaw("HelpView:MODELS.TXT"); GetReturnCode(nbox); CHECK(NEXTION.available() == 0); CHECK(GetButtonPress() && strcmp(TextIn, "HelpView:MODELS.TXT") == 0);
+    NEXTION.feedCode7(65); GetReturnCode(nbox); CHECK(pendingCode7() == 65);
+    // 25. ... and debris is still let go: a return code, a late value reply, a late text reply
+    NEXTION.feed({0x01, 0xFF, 0xFF, 0xFF}); NEXTION.feedQ(9); NEXTION.feedWord("pBTHUNDR1"); GetReturnCode(nbox); CHECK(!GetButtonPress());
+    NEXTION.later = true;
     printf("test_nextion: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.156"
+#define SCREEN_VERSION "1.11.157"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -3117,6 +3117,7 @@ static File uploadFile; static bool uploadGood = false; static uint32_t uploadBy
 static std::string psramJson();                        // (1.11.132) defined after the device headers (it names their buffers)
 static std::string wifiDiagJson();                     // (1.11.147) wifi_device.h, included later: the access point, the IP, the drops and joins
 static std::string iramJson();                         // (1.11.137) likewise
+static std::string audioJson();                        // (1.11.157) the announcements in turn, for /status
 static bool filmProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN);   // (26 Oct evening, bench) src/film_device.h: a film played from the bench, stopped, its frames through the flip or not
 static void webBegin() {
     web.on("/status", HTTP_GET, []() {                   // (the one page that answers when the workshop door is shut)
@@ -3145,6 +3146,7 @@ static void webBegin() {
         out += ","; xipJson(out);                          // (1.11.131) the code in the PSRAM: mode, pages, ms, strikes, why
         out += ","; stripJson(out);                        // (26 Oct evening) the strips: on, frames, fills, late
         out += ","; out += iramJson();
+        out += ","; out += audioJson();                   // (1.11.157) the announcements in turn
         out += ",\"sd_gone\":" + std::to_string((unsigned long) sdGoneMs);   // (1.11.138) when the card stopped answering and was given up (0: never)
         out += ","; out += packJson();                    // (1.11.138) the pack: pages, fonts and sounds in the chip's flash (16 MB boards)                    // (1.11.137) the chip's own RAM and our holders of it
         out += ","; out += psramJson();                   // (1.11.132) the PSRAM's holders: largest free block, resident pictures of the most allowed, the floor's evictions, the layer, the model picture, the film
@@ -3563,20 +3565,37 @@ static uint32_t audioDataStart = 0, audioDataSize = 0, audioDataLeft = 0, audioR
 // a time, into the same ring. audioBlock 0: 16-bit samples as they are (every clip, and the films before 1.11.93).
 #include "ima_adpcm.h"
 static uint32_t audioBlock = 0, audioBlockSamples = 0, audioSkip = 0;   // a block's bytes and samples; samples not to play (a start part way into a block)
-struct Clip { int id; uint8_t *data; uint32_t len; uint32_t used; };
+struct Clip { int id; uint8_t *data; uint32_t len; uint32_t used; uint32_t rate; };   // (1.11.157) rate: samples a second (every clip of ours is 22050)
 static std::vector<Clip> clips; static size_t clipBytes = 0; static const size_t CLIP_BUDGET = 1500 * 1024;
-static Clip *curClip = nullptr; static uint32_t curPos = 0;          // playing from memory
+static Clip *curClip = nullptr; static uint32_t curPos = 0; static int curId = -1;   // playing from memory (curId: which, so the pointer can be found again when the vector moves)
 static uint8_t *capture = nullptr; static uint32_t captureLen = 0;   // a copy being made while streaming
+// (1.11.157) ANNOUNCEMENTS IN TURN (Malcolm, 31 Oct 2026, a V1 receiver on the green: "the announcements, such as connected,
+// disconnected, model memory found, etc, these often failed to be heard"). A `play` used to stop whatever was being said and
+// start the new clip at once; at a connection the main board says several things within a second or two (Connected, the
+// model memory, the safety switch, a bank, a warning), and each cut the one before: the first words of each, or nothing,
+// reached the ear. Now a clip asked for while another is being said waits its turn (up to three) and follows it after a
+// short breath. A click (a clip under 93 ms) asked for under an announcement is let go: feedback for a tap is no use a
+// second later. A clip being said or waiting its turn is never let go by the cache, and the cache's vector may move under
+// the playing clip's pointer, so the pointer is found again by curId whenever it may have.
+static const int AUDIO_QUEUE = 3; static const size_t CLICK_BYTES = 4096;
+static int audioNextId[AUDIO_QUEUE]; static int audioNextN = 0;
+static uint32_t audioPlays = 0, audioInTurn = 0, audioCutShort = 0, audioClicksDropped = 0, audioLateDropped = 0;
 static Clip *clipFind(int id) { for (auto &c : clips) if (c.id == id) { c.used = millis(); return &c; } return nullptr; }
+static bool clipHeld(int id) {                            // (1.11.157) being said, or waiting its turn
+    if (curClip && id == curId) return true;
+    for (int k = 0; k < audioNextN; ++k) if (audioNextId[k] == id) return true;
+    return false;
+}
 static void clipMakeRoom(size_t need) {
     while (clipBytes + need > CLIP_BUDGET && !clips.empty()) {
         int old = -1;
-        for (size_t i = 0; i < clips.size(); ++i) if (&clips[i] != curClip && (old < 0 || clips[i].used < clips[old].used)) old = (int) i;
+        for (size_t i = 0; i < clips.size(); ++i) if (!clipHeld(clips[i].id) && (old < 0 || clips[i].used < clips[old].used)) old = (int) i;
         if (old < 0) return;
         free(clips[old].data); clipBytes -= clips[old].len; clips.erase(clips.begin() + old);
+        if (curClip) curClip = clipFind(curId);           // (1.11.157: the vector moved under it)
     }
 }
-static void clipAdd(int id, uint8_t *data, uint32_t len) { clips.push_back({ id, data, len, millis() }); clipBytes += len; }
+static void clipAdd(int id, uint8_t *data, uint32_t len, uint32_t rate) { clips.push_back({ id, data, len, millis(), rate }); clipBytes += len; if (curClip) curClip = clipFind(curId); }   // (1.11.157: a push may move the vector)
 // (1.11.133) The clip cache fills to CLIP_BUDGET (1.5 MB) while the screen is idle (audioWarm): with the firmware's code in the PSRAM
 // (1.11.131) that left a twin at 0.4 MB free. It is the PSRAM's most elastic part, so the floor (loop) and psMallocRoom let its
 // least recently used clip go first. Never while a clip plays from memory: curClip points into the vector.
@@ -3661,7 +3680,7 @@ static void audioBegin() {
 }
 static void audioStop() {
     if (audioFile) audioFile.close();
-    audioPlaying = false; audioId = -1; curClip = nullptr; audioDraining = false; audioBlock = 0; audioSkip = 0;
+    audioPlaying = false; audioId = -1; curClip = nullptr; curId = -1; audioNextN = 0; audioDraining = false; audioBlock = 0; audioSkip = 0;   // (1.11.157: a stop ends the turns waiting too)
     if (capture) { free(capture); capture = nullptr; }
     ldrcring::stop(ringEnds);                             // (1.11.95) a note for the task: it moves its own tail (loop() set head = tail here, and lost the race once)
 }
@@ -3688,7 +3707,22 @@ static void audioFill() {                               // called from loop(): k
     if (!audioPlaying || !audioRing) return;
     const size_t used = ldrcring::used(ringEnds, RING), space = ldrcring::space(ringEnds, RING);
     if (curClip) {                                       // from memory: everything there is room for, at once
-        if (curPos >= curClip->len) { if (audioLoop) curPos = 0; else { audioDraining = true; if (used == 0) audioStop(); } return; }
+        if (curPos >= curClip->len) {
+            if (audioLoop) curPos = 0;
+            else if (audioNextN) {                          // (1.11.157) the next one in turn, after a breath of 140 ms
+                static const uint8_t hush[2048] = { 0 };
+                if (space < 3 * sizeof hush) return;        // (room for the breath first: push() does not look)
+                for (int k = 0; k < 3; ++k) ringPush(hush, sizeof hush);
+                const int id = audioNextId[0];
+                for (int k = 1; k < audioNextN; ++k) audioNextId[k - 1] = audioNextId[k];
+                audioNextN--;
+                Clip *c = clipFind(id);
+                if (c) { curClip = c; curId = id; audioId = id; curPos = 0; }
+                else audioDraining = true;                  // (gone from the cache: clipHeld forbids it - but never a wild pointer)
+            }
+            else { audioDraining = true; if (used == 0) audioStop(); }
+            return;
+        }
         size_t n = min(space, (size_t) (curClip->len - curPos)); if (!n) return;
         // (1.11.120) All of it, as before (a stall of the loop must not starve the speaker: the ring holds 5.9 s), but in 8 kB
         // pieces with the pace's rests between: one memcpy of a whole clip within the PSRAM slipped the twin's picture at
@@ -3697,7 +3731,7 @@ static void audioFill() {                               // called from loop(): k
         return;
     }
     if (audioDataLeft == 0) {
-        if (capture && captureLen == audioDataSize) { clipAdd(audioId, capture, captureLen); capture = nullptr; }   // the copy is complete: keep it for next time
+        if (capture && captureLen == audioDataSize) { clipAdd(audioId, capture, captureLen, audioRate); capture = nullptr; }   // the copy is complete: keep it for next time
         if (audioLoop) { audioFile.seek(audioDataStart); audioDataLeft = audioDataSize; return; }
         audioDraining = true; if (used == 0) audioStop(); return;
     }
@@ -3717,30 +3751,48 @@ static void audioFill() {                               // called from loop(): k
     if (capture) { memcpy(capture + captureLen, tmp, got); captureLen += got; }
     psramPace((uint32_t) got);                            // (1.11.120: the ring and the copy are both in the PSRAM)
 }
+// (1.11.37) A clip not yet in memory is read WHOLE before a sample of it is played, and kept. It used to stream from
+// the card as the main loop found time, and "Model memory matched" (56 kB, above the size the idle warming keeps)
+// came out broken up: the loop was busy loading the front page and the model's picture from the same card at that
+// very moment (Malcolm, 8 Oct). The read takes some tens of milliseconds, once. (1.11.157: a function, used for the
+// clip asked for while another is being said too.) nullptr: not possible - too big for the memory, or the memory short -
+// and the clip is streamed as before.
+static Clip *clipLoad(int id) {
+    uint32_t rate;
+    if (!assetsOk() || !wavOpen(id, rate)) return nullptr;
+    if (audioDataSize > CLIP_BUDGET / 2) { audioFile.close(); return nullptr; }
+    clipMakeRoom(audioDataSize);
+    uint8_t *buf = (uint8_t *) psMallocRoom(audioDataSize);
+    if (!buf) { audioFile.close(); return nullptr; }
+    uint32_t got = 0;
+    while (got < audioDataSize) { const int n = audioFile.read(buf + got, min((uint32_t) 4096, audioDataSize - got)); if (n <= 0) break; got += n; psramPace((uint32_t) n); }   // (26 Oct evening: paced into the PSRAM, as every other card read)
+    audioFile.close();
+    if (got != audioDataSize) { free(buf); return nullptr; }
+    clipAdd(id, buf, audioDataSize, rate);
+    return clipFind(id);
+}
 static void audioStart(int id, bool loopIt) {
+    audioPlays++;
+    if (audioPlaying && curClip && !loopIt && !audioLoop && audioRing) {   // (1.11.157) something is being said: this one waits its turn (see AUDIO_QUEUE)
+        Clip *c = clipFind(id); if (!c) c = clipLoad(id);
+        if (c && curClip->len > CLICK_BYTES && c->rate == audioRate) {
+            if (c->len <= CLICK_BYTES) { audioClicksDropped++; return; }
+            if (audioNextN >= AUDIO_QUEUE) { audioLateDropped++; return; }
+            audioNextId[audioNextN++] = id; audioInTurn++; return;
+        }
+    }
+    if (audioPlaying) audioCutShort++;
     audioStop();
     if (!audioRing) return;
     audioLoop = loopIt; audioId = id;
-    if (Clip *c = clipFind(id)) { curClip = c; curPos = 0; audioPlaying = true; audioFill(); return; }
-    uint32_t rate;
+    Clip *c = clipFind(id); if (!c) c = clipLoad(id);
+    if (c) {
+        if (c->rate != audioRate) { i2s_set_sample_rates(I2S_PORT, c->rate); audioRate = c->rate; }
+        curClip = c; curId = id; curPos = 0; audioPlaying = true; audioFill(); return;
+    }
+    uint32_t rate;                                           // streamed off the card as it plays
     if (!assetsOk() || !wavOpen(id, rate)) { audioId = -1; return; }
     if (rate != audioRate) { i2s_set_sample_rates(I2S_PORT, rate); audioRate = rate; }
-    // (1.11.37) A clip not yet in memory is read WHOLE before a sample of it is played, and kept. It used to stream from
-    // the card as the main loop found time, and "Model memory matched" (56 kB, above the size the idle warming keeps)
-    // came out broken up: the loop was busy loading the front page and the model's picture from the same card at that
-    // very moment (Malcolm, 8 Oct). The read takes some tens of milliseconds, once.
-    if (audioDataSize <= CLIP_BUDGET / 2) {
-        clipMakeRoom(audioDataSize);
-        uint8_t *buf = (uint8_t *) psMallocRoom(audioDataSize);
-        if (buf) {
-            uint32_t got = 0;
-            while (got < audioDataSize) { const int n = audioFile.read(buf + got, min((uint32_t) 4096, audioDataSize - got)); if (n <= 0) break; got += n; psramPace((uint32_t) n); }   // (26 Oct evening: paced into the PSRAM, as every other card read)
-            audioFile.close();
-            if (got == audioDataSize) { clipAdd(id, buf, audioDataSize); if (Clip *c = clipFind(id)) { curClip = c; curPos = 0; audioPlaying = true; audioFill(); return; } }
-            free(buf);
-            if (!wavOpen(id, rate)) { audioId = -1; return; }   // (the read fell short: streamed as before)
-        }
-    }
     audioPlaying = true;
     audioFill();
 }
@@ -3772,7 +3824,7 @@ static void audioStartFile(const char *path, uint32_t fromMs = 0) {   // (1.11.8
 static void audioWarm() {
     Busy busy_(BUSY_AUDIO);
     static int next = 0; static uint32_t lastTry = 0;
-    static File warmFile; static uint8_t *warmBuf = nullptr; static uint32_t warmGot = 0, warmSize = 0; static int warmId = -1;
+    static File warmFile; static uint8_t *warmBuf = nullptr; static uint32_t warmGot = 0, warmSize = 0, warmRate = 22050; static int warmId = -1;
     if (!assetsOk() || !audioRing) return;
     if (audioPlaying) { if (warmBuf) { free(warmBuf); warmBuf = nullptr; warmFile.close(); warmId = -1; } return; }   // (a sound: the clip half in is let go; played, audioFill's capture keeps it)
     if (next >= 128 && !warmBuf) return;
@@ -3783,6 +3835,7 @@ static void audioWarm() {
         const int id = next++;
         if (clipFind(id)) return;
         uint32_t rate; if (!wavOpen(id, rate)) return;
+        warmRate = rate;
         if (!audioDataSize || audioDataSize > 40 * 1024) { audioFile.close(); return; }
         clipMakeRoom(audioDataSize);
         warmBuf = (uint8_t *) psMallocRoom(audioDataSize); if (!warmBuf) { audioFile.close(); return; }
@@ -3793,7 +3846,7 @@ static void audioWarm() {
     const int got = warmFile.read(warmBuf + warmGot, std::min((size_t) 4096, (size_t) (warmSize - warmGot)));
     if (got <= 0) { free(warmBuf); warmBuf = nullptr; warmFile.close(); warmId = -1; return; }
     warmGot += (uint32_t) got; psramPace((uint32_t) got);
-    if (warmGot >= warmSize) { warmFile.close(); clipAdd(warmId, warmBuf, warmSize); warmBuf = nullptr; warmId = -1; }
+    if (warmGot >= warmSize) { warmFile.close(); clipAdd(warmId, warmBuf, warmSize, warmRate); warmBuf = nullptr; warmId = -1; }
 }
 // A 6x6 dot in the top-left corner: green = on the WiFi, red = not.
 static void netDot(bool force = false) {
@@ -3905,6 +3958,13 @@ static void netPoll() {
 // (1.11.132) The PSRAM's big holders, for /status "mem": who has it when it runs short (twin #2 was seen at 71 kB free after its update).
 // (1.11.137) /status "iram": the chip's own RAM, and what of ours holds it - the kept values (every write to a page not on
 // show, and every value a finger set), the page-info cache, the logs. Read it after a page tour: what grew is the holder.
+static std::string audioJson() {                          // (1.11.157) the announcements: asked for, said in turn, cut short, let go
+    char b[220];
+    snprintf(b, sizeof b, "\"audio\":{\"plays\":%u,\"in_turn\":%u,\"cut\":%u,\"clicks_dropped\":%u,\"late_dropped\":%u,\"waiting\":%d,\"playing\":%d,\"clip\":%d,\"clips\":%u,\"clip_kb\":%u}",
+             (unsigned) audioPlays, (unsigned) audioInTurn, (unsigned) audioCutShort, (unsigned) audioClicksDropped, (unsigned) audioLateDropped,
+             audioNextN, audioPlaying ? 1 : 0, audioId, (unsigned) clips.size(), (unsigned) (clipBytes / 1024));
+    return b;
+}
 static std::string iramJson() {
     multi_heap_info_t hi = {}; heap_caps_get_info(&hi, MALLOC_CAP_INTERNAL);
     size_t keptBytes = 0, keptTxts = 0;

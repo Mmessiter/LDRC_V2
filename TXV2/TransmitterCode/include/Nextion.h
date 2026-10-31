@@ -6,14 +6,14 @@
 /*********************************************************************************************************************************/
 //                        NEXTION functions
 /*********************************************************************************************************************************/
+void StashPendingEventBytes(); // (below)
 void GetReturnCode(char *tbox)
 {
     CRUMB(CRUMB_RETURNCODE);
-    while (NEXTION.available())
-    {
-        delayMicroseconds(70);
-        NEXTION.read();
-    }
+    // B162: this screen sends no return codes, so what this drained after every command was a button pressed just then -
+    // its code or word read and thrown away, the press dead. Now such a press is kept for GetButtonPress, frame by frame;
+    // debris (a return code, a late reply to a get) is still let go (StashFrame).
+    StashPendingEventBytes();
 }
 /*********************************************************************************************************************************/
 void ClearNextionCommand()
@@ -206,8 +206,9 @@ void StashFrame(const uint8_t *f, uint16_t n) // a frame without its FF FF FF
     const bool code7 = first >= 0x80;                          // a button's 7-bit code (128 + n), 4 bytes
     const bool code24 = first == 0 && n == 4;                  // va0.val=n<<8: 00 n 00 00
     const bool word = first >= 0x20 && first < 0x7F;           // a word, "SendModel", "Import x.MOD" ...
-    if (!(code7 || code24 || word))
-        return;                                                // return-code debris (01, 1A ...)
+    const bool reply = first == 'p' || (first == 'q' && n == 5); // B162: a late reply to a get (no button's burst begins with p or q)
+    if (reply || !(code7 || code24 || word))
+        return;                                                // return-code debris (01, 1A ...), or a reply nobody waits for
     if (PendingEventLen + n >= sizeof(PendingEvent) - 1)
         return;
     memcpy(PendingEvent + PendingEventLen, f, n);
@@ -237,6 +238,19 @@ bool CollectReply(uint8_t expected, uint16_t &k)
                 continue;
             if (TextIn[0] == expected)                        // the reply: done
                 return true;
+            // B162 (the yellow transmitter, 31 Oct 2026: the Help button still opened "No log yet today" after B160): the
+            // screen's button codes and words carry NO terminator (its print sends the raw bytes), so a press that lands in
+            // this window is glued to the reply - "HelpView:MODELS.TXT" q 05 00 00 00 FF FF FF - and the whole frame was
+            // stashed as the press: the reply lost (400 ms, then 65535), and the word delivered with the reply's bytes on
+            // its tail (B160 then opened nothing; before it, the log). A value reply is always q and 4 bytes: when a frame
+            // ends with one, the press is what comes before it, and the reply is the reply.
+            if (expected == 'q' && k >= 9 && TextIn[k - 8] == 'q')
+            {
+                StashFrame((const uint8_t *)TextIn, k - 8);
+                memmove(TextIn, TextIn + k - 8, 8);
+                k = 8;
+                return true;
+            }
             StashFrame((const uint8_t *)TextIn, k >= 3 ? k - 3 : 0);   // something else first: kept for GetButtonPress
             k = 0;
             ffs = 0;
@@ -348,6 +362,14 @@ bool HelpNameFrom(char *name) // name: room for 16
     {
         name[i++] = TextIn[k++];
         name[i] = 0;
+    }
+    {
+        char *txt = strstr(name, ".TXT");
+        if (txt)
+        {   // B162: whatever rode in behind the name (a reply's bytes, when the word was glued to one) is not the name
+            txt[4] = 0;
+            i = (uint8_t)strlen(name);
+        }
     }
     const uint32_t began = millis();
     while (!HelpNameWhole(name) && i < 15 && (millis() - began) < 30)
