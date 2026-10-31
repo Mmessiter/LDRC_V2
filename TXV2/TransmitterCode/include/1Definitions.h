@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B159 31/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B160 31/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1185,6 +1185,8 @@ FASTRUN void LogModelMatched();
 FASTRUN void LogModelFound();
 FASTRUN void LogModelNotFound();
 void SendHelp();
+bool HelpNameFrom(char *name);        // B160: Nextion.h - the help text's name after the Help button's word, completed if the word was cut
+bool HelpNameWhole(const char *name); // B160: NAME.TXT
 FASTRUN void MakeTextFileName();
 void GetCommandbytes(uint8_t *C, uint8_t *C1);
 void TestTheCommandByte(uint8_t C, uint8_t C1);

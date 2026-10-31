@@ -246,21 +246,33 @@ bool CollectReply(uint8_t expected, uint16_t &k)
     return false;
 }
 
-void GetTextIn() 
+void GetTextIn()
 {
     delayMicroseconds(20);
     if (NEXTION.available())
     {
         CRUMB(CRUMB_GETTEXT);
         int j = 0;
-        while (NEXTION.available())
+        while (true)
         {
-            TextIn[j] = NEXTION.read();
-            KickTheDog();
-            if (j < MAXTEXTIN)
-                ++j;
-            delayMicroseconds(20);
+            while (NEXTION.available())
+            {
+                TextIn[j] = NEXTION.read();
+                KickTheDog();
+                if (j < MAXTEXTIN)
+                    ++j;
+                delayMicroseconds(20);
+            }
+            // B160: a touch word comes in one burst, but its bytes can reach this board with a short pause among them,
+            // and a pause of 20 us used to end the word ("HelpView:" was read without its name). The word is over when
+            // nothing more has come for 200 us.
+            const uint32_t quiet = micros();
+            while (!NEXTION.available() && (micros() - quiet) < 200)
+                delayMicroseconds(20);
+            if (!NEXTION.available())
+                break;
         }
+        TextIn[j] = 0; // (B160: the read ends the text - what an earlier, unanswered read left behind is no part of it)
     }
 }
 
@@ -301,6 +313,7 @@ bool GetButtonPress()
                     ++j;
                 delayMicroseconds(20);
             }
+            TextIn[j] = 0;
             return true;
         }
         GetTextIn();
@@ -309,6 +322,64 @@ bool GetButtonPress()
     return false;
 }
 
+/*********************************************************************************************************************************/
+// B160 (Malcolm, 31 Oct 2026: "The help button on the models page usually brings the help screen, but a couple of times it
+// tried to open a log file instead"). A Help button's word is "HelpView:" and the text's name - HelpView:MODELS.TXT - in one
+// burst. SendHelp took the name from a FIXED place (the tenth byte on): a word read in two parts, or one with another event
+// ahead of it in the same read, gave NO name, and the viewer, given none, opened TODAY'S LOG. Now the name is taken from
+// after the word wherever the word sits; a name not all there yet (every help text's is NAME.TXT) is completed from what the
+// get-reply collector set aside and from the wire, 30 ms at most; and without a whole name, nothing opens.
+bool HelpNameWhole(const char *name)
+{
+    const size_t n = strlen(name);
+    return n > 4 && strcmp(name + n - 4, ".TXT") == 0;
+}
+bool HelpNameFrom(char *name) // name: room for 16
+{
+    const char *at = strstr(TextIn, "HelpView");
+    uint8_t i = 0;
+    name[0] = 0;
+    if (!at)
+        return false;
+    uint16_t k = (uint16_t)(at - TextIn) + 8;
+    if (TextIn[k] == ':')
+        ++k;
+    while (i < 15 && (uint8_t)TextIn[k] > 32 && (uint8_t)TextIn[k] < 127)
+    {
+        name[i++] = TextIn[k++];
+        name[i] = 0;
+    }
+    const uint32_t began = millis();
+    while (!HelpNameWhole(name) && i < 15 && (millis() - began) < 30)
+    {
+        int c;
+        if (PendingEventLen)
+        {   // set aside by a get-reply window: the rest of this word begins printable; a code or another frame is left alone
+            c = (uint8_t)PendingEvent[0];
+            if (c <= 32 || c >= 127)
+                break;
+            memmove(PendingEvent, PendingEvent + 1, PendingEventLen - 1);
+            PendingEvent[--PendingEventLen] = 0;
+        }
+        else if (NEXTION.available())
+        {
+            c = NEXTION.peek();
+            if (c <= 32 || c >= 127)
+                break; // not ours: left in the port
+            NEXTION.read();
+        }
+        else
+        {
+            KickTheDog();
+            continue;
+        }
+        if (c == ':' && i == 0)
+            continue; // the colon, when the cut fell right after the word
+        name[i++] = (char)c;
+        name[i] = 0;
+    }
+    return HelpNameWhole(name);
+}
 /*********************************************************************************************************************************/
 void SendCommand(char *tbox)
 {

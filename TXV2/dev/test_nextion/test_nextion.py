@@ -12,7 +12,8 @@ def fn(sig):
     assert m, sig
     return m.group(0)
 parts = [fn('void StashFrame(const uint8_t *f, uint16_t n)'), fn('void StashPendingEventBytes()'), fn('bool CollectReply(uint8_t expected, uint16_t &k)'),
-         fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('uint32_t getvalue(char *nbox)')]
+         fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('uint32_t getvalue(char *nbox)'),
+         fn('bool HelpNameWhole(const char *name)'), fn('bool HelpNameFrom(char *name)')]   # (B160)
 prog = r'''
 #include <cstdio>
 #include <cstdlib>
@@ -32,11 +33,18 @@ static uint32_t millis() { return fakeMs; }
 static uint32_t micros() { return fakeUs; }
 static void delayMicroseconds(unsigned) { fakeUs += 20; }
 static void KickTheDog() { fakeMs += 1; }   // (each pass of a wait costs a millisecond: the 100 ms timeout is reachable)
+static uint64_t nowUs() { return (uint64_t) fakeMs * 1000 + fakeUs; }   // (B160) both clocks together: a late byte comes whichever one is waited on
 struct FakeSerial {
     std::deque<uint8_t> in, onGet; std::string out;   // onGet: what the screen answers once a "get" has been sent (the reply, and whatever lands ahead of it)
-    int available() { return (int) in.size(); }
-    int read() { if (in.empty()) return -1; uint8_t b = in.front(); in.pop_front(); return b; }
-    int peek() { return in.empty() ? -1 : in.front(); }
+    std::deque<uint8_t> late; uint64_t lateAt = 0;    // (B160) bytes that reach the port only later: a pause inside a word
+    int lateAfterPolls = 0, emptyPolls = 0;           // ... or only after the port has been found empty so many times (the fake's clocks are coarse: a byte read costs a millisecond)
+    void pump() { if (!late.empty() && (nowUs() >= lateAt || (lateAfterPolls && emptyPolls >= lateAfterPolls))) { for (uint8_t b : late) in.push_back(b); late.clear(); lateAfterPolls = 0; } }
+    int available() { if (in.empty()) ++emptyPolls; pump(); return (int) in.size(); }
+    void feedLatePolls(const char *w, int polls) { lateAt = ~(uint64_t) 0; lateAfterPolls = polls; emptyPolls = 0; for (const char *p = w; *p; ++p) late.push_back((uint8_t) *p); }
+    int read() { pump(); if (in.empty()) return -1; uint8_t b = in.front(); in.pop_front(); return b; }
+    int peek() { pump(); return in.empty() ? -1 : in.front(); }
+    void feedRaw(const char *w) { for (const char *p = w; *p; ++p) in.push_back((uint8_t) *p); }                      // a touch word as the screen sends it: no terminator
+    void feedLate(const char *w, uint32_t afterUs) { lateAt = nowUs() + afterUs; for (const char *p = w; *p; ++p) late.push_back((uint8_t) *p); }
     void print(const char *s) { out += s; if (strncmp(s, "get ", 4) == 0) { for (uint8_t b : onGet) in.push_back(b); onGet.clear(); } }
     void write(uint8_t b) { out.push_back((char) b); }
     bool later = false;                                  // feeds go to onGet (after the next get) rather than straight into the port
@@ -81,6 +89,38 @@ int main() {
     CHECK(getvalue(nbox) == 1); CHECK(pendingCode7() == 65);
     // 9. GetButtonPress on a quiet port: nothing
     CHECK(!GetButtonPress());
+    // --- B160 (31 Oct 2026): the Help button's word, "HelpView:MODELS.TXT", sent with no terminator and read by GetTextIn;
+    // once read in two parts it opened today's log, the name being taken from a fixed place ---
+    char name[16];
+    // 10. whole, in one burst: the name follows the word (and the read zero-ends the text)
+    NEXTION.feedRaw("HelpView:MODELS.TXT");
+    CHECK(GetButtonPress() && strcmp(TextIn, "HelpView:MODELS.TXT") == 0);
+    CHECK(HelpNameFrom(name) && strcmp(name, "MODELS.TXT") == 0);
+    // 11. a pause inside the word shorter than the read's patience (the port found empty three times, ~60 us): waited out, the word whole
+    NEXTION.feedRaw("HelpView:"); NEXTION.feedLatePolls("MODELS.TXT", 3);
+    CHECK(GetButtonPress() && strcmp(TextIn, "HelpView:MODELS.TXT") == 0);
+    // 12. a pause longer than the patience (fifteen empty looks): the read ends at the colon, and HelpNameFrom waits for the rest from the wire
+    NEXTION.feedRaw("HelpView:"); NEXTION.feedLatePolls("MODELS.TXT", 15);
+    CHECK(GetButtonPress() && strcmp(TextIn, "HelpView:") == 0);
+    CHECK(HelpNameFrom(name) && strcmp(name, "MODELS.TXT") == 0); CHECK(!NEXTION.available());
+    // 13. the rest set aside by a get-reply window (as the collector keeps it): taken from there, and only that
+    NEXTION.feedRaw("HelpView:"); CHECK(GetButtonPress());
+    StashFrame((const uint8_t *) "MODELS.TXT", 10);
+    CHECK(HelpNameFrom(name) && strcmp(name, "MODELS.TXT") == 0 && PendingEventLen == 0);
+    // 14. a code set aside is NOT eaten: no name, and the code still waits for GetButtonPress
+    NEXTION.feedRaw("HelpView:"); CHECK(GetButtonPress());
+    { const uint8_t code[4] = { 0xC1, 0, 0, 0 }; StashFrame(code, 4); }
+    CHECK(!HelpNameFrom(name) && PendingEventLen == 4 && (uint8_t) PendingEvent[0] == 0xC1); CHECK(pendingCode7() == 65);
+    // 15. another event ahead of it in the same read: the name is found wherever the word sits
+    NEXTION.feedRaw("Export"); NEXTION.feedRaw("HelpView:MODELS.TXT");
+    CHECK(GetButtonPress() && HelpNameFrom(name) && strcmp(name, "MODELS.TXT") == 0);
+    // 16. the word cut, and nothing more ever comes: no name, and the wait is bounded (30 ms)
+    NEXTION.feedRaw("HelpView:MOD"); CHECK(GetButtonPress());
+    { const uint32_t t0 = fakeMs; CHECK(!HelpNameFrom(name)); CHECK(fakeMs - t0 >= 30 && fakeMs - t0 < 40); }
+    // 17. a code on the wire after a cut word is not ours: left in the port for GetButtonPress
+    NEXTION.feedRaw("HelpView:"); CHECK(GetButtonPress());
+    NEXTION.later = false; NEXTION.feed({0xC1, 0, 0, 0}); NEXTION.later = true;
+    CHECK(!HelpNameFrom(name) && NEXTION.available() == 4); CHECK(pendingCode7() == 65);
     printf("test_nextion: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -7,13 +7,14 @@
 // ******************************************************************************************************************************/
 FLASHMEM void SendHelp()
 { // load new help file
-    uint8_t i = 0;
-    while (TextIn[i + 9] > 32 && TextIn[i + 9] < 127 && i < 15)
-    { // then load the help filename
-        TextFileName[i] = TextIn[i + 9];
-        ++i;
-        TextFileName[i] = 0;
+    char name[16];
+    if (!HelpNameFrom(name)) // B160: the name after "HelpView:", wherever the word sits, completed if it was cut (Nextion.h)
+    {   // no whole name came: nothing opens (least of all today's log) and the page goes on as it was
+        CurrentView = SavedCurrentView;
+        HelpTookRead = false;
+        return;
     }
-   LogVIEWNew(); // use the same function as for the log files
+    strcpy(TextFileName, name);
+    LogVIEWNew(); // use the same function as for the log files
 }
 #endif

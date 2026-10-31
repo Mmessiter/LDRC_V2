@@ -625,6 +625,10 @@ def source_checks():
     tr = src('include/transceiver.h'); mc = src('src/main.cpp')
     chk('GapStartedUnlinked = !LedWasGreen;' in tr and 'if (GapStartedUnlinked)' in tr, 'B157 a gap that began with no link up is not counted')
     chk('ClearMostParameters();\n    // B158' in mc and '    GapStart = 0;\n    ThisGap = 0;\n    LedWasRed = true;' in mc, 'B158 a gap that becomes a lost link is dropped at RedLedOn, never closed by the next model')
+    # B160 (31 Oct 2026): the Help button's word read in two parts opened today's log (the name was taken from a fixed place)
+    nx = src('include/Nextion.h'); hp = src('include/Help.h')
+    chk('bool HelpNameFrom(char *name)' in nx and 'strstr(TextIn, "HelpView")' in nx and 'if (!HelpNameFrom(name))' in hp and 'CurrentView = SavedCurrentView;' in hp, 'B160 the help name is read from after the word wherever it sits, completed if cut, and without one nothing opens')
+    chk('TextIn[i + 9]' not in hp and 'TextIn[j] = 0;' in nx and '(micros() - quiet) < 200' in nx, 'B160 SendHelp reads no fixed place; GetTextIn zero-ends the text and waits 200 us for a word to finish')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 
