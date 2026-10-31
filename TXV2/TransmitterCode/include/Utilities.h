@@ -188,8 +188,11 @@ void PlaySound(uint16_t id)
     if (millis() < 5000 && !Force_Early_Sound)
         return;                // don't play any sounds for the first 5 seconds of power up, except the forced early sound (e.g. for binding enabled)
     Force_Early_Sound = false; // reset this flag so that we don't play any more sounds for the first 5 seconds of power up
-    if (CurrentView == MODELSVIEW && id != CLICKONE)
-        return;
+    // B161 (Malcolm, 31 Oct 2026, a V1 receiver on the green: "the announcements, such as connected, disconnected, model
+    // memory found, etc, these often failed to be heard"): until now NO sound but a click was played while the Models page
+    // was showing - a rule from the original Nextion, whose own audio and its long model lists did not mix. The V2 screen
+    // plays from a ring of its own, whatever its page is doing, and the Models page is exactly where a pilot sorting a model
+    // out stands when "Connected" or "Model memory found" is said. So the rule is gone.
     if (!SD_Card_Exists)
         return;
     char cmd[24];

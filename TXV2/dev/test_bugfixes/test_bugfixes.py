@@ -629,6 +629,9 @@ def source_checks():
     nx = src('include/Nextion.h'); hp = src('include/Help.h')
     chk('bool HelpNameFrom(char *name)' in nx and 'strstr(TextIn, "HelpView")' in nx and 'if (!HelpNameFrom(name))' in hp and 'CurrentView = SavedCurrentView;' in hp, 'B160 the help name is read from after the word wherever it sits, completed if cut, and without one nothing opens')
     chk('TextIn[i + 9]' not in hp and 'TextIn[j] = 0;' in nx and '(micros() - quiet) < 200' in nx, 'B160 SendHelp reads no fixed place; GetTextIn zero-ends the text and waits 200 us for a word to finish')
+    # B161 (31 Oct 2026): announcements are no longer muted while the Models page shows (a rule from the original Nextion)
+    ut = src('include/Utilities.h')
+    chk('CurrentView == MODELSVIEW && id != CLICKONE' not in ut and 'snprintf(cmd, sizeof(cmd), "play 0,%u,0", id)' in ut, 'B161 PlaySound plays on every page, the Models page included')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 
