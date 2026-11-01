@@ -28,6 +28,17 @@ read back to check, and stored.|
 'Discard' leaves without saving.|
 If the save is refused or fails, your edits stay on the page.|
 Every page has its own 'Help'.||
+EVERY SAVE IS CHECKED:|
+After a save, the page reads the values back from the flight|
+controller and compares them with what you typed. 'Saved, and|
+confirmed by reading it back' (or 'read back the same') means|
+it now holds exactly your values. If anything differs, the page|
+says so and shows what the flight controller really holds; if|
+nothing comes back, it says NOT CONFIRMED. The transmitter never|
+says 'saved' on trust. The phone app checks every save the same|
+way. Rotorflight's own Lua scripts call a save done when the|
+flight controller acknowledges the write, and do not compare|
+what comes back with what was typed (their code, 1 Nov 2026).||
 BANKS:|
 The top left shows the bank and the rate in use.|
 The bank switch chooses the bank for 'PIDs ...',|
