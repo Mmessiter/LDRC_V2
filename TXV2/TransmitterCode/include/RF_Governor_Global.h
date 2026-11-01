@@ -4,6 +4,13 @@
 // Config parameters — MSP cmd 142, payload bytes [18]-[41]
 // Off-screen (not editable): Startup [20-21], RPM/Pwr/D/FF/TTA filters [34-38]
 // Profile-specific parameters are handled in RF_Governor_Profile.h
+// B165 (1 Nov 2026): A SAVE IS READ BACK, as on every other Rotorflight page (RF_Verify.h, VK_GOV_CFG). The three write
+// packets go as before; the page's own read is queued first (the stack sends it last) with an 8 s window - the receiver
+// writes, checks the flight controller's answer, saves and RESTARTS it, and answers from its verified copy meanwhile -
+// and the 24 bytes that come back are compared with GovWritePayload[18..41]: the same = "Saved, and confirmed by reading
+// it back." on t4, the done sound, OK's "Save now?" closes the page; different or nothing = a message box, the values
+// sent back on the page with the boxes that differ in red, Save shown again. The edited flag stays up until the
+// read-back says saved, so OK's "Save now?" waits for the verdict. The kept copy sent from the card is read back too.
 // ********************************************************************************************************
 
 #ifndef GOVERNOR_GLOBAL_H
@@ -104,6 +111,28 @@ FLASHMEM void HideGOVConfigMsg()
         AddWords();
     }
 }
+// B165: the plain hide, for the read-back's verdict (RF_Verify.h): the message line goes, OK and the labels come back,
+// and nothing is asked again - the verdict says what came back, or that nothing did.
+FLASHMEM void HideGOVConfigMsgQuiet()
+{
+    BlockBankChanges = false;
+    if (CurrentView != RFGOVERNORVIEW_GLOBAL)
+        return;
+    SendCommand((char *)"vis t4,0");
+    SendCommand((char *)"vis b1,1");
+    ForegroundColourGOVConfigLabels(Black);
+    AddWords();
+}
+// B165: the page's own read, as RF_Verify.h asks for it after a save: the flags and the boxes are left as they are (the
+// set was whole before the write, and the numbers on the page are the ones just sent)
+FLASHMEM void GovCfgAskValues()
+{
+    if (CurrentView != RFGOVERNORVIEW_GLOBAL) { BlockBankChanges = false; return; }
+    GOV_Config_Send_Duration = GOV_GLOBAL_WAIT_TIME;
+    Reading_GOV_Config_Now = true;
+    AddParameterstoQueue(SEND_GOV_CONFIG_VALUES);
+    GOV_Global_Start_Time = millis();
+}
 
 // ====================================================
 FLASHMEM void GOVS_G_Were_Edited()
@@ -199,9 +228,9 @@ FLASHMEM void DisplayGovConfigValues(uint8_t n, uint8_t m)
         if (i >= 18 && (uint8_t)(i - 18) < sizeof(Global_Params_Received_Flags))
             Global_Params_Received_Flags[i - 18] = 1; // mark this config byte as received
 
-        if (AllGlobalConfigBytesReceived())
+        if (AllGlobalConfigBytesReceived() && !RfVerifyPending())
         {
-            GOV_Global_Start_Time = 0; // instant timeout — all bytes in
+            GOV_Global_Start_Time = 0; // instant timeout — all bytes in (B165: not during a read-back - a set that differs waits for the window's end, another may follow)
         }
 
         switch (i)
@@ -393,6 +422,7 @@ FLASHMEM void RestoreFromSDGlobalGOV()
     // Show restored values on screen
     ShowLocalGovConfigBank();
 
+    const bool readBack = RfVerifyArm(VK_GOV_CFG, GovCfgAskValues);   // B165: read back after the write and compared with what was sent (the read queued first: the stack sends it last)
     // Send to FC — queue in reverse order (LIFO)
     AddParameterstoQueue(SEND_GOV_WRITE_CONFIG3); // executes 3rd
     AddParameterstoQueue(SEND_GOV_WRITE_CONFIG2); // executes 2nd
@@ -400,6 +430,7 @@ FLASHMEM void RestoreFromSDGlobalGOV()
 
     GOVS_GLOBAL_Were_Edited = false;
     SendCommand((char *)"vis b3,0");
+    if (readBack) return;                         // "reading back ..." stays up: the verdict does the rest (RF_Verify.h)
     HideGOVConfigMsg();
     PlaySound(BEEPCOMPLETE);
 }
@@ -430,6 +461,12 @@ FLASHMEM void SendEditedGovConfigValues()
         MsgBox((char *)"page RFGovViewGlbl", (char *)"Not saved: the governor settings have\r\nnot all arrived yet. Wait, then Save.");
         return;
     }
+    if (RfVerifyPending())   // B165: the last save is still being read back (OK's "Save now?" can ask while it is): one at a time
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RFGovViewGlbl", (char *)"Not saved yet: the last save is still\r\nbeing read back. Wait for its answer.");
+        return;
+    }
     NextionTextMissed = false;
     LoadGovConfigWritePayload();
     if (RfFieldsMissed("page RFGovViewGlbl")) return;   // B156: a box unanswered (GetValue 65535): nothing sent
@@ -438,13 +475,15 @@ FLASHMEM void SendEditedGovConfigValues()
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);
 
+    const bool readBack = RfVerifyArm(VK_GOV_CFG, GovCfgAskValues);   // B165: read back after the write and compared with what was sent (the read queued first: the stack sends it last)
     // Queue in reverse order — LIFO executes CONFIG1 first, CONFIG2 second, CONFIG3 third
     AddParameterstoQueue(SEND_GOV_WRITE_CONFIG3); // executes 3rd
     AddParameterstoQueue(SEND_GOV_WRITE_CONFIG2); // executes 2nd
     AddParameterstoQueue(SEND_GOV_WRITE_CONFIG1); // executes 1st
 
-    GOVS_GLOBAL_Were_Edited = false;
     SendCommand((char *)"vis b3,0");
+    if (readBack) return;        // "reading back ..." stays up; the edited flag stays up too, so OK's "Save now?" waits for the verdict (RF_Verify.h clears it when the read-back matches)
+    GOVS_GLOBAL_Were_Edited = false;
     PlaySound(BEEPCOMPLETE);
 
     // Reboot FC is done at receiver.

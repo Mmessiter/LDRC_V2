@@ -33,10 +33,12 @@ static int BasPortRow[BAS_PORT_ROWS];                  // the port (index into B
 static bool BasPortsHave = false, BasPortsEdited = false;
 static char BasBoard[24] = "";                         // the board's name (MSP 4), for the sockets' letters
 static uint32_t BasFeat = 0;                           // the features read before a save (36), written back with the bits the ports need (37)
+static uint32_t BasFeatWant = 0;                       // B165: the mask written (37), read back (36) after the restart and compared like the rest
+static bool BasFeatWritten = false;
 static const uint32_t F_MSP = 1, F_GPS = 2, F_SPORT = 32, F_RX = 64, F_BLACKBOX = 128, F_ESC = 1024;   // io/serial.h function bits
 static const char *const BasPortWords[7] PROGMEM = {"Nothing", "ESC telemetry", "GPS", "Dongle on a wire (MSP)", "Telemetry out: S.Port", "Blackbox logger", "As it is"};   // a tap steps 0-5 round; 6 is told (15 Oct: the phone app's words)
 static const uint32_t BasPortMasks[6] PROGMEM = {0, F_ESC, F_GPS, F_MSP, F_SPORT, F_BLACKBOX};
-enum { BAS_IDLE = 0, BAS_READ_MIX, BAS_READ_MOT, BAS_READ_ESC, BAS_READ_BOARD, BAS_READ_PORTS, BAS_WRITE_MIX, BAS_WRITE_MOT, BAS_WRITE_ESC, BAS_WRITE_PORTS, BAS_READ_FEAT, BAS_WRITE_FEAT, BAS_STORE, BAS_REBOOT, BAS_WAIT, BAS_VERIFY_MIX, BAS_VERIFY_MOT, BAS_VERIFY_ESC, BAS_VERIFY_PORTS };
+enum { BAS_IDLE = 0, BAS_READ_MIX, BAS_READ_MOT, BAS_READ_ESC, BAS_READ_BOARD, BAS_READ_PORTS, BAS_WRITE_MIX, BAS_WRITE_MOT, BAS_WRITE_ESC, BAS_WRITE_PORTS, BAS_READ_FEAT, BAS_WRITE_FEAT, BAS_STORE, BAS_REBOOT, BAS_WAIT, BAS_VERIFY_MIX, BAS_VERIFY_MOT, BAS_VERIFY_ESC, BAS_VERIFY_PORTS, BAS_VERIFY_FEAT };
 static int BasStep = BAS_IDLE, BasReq = 0, BasTries = 0;
 static uint32_t BasMsgUntil = 0, BasWaitUntil = 0;
 static const char *const BasSwashWords[7] PROGMEM = {"None", "Direct", "CCPM 120 deg", "CCPM 135 deg", "CCPM 140 deg", "FPM 90 deg L", "FPM 90 deg V"};   // (the configurator's, as RF_Travel.h tells them)
@@ -233,6 +235,11 @@ FLASHMEM static void BasSaved() // the end of a save: the page as the flight con
     PlaySound(BEEPCOMPLETE);
     RfSavedThenLeave(CurrentView);   // B102: OK's "Save now?" closes the page once saved
 }
+FLASHMEM static void BasVerifyDone() // B165: the blocks read back - and the features too when they were written - then the word
+{
+    if (BasFeatWritten) { BasReq = MspAsk(36, nullptr, 0); BasStep = BAS_VERIFY_FEAT; return; }
+    BasSaved();
+}
 FLASHMEM static void BasAskAgain() // after the restart: the flight controller is asked until it answers (5 s first, then every 2.5 s, five times)
 {
     BasWaitUntil = millis() + (BasTries ? 2500 : 5000);
@@ -322,6 +329,7 @@ FLASHMEM void BasicsPoll()
         if (!ok || PipeReplyBytes(b, sizeof(b)) < 4) { BasFail("Could not read the features"); return; }
         BasFeat = (uint32_t)b[0] | ((uint32_t)b[1] << 8) | ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
         const uint32_t want = BasFeatWanted();
+        BasFeatWritten = want != BasFeat; BasFeatWant = want;   // (B165: read back after the restart when written)
         if (want != BasFeat) { uint8_t f[4] = {(uint8_t)want, (uint8_t)(want >> 8), (uint8_t)(want >> 16), (uint8_t)(want >> 24)}; BasReq = MspAsk(37, f, 4); BasStep = BAS_WRITE_FEAT; return; }
         BasReq = MspAsk(250, nullptr, 0); BasStep = BAS_STORE;
         return;
@@ -357,7 +365,7 @@ FLASHMEM void BasicsPoll()
         memcpy(BasMixWant, BasMix, BAS_MIX_BYTES); memcpy(BasMotWant, BasMot, BAS_MOT_BYTES);
         if (escOk) memcpy(BasEscWant, BasEsc, BAS_ESC_BYTES);
         if (BasPortsEdited) { BasReq = MspAsk(54, nullptr, 0); BasStep = BAS_VERIFY_PORTS; return; }
-        BasSaved();
+        BasVerifyDone();
         return;
     }
     case BAS_VERIFY_PORTS: // B100
@@ -367,6 +375,17 @@ FLASHMEM void BasicsPoll()
         int cnt = n / BAS_PORT_BYTES; if (cnt > BAS_PORTS_MAX) cnt = BAS_PORTS_MAX;
         if (cnt != BasPortsN || memcmp(b, BasPortsWant, (size_t)cnt * BAS_PORT_BYTES) != 0) BasSame = false;
         if (cnt > 0) { BasPortsN = cnt; memcpy(BasPorts, b, (size_t)cnt * BAS_PORT_BYTES); memcpy(BasPortsWant, BasPorts, sizeof(BasPorts)); BasMapPortRows(); }
+        BasVerifyDone();
+        return;
+    }
+    case BAS_VERIFY_FEAT: // B165: the features mask written for the ports, as the flight controller holds it after its restart
+    {
+        uint8_t b[8];
+        const int n = ok ? PipeReplyBytes(b, sizeof(b)) : 0;
+        uint32_t m = 0;
+        if (n >= 4) { m = (uint32_t)b[0] | ((uint32_t)b[1] << 8) | ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24); BasFeat = m; }
+        if (n < 4 || m != BasFeatWant) BasSame = false;
+        BasFeatWritten = false;
         BasSaved();
         return;
     }

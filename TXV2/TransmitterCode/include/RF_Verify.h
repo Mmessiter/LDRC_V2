@@ -17,6 +17,13 @@
 // change; the read-back belongs to that one read (the kind's start time): a bank change or a page left in the meantime
 // ends it with nothing said. Needs: the blocks' arrays, the pages' Msg / Hide / Display / WereEdited functions and box
 // names, BlockSeen / BlockShown, RfSavedThenLeave, RfCutNote (1Definitions.h prototypes). Host test: dev/test_verify.
+// B165 (Malcolm, 1 Nov 2026: "check and confirm that after writing new values to the flight controller, the transmitter
+// and the app both read back the values"): the governor's GLOBAL page was the one page that did not - its three write
+// packets were queued and the page said done. Now it is VK_GOV_CFG here: the 24 config bytes (18-41) are read back
+// through the page's own read (GovCfgAskValues) with a longer window (RF_VERIFY_GOVCFG_WAIT_MS: the receiver writes,
+// checks, saves and RESTARTS the flight controller, and answers from its verified copy meanwhile), compared with
+// GovWritePayload, told on the page's own line (t4), and the page's edited flag stays up until the read-back says saved,
+// so OK's "Save now?" waits for the verdict as on the other pages.
 #ifndef RF_VERIFY_H
 #define RF_VERIFY_H
 #include <Arduino.h>
@@ -28,6 +35,7 @@ static uint16_t VfSent[MAX_PIDS_ADVANCED_BYTES];   // what was sent (26: the big
 static bool     VfSetSeen = false;                 // a whole set came, and differed
 static uint32_t VfBannerUntil = 0;                 // the "Saved" line goes at this time
 static int      VfBannerView = -1;
+static const char *VfBannerLine = "busy";          // the box the "Saved" line was put in (B165: the governor's global page says it on t4)
 
 FLASHMEM static uint8_t VfCount(uint8_t k)
 {
@@ -38,6 +46,7 @@ FLASHMEM static uint8_t VfCount(uint8_t k)
     case VK_PID: return MAX_PID_WORDS + 5;   // 12 PIDs, 3 boosts, 2 HSI offsets
     case VK_PID_ADV: return MAX_PIDS_ADVANCED_BYTES;
     case VK_GOV: return 18;                  // the profile's bytes 0..17 (0 a flag never written, 16-17 the flags as read)
+    case VK_GOV_CFG: return 24;              // B165: the global settings, bytes 18..41 of the governor block (value i = byte 18 + i)
     }
     return 0;
 }
@@ -50,6 +59,7 @@ FLASHMEM static int VfView(uint8_t k)
     case VK_PID: return PIDVIEW;
     case VK_PID_ADV: return PIDADVANCEDVIEW;
     case VK_GOV: return RFGOVERNORVIEW_PROFILE;
+    case VK_GOV_CFG: return RFGOVERNORVIEW_GLOBAL;
     }
     return -1;
 }
@@ -62,9 +72,11 @@ FLASHMEM static const char *VfPage(uint8_t k)
     case VK_PID: return "page PIDView";
     case VK_PID_ADV: return "page PID_A_View";
     case VK_GOV: return "page RFGovView";
+    case VK_GOV_CFG: return "page RFGovViewGlbl";
     }
     return "page RFView";
 }
+FLASHMEM static const char *VfLine(uint8_t k) { return k == VK_GOV_CFG ? "t4" : "busy"; }   // the page's message line (B165)
 FLASHMEM static uint32_t VfStart(uint8_t k)
 {
     switch (k)
@@ -74,6 +86,7 @@ FLASHMEM static uint32_t VfStart(uint8_t k)
     case VK_PID: return PID_Start_Time;
     case VK_PID_ADV: return PID_Advanced_Start_Time;
     case VK_GOV: return GOV_Start_Time;
+    case VK_GOV_CFG: return GOV_Global_Start_Time;
     }
     return 0;
 }
@@ -86,6 +99,7 @@ FLASHMEM static bool VfReading(uint8_t k)
     case VK_PID: return Reading_PIDS_Now;
     case VK_PID_ADV: return Reading_PIDS_Advanced_Now;
     case VK_GOV: return Reading_GOV_Now;
+    case VK_GOV_CFG: return Reading_GOV_Config_Now;
     }
     return false;
 }
@@ -98,6 +112,7 @@ FLASHMEM static void VfReadDone(uint8_t k)
     case VK_PID: Reading_PIDS_Now = false; break;
     case VK_PID_ADV: Reading_PIDS_Advanced_Now = false; break;
     case VK_GOV: Reading_GOV_Now = false; break;
+    case VK_GOV_CFG: Reading_GOV_Config_Now = false; break;
     }
 }
 FLASHMEM static void VfWindow(uint8_t k, uint16_t ms) // how long the read waits (and the receiver answers)
@@ -109,6 +124,7 @@ FLASHMEM static void VfWindow(uint8_t k, uint16_t ms) // how long the read waits
     case VK_PID: PID_Send_Duration = ms; break;
     case VK_PID_ADV: PID_Advanced_Send_Duration = ms; break;
     case VK_GOV: GOV_Send_Duration = ms; break;
+    case VK_GOV_CFG: GOV_Config_Send_Duration = ms; break;
     }
 }
 // the block's value i as the page holds it (what a read fills), and put back
@@ -121,6 +137,7 @@ FLASHMEM static uint16_t VfLive(uint8_t k, uint8_t i)
     case VK_PID: return i < MAX_PID_WORDS ? PID_Values[i] : i < MAX_PID_WORDS + 3 ? PID_Boost_Values[i - MAX_PID_WORDS] : PID_HSI_Offset_Values[i - MAX_PID_WORDS - 3];
     case VK_PID_ADV: return PID_Advanced_Values[i];
     case VK_GOV: return GovAckPayload[i];
+    case VK_GOV_CFG: return GovAckPayload[18 + i];
     }
     return 0;
 }
@@ -137,6 +154,7 @@ FLASHMEM static void VfPut(uint8_t k, uint8_t i, uint16_t v)
         break;
     case VK_PID_ADV: PID_Advanced_Values[i] = (uint8_t)v; break;
     case VK_GOV: GovAckPayload[i] = (uint8_t)v; break;
+    case VK_GOV_CFG: GovAckPayload[18 + i] = (uint8_t)v; break;
     }
 }
 FLASHMEM static bool VfWritten(uint8_t k, uint8_t i) { return k != VK_GOV || i >= 1; }   // (the governor's byte 0 is a flag never written)
@@ -153,6 +171,17 @@ FLASHMEM static const char *VfBox(uint8_t k, uint8_t i) // the box on the page t
         if (i < 1 || i > 15) return nullptr;   // (16-17: the flags, no box)
         snprintf(g, sizeof(g), "n%u", (unsigned)(i <= 2 ? 0 : i - 2));   // bytes 1-2 = n0 (the headspeed), 3 = n1 ... 15 = n13
         return g;
+    case VK_GOV_CFG:
+    { // B165: as DisplayGovConfigValues shows them - 18 n14 (mode), 19 n15 (handover), the six u16s 22-33 on n17..n22, 39 n28 (throttle type), 40 n29, 41 n30
+        const uint8_t b = (uint8_t)(18 + i);
+        if (b == 18) return "n14";
+        if (b == 19) return "n15";
+        if (b >= 22 && b <= 33) { snprintf(g, sizeof(g), "n%u", (unsigned)(17 + (b - 22) / 2)); return g; }
+        if (b == 39) return "n28";
+        if (b == 40) return "n29";
+        if (b == 41) return "n30";
+        return nullptr;   // (20-21 the start-up time and 34-38 the filters: off the page, written as they were read)
+    }
     }
     return nullptr;
 }
@@ -165,6 +194,7 @@ FLASHMEM static void VfMsg(uint8_t k, const char *m)
     case VK_PID: PIDMsg(m, Gray); break;
     case VK_PID_ADV: PIDAdvancedMsg(m, Gray); break;
     case VK_GOV: ShowGOVMsg(m, Gray); break;
+    case VK_GOV_CFG: ShowGOVConfigMsg(m, Gray); break;
     }
 }
 FLASHMEM static void VfHide(uint8_t k)
@@ -176,6 +206,7 @@ FLASHMEM static void VfHide(uint8_t k)
     case VK_PID: HidePIDMsg(); break;
     case VK_PID_ADV: HidePID_Advanced_Msg(); break;
     case VK_GOV: HideGOVMsg(); break;
+    case VK_GOV_CFG: HideGOVConfigMsgQuiet(); break;   // (the plain hide: the page's own asks the read again when it finds the set incomplete)
     }
 }
 FLASHMEM static void VfDisplay(uint8_t k) // the whole block onto the page
@@ -190,6 +221,7 @@ FLASHMEM static void VfDisplay(uint8_t k) // the whole block onto the page
         break;
     case VK_PID_ADV: Display_PID_Advanced_Values(0, MAX_PIDS_ADVANCED_BYTES); break;
     case VK_GOV: DisplayGovValues(1, 18); break;
+    case VK_GOV_CFG: DisplayGovConfigValues(18, 42); break;
     }
 }
 FLASHMEM static void VfEdited(uint8_t k) // Save shown again, the page's edited flag set
@@ -201,7 +233,13 @@ FLASHMEM static void VfEdited(uint8_t k) // Save shown again, the page's edited 
     case VK_PID: PIDs_Were_edited(); break;
     case VK_PID_ADV: PIDsAdvancedWereEdited(); break;
     case VK_GOV: GOVS_P_Were_Edited(); break;
+    case VK_GOV_CFG: Gov_Global_Were_Edited(); break;
     }
+}
+FLASHMEM static void VfSaved(uint8_t k) // the read-back matched: a page that kept its edited flag up for the verdict lets it go (B165)
+{
+    if (k == VK_GOV_CFG)
+        GOVS_GLOBAL_Were_Edited = false;
 }
 
 // A page's QueueWrite, before it queues its write packets: true = the block will be read back, and the page's read is
@@ -214,11 +252,11 @@ FLASHMEM bool RfVerifyArm(uint8_t kind, void (*ask)())
         return false;
     const uint8_t n = VfCount(kind);
     for (uint8_t i = 0; i < n; ++i)
-        VfSent[i] = kind == VK_GOV ? GovWritePayload[i] : VfLive(kind, i);
+        VfSent[i] = kind == VK_GOV ? GovWritePayload[i] : kind == VK_GOV_CFG ? GovWritePayload[18 + i] : VfLive(kind, i);
     ask();                                  // the page's own read
     if (!VfReading(kind))                   // (refused after all: the page saves as before)
         return false;
-    VfWindow(kind, RF_VERIFY_WAIT_MS);      // the receiver writes first, then answers: longer than a read's own window
+    VfWindow(kind, kind == VK_GOV_CFG ? RF_VERIFY_GOVCFG_WAIT_MS : RF_VERIFY_WAIT_MS);   // the receiver writes first, then answers: longer than a read's own window (B165: and restarts the flight controller for the governor's global settings)
     VfReadStart = VfStart(kind);
     VfSetSeen = false;
     VfKind = kind;
@@ -255,9 +293,11 @@ FLASHMEM int RfVerifySet()
     VfKind = VK_NONE;
     VfReadDone(k);                          // (the window closes here: nothing more to parse)
     VfHide(k);
+    VfSaved(k);
     SendCommand((char *)"vis b3,0");
-    SendText((char *)"busy", (char *)"Saved, and confirmed by reading it back.");   // (B154, Malcolm: "the flight controller holds what you sent" was "technically correct but ... phrased better for ordinary users")
-    SendCommand((char *)"vis busy,1");
+    VfBannerLine = VfLine(k);
+    SendText((char *)VfBannerLine, (char *)"Saved, and confirmed by reading it back.");   // (B154, Malcolm: "the flight controller holds what you sent" was "technically correct but ... phrased better for ordinary users")
+    SendCommand((char *)(k == VK_GOV_CFG ? "vis t4,1" : "vis busy,1"));
     VfBannerUntil = millis() + 3000;
     VfBannerView = CurrentView;
     PlaySound(BEEPCOMPLETE);
@@ -309,8 +349,8 @@ FLASHMEM void RfVerifyTick()
     VfBannerUntil = 0;
     if (CurrentView != VfBannerView)
         return;
-    if (Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now)
+    if (Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now || Reading_GOV_Config_Now)
         return;                             // (a new read has the line: its own hide clears it)
-    SendCommand((char *)"vis busy,0");
+    SendCommand((char *)(VfBannerLine[0] == 't' ? "vis t4,0" : "vis busy,0"));
 }
 #endif // RF_VERIFY_H

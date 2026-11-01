@@ -56,6 +56,11 @@ static void AddParameterstoQueue(int q) { queued.push_back(q); }
 static void ShowGOVConfigMsg(const char *, uint16_t) {}
 static void HideGOVConfigMsg() {}
 static void ShowLocalGovConfigBank() {}
+enum { VK_GOV_CFG = 6 };   // B165: the read-back itself lives in RF_Verify.h (dev/test_verify); here only that the save asks for it
+static bool verifyArmed = false, verifyPending = false; static int armedKind = -1;
+static bool RfVerifyArm(uint8_t kind, void (*)()) { armedKind = kind; return verifyArmed; }
+static bool RfVerifyPending() { return verifyPending; }
+static void GovCfgAskValues() {}
 static bool LedWasGreen = true, GOVS_GLOBAL_Were_Edited = false;
 static uint32_t ModelNumber = 1;
 static uint8_t GovAckPayload[GOV_ACK_PAYLOAD_SIZE], GovWritePayload[GOV_ACK_PAYLOAD_SIZE], Saved_GOV_Config_Values[GOV_CONFIG_PAYLOAD_SIZE];
@@ -85,6 +90,15 @@ int main() {
     CHECK(queued.empty()); CHECK(said("Not saved: Governor mode is 5."));
     page(4, 2); SendEditedGovConfigValues(); CHECK(queued.size() == 3); CHECK(boxes == 0);   // (NITRO, FUNCTION: the last of each list)
 
+    // B165: with the pipe the save is read back - the three writes go, the edited flag stays up for the verdict, no done sound yet;
+    // a Save while the last one is still being read back is refused, nothing queued
+    verifyArmed = true; page(3, 0); SendEditedGovConfigValues();
+    CHECK(queued.size() == 3); CHECK(armedKind == VK_GOV_CFG); CHECK(GOVS_GLOBAL_Were_Edited); CHECK(boxes == 0); CHECK(sounds.size() == 1 && sounds[0] == BEEPMIDDLE);
+    verifyArmed = false; armedKind = -1;
+    verifyPending = true; page(3, 0); SendEditedGovConfigValues();
+    CHECK(queued.empty()); CHECK(boxes == 1); CHECK(said("still")); CHECK(GOVS_GLOBAL_Were_Edited); CHECK(armedKind == -1);
+    verifyPending = false;
+
     // Keep a copy: nothing written to the card with a bad choice
     live = true; memset(Saved_GOV_Config_Values, 0, sizeof(Saved_GOV_Config_Values));
     page(3, 3); SaveToLocalGovGLOBAL();
@@ -103,6 +117,10 @@ int main() {
     CHECK(queued.empty()); CHECK(questions == 0); CHECK(boxes == 1); CHECK(said("Kept copy not sent: Throttle type is 3."));
     Saved_GOV_Config_Values[39] = 0; page(3, 0); RestoreFromSDGlobalGOV();
     CHECK(queued.size() == 3); CHECK(questions == 1); CHECK(GovWritePayload[39] == 0);
+    // B165: the kept copy sent to the flight controller is read back too (no done sound until the verdict)
+    verifyArmed = true; page(3, 0); RestoreFromSDGlobalGOV();
+    CHECK(queued.size() == 3); CHECK(armedKind == VK_GOV_CFG); CHECK(sounds.empty()); CHECK(!GOVS_GLOBAL_Were_Edited);
+    verifyArmed = false; armedKind = -1;
 
     // Armed: the old refusal still comes first
     armed = true; page(3, 3); SendEditedGovConfigValues(); CHECK(queued.empty()); CHECK(said("armed")); armed = false;

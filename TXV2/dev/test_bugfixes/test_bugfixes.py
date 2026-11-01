@@ -643,6 +643,11 @@ def source_checks():
     chk('if (!TextFileName[0])\n        NoteLogOpener("opened");' in ld and 'if (CurrentView == MODELSVIEW)\n    {   // B163' in ld and 'NoteLogOpener("code 18 ignored");' in ld, 'B163 today\'s log notes its opener; a log-view code on the Models page is ignored')
     chk('TextInWasStashed = true; // (B163)' in nx and 'TextInWasStashed = false;' in nx, 'B163 GetButtonPress says whether the frame was set aside or read')
     chk('(uint8_t)TextIn[0] == 0x92 && CurrentView == RXSETUPVIEW)\n        return; // B164' in lf, 'B164 the Log button of Model setup is not noted in the log; anything else that opens today\'s log still is')
+    # B165 (1 Nov 2026): the governor's global page reads its save back like every other Rotorflight page; the Basics page reads the features it wrote back too
+    gg = src('include/RF_Governor_Global.h'); vf = src('include/RF_Verify.h'); ba = src('include/RF_Basics.h')
+    chk(gg.count('RfVerifyArm(VK_GOV_CFG, GovCfgAskValues)') == 2 and 'if (RfVerifyPending())' in gg and 'AllGlobalConfigBytesReceived() && !RfVerifyPending()' in gg, 'B165 the governor global save and the kept copy are read back; a save during a read-back is refused; a differing set waits for the window')
+    chk('case VK_GOV_CFG: return 24;' in vf and 'GovWritePayload[18 + i]' in vf and 'if (RfVerifyEnd(VK_GOV_CFG)) return;' in tr and 'RF_VERIFY_GOVCFG_WAIT_MS' in vf, 'B165 RF_Verify knows the 24 global bytes, their window and their window end')
+    chk('case BAS_VERIFY_FEAT:' in ba and 'm != BasFeatWant' in ba and ba.count('BasVerifyDone();') == 2, 'B165 the Basics page reads the features mask back after the restart when it wrote one')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

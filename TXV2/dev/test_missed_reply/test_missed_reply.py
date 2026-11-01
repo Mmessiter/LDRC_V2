@@ -103,6 +103,10 @@ static void HideGOVMsg() {}
 static void GovQueueWrite() { ++govWrites; }
 static void ShowGOVConfigMsg(const char *, uint16_t) {}
 static void HideGOVConfigMsg() {}
+enum { VK_GOV_CFG = 6 };   // B165: the save's read-back is RF_Verify.h's (dev/test_verify): not armed here
+static bool RfVerifyArm(uint8_t, void (*)()) { return false; }
+static bool RfVerifyPending() { return false; }
+static void GovCfgAskValues() {}
 static void ShowLocalGovConfigBank() {}
 static bool allGlobalIn = true; static bool AllGlobalConfigBytesReceived() { return allGlobalIn; }
 '''

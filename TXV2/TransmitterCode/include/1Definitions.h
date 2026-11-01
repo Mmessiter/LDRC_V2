@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B164 31/10/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B165 01/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1308,8 +1308,12 @@ void StartRatesAdvancedView();
 void StartPIDAdvancedView();
 void SendForegroundColour(const char *label, uint16_t colour);
 // B153: a save read back and compared with what was sent (RF_Verify.h)
-enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV };
+enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV, VK_GOV_CFG };   // (B165: VK_GOV_CFG = the governor's global page, bytes 18-41)
 #define RF_VERIFY_WAIT_MS 4000 // the read-back's window: the receiver writes first (its read, write, check, save), then answers
+#define RF_VERIFY_GOVCFG_WAIT_MS 8000 // B165: the governor's global settings - the receiver writes, saves and RESTARTS the flight controller, then answers from its verified copy
+void ShowGOVConfigMsg(const char *msg, uint16_t Colour);
+void HideGOVConfigMsgQuiet();
+void GovCfgAskValues();
 bool RfVerifyArm(uint8_t kind, void (*ask)());
 bool RfVerifyPending();
 int RfVerifySet();

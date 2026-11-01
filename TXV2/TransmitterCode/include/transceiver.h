@@ -1270,6 +1270,7 @@ void Hide_msg_if_needed()
         if ((now - GOV_Global_Start_Time) > GOV_Config_Send_Duration)
         {
             Reading_GOV_Config_Now = false;
+            if (RfVerifyEnd(VK_GOV_CFG)) return;   // B165: a read-back that never matched, or never came: its verdict
             HideGOVConfigMsg();
             BlockSilence("Governor global");
             return;

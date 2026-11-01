@@ -194,7 +194,7 @@ int main() {
     BasPortsWant[2 * 9 + 1] = 33; BasPortsWant[2 * 9 + 2] = 0; BasShowPortRow(2); CHECK(fields["tn2"] == "As it is"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "Nothing"); BasicsPort3Tapped(); CHECK(fields["tn2"] == "ESC telemetry");
     // the save: 55 with all six ports, the features gaining ESC telemetry (27) and TELEMETRY (10), the restart, 54 read back
     fcLog.clear(); asked = 0; SaveBasics(); CHECK(asked == 1 && lastBox.find("ports") != std::string::npos); run(60);
-    CHECK(writes(55) == 1 && lastData(55).size() == 108 && writes(36) == 1 && writes(37) == 1 && writes(250) == 1 && writes(68) == 1 && writes(54) == 1 && pmask(2) == 1024 && pmask(0) == 64 && pmask(5) == 1);
+    CHECK(writes(55) == 1 && lastData(55).size() == 108 && writes(36) == 2 && writes(37) == 1 && writes(250) == 1 && writes(68) == 1 && writes(54) == 1 && pmask(2) == 1024 && pmask(0) == 64 && pmask(5) == 1);   // (B165: 36 twice - before the write, and read back after the restart)
     CHECK(feat == ((1u << 3) | (1u << 26) | (1u << 29) | (1u << 30) | (1u << 27) | (1u << 10)) && !BasPortsEdited && !Bas_Was_Edited && fields["busy"] == "Saved, and read back the same." && fields["tn2"] == "ESC telemetry");
     // no feature write when nothing new is needed
     BasicsPort3Tapped(); BasicsPort3Tapped(); CHECK(fields["tn2"] == "Dongle on a wire (MSP)"); fcLog.clear(); SaveBasics(); run(60); CHECK(writes(55) == 1 && writes(36) == 1 && writes(37) == 0 && pmask(2) == 1);

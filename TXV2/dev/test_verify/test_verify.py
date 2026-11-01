@@ -27,20 +27,22 @@ prog = r'''
 #define RATESADVANCEDVIEW 48
 #define PIDADVANCEDVIEW 49
 #define RFGOVERNORVIEW_PROFILE 54
+#define RFGOVERNORVIEW_GLOBAL 55
 #define ROTORFLIGHTVIEW 44
 #define BEEPCOMPLETE 2
 #define WHAHWHAHMSG 1
 #define Gray 33840
 #define Red 63488
 #define RF_VERIFY_WAIT_MS 4000
-enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV };
+#define RF_VERIFY_GOVCFG_WAIT_MS 8000
+enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV, VK_GOV_CFG };
 static uint32_t nowMs = 1000; static uint32_t millis() { return nowMs; }
 static int CurrentView = RATESVIEW_RF;
 static uint8_t PipeState = 2; static bool BoundFlag = true, ModelMatched = true, bakOffline = false; static bool BakOffline() { return bakOffline; }
-static bool BlockBankChanges = false, RfValueWasCut = false;
-static bool Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false;
-static uint32_t RATES_Start_Time = 0, RATES_Advanced_Start_Time = 0, PID_Start_Time = 0, PID_Advanced_Start_Time = 0, GOV_Start_Time = 0;
-static uint16_t RATES_Send_Duration = 0, PID_Send_Duration = 0, Rates_Advanced_Send_Duration = 0, PID_Advanced_Send_Duration = 0; static uint32_t GOV_Send_Duration = 0;
+static bool BlockBankChanges = false, RfValueWasCut = false, GOVS_GLOBAL_Were_Edited = false;
+static bool Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;
+static uint32_t RATES_Start_Time = 0, RATES_Advanced_Start_Time = 0, PID_Start_Time = 0, PID_Advanced_Start_Time = 0, GOV_Start_Time = 0, GOV_Global_Start_Time = 0;
+static uint16_t RATES_Send_Duration = 0, PID_Send_Duration = 0, Rates_Advanced_Send_Duration = 0, PID_Advanced_Send_Duration = 0; static uint32_t GOV_Send_Duration = 0, GOV_Config_Send_Duration = 0;
 static uint8_t Rate_Values[MAX_RATES_BYTES], Rate_Advanced_Values[MAX_RATES_ADVANCED_BYTES], PID_Advanced_Values[MAX_PIDS_ADVANCED_BYTES], GovAckPayload[GOV_ACK_PAYLOAD_SIZE], GovWritePayload[GOV_ACK_PAYLOAD_SIZE];
 static uint16_t PID_Values[MAX_PID_WORDS], PID_Boost_Values[3], PID_HSI_Offset_Values[2];
 static char RatesWindows[MAX_RATES_BYTES][5] = {"t10", "tn0", "tn1", "tn2", "tn3", "tn4", "tn5", "tn6", "tn7", "tn8", "tn9", "tn10", "tn11"};
@@ -78,6 +80,12 @@ static void RatesAdvancedWereEdited() { edited.push_back("ratesadv"); }
 static void PIDs_Were_edited() { edited.push_back("pid"); }
 static void PIDsAdvancedWereEdited() { edited.push_back("pidadv"); }
 static void GOVS_P_Were_Edited() { edited.push_back("gov"); }
+// B165: the governor's global page - its message line is t4, its hide the quiet one, its display the config bytes
+static void ShowGOVConfigMsg(const char *m, uint16_t) { msgs.push_back(std::string("govcfg:") + m); }
+static void HideGOVConfigMsgQuiet() { hides.push_back("govcfg"); BlockBankChanges = false; }
+static void DisplayGovConfigValues(uint8_t a, uint8_t b) { displays.push_back("govcfg " + std::to_string(a) + "-" + std::to_string(b)); }
+static void Gov_Global_Were_Edited() { edited.push_back("govcfg"); GOVS_GLOBAL_Were_Edited = true; }
+static void GovCfgAskValues() { ++asks; GOV_Config_Send_Duration = 4000; Reading_GOV_Config_Now = true; GOV_Global_Start_Time = millis(); }
 // the pages' own reads (their AskValues) as they are: the kind's flag, window and start time
 static void RatesAskValues() { ++asks; RATES_Send_Duration = 2500; Reading_RATES_Now = true; RATES_Start_Time = millis(); }
 static void RatesAdvAskValues() { ++asks; Rates_Advanced_Send_Duration = 2500; Reading_RATES_Advanced_Now = true; RATES_Advanced_Start_Time = millis(); }
@@ -90,7 +98,7 @@ bool RfVerifyArm(uint8_t kind, void (*ask)()); bool RfVerifyPending(); int RfVer
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
 static void reset() { cmds.clear(); msgs.clear(); hides.clear(); displays.clear(); edited.clear(); reds.clear(); sounds.clear(); texts.clear(); boxes = leaves = cutNotes = asks = 0; lastBox.clear(); BlockBankChanges = false; RfValueWasCut = false;
-    Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = false; }
+    Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false; }
 static bool has(const std::vector<std::string> &v, const char *s) { for (auto &x : v) if (x == s) return true; return false; }
 static int count(const std::vector<std::string> &v, const char *s) { int n = 0; for (auto &x : v) if (x == s) ++n; return n; }
 int main() {
@@ -153,6 +161,24 @@ int main() {
     reset(); nowMs = 9000; CHECK(RfVerifyArm(VK_PID_ADV, PidAdvAskValues) && Reading_PIDS_Advanced_Now && PID_Advanced_Send_Duration == 4000 && msgs[0].find("pidadv:Sent") == 0);
     PID_Advanced_Values[0] = 0; PID_Advanced_Values[25] = 0; CHECK(RfVerifySet() == 2 && RfVerifyEnd(VK_PID_ADV) && lastBoxPage == "page PID_A_View" && reds.size() == 2 && reds[0] == "sw0" && reds[1] == "t25" && PID_Advanced_Values[0] == 60 && has(displays, "pidadv 0-26") && has(edited, "pidadv") && has(hides, "pidadv"));
     reset(); nowMs = 9000; RfVerifyArm(VK_PID_ADV, PidAdvAskValues); CHECK(RfVerifySet() == 1 && leaves == 1 && !Reading_PIDS_Advanced_Now);
+    // 9. B165 the governor's global page: the 24 bytes 18..41 (what was sent is GovWritePayload[18..41], the read fills GovAckPayload[18..41]), an
+    //    8 s window, the word on t4, and the page's edited flag let go only when the read-back matches (OK's "Save now?" waits for the verdict)
+    CurrentView = RFGOVERNORVIEW_GLOBAL; for (int i = 18; i < 42; ++i) { GovWritePayload[i] = (uint8_t)i; GovAckPayload[i] = (uint8_t)i; }
+    reset(); nowMs = 10000; GOVS_GLOBAL_Were_Edited = true;
+    CHECK(RfVerifyArm(VK_GOV_CFG, GovCfgAskValues) && asks == 1 && Reading_GOV_Config_Now && GOV_Config_Send_Duration == 8000 && GOV_Global_Start_Time == 10000 && msgs[0].find("govcfg:Sent") == 0 && has(cmds, "vis b3,0") && BlockBankChanges);
+    CHECK(RfVerifySet() == 1 && !RfVerifyPending() && !Reading_GOV_Config_Now && has(hides, "govcfg") && texts["t4"] == "Saved, and confirmed by reading it back." && has(cmds, "vis t4,1") && !has(cmds, "vis busy,1") && !GOVS_GLOBAL_Were_Edited && leaves == 1 && sounds.size() == 1 && sounds[0] == "done");
+    cmds.clear(); nowMs = 13000; RfVerifyTick(); CHECK(has(cmds, "vis t4,0") && !has(cmds, "vis busy,0"));
+    // different: the spool-up's high byte (23 = n17), the throttle type (39 = n28) and an off-page byte (20: counted, no box) - the verdict at the window's end
+    reset(); nowMs = 20000; GOVS_GLOBAL_Were_Edited = true; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); GovAckPayload[23] = 0; GovAckPayload[39] = 9; GovAckPayload[20] = 1;
+    CHECK(RfVerifySet() == 2 && RfVerifyPending() && Reading_GOV_Config_Now && GOVS_GLOBAL_Were_Edited && boxes == 0 && hides.empty());
+    CHECK(RfVerifyEnd(VK_GOV_CFG) && lastBoxPage == "page RFGovViewGlbl" && lastBox.find("other values for 3 boxes") != std::string::npos && reds.size() == 2 && reds[0] == "n17" && reds[1] == "n28");
+    CHECK(GovAckPayload[23] == 23 && GovAckPayload[39] == 39 && GovAckPayload[20] == 20 && has(displays, "govcfg 18-42") && has(edited, "govcfg") && has(hides, "govcfg") && GOVS_GLOBAL_Were_Edited && !RfVerifyPending());
+    // nothing came back: NOT CONFIRMED, Save shown, the edits kept
+    reset(); nowMs = 30000; GOVS_GLOBAL_Were_Edited = true; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues);
+    CHECK(RfVerifyEnd(VK_GOV_CFG) && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0 && has(edited, "govcfg") && has(hides, "govcfg") && GOVS_GLOBAL_Were_Edited && !RfVerifyPending() && displays.empty());
+    // another kind's window end is not ours; the page left drops it with nothing said
+    reset(); nowMs = 31000; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); CHECK(!RfVerifyEnd(VK_GOV) && RfVerifyPending());
+    CurrentView = ROTORFLIGHTVIEW; CHECK(!RfVerifyEnd(VK_GOV_CFG) && !RfVerifyPending() && boxes == 0); CurrentView = RFGOVERNORVIEW_GLOBAL;
     printf("test_verify: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
