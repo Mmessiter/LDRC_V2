@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.914-read-back-help",
+      "url": "https://messiter.com/rxv2/release/v0.9.914/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.914/littlefs.bin",
+      "fs_md5": "6dee652fd16c0a9f01b7f11649d73a4f",
+      "notes": "The Rotorflight help says it plainly: every save is read back from the flight controller and compared with what you typed; the app never says saved on trust."
+    },
+    {
       "name": "RXV2-0.9.913-read-back",
       "url": "https://messiter.com/rxv2/release/v0.9.913/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.913/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.903/littlefs.bin",
       "fs_md5": "8c91752d9eebcc4acb613a0c0e753030",
       "notes": "Switches and knobs: the Switches page and the In-flight adjustments page are one page now - the switch jobs (arm, rescue, self-level ...), the bank and rates selectors, and the knobs and switches that change a setting, each written to its own Rotorflight table out of sight. Rotorflight keeps them on two tabs (Modes and Adjustments); many found that confusing, so we combined them, as the transmitter has. The old In-flight adjustments link points there."
-    },
-    {
-      "name": "RXV2-0.9.902-selectors-pointer",
-      "url": "https://messiter.com/rxv2/release/v0.9.902/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.902/littlefs.bin",
-      "fs_md5": "843727538c4c5a76ee66349c61859e46",
-      "notes": "Adjustments: the setting list now says at its top that the Bank (Profile) and Rates selectors are made on the Switches page (they were there all along, but not in this list, where Malcolm looked for them)."
     }
   ],
   "rotorflight": {

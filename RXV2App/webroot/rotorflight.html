@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rotorflight &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=412">
-<script src="/app.js?v=412" defer></script>
+<link rel=stylesheet href="/style.css?v=413">
+<script src="/app.js?v=413" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -142,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <template id=helpContent><h2>Rotorflight</h2>
+<p><b>Every save is checked.</b> After a save, the page reads the values back from the flight controller and compares them with what you typed: &ldquo;verified&rdquo; means it now holds exactly your values. If anything differs, the page says so and shows what the flight controller really holds; if nothing comes back, it says NOT CONFIRMED. The app never says &ldquo;saved&rdquo; on trust, and the Version 2 transmitter checks its saves the same way. Rotorflight&rsquo;s own Lua scripts call a save done when the flight controller acknowledges the write, and do not compare what comes back with what was typed (their code, read 1 November 2026).</p>
 <p>Four doors:</p>
 <ul>
 <li><b>Wizards</b> &mdash; step-by-step guides that take you through a whole job in order: building a new helicopter, or tuning one afterwards.</li>
