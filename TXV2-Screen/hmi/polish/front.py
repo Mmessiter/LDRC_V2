@@ -115,8 +115,11 @@ def channels(pg):
 
 # ------------------------------------------------------------------ 38 GapsView (Reconnection times)
 # Full card. Eleven columns: the share on top, the bar, the count below it, the length under that. A bar fills green up to
-# 100 ms, amber to 250, red beyond (what the help says: over 100 worth a look, over 250 act); empty columns stay quiet slate.
-GREEN, AMBER, RED = 1056, 64512, 53248
+# 100 ms, amber to 250, red beyond (what the help says: over 100 worth a look, over 250 act). 1 Nov 2026 (Malcolm, from a
+# photo of the page: "the green colour and the grey colour are not different enough ... the green should be brighter and the
+# grey should be closer to black"): the fill is the style's bright green 0x07E0 (it was a mid green 0x0420 of much the same
+# lightness as the slate), and an empty column is a near-black trough 0x2104, not slate.
+GREEN, AMBER, RED, TROUGH = 2016, 64512, 53248, 8452
 BARS = ('j0', 'j10', 'j11', 'j6', 'j5', 'j4', 'j3', 'j9', 'j2', 'j8', 'j7')           # left to right, as the Teensy fills them
 SHARES = ('t13', 't15', 't17', 't18', 't19', 't20', 't21', 't22', 't23', 't24', 't25')
 LENGTHS = ('< 4', '< 8', '< 10', '< 12', '< 15', '< 25', '< 50', '< 100', '< 250', '< 500', '> 500')   # (the Teensy's own words)
@@ -128,7 +131,7 @@ def gaps(pg):
     for k in range(11):
         x, fill = 15 + 71 * k, GREEN if k < 8 else AMBER if k == 8 else RED
         put(pg, SHARES[k], x=x, y=66, w=65, h=28, c={'bco': PANEL, 'pco': WHITE})
-        put(pg, BARS[k], x=x, y=98, w=65, h=228, c={'bco': SLATE, 'pco': fill})
+        put(pg, BARS[k], x=x, y=98, w=65, h=228, c={'bco': TROUGH, 'pco': fill})
         # The count: white on the card. (Coloured boxes made an empty column's leftover '0' amber or red on a second visit,
         # when the Teensy does not hide it again; the colour stays in the bars.)
         put(pg, f'n{k}', x=x, y=330, w=65, h=26, c={'bco': PANEL, 'pco': WHITE})       # ("12345": 60 px)
