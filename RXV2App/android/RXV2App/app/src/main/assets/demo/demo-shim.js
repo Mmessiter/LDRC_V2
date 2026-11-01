@@ -106,10 +106,12 @@
                     143: [142, null],   149: [148, "pid"], 43: [42, null],
                     147: [146, "pid"],  216: [123, null],  222: [131, null],
                     33:  [32, null],    65:  [64, null],   39:  [38, null],
-                    37:  [36, null],    81:  [80, null] };
+                    37:  [36, null],    81:  [80, null],   93:  [92, null],
+                    55:  [54, null],    45:  [44, null] };
   const MSP_READ_SPACE = { 111: "rate", 112: "pid", 94: "pid", 142: null, 148: "pid", 42: null,
                            146: "pid", 123: null, 131: null, 32: null, 64: null, 38: null, 36: null,
-                           34: null, 105: null, 108: null, 120: null, 80: null, 70: null, 101: null };
+                           34: null, 105: null, 108: null, 120: null, 80: null, 70: null, 101: null,
+                           92: null, 54: null, 44: null, 4: null };
   // Canned answers for the wizard-era pages (servos, rescue, switches,
   // first-time basics) so the demo shows realistic data instead of
   // "undefined servos" (Malcolm's screenshot, 2026-08-25).
@@ -139,6 +141,16 @@
   MSP_DEFAULTS[70]  = [3].concat(u32(256), u32(FLASH_TOTAL), u32(FLASH_USED));
   MSP_DEFAULTS[101] = [].concat(u16(1000), u16(125), u16(0x21), [0,0,0,0], [0], u16(300), u16(180), [0],
                        [26], [0,0,0,0], [0, 2], [0, 6, 0, 6], [1, 4, 1]);
+  // 0.9.913: the Filters and Ports pages too (their saves are read back and compared; dev/save_test.js runs them here).
+  // MSP 92 filter config, 27 bytes (Rotorflight 4.6 msp.c): hardware lpf 0 | lpf1 PT1 (3) 125 Hz | lpf2 off | notches off |
+  // dyn lpf 50..150 | dyn notch count 4, Q 2.5, 25..200 Hz | rpm preset 2 (medium), rpm min 20 Hz.
+  MSP_DEFAULTS[92]  = [0, 3].concat(u16(125), [0], u16(0), u16(0), u16(0), u16(0), u16(0), u16(50), u16(150), [4, 25], u16(25), u16(200), [2, 20]);
+  // MSP 54 serial ports, 9 bytes each: UART1 receiver (64), UART2 ESC telemetry (1024), UART3 nothing, UART6 MSP (1) at 115200 (5)
+  MSP_DEFAULTS[54]  = [].concat([0].concat(u32(64), [5, 4, 0, 5]), [1].concat(u32(1024), [5, 4, 0, 5]), [2].concat(u32(0), [5, 4, 0, 5]), [5].concat(u32(1), [5, 4, 0, 5]));
+  // MSP 44 receiver config: provider 9 (CRSF), the rest Rotorflight's defaults
+  MSP_DEFAULTS[44]  = [9].concat(u16(1900), u16(1500), u16(1100), [0], u16(885), u16(2115), [0, 0], u16(0), [0, 0, 0, 0], u16(0), [0, 0, 0]);
+  // MSP 4 board info: id "NEXU", rev 0, type 0, caps 0, target "NEXUS_X", board "NEXUS_X"
+  MSP_DEFAULTS[4]   = [0x4E, 0x45, 0x58, 0x55, 0, 0, 0, 0, 7, 0x4E, 0x45, 0x58, 0x55, 0x53, 0x5F, 0x58, 7, 0x4E, 0x45, 0x58, 0x55, 0x53, 0x5F, 0x58];
   const mspStore = (function () {
     try { return JSON.parse(localStorage.getItem("rxv2DemoMsp") || "{}"); }
     catch (e) { return {}; }

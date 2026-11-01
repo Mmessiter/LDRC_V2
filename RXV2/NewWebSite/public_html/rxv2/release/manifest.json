@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.913-read-back",
+      "url": "https://messiter.com/rxv2/release/v0.9.913/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.913/littlefs.bin",
+      "fs_md5": "c94682376d2b421660c17e7d73f2ef47",
+      "notes": "Every page that writes to the flight controller now reads the values back and compares them with what you sent: Filters, Ports, the channel wizard, the channel order and the level calibration join the pages that already did. A difference is said plainly, never Saved."
+    },
+    {
       "name": "RXV2-0.9.912-safety-review",
       "url": "https://messiter.com/rxv2/release/v0.9.912/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.912/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.902/littlefs.bin",
       "fs_md5": "843727538c4c5a76ee66349c61859e46",
       "notes": "Adjustments: the setting list now says at its top that the Bank (Profile) and Rates selectors are made on the Switches page (they were there all along, but not in this list, where Malcolm looked for them)."
-    },
-    {
-      "name": "RXV2-0.9.901-bluetooth-reply-resync",
-      "url": "https://messiter.com/rxv2/release/v0.9.901/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.901/littlefs.bin",
-      "fs_md5": "0798e7a5d0809b0adba7f2a10ca823a7",
-      "notes": "Bluetooth update from a phone: an install no longer fails with 'cannot be converted to JSONObject'. The apps read every reply header as a header, so a reply cut short or sent twice can no longer be taken for the body of the next one; the Android app keeps one Bluetooth link only (two made every reply arrive twice) and logs what the link did (Send debug data on the Help page, and a note on a failed install); the receiver's reply pump stops cleanly when a fresh request arrives mid-reply."
     }
   ],
   "rotorflight": {

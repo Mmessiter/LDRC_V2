@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Transmitter channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=411">
-<script src="/app.js?v=411" defer></script>
+<link rel=stylesheet href="/style.css?v=412">
+<script src="/app.js?v=412" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -202,7 +202,13 @@ async function removeExtra(i){
                 cleared++;
             }
         }
-        if(cleared){ await LDRC.msp(250); flash('✅ Removed — cleared from the flight controller too'); }
+        if(cleared){
+            await LDRC.msp(250);
+            // 0.9.913: read back - the slot must be empty now
+            const chk=hexToBytes(await LDRC.msp(34)); let still=false;
+            for(let sl=0;sl*4+3<chk.length;sl++){const o=sl*4; if(chk[o]===x.perm&&chk[o+1]===fcCh-6&&chk[o+2]!==chk[o+3]) still=true;}
+            flash(still?'⚠️ Removed here, but the flight controller still shows it — open the Switches page':'✅ Removed — cleared from the flight controller and read back clear');
+        }
         else flash('✅ Removed (nothing saved on the flight controller)');
     }catch(e){ flash('Removed here — could not reach the flight controller to clear it'); }
 }
@@ -382,7 +388,13 @@ async function clearOptional(f){
                     .map(v=>v.toString(16).padStart(2,'0')).join(''));
                 cleared++;
             }}
-        if(cleared){ await LDRC.msp(250); flash('✅ Removed — cleared from the flight controller too'); }
+        if(cleared){
+            await LDRC.msp(250);
+            // 0.9.913: read back - no rescue range may be left
+            const chk=hexToBytes(await LDRC.msp(34)); let still=false;
+            for(let sl=0;sl*4+3<chk.length;sl++){const o=sl*4; if(chk[o]===53&&chk[o+2]!==chk[o+3]) still=true;}
+            flash(still?'⚠️ Removed here, but the flight controller still shows a rescue switch — open the Switches page':'✅ Removed — cleared from the flight controller and read back clear');
+        }
         else flash('✅ Removed (nothing saved on the flight controller)');
     }catch(e){ flash('Removed here — could not reach the flight controller to clear it'); }
 }
@@ -571,6 +583,7 @@ async function saveAll(){
         // value channel = the switch, value range = the two ends → 1..K.
         // The other five slots of each selector are cleared.
         const hx=a=>a.map(v=>v.toString(16).padStart(2,'0')).join('');
+        const selWritten=[];   // (0.9.913: every adjustment line written, for the read-back)
         for(const p of prof){
             const b=selBounds(LS+p.f.k+'.bounds');
             for(let n=1;n<=6;n++){
@@ -578,11 +591,13 @@ async function saveAll(){
                 const payload=hx(n===1&&p.fc ? selPayload(slot, p.f.adj, p.fc-6, b, usStep)
                                             : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
                 await LDRC.msp(53,payload);
+                selWritten.push({slot,bytes:hexToBytes(payload).slice(1)});
                 try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
             }
         }
         // Retire the earlier single-slot selectors (0.9.456–459 wrote 40/41).
         for(const slot of [40,41]){ const payload=hx([slot,0,0,0,0,0,0,0,0,0,0,0,0,0,0]); await LDRC.msp(53,payload);
+            selWritten.push({slot,bytes:hexToBytes(payload).slice(1)});
             try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){} }
         await LDRC.msp(250);
         // 3. verify all of it by read-back
@@ -594,10 +609,27 @@ async function saveAll(){
         if(ok)ok=hasMode(0,armFc-6);
         if(ok&&rscFc)ok=hasMode(53,rscFc-6);
         for(const x of xw)if(ok)ok=hasMode(x.perm,x.fc-6);
-        if(ok){
-            setStatus('good','✓ Saved & verified — now flick the switches and watch them on the <a href="/rotorflight-modes">Switches page</a>.');
+        // 0.9.913 (Malcolm, 1 Nov 2026: "confirm that ... the app reads back the values"): the selectors' adjustment lines
+        // (53) are read back too (52) when the flight controller is on the USB cable. Over the radio link Rotorflight 4.6
+        // cannot send its 588-byte adjustments list (the receiver refuses MSP 52: ROTORFLIGHT-MSP52-BUG.md), so there the
+        // page says plainly that they were written but could not be read back.
+        let selNote='', selBad=false;
+        if(prof.some(p=>p.fc)){
+            let st=null; try{ st=await LDRC.fetchState(); }catch(e){}
+            if(st&&st.usb&&st.usb.host){
+                try{
+                    const adj=hexToBytes(await LDRC.msp(52));
+                    for(const w of selWritten){ if(adj.length<(w.slot+1)*14){ selBad=true; continue; } for(let k=0;k<14;k++) if(adj[w.slot*14+k]!==w.bytes[k]) selBad=true; }
+                    selNote=selBad?' The bank / rates selectors read back DIFFERENT.':' The bank / rates selectors read back the same.';
+                }catch(e){ selNote=' The bank / rates selectors could not be read back ('+e.message+').'; selBad=true; }
+            } else selNote=' The bank / rates selectors were written but cannot be read back over the radio link (Rotorflight 4.6): check them by flicking the switch and watching the flight-controller line.';
+        }
+        if(!ok) setStatus('bad','⚠ The flight controller adjusted something — check the Switches page.'+selNote);
+        else if(selBad) setStatus('bad','⚠ The channel order and the switches read back the same, but'+selNote.replace(/^ The/,' the')+' Open the Switches page and check.');
+        else {
+            setStatus('good','✓ Saved & verified — the channel order and the switches read back the same.'+selNote+' Now flick the switches and watch them on the <a href="/rotorflight-modes">Switches page</a>.');
             flash('✅ Saved & verified');
-        }else setStatus('bad','⚠ The flight controller adjusted something — check the Switches page.');
+        }
     }catch(err){ setStatus('bad','Write failed: '+err.message); }
 }
 

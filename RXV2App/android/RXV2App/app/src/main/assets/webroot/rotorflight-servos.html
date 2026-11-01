@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Servos &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=411">
-<script src="/app.js?v=411" defer></script>
+<link rel=stylesheet href="/style.css?v=412">
+<script src="/app.js?v=412" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -197,7 +197,10 @@ async function saveServo(i) {
             msg.textContent = '✅ Saved & verified';
         } else {
             msg.textContent = '⚠️ The flight controller adjusted the values — re-reading';
-            await load();
+            await load();   // (rebuilds the cards: the word goes on the banner, 0.9.913)
+            $('status').className = 'banner bad';
+            $('status').textContent = '⚠ NOT as sent: servo ' + (i + 1) + ' read back other values, now shown. Check them and save again.';
+            const m2 = $('s'+i+'_msg'); if (m2) m2.textContent = '⚠️ Read back different — see above';
         }
     } catch (e) {
         msg.textContent = '⚠️ Write failed — try again';

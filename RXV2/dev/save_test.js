@@ -7,6 +7,9 @@
 //   3. A REFUSED WRITE stops the sequence: when the receiver answers 409 (armed) to the first write, no EEPROM write
 //      (250) follows, and the page does not go on as if it had saved.
 //   4. A SHORT BLOCK (an older Rotorflight answering fewer bytes) never becomes a longer write, nor one with NaN.
+//   5. READ BACK (0.9.913, Malcolm 1 Nov 2026: "confirm that after writing new values ... the app reads back the values"):
+//      after a save the page reads the block again and says it was verified; when the flight controller answers that
+//      read with a block that differs from what was sent (one byte flipped here), the page says so and does not say verified.
 //   node dev/save_test.js            (all pages)      node dev/save_test.js pid gov-profile   (some)
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const DATA = path.join(__dirname, '..', 'data');
@@ -47,7 +50,9 @@ function makePage(name, fc, opts) {
     const checkIds = [...html.matchAll(/<input[^>]*type=checkbox[^>]*>/g)].map(m => (m[0].match(/\bid=(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_-]+))/) || [])).map(m => m && (m[1] || m[2] || m[3])).filter(Boolean);
     const ids = new Set([...html.matchAll(/\bid=(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_-]+))/g)].map(m => m[1] || m[2] || m[3]));
     const els = {};
-    const mkEl = id => ({ id, style: {}, textContent: '', innerHTML: '', value: '', checked: false, disabled: false, hidden: false, className: '', title: '',
+    // a <select> painted by innerHTML answers .value with its selected option (0.9.913: the Filters and Ports pages read their selects at a save)
+    const withValue = el => { Object.defineProperty(el, 'value', { enumerable: true, get() { if (el._value !== undefined) return el._value; const m = /<option value=(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*\bselected\b/.exec(el.innerHTML || ''); return m ? (m[1] != null ? m[1] : m[2] != null ? m[2] : m[3]) : ''; }, set(v) { el._value = v; } }); return el; };
+    const mkEl = id => withValue({ id, style: {}, textContent: '', innerHTML: '', _value: undefined, checked: false, disabled: false, hidden: false, className: '', title: '',
         dataset: {}, children: [], options: [], selectedIndex: -1, classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
         appendChild(c) { this.children.push(c); return c; }, insertBefore(c) { this.children.push(c); return c; }, removeChild() {}, remove() {},
         addEventListener() {}, removeEventListener() {}, scrollIntoView() {}, focus() {}, blur() {}, click() {}, matches: () => false, closest: () => null,
@@ -64,7 +69,7 @@ function makePage(name, fc, opts) {
         documentElement: { classList: { add() {}, remove() {} }, style: {} }, body: mkEl('body'), head: mkEl('head'), hidden: false, visibilityState: 'visible',
     };
     const log = [];                       // every MSP exchange: {fn, hex (sent), reply}
-    const state = { armedOnWrite: false, shortRead: null };   // shortRead: {fn, drop} - the fake FC's answer cut short
+    const state = { armedOnWrite: false, shortRead: null, flipAfterWrite: null };   // shortRead: {fn, drop} - the fake FC's answer cut short; flipAfterWrite: {fn, index} - once a block was written, that read's byte comes back flipped (the FC holds something else)
     const WRITE = new Set([33, 35, 37, 39, 43, 45, 55, 65, 68, 74, 81, 93, 95, 143, 147, 149, 171, 175, 202, 204, 205, 212, 216, 222, 250]);
     const LDRC = {
         replay: false, replayReady: Promise.resolve(), dirty: false, state: { info: { name: 'Test' }, fcinfo: { api_major: 12, api_minor: 9 } }, BANKS_MAX: 6,
@@ -83,6 +88,10 @@ function makePage(name, fc, opts) {
             const r = await fc.fetch('/api/msp?fn=' + fn + (hex ? '&data=' + hex : ''));
             let t = (await r.text()).trim();
             if (state.shortRead && state.shortRead.fn === fn && !hex) t = t.slice(0, Math.max(0, t.length - 2 * state.shortRead.drop));
+            if (state.flipAfterWrite && state.flipAfterWrite.fn === fn && !hex && log.some(x => x.hex && WRITE.has(x.fn) && x.fn !== 250)) {
+                const pos = state.flipAfterWrite.index * 2;
+                if (t.length >= pos + 2) t = t.slice(0, pos) + (parseInt(t.substr(pos, 2), 16) ^ 1).toString(16).padStart(2, '0') + t.slice(pos + 2);
+            }
             e.reply = t; return t;
         },
     };
@@ -118,14 +127,18 @@ async function loadPage(name, fc, opts) {
 
 // ---------------------------------------------------------------- the pages and their write pairs
 // pairs: [readFn, writeFn, how] - how: 'same' (the write is the read, byte for byte); a function (readHex, writeHex) => true/false
+// vbyte: the byte of the read block the READ BACK check flips (default 1); travel judges only the fields it owns (3 = the tail centre trim)
 const PAGES = {
     'pid':         { save: 'save()', pairs: [[112, 202, 'same']] },
     'pidplus':     { save: 'save()', pairs: [[94, 95, 'same']] },
     'rates':       { save: 'save()', pairs: [[111, 204, 'same']] },
     'gov-profile': { save: 'save()', pairs: [[148, 149, 'same']] },
     'rescue':      { save: 'save()', pairs: [[146, 147, 'same']] },
-    'travel':      { save: 'save()', pairs: [[42, 43, 'same']] },
+    'travel':      { save: 'save()', pairs: [[42, 43, 'same']], vbyte: 3 },
+    'filters':     { save: 'save()', pairs: [[92, 93, 'same']] },      // (0.9.913: the demo answers 92 now)
+    'ports':       { save: 'save()', pairs: [[54, 55, 'same']] },      // (0.9.913: and 54 / 44 / 4; its save restarts the flight controller and reads back after)
 };
+const statusOf = p => p.els.status ? (p.els.status.textContent || p.els.status.innerHTML || '') : '';
 // Not yet run by default (29 Oct 2026): each needs a fixture or a stub the harness does not have yet - gov-global (its mode
 // <select> is read by selectedIndex), filters (the demo answers MSP 92 with nothing: the page then writes an EMPTY 93 and says
 // Saved - a length check is wanted there), servos (saveServo(i) wants a servo picked), modes (save() lives in an IIFE:
@@ -133,7 +146,6 @@ const PAGES = {
 // with   node dev/save_test.js --all gov-global
 const PENDING = {
     'gov-global':  { save: 'save()', pairs: [[142, 143, 'same']] },
-    'filters':     { save: 'save()', pairs: [[92, 93, 'same']] },
     'servos':      { save: 'saveServo(0)', pairs: [[120, 212, (r, w) => w.length === 2 + 32 && r.slice(2, 2 + 32) === w.slice(2)]] },   // servo 1 of the table
     'modes':       { save: 'saveRow(0)', pairs: [[34, 35, (r, w) => r.startsWith(w.slice(2))]] },                                         // one slot: idx + its 4 bytes
     'txchannels':  { save: 'saveAll()', pairs: [[64, 65, 'same']] },
@@ -198,6 +210,21 @@ async function testPage(name) {
         if (!w) { ok(true, name + ': SHORT BLOCK ' + rf + ': the save is refused or writes nothing'); continue; }
         ok(hexOk(w.hex) && w.hex.length <= (r ? r.reply.length : 0) + (typeof PAGES[name].pairs[0][2] === 'string' ? 0 : 2), name + ': SHORT BLOCK ' + rf + ' -> ' + wf + ': the write is no longer than the read and clean (' + w.hex.length / 2 + ' vs ' + (r ? r.reply.length / 2 : 0) + ' bytes)');
     }
+
+    // 5. READ BACK (0.9.913): the block is read again after the write and the page says verified; a block that comes back
+    //    different (one byte flipped by the fake flight controller) is said, and "verified" is not
+    const [rf0, wf0] = cfg.pairs[0];
+    fc = makeFc(); p = await loadPage(name, fc);
+    try { await p.run(cfg.save); } catch (e) { p.__threw = e; }
+    await settle(200);
+    { const w = first(p.log, wf0, true), i = w ? p.log.indexOf(w) : -1, st = statusOf(p);
+      ok(i >= 0 && p.log.slice(i + 1).some(e => e.fn === rf0 && !e.hex), name + ': READ BACK: ' + rf0 + ' is read again after the write of ' + wf0);
+      ok(/verified|read back (exactly|the same)/i.test(st) && !/not (as sent|confirmed)|differ/i.test(st), name + ': READ BACK: the page says verified (status: ' + st + ')'); }
+    fc = makeFc(); p = await loadPage(name, fc); p.state.flipAfterWrite = { fn: rf0, index: cfg.vbyte == null ? 1 : cfg.vbyte };
+    try { await p.run(cfg.save); } catch (e) { p.__threw = e; }
+    await settle(200);
+    { const st = statusOf(p);
+      ok(!/verified|read back (exactly|the same)/i.test(st) && /differ|not (as sent|confirmed)|adjusted|other values/i.test(st), name + ': READ BACK: a block that came back different is said, and not called verified (status: ' + st + ')'); }
 }
 
 (async () => {

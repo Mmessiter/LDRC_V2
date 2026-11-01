@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Rescue &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=411">
-<script src="/app.js?v=411" defer></script>
+<link rel=stylesheet href="/style.css?v=412">
+<script src="/app.js?v=412" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -198,7 +198,8 @@ async function save(){
             setStatus('good', LDRC.replay?'✓ Saved on the phone':'✓ Saved & verified by read-back');
             $('sMsg').textContent='✅ Saved & verified'; setTimeout(()=>$('sMsg').textContent='',6000);
         } else {
-            setStatus('bad','⚠ Flight controller adjusted the values — re-reading'); await load();
+            await load();   // (0.9.913: the word AFTER the reload - load() used to wipe it at once)
+            setStatus('bad','⚠ NOT as sent: the flight controller holds other values, now shown. Check them and save again.');
         }
     }catch(e){ setStatus('bad','Write failed: '+e.message); }
 }

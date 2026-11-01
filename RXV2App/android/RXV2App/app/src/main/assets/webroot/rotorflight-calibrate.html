@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Calibrate &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=411">
-<script src="/app.js?v=411" defer></script>
+<link rel=stylesheet href="/style.css?v=412">
+<script src="/app.js?v=412" defer></script>
 <style>
 .calBtn{width:100%;margin-top:.6em;padding:.75em;border:0;border-radius:10px;background:#5f8fab;color:#fff;font-size:1.05em;font-weight:700;cursor:pointer}
 .sMsg{text-align:center;font-size:.85em;min-height:1.2em;margin-top:.3em;font-weight:600;color:#3a5165}
@@ -68,8 +68,17 @@ async function calibrate(){
     try{
         await LDRC.msp(205);           // MSP_ACC_CALIBRATION — FC ignores it if armed
         flash('calMsg','⏳ Calibrating — keep it still…');
-        setTimeout(async()=>{ await LDRC.msp(250); await pollAttitude();
-                              flash('calMsg','✅ Done — roll/pitch above should read near 0°'); },2500);
+        setTimeout(async()=>{
+            try{
+                await LDRC.msp(250);
+                // 0.9.913: the result is read back - level is within 2 degrees on both axes
+                const b=hexToBytes(await LDRC.msp(108,'',1));
+                const r=b.length>=4?rdS16(b,0)/10:NaN, p=b.length>=4?rdS16(b,2)/10:NaN;
+                await pollAttitude();
+                if(Math.abs(r)<2&&Math.abs(p)<2) flash('calMsg','✅ Done & verified — it reads level (roll '+r.toFixed(1)+'°, pitch '+p.toFixed(1)+'°)');
+                else flash('calMsg','⚠️ Calibrated and saved, but it reads roll '+(isNaN(r)?'?':r.toFixed(1))+'°, pitch '+(isNaN(p)?'?':p.toFixed(1))+'° — not level. Flat and perfectly still, then try again.');
+            }catch(e){ flash('calMsg','⚠️ Calibrated, but not confirmed: '+e.message); }
+        },2500);
     }catch(e){ flash('calMsg','⚠️ Failed: '+e.message); }
 }
 // DOMContentLoaded, never top-level: deferred app.js must define LDRC first

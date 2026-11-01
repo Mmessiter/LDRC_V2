@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Switches and knobs &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=411">
-<script src="/app.js?v=411" defer></script>
+<link rel=stylesheet href="/style.css?v=412">
+<script src="/app.js?v=412" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -514,7 +514,11 @@ async function saveRow(i){
     try{
         const ok=await writeSlot(i,perm,aux,lo,hi);
         if(ok){ slots[i]={perm,aux,lo,hi}; $('msg'+i).textContent='✅ Saved & verified'; setTimeout(()=>{const e=$('msg'+i);if(e)e.textContent='';},5000); }
-        else { $('msg'+i).textContent='⚠ Flight controller adjusted it — re-reading'; await load(); }
+        else {   // (0.9.913: the word AFTER the reload, which redraws the rows and used to wipe it)
+            $('msg'+i).textContent='⚠ Flight controller adjusted it — re-reading'; await load();
+            const e=$('msg'+i); if(e) e.textContent='⚠ NOT as sent — see above';
+            setStatus('bad','⚠ Switch '+(i+1)+': NOT as sent. The flight controller holds another range for it, now shown. Check it and save again.');
+        }
     }catch(e){ $('msg'+i).textContent='⚠ Write failed — try again'; }
 }
 

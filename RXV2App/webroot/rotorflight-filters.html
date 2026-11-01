@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Filters &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=411">
-<script src="/app.js?v=411" defer></script>
+<link rel=stylesheet href="/style.css?v=412">
+<script src="/app.js?v=412" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -170,9 +170,9 @@ async function save() {
     try { f = collect(); m = collectFeat(); } catch (e) { setStatus('bad', e.message); return; }   // (0.9.912: a blank box: said, nothing written)
     if ($('dynon').checked && f.dnmax <= f.dnmin) { setStatus('bad', 'The dynamic filter\'s maximum frequency must be above its minimum'); return; }
     setStatus('info', 'Writing…');
+    const sent = encodeF(raw, f), featChanged = m !== feat;
     try {
-        await LDRC.msp(93, bytesToHex(encodeF(raw, f)));
-        const featChanged = m !== feat;
+        await LDRC.msp(93, bytesToHex(sent));
         if (featChanged) await LDRC.msp(37, bytesToHex(featBytes(m)));
         await LDRC.msp(250);
         if (featChanged) {
@@ -180,13 +180,37 @@ async function save() {
             if (await LDRC.confirm('Saved. An Enable of the Dynamic or RPM filter takes effect when the flight controller restarts.\n\nRestart it now?', { title: 'Restart to apply', icon: '🔄', yes: 'Restart now' })) {
                 try { await LDRC.msp(68, '', 1); } catch (e) {}   // retries=1: the FC reboots before answering
                 setStatus('info', 'Flight controller restarting — back in a few seconds…');
-                setTimeout(load, 8000);
+                if (!(await fcBack())) { setStatus('bad', 'NOT CONFIRMED: saved, but the flight controller has not answered since the restart. Reload the page and check the values.'); return; }
+                await verifySaved(sent, m, featChanged, ' — in use now, after the restart');
                 return;
             }
         }
-        await load();
-        setStatus('good', featChanged ? '✓ Saved - the Enable applies at the next restart' : '✓ Saved - in use now');
+        await verifySaved(sent, m, featChanged, featChanged ? ' — the Enable applies at the next restart' : ' — in use now');
     } catch (e) { setStatus('bad', 'Not saved: ' + e.message); }
+}
+// 0.9.913 (Malcolm, 1 Nov 2026: "confirm that after writing new values to the flight controller ... the app reads back the
+// values"): the save is READ BACK and compared - the 27 filter bytes as sent, and the two Enable bits when they were
+// written. Before, the page re-read and said Saved whatever came back.
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function fcBack() {             // after a restart: a small read answers again (up to ~40 s)
+    await sleep(2500);
+    for (let i = 0; i < 20; i++) { try { await LDRC.msp(4, '', 1); return true; } catch (e) {} await sleep(2000); }
+    return false;
+}
+async function verifySaved(sent, sentFeat, featChanged, note) {
+    setStatus('info', 'Verifying — reading back from the flight controller…');
+    let back, backFeat;
+    try { backFeat = featMask(hexToBytes((await LDRC.msp(36)).trim())); back = hexToBytes((await LDRC.msp(92)).trim()); }
+    catch (e) { setStatus('bad', 'NOT CONFIRMED: written, but the flight controller did not answer when the values were read back (' + e.message + '). Reload the page and check them.'); return; }
+    feat = backFeat; raw = back;
+    const pf = parseF(back); if (pf) { paint(pf); markClean(); }   // (the page shows what the flight controller holds, as it did)
+    const diffs = [];
+    if (back.length < LEN) diffs.push('only ' + back.length + ' bytes came back');
+    for (let i = 0; i < LEN && i < back.length; i++) if (back[i] !== sent[i]) diffs.push('byte ' + i);
+    const FB = (FEAT_DYN_NOTCH | FEAT_RPM_FILTER) >>> 0;
+    if (featChanged && ((backFeat & FB) >>> 0) !== ((sentFeat & FB) >>> 0)) diffs.push('the Enable bits');
+    if (diffs.length) { setStatus('bad', '⚠ NOT as sent: the flight controller read back different values (' + diffs.slice(0, 4).join(', ') + (diffs.length > 4 ? ', …' : '') + '). The page now shows what it holds: check it and save again.'); return; }
+    setStatus('good', '✓ Saved & verified by read-back' + note);
 }
 document.addEventListener('DOMContentLoaded', async () => {
     $('saveBtn').onclick = save;
