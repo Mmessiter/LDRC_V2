@@ -318,6 +318,15 @@ void GreenLedOn()
         return; // no green led for wrong model
     if (!LedWasGreen)
     {
+        // B167 (Malcolm, 1 Nov 2026: "it says model matched, then issues a beep, and we never hear the word connected"):
+        // the flag goes up FIRST. Since B156 the pause between the two announcements is DelayWithDog, which keeps the
+        // packets going - and SuccessfulPacket calls GreenLedOn again while the flag is still down. That second call said
+        // "Connected" again and, its own pause refused (DelayWithDog guards against recursion), the model message at
+        // once - cutting "Connected" after a few milliseconds - and took the message; the first call, its second up,
+        // then played the message it had already lost: 0, the click. The connection was also logged and set up twice.
+        LedWasGreen = true;
+        const uint8_t mm = Connect_MMmsg; // this is set when Modelmatch is executed during binding: taken once, here
+        Connect_MMmsg = 0;
         if (CurrentView == FRONTVIEW)
         {
             SendCommand((char *)"vis ams,0");
@@ -330,15 +339,17 @@ void GreenLedOn()
         ShowComms();
         if (AnnounceConnected && !ReceiverUpdateBusy()) // (during a receiver update RxUpdate.h says "Connected" once, when the new release is heard)
         {
+            // In Malcolm's words the transmitter says "Model matched - connected": the model message first, then
+            // "Connected" once it has been said in full (the published screen starts a new clip by stopping the one
+            // playing; the longest of these messages, "Model memory found", is 1.45 s).
+            if (mm)
+            {
+                Force_Early_Sound = true; // Force sound to play
+                PlaySound(mm);            // "Model matched!", "Model memory found!" or "Bind succeeded"
+                DelayWithDog(1700);       // let it finish (packets keep going meanwhile - B156)
+            }
             Force_Early_Sound = true; // Force sound to play
             PlaySound(CONNECTEDMSG);
-            if (Connect_MMmsg) // this is set when Modelmatch is executed during binding.
-            {
-                DelayWithDog(1000);       // wait a second before playing the message (B156: packets keep going meanwhile - DelaySimple was a blind second on every reconnection)
-                Force_Early_Sound = true; // Force sound to play
-                PlaySound(Connect_MMmsg); // play the message that was set during ModelMatch  ("Model Found!" or "Model matched!" or "Model not found!")
-                Connect_MMmsg = 0;        // reset the message to be played later
-            }
         }
         if (UseLog && !ReceiverUpdateBusy())
         {

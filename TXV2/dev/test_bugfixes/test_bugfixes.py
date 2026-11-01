@@ -648,6 +648,14 @@ def source_checks():
     chk(gg.count('RfVerifyArm(VK_GOV_CFG, GovCfgAskValues)') == 2 and 'if (RfVerifyPending())' in gg and 'AllGlobalConfigBytesReceived() && !RfVerifyPending()' in gg, 'B165 the governor global save and the kept copy are read back; a save during a read-back is refused; a differing set waits for the window')
     chk('case VK_GOV_CFG: return 24;' in vf and 'GovWritePayload[18 + i]' in vf and 'if (RfVerifyEnd(VK_GOV_CFG)) return;' in tr and 'RF_VERIFY_GOVCFG_WAIT_MS' in vf, 'B165 RF_Verify knows the 24 global bytes, their window and their window end')
     chk('case BAS_VERIFY_FEAT:' in ba and 'm != BasFeatWant' in ba and ba.count('BasVerifyDone();') == 2, 'B165 the Basics page reads the features mask back after the restart when it wrote one')
+    # B167 (1 Nov 2026): "Model matched" then "Connected", said once - the connection's flag goes up before the pause
+    # that keeps the packets going (SuccessfulPacket re-entered GreenLedOn, cut "Connected" and left a click for the message)
+    mc = src('src/main.cpp')
+    a = mc.find('LedWasGreen = true;\n        const uint8_t mm = Connect_MMmsg;')
+    b = mc.find('PlaySound(mm);')
+    c = mc.find('DelayWithDog(1700);')
+    d = mc.find('PlaySound(CONNECTEDMSG);\n        }')
+    chk(0 < a < b < c < d and 'PlaySound(Connect_MMmsg)' not in mc, 'B167 GreenLedOn raises LedWasGreen first, takes the model message once, says it, waits for it, then says Connected')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 
