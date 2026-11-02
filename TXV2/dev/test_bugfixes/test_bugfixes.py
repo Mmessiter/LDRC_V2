@@ -665,6 +665,11 @@ def source_checks():
     if os.path.isdir(scr):
         p38 = open(os.path.join(scr, 'sd', 'hmi', 'pages', '38.json')).read()
         chk('"n":"t26"' in p38 and '"g":"g"' in p38.split('"n":"t26"')[1][:200], 'B168 the Gaps page has its "Not counted" line, kept across page loads')
+    # B169 (2 Nov 2026): two quick taps on a backup file say when it was written; the Teensy's clock follows the clock chip, so the card dates its files
+    mo = src('include/MenuOptions.h'); ut = src('include/Utilities.h')
+    chk('static void BackupFileTapped()' in mo and 'GetValue((char *)SCREEN_X)' in mo and '(now - lastTapMs) < 700' in mo and 'f.getModifyTime(dt)' in mo and 'MsgBox(pModelsView, msg);' in mo, 'B169 two taps on the same backup file within 700 ms, told from the left list by where the finger lifted, open the date box')
+    chk('    if (CurrentView == MODELSVIEW)\n        BackupFileTapped();' in mo, 'B169 only on the Models page')
+    chk('Teensy3Clock.set(chip);' in ut and 'if (tm.Year >= 54)' in ut, 'B169 the Teensy clock follows a set clock chip, so the card dates its files')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

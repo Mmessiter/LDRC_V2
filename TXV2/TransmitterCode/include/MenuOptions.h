@@ -446,10 +446,71 @@ void ModelViewEnd()
 
 /******************************************************************************************************************************/
 
+// B169 (Malcolm, 2 Nov 2026: "if the user double taps on the name of a backup file on the right-hand side of this screen, I would
+// like it to put up a little box which shows the date and time that that file was written"). Both lists of the Models page send
+// the same code (1); where the finger lifted (the screen's tch2, its x) says which list it was: the backup list is x 498-788.
+// Two taps on the same backup file within 700 ms open the box. The date is the card's own (the file's modify time), right from
+// B169 on: ReadTheRTC now sets the Teensy's clock from the clock chip, and the card's library dates every file it writes from
+// that clock (it started at 1 Jan 2019 at every power-up before, so a file written before B169 carries no real date).
+static void ShowBackupFileDate(uint32_t row)
+{
+    if (row >= 150 || TheFilesList[row][0] <= ' ')
+        return;
+    char name[14];
+    int n = 0;
+    while (n < 12 && TheFilesList[row][n] > ' ' && TheFilesList[row][n] < 127)
+    { // (as ShowFileNumber reads the list: up to 12 characters, to the first blank)
+        name[n] = TheFilesList[row][n];
+        ++n;
+    }
+    name[n] = 0;
+    AddPath(name); // /mod/NAME.MOD into SearchFile
+    char msg[160];
+    File f = SD.open(SearchFile, FILE_READ);
+    if (!f)
+        snprintf(msg, sizeof(msg), "%s\r\nThe file could not be opened.", name);
+    else
+    {
+        static const char Months[12][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        DateTimeFields dt;
+        const uint32_t size = f.size();
+        const bool dated = f.getModifyTime(dt) && dt.year >= 124; // 2024 or later: a date from a clock that was set
+        f.close();
+        if (dated)
+            snprintf(msg, sizeof(msg), "%s\r\nWritten on %u %s %u at %02u:%02u\r\n(%lu bytes)", name, (unsigned)dt.mday, Months[dt.mon % 12], (unsigned)dt.year + 1900, (unsigned)dt.hour, (unsigned)dt.min, (unsigned long)size);
+        else
+            snprintf(msg, sizeof(msg), "%s\r\nNo date recorded: it was written before\r\nthe clock reached the card.\r\n(%lu bytes)", name, (unsigned long)size);
+    }
+    MsgBox(pModelsView, msg);
+}
+static void BackupFileTapped()
+{
+    static uint32_t lastTapMs = 0;
+    static uint32_t lastRow = 0xFFFFFFFF;
+    const uint32_t x = GetValue((char *)SCREEN_X); // where the finger lifted
+    if (x == 65535 || x < 490)
+    { // a reply that never came, or the left list
+        lastTapMs = 0;
+        return;
+    }
+    const uint32_t row = GetValue((char *)"Mfiles");
+    if (row == 65535)
+        return;
+    const uint32_t now = millis();
+    const bool twice = row == lastRow && (now - lastTapMs) < 700;
+    lastRow = row;
+    lastTapMs = now;
+    if (!twice)
+        return;
+    lastTapMs = 0;
+    ShowBackupFileDate(row);
+}
 void DoMFName()
 {
     DelayWithDog(100);
     CheckModelName();
+    if (CurrentView == MODELSVIEW)
+        BackupFileTapped(); // B169: two quick taps on a backup file say when it was written
 }
 
 /******************************************************************************************************************************/

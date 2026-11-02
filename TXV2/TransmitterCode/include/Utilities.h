@@ -592,6 +592,16 @@ void ReadTheRTC()
     GmonthDay = monthDay;
     Gmonth = month;
     Gyear = year - 30; // ???
+    // B169: the Teensy's own clock follows the clock chip, so the card's files - backups, logs, models.dat - carry the right date
+    // and time (the card's library dates every file it writes from the Teensy's clock, which started at 1 Jan 2019 at every
+    // power-up: it has no battery). Only from a chip that is set (2024 or later), and only when the two differ.
+    if (tm.Year >= 54) // (years since 1970)
+    {
+        const uint32_t chip = (uint32_t)makeTime(tm);
+        const uint32_t own = Teensy3Clock.get();
+        if ((own > chip ? own - chip : chip - own) > 2)
+            Teensy3Clock.set(chip);
+    }
 }
 /*********************************************************************************************************************************/
 

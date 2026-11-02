@@ -27,6 +27,7 @@ The buttons on the right act on the chosen backup file:|
 'Delete' removes it, after a question.|
 'Rename' renames the file only: 8 letters or digits at most.|
 'Send' sends it to another transmitter.|
+Tap a file twice, quickly, to see when it was written.|
 'File error!' flashes when a file could not be written or read,|
 or when a new file name is too long.||
 Back up each model once it is set up well. It is the backup file|
