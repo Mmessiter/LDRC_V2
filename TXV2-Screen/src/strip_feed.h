@@ -45,6 +45,7 @@ static gdma_channel_handle_t sfTx = nullptr, sfRx = nullptr; static int sfTxCh =
 static dma_descriptor_t *sfTxD = nullptr, *sfRxD = nullptr;
 static const char *stripWhy = "off";
 static int stripWant = 0;                                // the pref, resolved (main.cpp setup)
+static bool stripSkipRun = false; static uint32_t updSeenMs = 0;   // (1.11.159) this start was the updater's fresh start: the strips wait until the update page has been and gone (main.cpp flipTick)
 static bool stripArmed = false; static uint32_t stripStrikes = 0;   // (main.cpp) this start's strike stands until 20 s have passed
 static volatile int stripCur = 0;                        // the strip the panel's DMA is on (its EOF comes next)
 static const uint16_t *volatile stripFrameFb = nullptr;  // this frame's picture

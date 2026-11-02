@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.158"
+#define SCREEN_VERSION "1.11.159"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -170,6 +170,10 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // (Malcolm, 2 Nov 2026, the Models page's backup-file date box, main board B169/B171). The bounce guard is 30 ms now: a finger
 // that has been away for the 80 ms is up, and a new press is a new press. The 80 ms stays until the chip's dropped samples are
 // measured: /status "touchgap" records the longest no-touch gap bridged inside a press, and how many were over 30 ms.
+// (1.11.159) THE STRIPS BACK AFTER A MAIN-BOARD UPDATE. The updater's fresh start (before a check or an install) runs
+// without the strips, and after a main-board install the screen carries on in that same run: the strips stayed off until
+// the next power cycle, and the twin's old flicker was back for every picture the CPU drew - the Models page's model
+// pictures above all (Malcolm, 2 Nov 2026, right after B173). Now they come back once the update page has been gone 5 s.
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -382,6 +386,13 @@ static void flipTick() {
     ringTick();                                        // (25 Oct) the engine started again should the frames stop
     if (stripOn && updShowing() && !stripStopWanted) stripStopWanted = true;   // (26 Oct, late) the update page: the strips stand down (their 19 kB of internal RAM to the secure connection)
     stripRelease();
+    // (1.11.159) The updater's fresh start ran without the strips for the whole run: after a main-board install the screen
+    // carries on in that run, so the strips were off until the next power cycle - every picture the CPU drew shared the
+    // PSRAM with the panel again (Malcolm, 2 Nov 2026, scrolling the Models page's pictures right after B173: "the screen
+    // flickers quite a lot with each new image"). Once the update page has been gone for 5 s, and this start is half a
+    // minute old, they are wanted again; the line below starts them as it does after any update page.
+    if (updShowing()) updSeenMs = millis();
+    if (stripSkipRun && !updShowing() && millis() > 30000 && millis() - updSeenMs > 5000) { stripSkipRun = false; stripWant = 1; stripWhy = "on (after the update)"; }
     if (stripWant && ringOn && !stripOn && !stripArm && !stripStopWanted && !updShowing()) stripBegin();   // (26 Oct evening) the strips, once the ring runs (the pref "strips"), and back after the update page
     if (!flipOk) return;
     if (flipComposing) {                               // (the first test held the loop 59 ms for it: taps were missed) a few rows a pass
@@ -3999,7 +4010,7 @@ void setup() {
         stripWant = want < 0 ? (board->psramRestUs != 0 ? 1 : 0) : want;
         const bool skip = prefs.getInt("stripskip", 0) != 0; if (skip) prefs.putInt("stripskip", 0);   // (the updater's fresh start before an install: this one start without them)
         if (strikes >= 2) { stripWant = 0; stripWhy = "off (two early crashes)"; }
-        else if (skip && stripWant) { stripWant = 0; stripWhy = "off (the update's fresh start)"; }
+        else if (skip && stripWant) { stripWant = 0; stripSkipRun = true; stripWhy = "off (the update's fresh start)"; }   // (1.11.159: back once the update page has gone - flipTick)
         else if (!stripWant) stripWhy = want < 0 ? "off (board)" : "off (pref)";
         else { prefs.putInt("striparm", 1); stripArmed = true; }
     }   // (1.11.128) the DMA copy of 1.11.126 is OFF unless the pref says so (Malcolm, 26 Oct: more flicker on the desk than it cured, the bench's counters blind to it); /stall?kind=dmacopy&kb=1 for the bench
