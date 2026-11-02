@@ -93,15 +93,25 @@ void ReadWhyOff() // at start-up, once
 // once-a-second chores, when the clock has been read and the log can be written): the watchdog (SRC_SRSR bit 7), or a
 // software reset nobody asked for (bit 1, no power-on bit, and no reason noted on the way out: a lock-up or a fault), with
 // where the code was (the breadcrumb), the page showing, and how long it had run.
+// B173: EVERY start is logged, not only the watchdog and the faults - the first test of B172 jumped again and left no line, and
+// the log's "Time since boot: 0 minutes and 26 seconds" said the board had started not long before. A power-on reset with no
+// reason noted on the way out is the one that matters most: the power itself went (a dip, a lead, a pulled battery) and the
+// board came up again on the front page as if nothing had happened.
 FLASHMEM void LogRestartCause()
 {
     const bool watchdog = (LastResetCause & 0x80) != 0;
-    const bool fault = (LastResetCause & 0x02) != 0 && (LastResetCause & 0x01) == 0 && LastOffReason == OFF_NONE;
-    if (!watchdog && !fault)
-        return;
-    char line[170];
-    snprintf(line, sizeof(line), "Started after %s: it was on page %lu at crumb %u, %lu s after its start B172",
-             watchdog ? "the watchdog reset it" : "a reset nobody asked for (a fault)", (unsigned long)LastCrumbView, (unsigned)LastCrumb, (unsigned long)(LastCrumbUpMs / 1000));
+    const bool power = (LastResetCause & 0x01) != 0;
+    const bool soft = (LastResetCause & 0x02) != 0;
+    const char *how = watchdog                                        ? "the watchdog reset it"
+                      : power && LastOffReason == OFF_NONE            ? "power on, and nothing had switched it off: the power itself went"
+                      : power                                         ? "power on"
+                      : soft && LastOffReason == OFF_FIRMWARE_SWAP    ? "a restart into new firmware"
+                      : soft && LastOffReason == OFF_RESTORE_RESTART  ? "a restart after the files were put back"
+                      : soft                                          ? "a reset nobody asked for (a fault)"
+                                                                      : "a reset of an unknown kind";
+    char line[200];
+    snprintf(line, sizeof(line), "Started: %s (rst=0x%lX off=%u); before it: page %lu, crumb %u, %lu s after that start B173",
+             how, (unsigned long)LastResetCause, (unsigned)LastOffReason, (unsigned long)LastCrumbView, (unsigned)LastCrumb, (unsigned long)(LastCrumbUpMs / 1000));
     LogText(line, strlen(line), true);
 }
 
