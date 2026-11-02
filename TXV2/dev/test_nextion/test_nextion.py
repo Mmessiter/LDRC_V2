@@ -13,7 +13,7 @@ def fn(sig):
     assert m, sig
     return m.group(0)
 parts = [fn('void StashFrame(const uint8_t *f, uint16_t n)'), fn('void StashPendingEventBytes()'), fn('bool CollectReply(uint8_t expected, uint16_t &k)'),
-         fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('uint32_t getvalue(char *nbox)'),
+         fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('static uint32_t GetNumberReply(const char *CB)'), fn('uint32_t getvalue(char *nbox)'),   # (B171: getvalue's exchange lives in GetNumberReply)
          fn('bool HelpNameWhole(const char *name)'), fn('bool HelpNameFrom(char *name)'),   # (B160)
          fn('void GetReturnCode(char *tbox)')]   # (B162: keeps a press that arrives during a send)
 prog = r'''

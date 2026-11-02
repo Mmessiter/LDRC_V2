@@ -449,9 +449,13 @@ void ModelViewEnd()
 // B169 (Malcolm, 2 Nov 2026: "if the user double taps on the name of a backup file on the right-hand side of this screen, I would
 // like it to put up a little box which shows the date and time that that file was written"). Both lists of the Models page send
 // the same code (1); where the finger lifted (the screen's tch2, its x) says which list it was: the backup list is x 498-788.
-// Two taps on the same backup file within 700 ms open the box. The date is the card's own (the file's modify time), right from
-// B169 on: ReadTheRTC now sets the Teensy's clock from the clock chip, and the card's library dates every file it writes from
-// that clock (it started at 1 Jan 2019 at every power-up before, so a file written before B169 carries no real date).
+// Two taps on the same backup file within a second open the box. The list is a wheel: the first tap turns it so that the file
+// tapped sits in the highlighted band, so the second tap is on that band (the help says so). The date is the card's own (the
+// file's modify time), right from B169 on: ReadTheRTC now sets the Teensy's clock from the clock chip, and the card's library
+// dates every file it writes from that clock (it started at 1 Jan 2019 at every power-up before, so a file written before B169
+// carries no real date). B171: tch2 is asked for by its bare name (GetSysValue) - as "tch2.val" the screen answered 0 and no tap
+// counted - and a tap's time is when its code arrived, before the 100 ms wait and the reads: the gap between two taps is the
+// pilot's, not ours.
 static void ShowBackupFileDate(uint32_t row)
 {
     if (row >= 150 || TheFilesList[row][0] <= ' ')
@@ -483,11 +487,11 @@ static void ShowBackupFileDate(uint32_t row)
     }
     MsgBox(pModelsView, msg);
 }
-static void BackupFileTapped()
+static void BackupFileTapped(uint32_t at) // at = millis() when the tap's code arrived
 {
     static uint32_t lastTapMs = 0;
     static uint32_t lastRow = 0xFFFFFFFF;
-    const uint32_t x = GetValue((char *)SCREEN_X); // where the finger lifted
+    const uint32_t x = GetSysValue(SCREEN_X); // where the finger lifted (B171: by its bare name)
     if (x == 65535 || x < 490)
     { // a reply that never came, or the left list
         lastTapMs = 0;
@@ -496,10 +500,9 @@ static void BackupFileTapped()
     const uint32_t row = GetValue((char *)"Mfiles");
     if (row == 65535)
         return;
-    const uint32_t now = millis();
-    const bool twice = row == lastRow && (now - lastTapMs) < 700;
+    const bool twice = row == lastRow && lastTapMs != 0 && (at - lastTapMs) < 1000;
     lastRow = row;
-    lastTapMs = now;
+    lastTapMs = at;
     if (!twice)
         return;
     lastTapMs = 0;
@@ -507,10 +510,11 @@ static void BackupFileTapped()
 }
 void DoMFName()
 {
+    const uint32_t at = millis(); // B171: the tap's time is now, not after the wait and the reads below
     DelayWithDog(100);
     CheckModelName();
     if (CurrentView == MODELSVIEW)
-        BackupFileTapped(); // B169: two quick taps on a backup file say when it was written
+        BackupFileTapped(at); // B169: two quick taps on a backup file say when it was written
 }
 
 /******************************************************************************************************************************/

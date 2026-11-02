@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B170 02/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B171 02/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1098,6 +1098,7 @@ void BindNow();
 FASTRUN uint32_t GetIntFromAckPayload(); // This one uses a uint32_t int
 uint32_t getvalue(char *nbox);
 uint32_t GetValue(char *nbox);
+uint32_t GetSysValue(const char *name); // B171: a system variable (tch2 ...) by its bare name
 void SendValue(char *nbox, int value);
 void LogTotalLostPackets();
 void LogTotalGoodPackets();

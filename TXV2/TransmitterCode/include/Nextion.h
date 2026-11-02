@@ -445,16 +445,11 @@ void SendValue(char *nbox, int value)
 }
 
 /*********************************************************************************************************************************/
-uint32_t getvalue(char *nbox)
+// The number the screen answers to a "get" command (CB = "get Mfiles.val", "get tch2"): 65535 when no reply came.
+// (B171: lifted out of getvalue so that a system variable can be asked for by its bare name, GetSysValue below.)
+static uint32_t GetNumberReply(const char *CB)
 {
     uint32_t ValueIn = 0;
-    char GET[] = "get ";
-    char VAL[] = ".val";
-    char CB[100];
-
-    strcpy(CB, GET);
-    strcat(CB, nbox);
-    strcat(CB, VAL);
     // ClaudeFix-2-7-2026 Same discipline as the fixed GetText: FLUSH stale bytes first (a
     // leftover reply used to be parsed as THIS one -- the ArmingChannel bug
     // family, which also fed shifted-by-one PIDs/rates to the FC), then WAIT
@@ -483,6 +478,30 @@ uint32_t getvalue(char *nbox)
         ValueIn = 65535; // = THERE WAS AN ERROR !
     }
     return ValueIn;
+}
+
+uint32_t getvalue(char *nbox) // a component's val: "get <nbox>.val"
+{
+    char GET[] = "get ";
+    char VAL[] = ".val";
+    char CB[100];
+    strcpy(CB, GET);
+    strcat(CB, nbox);
+    strcat(CB, VAL);
+    return GetNumberReply(CB);
+}
+
+// B171 (2 Nov 2026; Malcolm: "I cannot see the date and time of the backup file by double clicking yet"): a SYSTEM variable
+// (tch2 = where the finger lifted) is asked for by its bare name, "get tch2". B169 asked GetValue, whose "get tch2.val" named a
+// component the screen has not got: the screen answered 0 for it, every tap looked like the left list, and no tap ever counted.
+// 65535 when no reply came (as GetValue; nothing else is marked - a missed system variable fails no page's save).
+uint32_t GetSysValue(const char *name)
+{
+    char GET[] = "get ";
+    char CB[60];
+    strcpy(CB, GET);
+    strncat(CB, name, sizeof(CB) - sizeof(GET) - 1);
+    return GetNumberReply(CB);
 }
 
 /*********************************************************************************************************************************/

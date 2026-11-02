@@ -667,8 +667,12 @@ def source_checks():
         chk('"n":"t26"' in p38 and '"g":"g"' in p38.split('"n":"t26"')[1][:200], 'B168 the Gaps page has its "Not counted" line, kept across page loads')
     # B169 (2 Nov 2026): two quick taps on a backup file say when it was written; the Teensy's clock follows the clock chip, so the card dates its files
     mo = src('include/MenuOptions.h'); ut = src('include/Utilities.h')
-    chk('static void BackupFileTapped()' in mo and 'GetValue((char *)SCREEN_X)' in mo and '(now - lastTapMs) < 700' in mo and 'f.getModifyTime(dt)' in mo and 'MsgBox(pModelsView, msg);' in mo, 'B169 two taps on the same backup file within 700 ms, told from the left list by where the finger lifted, open the date box')
-    chk('    if (CurrentView == MODELSVIEW)\n        BackupFileTapped();' in mo, 'B169 only on the Models page')
+    chk('static void BackupFileTapped(uint32_t at)' in mo and 'GetSysValue(SCREEN_X)' in mo and '(at - lastTapMs) < 1000' in mo and 'f.getModifyTime(dt)' in mo and 'MsgBox(pModelsView, msg);' in mo, 'B169 two taps on the same backup file within a second, told from the left list by where the finger lifted, open the date box')
+    chk('    if (CurrentView == MODELSVIEW)\n        BackupFileTapped(at);' in mo and 'const uint32_t at = millis();' in mo, 'B169 only on the Models page; B171 the tap\'s time is when its code arrived')
+    # B171 (2 Nov 2026): tch2 is a SYSTEM variable - "get tch2", not "get tch2.val" (which named a component the screen has not got, answered 0: no tap ever counted)
+    nx = src('include/Nextion.h')
+    chk('uint32_t GetSysValue(const char *name)' in nx and 'static uint32_t GetNumberReply(const char *CB)' in nx and nx.count('return GetNumberReply(CB);') == 2 and 'GetValue((char *)SCREEN_' not in mo, 'B171 a system variable is asked for by its bare name through GetSysValue; nothing asks GetValue for one')
+    chk('tap it so it is highlighted,|\nthen tap it again at once.|' in open(os.path.join(ROOT, 'Help files for SD', 'MODELS.TXT'), encoding='utf-8', errors='replace').read(), 'B171 the Models help says the second tap is on the highlighted band (the list is a wheel)')
     chk('Teensy3Clock.set(chip);' in ut and 'if (tm.Year >= 54)' in ut, 'B169 the Teensy clock follows a set clock chip, so the card dates its files')
     # B170 (2 Nov 2026): a model changed since its last backup shows in orange on the Models page - the content CRC and the mark
     sdc = src('include/SDcard.h'); mo = src('include/MenuOptions.h'); mc = src('src/main.cpp'); me = src('include/ModelExchange.h')
