@@ -32,6 +32,7 @@ static volatile bool updBusy = false, updStop = false; static volatile uint32_t 
 static TaskHandle_t updTaskHandle = nullptr;
 static WiFiClientSecure *updTls = nullptr; static HTTPClient *updHttp = nullptr;
 static uint8_t *updBuf = nullptr; static const size_t UPD_BUF = 16384;
+static bool updBufInternal = false; static const size_t UPD_SLICE = 4096;   // (1.11.161) the buffer in the chip's own RAM when a piece is there (updStart); the connection read in 4 kB slices with the pace's rests between
 static volatile uint32_t updFreeKb = 0; static volatile bool updFreeKnown = false;      // the card's free space: asking takes seconds the first time, so the task asks
 // (1.11.93) Where a fetch's time goes, file by file (ScreenHost::fetchNotes): asking for it, the bytes coming, writing them to
 // the card, reading the card back, asking the card's free space; and the WiFi's strength after each
@@ -84,8 +85,8 @@ template <class Sink> static bool updRead(int len, std::string &err, Sink sink) 
         if (updStop) { err = "cancelled"; break; }
         int n = s->available();
         if (n > 0) {
-            n = s->read(updBuf, min((size_t) n, min(UPD_BUF, (size_t) ((uint32_t) len - got))));
-            if (n > 0) { if (!sink(updBuf, (size_t) n)) { if (err.empty()) err = "the screen's card would not take it"; break; } got += n; idle = millis(); updProgress = got; continue; }
+            n = s->read(updBuf, min((size_t) n, min(UPD_SLICE, (size_t) ((uint32_t) len - got))));   // (1.11.161: a 4 kB slice, not 16 - a smaller bite out of the panel)
+            if (n > 0) { if (!sink(updBuf, (size_t) n)) { if (err.empty()) err = "the screen's card would not take it"; break; } got += n; idle = millis(); updProgress = got; psramPace((uint32_t) n); continue; }   // (1.11.161: the pace's rest after each slice, as every other mover)
         }
         if (!s->connected() && s->available() <= 0) { err = "the connection was lost"; break; }
         if (millis() - idle > 15000) { err = "messiter.com stopped answering"; break; }
@@ -130,7 +131,7 @@ static bool updReadBack(const std::string &path, uint32_t &size, uint32_t &crc) 
     File f = SD.open(path.c_str(), FILE_READ);
     if (!f || f.isDirectory()) { if (f) f.close(); return false; }
     size = 0; crc = 0; int n, turns = 0;
-    while ((n = f.read(updBuf, UPD_BUF)) > 0) { crc = ldrc::crc32(updBuf, (size_t) n, crc); size += (uint32_t) n; if ((++turns & 7) == 0) vTaskDelay(1); if (updStop) break; }
+    while ((n = (int) sdReadPaced(f, updBuf, UPD_BUF)) > 0) { crc = ldrc::crc32(updBuf, (size_t) n, crc); size += (uint32_t) n; if ((++turns & 7) == 0) vTaskDelay(1); if (updStop) break; }   // (1.11.161: paced off the card, as every other card read)
     f.close();
     return n == 0 && !updStop;
 }
@@ -183,7 +184,7 @@ static void updCheckFile(ldrc::Work &w) {
     if (!f || f.isDirectory()) { if (f) f.close(); w.error = "no such file"; return; }
     uint32_t crc = 0, size = 0; int n;
     int turns = 0;
-    while ((n = f.read(updBuf, UPD_BUF)) > 0) { crc = ldrc::crc32(updBuf, (size_t) n, crc); size += n; updProgress = size; if ((++turns & 7) == 0) vTaskDelay(1); if (updStop) break; }
+    while ((n = (int) sdReadPaced(f, updBuf, UPD_BUF)) > 0) { crc = ldrc::crc32(updBuf, (size_t) n, crc); size += n; updProgress = size; if ((++turns & 7) == 0) vTaskDelay(1); if (updStop) break; }   // (1.11.161: paced off the card)
     f.close();
     if (updStop) { w.error = "cancelled"; return; }
     w.size = size; w.crc = crc; w.ok = true;
@@ -288,7 +289,18 @@ static void updTask(void *) {
 }
 static void updStart(int kind, const std::string &url, const std::string &local, uint32_t size, uint32_t crc, size_t maxBytes) {
     if (updBusy) return;
-    if (!updBuf) updBuf = (uint8_t *) psMallocRoom(UPD_BUF);
+    if (!updBuf) {
+        // (1.11.161) THE DOWNLOAD'S BURSTS. The buffer was in the PSRAM: every 16 kB slice from the connection was copied into
+        // it at full speed, the checksum read it, the card's driver read it again, and the check and the read-back filled it
+        // from the card at full speed - each a burst through the PSRAM the panel reads, and the strips are down for the update
+        // page: the frame shifted at each (Malcolm, 2 Nov 2026: "we also see flickering while downloading the files"). Now the
+        // chip's own RAM when a 16 kB piece is there AND a 24 kB piece is still left for the task made below; else the PSRAM
+        // as before. Given back when the panel has gone (updPoll): held, it would be 16 kB less for the WiFi's buffers.
+        uint8_t *p = (uint8_t *) heap_caps_malloc(UPD_BUF, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        if (p && heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) < 24576 + 4096) { free(p); p = nullptr; }
+        updBufInternal = p != nullptr;
+        updBuf = p ? p : (uint8_t *) psMallocRoom(UPD_BUF);
+    }
     if (!updBuf) { updWork = ldrc::Work(); updWork.error = "the screen is out of memory"; return; }
     updJob.kind = kind; updJob.url = url; updJob.local = local; updJob.size = size; updJob.crc = crc; updJob.maxBytes = maxBytes;
     if (kind == 2 || kind == 4) updDarkWant = true;       // (1.11.160) a file fetched for an install, or the flash written: the dark install, until the panel has gone (updPoll)
@@ -678,6 +690,7 @@ static void updPoll() {
             dirty(updBarX, updBarY, updBarW, updBarH);
         }
     } else if (wasUp) { if (topWho == 1) { topOn = false; topWho = 0; } updPressed = 0; dirty(UPD_X, UPD_Y, UPD_W, UPD_H); touchPainted = true; goneAt = millis(); }   // the page, as the Teensy has drawn it meanwhile
+    if (!up && !updBusy && updBuf) { free(updBuf); updBuf = nullptr; updBufInternal = false; }   // (1.11.161) the buffer given back once the panel has gone and no job runs: the next job takes one afresh
     wasUp = up;
     // A new screen (a card with no pages on it) has nothing to show but this panel, and no button to bring it
     // back: three seconds after it has gone it comes again, unless the WiFi page is up or the pilot is flying.

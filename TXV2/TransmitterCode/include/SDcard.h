@@ -177,6 +177,7 @@ FLASHMEM bool ReadOneModel(uint32_t Mnum)
         // Without this the PREVIOUS model's name stayed in ModelName, so the
         // models list repeated the last real model all the way down.
         strcpy(ModelName, "Not in use");
+        strcpy(ModelImageFileName, "Noimage"); // B174 (Malcolm, 2 Nov 2026: "if I pause on a 'not in use' memory it shows the model image from the most recent model"): a free slot has no picture - the name stayed the last model's
         ModelsMacUnionSaved.Val64 = 0;
         return false;
     }
