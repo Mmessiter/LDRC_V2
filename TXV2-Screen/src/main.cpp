@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.161"
+#define SCREEN_VERSION "1.11.162"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -185,6 +185,11 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // reading it and the check's and read-back's reads from the card into it went through the PSRAM at full speed. The buffer
 // now comes from the chip's own RAM when a piece is there (and a 24 kB piece is left for the updater's task), the
 // connection is read in 4 kB slices with the pace's rests, and the card reads are paced (update_device.h).
+// (1.11.162) THE BUFFER BACK IN THE PSRAM. 1.11.161's download buffer in the chip's own RAM broke the next install on
+// Malcolm's screen: "fetching TXFW.BIN ... The screen is out of memory", five tries alike. Every job of an install is a
+// task with a 24 kB stack from that RAM, in one piece; the lists' parse between two jobs cuts the pool up, and with 16 kB
+// less of it the third job's task could not be made. The buffer is in the PSRAM again (the slices and the pacing stay),
+// and a task that cannot be made is now a want of memory for the updater: a fresh start and on, not five tries alike.
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };

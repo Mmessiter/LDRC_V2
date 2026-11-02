@@ -289,18 +289,13 @@ static void updTask(void *) {
 }
 static void updStart(int kind, const std::string &url, const std::string &local, uint32_t size, uint32_t crc, size_t maxBytes) {
     if (updBusy) return;
-    if (!updBuf) {
-        // (1.11.161) THE DOWNLOAD'S BURSTS. The buffer was in the PSRAM: every 16 kB slice from the connection was copied into
-        // it at full speed, the checksum read it, the card's driver read it again, and the check and the read-back filled it
-        // from the card at full speed - each a burst through the PSRAM the panel reads, and the strips are down for the update
-        // page: the frame shifted at each (Malcolm, 2 Nov 2026: "we also see flickering while downloading the files"). Now the
-        // chip's own RAM when a 16 kB piece is there AND a 24 kB piece is still left for the task made below; else the PSRAM
-        // as before. Given back when the panel has gone (updPoll): held, it would be 16 kB less for the WiFi's buffers.
-        uint8_t *p = (uint8_t *) heap_caps_malloc(UPD_BUF, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-        if (p && heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) < 24576 + 4096) { free(p); p = nullptr; }
-        updBufInternal = p != nullptr;
-        updBuf = p ? p : (uint8_t *) psMallocRoom(UPD_BUF);
-    }
+    // (1.11.161) THE DOWNLOAD'S BURSTS: the connection is read in 4 kB slices with the pace's rests, and the card reads of the
+    // check and the read-back are paced (updRead, updReadBack, updCheckFile). 1.11.161 ALSO took this buffer from the chip's
+    // own RAM when a 16 kB piece was there - and Malcolm's next install failed at its second job, "fetching TXFW.BIN ... The
+    // screen is out of memory": every job's task wants 24 kB of that RAM in one piece, the job before it gives its own back
+    // only when core 0's idle task runs, and with 16 kB gone from the pool the second piece was not there. The PSRAM, as it
+    // was (1.11.162); given back when the panel has gone (updPoll).
+    if (!updBuf) { updBuf = (uint8_t *) psMallocRoom(UPD_BUF); updBufInternal = false; }
     if (!updBuf) { updWork = ldrc::Work(); updWork.error = "the screen is out of memory"; return; }
     updJob.kind = kind; updJob.url = url; updJob.local = local; updJob.size = size; updJob.crc = crc; updJob.maxBytes = maxBytes;
     if (kind == 2 || kind == 4) updDarkWant = true;       // (1.11.160) a file fetched for an install, or the flash written: the dark install, until the panel has gone (updPoll)
@@ -308,6 +303,7 @@ static void updStart(int kind, const std::string &url, const std::string &local,
     updBusy = true;                                        // before the task exists: it reads the job, and clears this itself when done
     if (xTaskCreatePinnedToCore(updTask, "update", 24576, nullptr, 1, &updTaskHandle, 0) != pdPASS) {
         updTaskHandle = nullptr; updBusy = false; updWork.error = "the screen is out of memory";   // (24 kB of internal RAM in one piece: the fresh start is for this)
+        updWork.memory = true;                             // (1.11.162) said as a want of memory: the updater's fresh start follows (freshForMemory), not five tries that cannot differ - 1.11.161's five failed alike
     }
 }
 
