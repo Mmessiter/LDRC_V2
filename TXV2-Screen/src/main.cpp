@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.157"
+#define SCREEN_VERSION "1.11.158"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -165,6 +165,11 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // displayed in another colour, say orange, in order to warn the user he has changed it since it was backed up"; main board
 // B170). The mark is never part of the row's words: not in txt, not in what "get .txt" answers. (The audio change once
 // numbered 1.11.157, announcements in turn, was never published: reverted, kept in the history.)
+// (1.11.158) A QUICKER DOUBLE TAP. A new press within 150 ms of a lift was dropped as a bounce, and a lift counts only after
+// 80 ms with no touch: the second tap of a double tap had to come 230 ms after the first finger-up - "quite a big separation"
+// (Malcolm, 2 Nov 2026, the Models page's backup-file date box, main board B169/B171). The bounce guard is 30 ms now: a finger
+// that has been away for the 80 ms is up, and a new press is a new press. The 80 ms stays until the chip's dropped samples are
+// measured: /status "touchgap" records the longest no-touch gap bridged inside a press, and how many were over 30 ms.
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -2879,6 +2884,7 @@ static void openKeyboard(int key, int compId) {
     kept[kb + ".loadcmpid"].ints["val"] = compId;
     loadPage(kb);
 }
+static uint32_t touchGapMax = 0, touchGapOver30 = 0, touchPresses = 0; static bool touchMissed = false;   // (1.11.158) the no-touch gaps bridged inside a press: how long the chip's dropped samples really are (/status "touchgap")
 static void pollTouch() {
     static bool down = false; static int held = -1; static uint32_t lastSeen = 0, lastRelease = 0;
     static int dragY0 = 0, dragS0 = 0, lastY = 0, lastX = 0; static bool dragged = false; static uint32_t lastDragDraw = 0;
@@ -2956,15 +2962,17 @@ static void pollTouch() {
     // the new page's list - and so on round, "an endless loop of more and more cancels".)
     if (touchLockout && down) { down = false; held = -1; dragged = false; }
     if (!down && !touchLockout && filmButtonTouch(pressed, pressed ? x[0] : 0, pressed ? y[0] : 0, now)) return;   // (1.11.85) the help page's Film button
+    if (pressed && down && touchMissed) { const uint32_t gap = now - lastSeen; if (gap > touchGapMax) touchGapMax = gap; if (gap > 30) ++touchGapOver30; }   // (1.11.158) the finger was there all along, the chip said nothing for a while: how long (for /status "touchgap")
+    touchMissed = !pressed && down;
     if (pressed) { lastSeen = now; lastX = x[0]; lastY = y[0]; host.sys["tch0"] = x[0]; host.sys["tch1"] = y[0]; touchPainted = true; }
     else if (down) touchPainted = true;
     // The touch chip drops the odd sample mid-press: a release is only real after 80 ms of nothing.
     const bool up = !pressed && down && now - lastSeen > 80;
     if (pressed && !down) {
         if (touchLockout) return;                             // the finger that changed the page is still down
-        if (now - lastRelease < 150) return;                  // a bounce, not a second tap
+        if (now - lastRelease < 30) return;                   // a bounce, not a second tap (1.11.158: 30 ms, was 150 - the finger has been away for the 80 ms above, so it is up; the second tap of a quick double tap was dropped here)
         if (oursWentAt && now - oursWentAt < 400) return;     // our own page closed a moment ago
-        down = true; held = hit(x[0], y[0]); dragY0 = lastY = y[0]; dragged = false;
+        down = true; held = hit(x[0], y[0]); dragY0 = lastY = y[0]; dragged = false; ++touchPresses;
         // A tap on an open drop-down list picks that row; a tap anywhere else closes any open list.
         if (held >= 0 && page.comps[held].type == "combobox" && page.comps[held].open) {
             Comp &c = page.comps[held];
@@ -3144,6 +3152,7 @@ static void webBegin() {
              + ",\"slot\":" + std::to_string((unsigned) boardSlotBytes()) + ",\"build\":\"" + (BUILD_FULL ? "full" : "standard") + "\"";   // (1.11.111) which board this is (its flash chip), what the firmware was built for, the slot the next firmware goes in
         out += ",\"crash\":" + crashJson();                     // (1.11.15) the last crash's summary from the core dump in flash, if there is one
         out += ",\"drawbad\":" + std::to_string((unsigned long) drawDropped);   // (1.11.140) drawing commands dropped as two run into one (bytes lost on the wire); their text at /odd
+        out += ",\"touchgap\":{\"max\":" + std::to_string((unsigned long) touchGapMax) + ",\"over30\":" + std::to_string((unsigned long) touchGapOver30) + ",\"presses\":" + std::to_string((unsigned long) touchPresses) + "}";   // (1.11.158) the longest no-touch gap bridged inside a press (the chip's dropped samples): what the 80 ms lift filter must exceed
         { char q[340]; snprintf(q, sizeof(q), ",\"quiet\":{\"frames\":%lu,\"frame_us\":%lu,\"n\":%lu,\"late\":%lu,\"over\":%lu,\"wait_ms\":%lu,\"copy_us\":%lu,\"copy_max\":%lu,\"draw_us\":%lu,\"draw_max\":%lu,\"kept\":%lu,\"full\":%lu,\"warmed\":%lu,\"step_max\":%lu,\"stores\":%lu,\"store_max\":%lu}",
                                 (unsigned long) frameEnds, (unsigned long) frameUs, (unsigned long) quietN, (unsigned long) quietLateN, (unsigned long) quietOverN, (unsigned long) quietWaitMs,
                                 (unsigned long) quietCopyUs, (unsigned long) quietCopyMax, (unsigned long) quietDrawUs, (unsigned long) quietDrawMax,
