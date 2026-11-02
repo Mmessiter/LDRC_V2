@@ -192,7 +192,7 @@ static void stripRelease() {                             // (from the loop, once
     sfBusy = false; sfQn = sfQi = 0;
     for (int i = 0; i < STRIP_K; ++i) { free(stripBuf[i]); stripBuf[i] = nullptr; }
     free(stripNodes); stripNodes = nullptr; free(sfTxD); sfTxD = nullptr; free(sfRxD); sfRxD = nullptr;
-    stripStops++; stripWhy = "off (the update page)";
+    stripStops++; stripWhy = "off (stood down: the flash is being written, or a session wanted its stack)";   // (1.11.165: no longer the whole update page)
 }
 
 // From the loop, once the ring runs (ringOn): the strips made, the pair made, the slots pre-filled by the CPU, the panel's

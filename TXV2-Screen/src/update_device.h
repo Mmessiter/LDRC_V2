@@ -49,7 +49,9 @@ static bool updAsk(const std::string &url, int &len, std::string &err) {
     if (!updHttp) { updHttp = new HTTPClient(); updHttp->setReuse(true); updHttp->setUserAgent("LDRC-V1B-screen/" SCREEN_VERSION); }
     updHttp->setConnectTimeout(12000); updHttp->setTimeout(15000);
     if (!updHttp->begin(*updTls, url.c_str())) { err = "the address is not understood"; return false; }
+    const uint8_t phaseBefore = updPhase; updPhase = 1;     // (1.11.164) connecting: the handshake and the headers
     const int code = updHttp->GET();
+    updPhase = phaseBefore;
     if (code != 200) {
         char why[96] = ""; const int tls = updTls->lastError(why, sizeof why);
         if (code > 0) { char b[48]; snprintf(b, sizeof b, "messiter.com answered %d", code); err = b; }
@@ -85,7 +87,9 @@ template <class Sink> static bool updRead(int len, std::string &err, Sink sink) 
         if (updStop) { err = "cancelled"; break; }
         int n = s->available();
         if (n > 0) {
+            updPhase = 3;                                  // (1.11.164) reading the connection
             n = s->read(updBuf, min((size_t) n, min(UPD_SLICE, (size_t) ((uint32_t) len - got))));   // (1.11.161: a 4 kB slice, not 16 - a smaller bite out of the panel)
+            updPhase = 4;                                  // (1.11.164) writing the card (the sink)
             if (n > 0) { if (!sink(updBuf, (size_t) n)) { if (err.empty()) err = "the screen's card would not take it"; break; } got += n; idle = millis(); updProgress = got; psramPace((uint32_t) n); continue; }   // (1.11.161: the pace's rest after each slice, as every other mover)
         }
         if (!s->connected() && s->available() <= 0) { err = "the connection was lost"; break; }
@@ -131,6 +135,7 @@ static bool updReadBack(const std::string &path, uint32_t &size, uint32_t &crc) 
     File f = SD.open(path.c_str(), FILE_READ);
     if (!f || f.isDirectory()) { if (f) f.close(); return false; }
     size = 0; crc = 0; int n, turns = 0;
+    updPhase = 5;                                          // (1.11.164) reading the card back
     while ((n = (int) sdReadPaced(f, updBuf, UPD_BUF)) > 0) { crc = ldrc::crc32(updBuf, (size_t) n, crc); size += (uint32_t) n; if ((++turns & 7) == 0) vTaskDelay(1); if (updStop) break; }   // (1.11.161: paced off the card, as every other card read)
     f.close();
     return n == 0 && !updStop;
@@ -213,6 +218,7 @@ static bool updFlashOnce(std::string &why, uint32_t &size, uint32_t &crcOut) {
                 char b[110]; snprintf(b, sizeof b, "this firmware is built for a %lu MB flash and this screen's slot lies beyond it", (unsigned long) (built >> 20)); why = b; break;
             }
         }
+        updPhase = 6;                                      // (1.11.164) writing the flash
         crc = ldrc::crc32(updBuf, (size_t) n, crc);
         const uint32_t skip = done < 16 ? min<uint32_t>(16 - done, (uint32_t) n) : 0;     // the CRC of everything after the 16-byte header, which the core holds back until end()
         body = ldrc::crc32(updBuf + skip, (size_t) n - skip, body);
@@ -245,6 +251,8 @@ static bool updFlashOnce(std::string &why, uint32_t &size, uint32_t &crcOut) {
 }
 static void updFlash(ldrc::Work &w) {
     std::string why, first;
+    for (int i = 0; i < 50 && stripOn; ++i) vTaskDelay(pdMS_TO_TICKS(10));   // (1.11.165) the strips stand down first (flipTick), up to half a second: a flash write would stall their feeder
+
     for (int attempt = 1; attempt <= 2; ++attempt) {
         uint32_t size = 0, crc = 0;
         if (updFlashOnce(why, size, crc)) { w.size = size; w.crc = crc; w.ok = true; return; }
@@ -258,12 +266,26 @@ static void updFlash(ldrc::Work &w) {
 // a task kept waiting between jobs held it from the quiet look at power-up to the power-off. updStackLeast: the least
 // the stack had to spare, by the kind of job (text, file, check, flash), for /update/status "stack_free".
 static volatile uint32_t updStackLeast[4] = { 0, 0, 0, 0 };
-static void updTask(void *) {
+// (1.11.165) THE STRIPS THROUGH THE DOWNLOAD. The strips (the panel reading the chip's own RAM, src/strip_feed.h) stood
+// down for the whole update page since 1.11.134, when the secure connection wanted their RAM; that memory is the PSRAM's
+// since 1.11.146, and the stand-down left the download with the old twin flicker: Malcolm, 2 Nov 2026, "the text on it
+// still flickered a lot" while the hold watch saw no interrupt held and two frames lost in thirty seconds - the sideways
+// shifts that cost no frame, which only the strips cure. What kept the strips off was the memory for THIS task: every job
+// made a task with a 24 kB stack from the internal RAM, in one piece, and the strips' 19 kB could take that piece. So
+// while the update page is up the task is ONE, on a stack reserved when the page opens (updSessionBegin) and given back
+// when it has gone: the jobs come to it by notification, the stack is never asked for again, and the strips may run
+// (main.cpp flipTick: while the session holds its stack and 40 kB of internal RAM remain). They stand down only while
+// the flash is written (updFlashingNow: a flash write stops the PSRAM for their feeder too; the dark install covers that
+// phase). A session that cannot have its stack (no 24 kB piece even with the strips stopped) runs as before: a task a job.
+static StaticTask_t *updTcb = nullptr; static StackType_t *updStack = nullptr; static bool updSessionOn = false;
+static uint32_t updSessionEndMs = 0, updSessionTryMs = 0; static const uint32_t UPD_STACK = 24576;
+static void updRunJob() {
     ldrc::Work w;
     // The card's driver and the flash wait in loops that do not sleep: a long file, or the card counting its
     // free space for the first time, can keep this core's idle task from running for more than the five
     // seconds its watchdog allows - and the screen would restart in the middle of an update.
     disableCore0WDT();
+    updPhase = (uint8_t) (10 + updJob.kind);                // (1.11.164) the hold watch: which job runs (11 text, 12 file, 13 check, 14 flash)
     switch (updJob.kind) {
     case 1: updFetchText(w); break;
     case 2: updFetchFile(w); break;
@@ -282,10 +304,38 @@ static void updTask(void *) {
     enableCore0WDT();
     { const uint32_t spare = uxTaskGetStackHighWaterMark(nullptr); const int k = updJob.kind >= 1 && updJob.kind <= 4 ? updJob.kind - 1 : 0;
       if (!updStackLeast[k] || spare < updStackLeast[k]) updStackLeast[k] = spare; }
+    updPhase = 0;                                          // (1.11.164)
+    if (updJob.kind == 4) updFlashingNow = false;          // (1.11.165) the strips may come back (the screen restarts anyway when it went well)
     updWork = w;
+}
+static void updTask(void *) {                              // a job's own task (no session): as 1.11.150 had it
+    updRunJob();
     updTaskHandle = nullptr;                               // (the next job makes a task of its own; nobody asks this one anything again)
     updBusy = false;                                       // last: the result is complete before anyone may read it
     vTaskDelete(nullptr);                                  // and the stack goes back to the pool (core 0's idle task frees it)
+}
+static void updSessionTask(void *) {                       // (1.11.165) the session's task: a job at each notification, blocked between
+    for (;;) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        updRunJob();
+        updBusy = false;                                   // last: the result is complete before anyone may read it
+    }
+}
+static bool updSessionBegin() {                            // the stack reserved and the task made, once per update page
+    if (updSessionOn) return true;
+    if (updBusy) return false;                             // a job's own task is running (the quiet look's, say): its handle is in use - once it is done
+    if (!updStack) updStack = (StackType_t *) heap_caps_malloc(UPD_STACK, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!updTcb) updTcb = (StaticTask_t *) heap_caps_malloc(sizeof(StaticTask_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!updStack || !updTcb) return false;
+    updTaskHandle = xTaskCreateStaticPinnedToCore(updSessionTask, "update", UPD_STACK, nullptr, 1, updStack, updTcb, 0);
+    if (!updTaskHandle) return false;
+    updSessionOn = true; updSessionHeld = true;
+    return true;
+}
+static void updSessionEnd() {                              // the page has gone and no job runs: the task deleted, the stack given back a second later (updPoll)
+    if (!updSessionOn || updBusy) return;
+    if (updTaskHandle) vTaskDelete(updTaskHandle);
+    updTaskHandle = nullptr; updSessionOn = false; updSessionHeld = false; updSessionEndMs = millis();
 }
 static void updStart(int kind, const std::string &url, const std::string &local, uint32_t size, uint32_t crc, size_t maxBytes) {
     if (updBusy) return;
@@ -301,6 +351,8 @@ static void updStart(int kind, const std::string &url, const std::string &local,
     if (kind == 2 || kind == 4) updDarkWant = true;       // (1.11.160) a file fetched for an install, or the flash written: the dark install, until the panel has gone (updPoll)
     updWork = ldrc::Work(); updProgress = 0; updStop = false;
     updBusy = true;                                        // before the task exists: it reads the job, and clears this itself when done
+    if (kind == 4) updFlashingNow = true;                  // (1.11.165) the strips stand down for the flash (main.cpp flipTick); updFlash waits a moment for them
+    if (updSessionOn && updTaskHandle) { xTaskNotifyGive(updTaskHandle); return; }   // (1.11.165) the session's task takes the job: no new stack asked for
     if (xTaskCreatePinnedToCore(updTask, "update", 24576, nullptr, 1, &updTaskHandle, 0) != pdPASS) {
         updTaskHandle = nullptr; updBusy = false; updWork.error = "the screen is out of memory";   // (24 kB of internal RAM in one piece: the fresh start is for this)
         updWork.memory = true;                             // (1.11.162) said as a want of memory: the updater's fresh start follows (freshForMemory), not five tries that cannot differ - 1.11.161's five failed alike
@@ -586,6 +638,24 @@ static void updDrawPanel(const ldrc::UpdView &v) {
 }
 static bool updPanelUp() { return topOn && topWho == 1; }
 static bool updShowing() { return updater.showing(); }
+// (1.11.163) THE SECURE CONNECTION AS A PROBE (/stall?kind=tls, the bench): one connection to messiter.com and a HEAD of
+// latest.txt, on the loop's task, its microseconds returned; /stall says what the panel's DMA saw meanwhile (slips, huge).
+// Measured because the update page lost whole frames while the files came down and before (2 Nov 2026), with no flash
+// written: the handshake's hardware (AES, SHA, the big numbers) and the records' decryption are what is left to suspect.
+static uint32_t updTlsProbe(bool &ok) {
+    ok = false;
+    if (!updHost.wifiUp()) return 0;
+    WiFiClientSecure c; c.setCACert(LDRC_CA_BUNDLE); c.setHandshakeTimeout(20);
+    const uint32_t t0 = micros();
+    if (c.connect("messiter.com", 443)) {
+        c.print("HEAD /txv1b/release/latest.txt HTTP/1.0\r\nHost: messiter.com\r\nConnection: close\r\n\r\n");
+        const uint32_t waitFrom = millis(); int got = 0;
+        while (millis() - waitFrom < 8000 && (c.connected() || c.available())) { while (c.available()) { c.read(); ++got; } if (got && !c.connected()) break; delay(2); }
+        ok = got > 0;
+    }
+    c.stop();
+    return micros() - t0;
+}
 static bool updChanging() { return updater.working(); }
 static bool updHoldsLight() { const ldrc::UpdView::Kind k = updater.view().kind; return k == ldrc::UpdView::BUSY || k == ldrc::UpdView::WORKING; }
 static bool updHasLink() { return updater.ownsLink() || updater.showing(); }
@@ -657,6 +727,18 @@ static void updPoll() {
     // updating, there's a huge amount of flickering"). A shifted black frame is not seen; only the words wobble. The page's
     // canvas is never touched (copyRowsCpu reads a black row in its place; the flip is refused meanwhile): the page comes
     // back whole when the panel goes.
+    // (1.11.165) The session: its task and stack from the moment the page is up (with the strips stopped for a moment if the
+    // 24 kB piece is not there with them running; given up after 3 s of trying - the jobs then make their own tasks, as before),
+    // ended once the page has gone and no job runs; the stack given back a second later, when the deleted task is cleaned up.
+    {
+        const bool pageUp = updater.showing();
+        if (pageUp && !updSessionOn && !updBusy) {         // (not while a job's own task runs: its handle is in use)
+            if (!updSessionTryMs) updSessionTryMs = millis();
+            if (!updSessionBegin() && millis() - updSessionTryMs < 3000 && stripOn && !stripStopWanted) stripStopWanted = true;
+        }
+        if (!pageUp) { updSessionTryMs = 0; if (updSessionOn && !updBusy) updSessionEnd(); }
+        if (!updSessionOn && updSessionEndMs && millis() - updSessionEndMs > 1000) { if (updStack) { free(updStack); updStack = nullptr; } if (updTcb) { free(updTcb); updTcb = nullptr; } updSessionEndMs = 0; }
+    }
     {
         const bool wantDark = updDarkWant && updater.showing();
         if (wantDark != darkPage) {

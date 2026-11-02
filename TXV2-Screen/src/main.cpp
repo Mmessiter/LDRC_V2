@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.162"
+#define SCREEN_VERSION "1.11.165"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -60,6 +60,7 @@ class PacedCanvas;                                            // (src/psram_pace
 PacedCanvas *canvas = nullptr;                                // every draw lands here (PSRAM); present() copies finished rectangles to the panel
 Arduino_GFX *gfx = nullptr;                                   // the screen at first, switched to the canvas at boot
 #include "psram_pace.h"                                // (1.11.116: the twin's big moves through the PSRAM, paced; the canvases' big fills)
+#include "hold_watch.h"                                // (1.11.164) who holds this core's interrupts, and for how long: /status "holds"
 // (1.11.120) A big read off the card into the PSRAM goes in slabs of 4 kB with the pace's rests between. The whole file in
 // one read - a 768 kB background, a page's 30 kB of JSON, a 40 kB clip - was one unpaced burst of PSRAM writes (the card
 // driver copies it in through a bounce buffer): a slip of the twin's picture at the first visit to each page and each
@@ -118,6 +119,7 @@ static bool benchNoWb = false;                                // (bench) copyRow
 static PacedCanvas *topCanvas = nullptr; static uint16_t *topFb = nullptr;
 static bool topOn = false;
 static bool darkPage = false; static volatile bool updDarkWant = false; static uint16_t darkRow[W];   // (1.11.160) THE DARK INSTALL: the page around the update panel shown black (copyRowsCpu reads this row in the canvas's place; update_device.h updPoll)
+static volatile bool updFlashingNow = false, updSessionHeld = false;   // (1.11.165) the flash is being written (the strips stand down for it alone); the update session holds its task's stack (the strips may run with the page up)
 static int topWho = 0;                                        // whose it is: 1 the update panel (src/update_device.h), 2 the WiFi page (src/wifi_device.h), 3 the link's panel, 4 the picture chooser (src/pics_device.h), 5 the flight screen, 6 its setup page (src/flight_device.h)
 static int topX = 40, topY = 36, topW = 720, topH = 408;      // the part of the screen it covers
 // (1.11.94) A second stretch of the layer, on the same rows as the first: the help page's "Fix problems" button, top right,
@@ -190,6 +192,21 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // task with a 24 kB stack from that RAM, in one piece; the lists' parse between two jobs cuts the pool up, and with 16 kB
 // less of it the third job's task could not be made. The buffer is in the PSRAM again (the slices and the pacing stay),
 // and a task that cannot be made is now a want of memory for the updater: a fresh start and on, not five tries alike.
+// (1.11.163) TWO PROBES FOR THE UPDATE PAGE'S LOST FRAMES. Measured on the green transmitter's re-install (2 Nov 2026,
+// evening): 33 whole frames lost in two minutes of preparation and fetching, about one a second in bursts, the touch poll
+// stalled 47 ms in the same run (its interrupt timing out) - interrupts on this core held off for a frame at a time, with
+// no flash written (the pack writes only at start-up, the WiFi driver keeps nothing in flash, the updater's flash is the
+// install's last step). /stall?kind=sdwrite&kb=N (the card written as the download writes it) and kind=tls (one secure
+// HEAD) say what the two remaining suspects cost the panel.
+// (1.11.164) THE HOLD WATCH (src/hold_watch.h): a 1 ms timer interrupt on this core records every gap over 4 ms, with the
+// loop's busy tag and the updater's phase - /status "holds". It said: in a real install the download held nothing and
+// lost two frames in thirty seconds; the flash phase made 505 holds in seven seconds (the sector erases), under the dark
+// install. Yet the words jumped through the download - the sideways shift that costs no frame.
+// (1.11.165) THE STRIPS THROUGH THE DOWNLOAD. The strips stood down for the whole update page (1.11.134, for the secure
+// connection's memory - the PSRAM's since 1.11.146): that was the download's flicker. Now the updater's jobs run on ONE
+// task for the whole page, its 24 kB stack reserved when the page opens (update_device.h updSessionBegin), so the
+// strips' 19 kB can no longer take the piece that task needs, and the strips run with the page up (40 kB of internal RAM
+// remaining) - in a fresh-start run too. They stand down only while the flash is written (updFlashingNow).
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -210,6 +227,7 @@ static std::string partsJson() {                       // the /perf block; the w
 #include "dma_copy.h"                                  // (26 Oct 2026, bench: a GDMA memory-to-memory copy into the panel's buffers - no cache write-backs; /stall m2m, m2mrows, lcdpri)
 #include "strip_feed.h"                                // (26 Oct 2026, evening: the panel reads internal RAM, fed by a DMA copy from the PSRAM picture; pref "strips", /status "strips")
 static bool updShowing();                              // (update_device.h, included later: the strips stand down while the update page is up)
+static uint32_t updTlsProbe(bool &ok);                 // (1.11.163, update_device.h) /stall?kind=tls: one secure HEAD, its microseconds
 #include "layer_rows.h"                                // (1.11.94: the panel's rows with our layer over one or two stretches, host-tested: hmi/test_film)
 static bool IRAM_ATTR onFrameEnd(esp_lcd_panel_handle_t, esp_lcd_rgb_panel_event_data_t *, void *) { dmaFrameTick(); dmaSpin(); ringFrameEnd(); quietFrameEnd(); flipFrameEnd(); return false; }
 static void hookFrameEnd() {
@@ -400,7 +418,7 @@ static bool spareSkip(int x, int y, int w, int h) {   // (26 Oct) with the eager
 static void flipTick() {
     Busy busy_(BUSY_FLIP);
     ringTick();                                        // (25 Oct) the engine started again should the frames stop
-    if (stripOn && updShowing() && !stripStopWanted) stripStopWanted = true;   // (26 Oct, late) the update page: the strips stand down (their 19 kB of internal RAM to the secure connection)
+    if (stripOn && updFlashingNow && !stripStopWanted) stripStopWanted = true;   // (26 Oct, late: the whole update page; 1.11.165: the flash phase alone - a flash write stalls the feeder, and the dark install covers it)
     stripRelease();
     // (1.11.159) The updater's fresh start ran without the strips for the whole run: after a main-board install the screen
     // carries on in that run, so the strips were off until the next power cycle - every picture the CPU drew shared the
@@ -408,8 +426,11 @@ static void flipTick() {
     // flickers quite a lot with each new image"). Once the update page has been gone for 5 s, and this start is half a
     // minute old, they are wanted again; the line below starts them as it does after any update page.
     if (updShowing()) updSeenMs = millis();
-    if (stripSkipRun && !updShowing() && millis() > 30000 && millis() - updSeenMs > 5000) { stripSkipRun = false; stripWant = 1; stripWhy = "on (after the update)"; }
-    if (stripWant && ringOn && !stripOn && !stripArm && !stripStopWanted && !updShowing()) stripBegin();   // (26 Oct evening) the strips, once the ring runs (the pref "strips"), and back after the update page
+    if (stripSkipRun && (updSessionHeld || (!updShowing() && millis() > 30000 && millis() - updSeenMs > 5000))) { stripSkipRun = false; stripWant = 1; stripWhy = updSessionHeld ? "on (with the update)" : "on (after the update)"; }   // (1.11.165: with the page up too, once its session holds the task's stack)
+    // (1.11.165) With the update page up the strips run while its session holds the task's stack and 40 kB of internal RAM
+    // remain for the rest (the WiFi's pieces, the card, the secure client's own objects); not while the flash is written.
+    const bool pageAllows = !updShowing() || (updSessionHeld && heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) >= 40000);
+    if (stripWant && ringOn && !stripOn && !stripArm && !stripStopWanted && !updFlashingNow && pageAllows) stripBegin();   // (26 Oct evening) the strips, once the ring runs (the pref "strips"), and back after the update page
     if (!flipOk) return;
     if (flipComposing) {                               // (the first test held the loop 59 ms for it: taps were missed) a few rows a pass
         const uint32_t t0 = micros();
@@ -596,7 +617,7 @@ static void eraseLine(int x1, int y1, int x2, int y2) {
 }
 TouchDrvGT911 touch;
 SPIClass sdSPI(HSPI);
-bool touchOk = false, sdOk = false;
+bool touchOk = false, sdOk = false; static uint32_t sdMhz = 0;   // (1.11.165) the SPI clock the card answered at, MHz (0: none)
 
 // ------------------------------------------------------------------ fonts: the HMI's own .zi glyphs
 // (hmi/fonts/decode_zi.py → nextion_fonts.h). 1-bpp rows, MSB = leftmost pixel;
@@ -3180,6 +3201,8 @@ static void webBegin() {
         out += ",\"crash\":" + crashJson();                     // (1.11.15) the last crash's summary from the core dump in flash, if there is one
         out += ",\"drawbad\":" + std::to_string((unsigned long) drawDropped);   // (1.11.140) drawing commands dropped as two run into one (bytes lost on the wire); their text at /odd
         out += ",\"touchgap\":{\"max\":" + std::to_string((unsigned long) touchGapMax) + ",\"over30\":" + std::to_string((unsigned long) touchGapOver30) + ",\"presses\":" + std::to_string((unsigned long) touchPresses) + "}";   // (1.11.158) the longest no-touch gap bridged inside a press (the chip's dropped samples): what the 80 ms lift filter must exceed
+        out += "," + holdJson();                               // (1.11.164) the hold watch: interrupts held on this core, by whom, during what
+        out += ",\"sd_mhz\":" + std::to_string((unsigned long) sdMhz);   // (1.11.165) the SPI clock the card answered at (0: no card)
         { char q[340]; snprintf(q, sizeof(q), ",\"quiet\":{\"frames\":%lu,\"frame_us\":%lu,\"n\":%lu,\"late\":%lu,\"over\":%lu,\"wait_ms\":%lu,\"copy_us\":%lu,\"copy_max\":%lu,\"draw_us\":%lu,\"draw_max\":%lu,\"kept\":%lu,\"full\":%lu,\"warmed\":%lu,\"step_max\":%lu,\"stores\":%lu,\"store_max\":%lu}",
                                 (unsigned long) frameEnds, (unsigned long) frameUs, (unsigned long) quietN, (unsigned long) quietLateN, (unsigned long) quietOverN, (unsigned long) quietWaitMs,
                                 (unsigned long) quietCopyUs, (unsigned long) quietCopyMax, (unsigned long) quietDrawUs, (unsigned long) quietDrawMax,
@@ -3298,6 +3321,12 @@ static void webBegin() {
         else if (kind == "yield") { if (kb >= 0 && kb <= 1000) slideYieldUs = (uint32_t) kb; us = slideYieldUs; }         // (31 Oct, bench) a row waits up to N us for the feeder's fill in flight
         else if (kind == "wbspiece") { if (kb >= 256) wbStripPiece = (uint32_t) kb; us = wbStripPiece; }                 // (31 Oct, bench) with the strips on: a write-back's piece, bytes (psram_pace.h)
         else if (kind == "wbsgap") { if (kb >= 0 && kb <= 1000) wbStripGapUs = (uint32_t) kb; us = wbStripGapUs; }       // (31 Oct, bench) ... and the breath after each piece, us
+        else if (kind == "sdwrite") {   // (1.11.163) kb written to a scratch file on the card from an internal 4 kB buffer, as the download writes: the card's part in the update page's lost frames
+            uint8_t *m = (uint8_t *) heap_caps_malloc(4096, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); File f = sdOk ? SD.open("/stall.tmp", FILE_WRITE) : File();
+            if (!m || !f) ok = false; else { memset(m, 0x5A, 4096); const uint32_t t0 = micros(); for (int i = 0; i < kb / 4 && ok; ++i) ok = f.write(m, 4096) == 4096; us = micros() - t0; }
+            if (f) f.close(); if (m) free(m); if (sdOk) SD.remove("/stall.tmp");
+        }
+        else if (kind == "tls") { us = updTlsProbe(ok); }   // (1.11.163) one secure HEAD of latest.txt from messiter.com on this task: the secure connection's part (update_device.h)
         else ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra);   // (26 Oct) m2m, m2mp, m2mrows, wbnop, lcdpri, dcstat - or an unknown kind (src/dma_copy.h)
         char b[460]; snprintf(b, sizeof b, "{\"kind\":\"%s\",\"kb\":%d,\"us\":%lu,\"ok\":%d,\"slips\":%lu,\"huge\":%lu,\"pos\":%lu,\"fr\":%lu,\"dmax\":%ld%s}", kind.c_str(), kb, (unsigned long) us, ok ? 1 : 0,
                  (unsigned long) (dmaSlipsAll - slips0), (unsigned long) (dmaHugeAll - huge0), (unsigned long) dmaProbePos, (unsigned long) dmaProbeFr, (long) dmaProbeMax, extra);
@@ -4040,8 +4069,11 @@ void setup() {
     sdSPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
     blog("boot", std::string("screen up ") + SCREEN_MARK + " " + BUILD_MARK + " on " + boardWords());   // (1.11.111: which board, and which build)
     ldrc::crc32((const uint8_t *) "", 0);                  // (its table is made now, by one task, not later by two at once)
-    sdOk = SD.begin(SD_CS, sdSPI, 40000000) || SD.begin(SD_CS, sdSPI, 20000000);
-    blog("boot", sdOk ? "sd ok" : "sd FAILED");
+    // (1.11.165) Four speeds, not two: a builder's board or card may want a slower clock than ours do (Christoph, 2 Nov 2026:
+    // "sd=0" with three FAT32 cards on a fresh CrowPanel). The speed that worked goes in the boot log; /status "sd_mhz".
+    { static const uint32_t speeds[4] = { 40000000, 20000000, 10000000, 4000000 }; sdMhz = 0;
+      for (int i = 0; i < 4 && !sdOk; ++i) if (SD.begin(SD_CS, sdSPI, speeds[i])) { sdOk = true; sdMhz = speeds[i] / 1000000; } }
+    blog("boot", sdOk ? "sd ok at " + std::to_string((unsigned long) sdMhz) + " MHz" : "sd FAILED at 40, 20, 10 and 4 MHz (no card answering on CS 10 / CLK 12 / MOSI 11 / MISO 13, or no FAT32 on it)");
     updMend();                                             // a file that was being replaced when the power went is put back, before anything is read
     packMount();                                           // (1.11.138, flash_pack.h) the pack: pages, fonts and sounds in the chip's own flash, on the 16 MB boards
     if (assetsOk()) loadAaFonts();
@@ -4087,6 +4119,7 @@ void setup() {
     // the word "FrontView" is one of its legacy text commands. (1.11.34: whatever page it was: a page put back from
     // the card alone has none of the words the Teensy wrote on it, and the Teensy would never write them again.)
     if (why == ESP_RST_SW && !pageNames.empty()) { delay(300); Serial.print("FrontView"); }
+    holdWatchBegin();                                      // (1.11.164) the hold watch, on this core, from here on
     bootMs = millis(); blog("boot", std::string("loop ") + (warm ? "(warm)" : "(cold)"));
     netBegin();
     updater.resume();                                      // a verdict nobody has seen, an update cut short, or new firmware on trial
