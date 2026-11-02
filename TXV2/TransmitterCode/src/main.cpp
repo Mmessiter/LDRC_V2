@@ -2727,6 +2727,14 @@ void ZeroGapStats()
     GapCount = 0;
     GapStart = 0;
     ThisGap = 0;
+    GapShortest = 1000; // B168: the Gaps page's columns, its shortest and its "Not counted" line go with the rest (they stayed behind: full columns under an average of 0)
+    GapsNotCountedSafety = 0;
+    GapsNotCountedSaving = 0;
+    for (int i = 0; i < 11; ++i)
+    {
+        GapSets[i] = 0;
+        GapPercentages[i] = 0;
+    }
 }
 void ZeroDataScreen()
 { // ZERO Those parameters that are zeroable

@@ -130,6 +130,7 @@ t25.txt="< 1%"
 n13.val=123456
 n12.val=12
 n11.val=1
+t26.txt="Not counted: 3764 (safety on), 12 (receiver saving)"
 @shot 38_long
 # ---- the same page in a light theme and in another dark one (the page's own words after a screen-only restart: --bare)
 @theme white

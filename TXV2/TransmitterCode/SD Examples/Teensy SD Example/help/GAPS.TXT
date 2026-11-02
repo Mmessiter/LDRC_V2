@@ -28,6 +28,10 @@ NOT COUNTED:|
 model that has an arming channel;|
 - gaps while a V2 receiver is saving flight data.|
 The log still notes these two (with 'Keep log files' on).|
+How many were left out is written above the bottom row, as|
+'Not counted: 3764 (safety on)'. So an empty page on the|
+ground, with the safety on, is no surprise: the link is being|
+measured, but those gaps are not flight gaps.|
 Gaps while the 'PID (Rotorflight)' page is open are|
 neither counted nor logged.||
 'Clear', on the Telemetry page, sets the counts back to zero.|

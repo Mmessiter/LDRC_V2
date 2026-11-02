@@ -902,6 +902,26 @@ void PopulateGapsView()
         SendCommand(NextionCommand);
 
     ClearNextionCommand();
+    // B168 (Malcolm, 2 Nov 2026, on the bench: 3764 lost packets and "zero gaps! This seems very unlikely"): the gaps the
+    // statistics leave out - begun with the safety on (his rule of 26 Sep 2026), or while the V2 receiver was saving flight
+    // data - are counted and said on the page, above the bottom row, so an empty page on the ground explains itself.
+    // (t26 keeps its words across page loads, like the columns.)
+    static uint32_t PrevNotSafety = 0xFFFFFFFF, PrevNotSaving = 0xFFFFFFFF;
+    if (FirstCall || GapsNotCountedSafety != PrevNotSafety || GapsNotCountedSaving != PrevNotSaving)
+    {
+        char line[80];
+        if (!GapsNotCountedSafety && !GapsNotCountedSaving)
+            strcpy(line, " ");
+        else if (GapsNotCountedSafety && GapsNotCountedSaving)
+            snprintf(line, sizeof(line), "Not counted: %lu (safety on), %lu (receiver saving)", (unsigned long)GapsNotCountedSafety, (unsigned long)GapsNotCountedSaving);
+        else if (GapsNotCountedSafety)
+            snprintf(line, sizeof(line), "Not counted: %lu (safety on)", (unsigned long)GapsNotCountedSafety);
+        else
+            snprintf(line, sizeof(line), "Not counted: %lu (receiver saving)", (unsigned long)GapsNotCountedSaving);
+        SendText((char *)"t26", line);
+        PrevNotSafety = GapsNotCountedSafety;
+        PrevNotSaving = GapsNotCountedSaving;
+    }
     FirstCall = false;
     SimplePing();
 }

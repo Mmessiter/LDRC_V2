@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B167 01/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B168 02/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -2068,6 +2068,8 @@ uint32_t GapStart = 0;
 uint32_t ThisGap = 0;
 uint32_t GapAverage = 0;
 uint32_t GapCount = 0;
+uint32_t GapsNotCountedSafety = 0; // B168: gaps left out of the statistics because they began with the safety on (a Rotorflight model with an arming channel): said on the Gaps page
+uint32_t GapsNotCountedSaving = 0; // B168: ... because the V2 receiver was saving flight data
 
 uint32_t GapSets[11] = {0};
 uint8_t GapPercentages[11] = {0};

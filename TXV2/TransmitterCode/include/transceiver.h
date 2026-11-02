@@ -152,6 +152,7 @@ FASTRUN void ProcessRecentCommsGap() // When we know there is time, process a re
             snprintf(Excused, sizeof(Excused), "(%lu ms gap excluded - RX saving flight data)", (unsigned long)ThisGap);
             LogText(Excused, strlen(Excused), true);
         }
+        ++GapsNotCountedSaving; // B168: the Gaps page says how many were left out, and why
         ThisGap = 0;
         return;
     }
@@ -165,6 +166,7 @@ FASTRUN void ProcessRecentCommsGap() // When we know there is time, process a re
             snprintf(Excused, sizeof(Excused), "(%lu ms gap excluded - model disarmed)", (unsigned long)ThisGap);
             LogText(Excused, strlen(Excused), true);
         }
+        ++GapsNotCountedSafety; // B168 (Malcolm, 2 Nov 2026, on the bench: 3764 lost packets and "zero gaps! This seems very unlikely")
         GapStartedDisarmed = false;
         ThisGap = 0;
         return;

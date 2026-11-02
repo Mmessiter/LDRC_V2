@@ -136,6 +136,10 @@ def gaps(pg):
         # when the Teensy does not hide it again; the colour stays in the bars.)
         put(pg, f'n{k}', x=x, y=330, w=65, h=26, c={'bco': PANEL, 'pco': WHITE})       # ("12345": 60 px)
         put(pg, f't{k + 1}', x=x, y=360, w=65, h=30, c={'bco': PANEL, 'pco': WHITE}, txt=LENGTHS[k])
+    # B168 (2 Nov 2026): the gaps the statistics leave out (begun with the safety on, or while the receiver was saving flight
+    # data) are counted by the Teensy and said here, above the bottom row - "Not counted: 3764 (safety on)" - so an empty page
+    # on the ground explains itself. Global scope like the columns: the words stay across page loads.
+    add_text(pg, 't26', after='t25', x=15, y=392, w=770, h=30, g='g', c={'bco': PANEL, 'pco': WHITE}, txt=' ', a={'xcen': 0, 'txt_maxl': 60})
     # The bottom row on the page's slots: Shortest / Average / Longest, each a label and its figure, then OK.
     for k, (lab, val, txt) in enumerate((('t12', 'n11', 'Shortest'), ('t14', 'n12', 'Average'), ('t16', 'n13', 'Longest'))):
         x = 14 + 197 * k

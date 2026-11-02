@@ -656,6 +656,15 @@ def source_checks():
     c = mc.find('DelayWithDog(1700);')
     d = mc.find('PlaySound(CONNECTEDMSG);\n        }')
     chk(0 < a < b < c < d and 'PlaySound(Connect_MMmsg)' not in mc, 'B167 GreenLedOn raises LedWasGreen first, takes the model message once, says it, waits for it, then says Connected')
+    # B168 (2 Nov 2026): the gaps the statistics leave out (safety on / receiver saving) are counted and said on the Gaps page;
+    # ZeroGapStats clears the columns, the shortest and that line with the rest
+    tl = src('include/Telemetry.h')
+    chk('++GapsNotCountedSafety;' in tr and '++GapsNotCountedSaving;' in tr, 'B168 the two kinds of excluded gap are counted')
+    chk('SendText((char *)"t26", line);' in tl and 'Not counted: %lu (safety on), %lu (receiver saving)' in tl and 'strcpy(line, " ");' in tl, 'B168 the Gaps page says how many were not counted, and why; nothing when none')
+    chk('    GapsNotCountedSafety = 0;\n    GapsNotCountedSaving = 0;\n    for (int i = 0; i < 11; ++i)\n    {\n        GapSets[i] = 0;\n        GapPercentages[i] = 0;\n    }\n}' in mc and 'GapShortest = 1000; // B168' in mc, 'B168 ZeroGapStats clears the columns, the shortest and the not-counted line with the rest')
+    if os.path.isdir(scr):
+        p38 = open(os.path.join(scr, 'sd', 'hmi', 'pages', '38.json')).read()
+        chk('"n":"t26"' in p38 and '"g":"g"' in p38.split('"n":"t26"')[1][:200], 'B168 the Gaps page has its "Not counted" line, kept across page loads')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 
