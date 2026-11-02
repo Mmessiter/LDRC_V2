@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.159"
+#define SCREEN_VERSION "1.11.160"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -117,6 +117,7 @@ static bool benchNoWb = false;                                // (bench) copyRow
 // or damage it. When the panel goes, the page is there as the Teensy last drew it.
 static PacedCanvas *topCanvas = nullptr; static uint16_t *topFb = nullptr;
 static bool topOn = false;
+static bool darkPage = false; static volatile bool updDarkWant = false; static uint16_t darkRow[W];   // (1.11.160) THE DARK INSTALL: the page around the update panel shown black (copyRowsCpu reads this row in the canvas's place; update_device.h updPoll)
 static int topWho = 0;                                        // whose it is: 1 the update panel (src/update_device.h), 2 the WiFi page (src/wifi_device.h), 3 the link's panel, 4 the picture chooser (src/pics_device.h), 5 the flight screen, 6 its setup page (src/flight_device.h)
 static int topX = 40, topY = 36, topW = 720, topH = 408;      // the part of the screen it covers
 // (1.11.94) A second stretch of the layer, on the same rows as the first: the help page's "Fix problems" button, top right,
@@ -174,6 +175,11 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // without the strips, and after a main-board install the screen carries on in that same run: the strips stayed off until
 // the next power cycle, and the twin's old flicker was back for every picture the CPU drew - the Models page's model
 // pictures above all (Malcolm, 2 Nov 2026, right after B173). Now they come back once the update page has been gone 5 s.
+// (1.11.160) THE DARK INSTALL. Writing new firmware stops the PSRAM for everyone, the panel's DMA included, for every
+// sector (some hundreds a screen update), and the strips stand down for the update page: the frame on show shifts sideways
+// at each stop - "while updating, there's a huge amount of flickering" (Malcolm, 2 Nov 2026). What cannot be stopped can be
+// hidden: while an install is under way the page around the panel is shown black and the panel black with white words. A
+// shifted black frame is not seen. The page's canvas is untouched (darkPage, darkRow: copyRowsCpu; update_device.h updPoll).
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -247,8 +253,8 @@ static void copyRowsCpu(uint16_t *dst, int x, int y, int w, int h, bool over) {
         const int row = y + yy;
         if (over && row >= topY && row < topY + topH) {                     // page | panel | page: no pixel under the panel is ever shown, not even for a frame
             const bool twin = topTwin();                                     // (1.11.94: page | button | title | button | page)
-            ldrclayer::composeRow(dst + row * W, pageFb + row * W, topFb + row * W, x, w, topX, topX + topW, twin ? top2X : 0, twin ? top2X + top2W : 0);
-        } else memcpy(dst + row * W + x, pageFb + row * W + x, w * 2);
+            ldrclayer::composeRow(dst + row * W, darkPage ? darkRow : pageFb + row * W, topFb + row * W, x, w, topX, topX + topW, twin ? top2X : 0, twin ? top2X + top2W : 0);   // (1.11.160: black around the panel while an install runs)
+        } else memcpy(dst + row * W + x, (darkPage ? darkRow : pageFb + row * W) + x, w * 2);
         if (((yy & 7) == 7 || yy == h - 1) && !benchNoWb) {
             const int first = row - (yy & 7);
             wbPaced((uint32_t) (dst + first * W + x), (uint32_t) (((row - first) * W + w) * 2));   // (25 Oct: gently - src/psram_pace.h)
@@ -266,7 +272,7 @@ static void canvasWriteBack(int x, int y, int w, int h) {   // the canvas's rows
 static void copyRows(uint16_t *dst, int x, int y, int w, int h, bool over, bool wbDone = false) {   // wbDone: present() wrote the canvas back already, once for both buffers
     Busy busy_(BUSY_COPY);
     canvasEnsureRows(y, h);                                // (1.11.116: a band not yet caught up holds the page before)
-    if (!dmaReady() || benchNoWb) { copyRowsCpu(dst, x, y, w, h, over); return; }
+    if (!dmaReady() || benchNoWb || darkPage) { copyRowsCpu(dst, x, y, w, h, over); return; }   // (1.11.160: the DMA would copy the page; dark takes the black row)
     const int x0 = x & ~31, x1 = min((int) W, (x + w + 31) & ~31);
     for (int yy = 0; yy < h; ) {
         const bool composed = over && y + yy >= topY && y + yy < topY + topH;
@@ -534,7 +540,7 @@ static void presentDirty(bool force = false) {
         const Rect16 r = dirtyList[i];
         const uint32_t copyUs = (uint32_t) ((uint64_t) r.w * r.h * copyUsPerKpx / 1000) + 30;
         if (flipComposing || flipPending) { dirtyList[kept++] = r; continue; }   // (1.11.116) begun in this pass: the rest follow the flip
-        if (flipOk && !presentNoFlip && (long) r.w * r.h >= 100000 && flipBigChange(r)) continue;   // (1.11.115) the twin: composed unseen, then flipped to (not a film's frames: presentNoFlip)
+        if (flipOk && !presentNoFlip && !darkPage && (long) r.w * r.h >= 100000 && flipBigChange(r)) continue;   // (1.11.115) the twin: composed unseen, then flipped to (not a film's frames: presentNoFlip; 1.11.160: nor while the dark install shows - a flip would leave the canvas stale, to be caught up from black)
         if (!force && now - firstDirtyMs < 60 && !beamClear(r.y, r.h, micros(), copyUs)) { dirtyList[kept++] = r; continue; }
         present(r.x, r.y, r.w, r.h); px += (uint32_t) r.w * r.h;
     }

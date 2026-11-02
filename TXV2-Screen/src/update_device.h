@@ -291,6 +291,7 @@ static void updStart(int kind, const std::string &url, const std::string &local,
     if (!updBuf) updBuf = (uint8_t *) psMallocRoom(UPD_BUF);
     if (!updBuf) { updWork = ldrc::Work(); updWork.error = "the screen is out of memory"; return; }
     updJob.kind = kind; updJob.url = url; updJob.local = local; updJob.size = size; updJob.crc = crc; updJob.maxBytes = maxBytes;
+    if (kind == 2 || kind == 4) updDarkWant = true;       // (1.11.160) a file fetched for an install, or the flash written: the dark install, until the panel has gone (updPoll)
     updWork = ldrc::Work(); updProgress = 0; updStop = false;
     updBusy = true;                                        // before the task exists: it reads the job, and clears this itself when done
     if (xTaskCreatePinnedToCore(updTask, "update", 24576, nullptr, 1, &updTaskHandle, 0) != pdPASS) {
@@ -465,11 +466,11 @@ static void updDrawBar(const ldrc::UpdView &v) {
 }
 static void updDrawPanel(const ldrc::UpdView &v) {
     using ldrc::UpdView;
-    const bool mine = v.kind != UpdView::GOOD && v.kind != UpdView::BAD;                          // (the pilot's colours, unless it is good or bad news)
+    const bool mine = !darkPage && v.kind != UpdView::GOOD && v.kind != UpdView::BAD;             // (the pilot's colours, unless it is good or bad news - or the dark install: white on black)
     // (the warning and the new versions in the theme's accent: yellow, or on a light theme its text colour - yellow does not read on white)
     const uint16_t ink = mine ? OUR_INK : 0xFFFF, soft = mine ? OUR_SOFT : 0xC618, warn = mine ? theme.accent() : 0xFFE0;
-    updBack = v.kind == UpdView::GOOD ? 0x0320 : v.kind == UpdView::BAD ? 0x8000 : OUR_PANEL;   // solid: dark green, dark red, the panels' colour
-    const uint16_t head = v.kind == UpdView::GOOD ? 0x0220 : v.kind == UpdView::BAD ? 0x5800 : OUR_STRIP;
+    updBack = v.kind == UpdView::GOOD ? 0x0320 : v.kind == UpdView::BAD ? 0x8000 : darkPage ? 0x0000 : OUR_PANEL;   // solid: dark green, dark red, black for the dark install (1.11.160), the panels' colour
+    const uint16_t head = v.kind == UpdView::GOOD ? 0x0220 : v.kind == UpdView::BAD ? 0x5800 : darkPage ? 0x0000 : OUR_STRIP;
     const int x = UPD_X, y = UPD_Y, w = UPD_W, h = UPD_H;
     const int head_h = 58;                                       // (the strip of every page)
     gfx->fillRect(x, y, w, h, updBack);
@@ -640,6 +641,22 @@ static void updPoll() {
         if (o == 1 || o == 2 || o == 4) quietDone = true;   // (1.11.146) 4: short of memory for the secure connection - not again this power-up (the twin thrashed twenty times before)
         std::string n;
         if (updater.news(n)) { banner(n.c_str(), 20000); audioStart(17, false); }
+    }
+    // (1.11.160) THE DARK INSTALL. While an install is under way (a file fetched, the flash written) and until the panel has
+    // gone, the page around the panel is shown black, and the panel itself black with white words (updDrawPanel). The flash's
+    // writes stop the PSRAM for everyone - the panel's own DMA included - some hundreds of times an install, and the strips
+    // stand down for the update page: each stop shifts the frame on show sideways for a moment (Malcolm, 2 Nov 2026: "while
+    // updating, there's a huge amount of flickering"). A shifted black frame is not seen; only the words wobble. The page's
+    // canvas is never touched (copyRowsCpu reads a black row in its place; the flip is refused meanwhile): the page comes
+    // back whole when the panel goes.
+    {
+        const bool wantDark = updDarkWant && updater.showing();
+        if (wantDark != darkPage) {
+            if (wantDark) canvasEnsureRows(0, H);          // every band of the canvas caught up before the glass goes black: nothing is caught up from black later
+            darkPage = wantDark; updRedraw = true;
+            dirty(0, 0, W, H); touchPainted = true;
+        }
+        if (!updater.showing()) updDarkWant = false;
     }
     const ldrc::UpdView &v = updater.view();
     const bool up = v.kind != ldrc::UpdView::NONE && topReady();
