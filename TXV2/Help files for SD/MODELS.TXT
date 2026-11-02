@@ -8,6 +8,8 @@ MODELS LOADED (LEFT):|
 The 90 model memories. Each name ends with its number:|
 in round brackets, like (3), when its receiver ID is stored;|
 in square brackets, like [12], when no ID is stored yet.|
+A name in orange: the model has been changed since it was last|
+backed up or restored. Back it up again once it is right.|
 The buttons on the left act on the chosen model memory:|
 'Delete' empties it, after a question.|
 It then shows 'Not in use'.|

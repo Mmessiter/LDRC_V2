@@ -142,6 +142,7 @@ FLASHMEM bool ReadOneModel(uint32_t Mnum)
     FileCheckSum = 0;
     MixNumber = 0;
     MaxRangeNarrow = 0; // B113: until this model's own extension is read (a slot never written stays 500 to 2500)
+    ModelContentCrc = ModelBackupCrc = ModelBackupEpoch = 0; // B170: until its mark is read
     for (uint8_t c = 0; c <= CHANNELSUSED; ++c)
         CurvePointCount[c] = 5; // B118: five points until the model's own extension says otherwise
     if ((Mnum > 90) || (Mnum <= 0))
@@ -586,6 +587,31 @@ void BuildCheckSum(int p_address, short int p_value)
 }
 
 /*********************************************************************************************************************************/
+// B170: the content CRC (1Definitions.h ModelCrcOn). CRC-32 (reflected, 0xEDB88320) a byte at a time: a record is some 2100
+// bytes, nothing to notice. Folded by the writers below while the checked sequence is written (not the checksum: DoingCheckSm),
+// then by SaveModelExtension over the extension's content in one canonical form, whatever blocks the record has or gets.
+static void ModelCrcByte(uint8_t b)
+{
+    uint32_t c = ModelCrcAcc ^ b;
+    for (int k = 0; k < 8; ++k)
+        c = (c >> 1) ^ (0xEDB88320u & (0u - (c & 1u)));
+    ModelCrcAcc = c;
+}
+static void ModelCrcFold(const uint8_t *p, int n)
+{
+    for (int i = 0; i < n; ++i)
+        ModelCrcByte(p[i]);
+}
+static uint32_t BackupEpochNow()
+{
+#if defined(ARDUINO)
+    const uint32_t t = Teensy3Clock.get(); // (B169: follows the clock chip)
+    return t >= 1704067200u ? t : 0;       // 2024 or later, else unknown
+#else
+    return 0;
+#endif
+}
+#define MODEL_MARK_LEN 15 // 0x5A 0xC9, the content CRC, the backup CRC, the backup's time (4 bytes each), a checksum byte
 void SDUpdateFLOAT(int p_address, float p_value)
 {
     union
@@ -596,6 +622,8 @@ void SDUpdateFLOAT(int p_address, float p_value)
     } converter;
     converter.f = p_value;
     BuildCheckSum(p_address, converter.u32);
+    if (ModelCrcOn && !DoingCheckSm)
+        ModelCrcFold(converter.b, 4); // B170
     ModelsFileNumber.seek(p_address);
     ShortDelay();
     for (int i = 0; i < 4; ++i)
@@ -628,6 +656,13 @@ float SDReadFLOAT(int p_address)
 void SDUpdate32BITS(int p_address, uint32_t p_value)
 {
     BuildCheckSum(p_address, p_value);
+    if (ModelCrcOn && !DoingCheckSm)
+    { // B170
+        ModelCrcByte((uint8_t)p_value);
+        ModelCrcByte((uint8_t)(p_value >> 8));
+        ModelCrcByte((uint8_t)(p_value >> 16));
+        ModelCrcByte((uint8_t)(p_value >> 24));
+    }
     ModelsFileNumber.seek(p_address);
     ShortDelay();
     ModelsFileNumber.write(uint8_t(p_value));
@@ -656,6 +691,11 @@ uint32_t SDRead32BITS(int p_address)
 void SDUpdate16BITS(int p_address, short int p_value)
 {
     BuildCheckSum(p_address, p_value);
+    if (ModelCrcOn && !DoingCheckSm)
+    { // B170
+        ModelCrcByte((uint8_t)p_value);
+        ModelCrcByte((uint8_t)(p_value >> 8));
+    }
     ModelsFileNumber.seek(p_address);
     ShortDelay();
     ModelsFileNumber.write(uint8_t(p_value));
@@ -668,6 +708,8 @@ void SDUpdate16BITS(int p_address, short int p_value)
 void SDUpdate8BITS(int p_address, uint8_t p_value)
 {
     BuildCheckSum(p_address, p_value);
+    if (ModelCrcOn && !DoingCheckSm)
+        ModelCrcByte(p_value); // B170
     ModelsFileNumber.seek(p_address);
     ShortDelay();
     ModelsFileNumber.write(uint8_t(p_value));
@@ -981,6 +1023,24 @@ FLASHMEM void ReadModelExtension()
         else if (BanksFileRead(BanksSlot(), blk, BANKS_BLOCK_LEN))
             taken = BanksBlockTake(blk, true);
     }
+    // B170: the mark, after the banks' part (in-line in a .MOD): the content CRC as saved, the CRC as last backed up, when
+    ModelContentCrc = ModelBackupCrc = ModelBackupEpoch = 0;
+    {
+        const int q = pos + ((six && SingleModelFlag) ? BANKS_BLOCK_LEN : 0);
+        if (first && size >= q + MODEL_MARK_LEN && SDRead8BITS(q) == TX_EXT_MAGIC && SDRead8BITS(q + 1) == TX_EXT_MAGIC9)
+        {
+            uint8_t mk[MODEL_MARK_LEN];
+            for (int i = 0; i < MODEL_MARK_LEN; ++i)
+                mk[i] = SDRead8BITS(q + i);
+            if (Ext2Sum(mk + 2, MODEL_MARK_LEN - 3) == mk[MODEL_MARK_LEN - 1])
+                for (int i = 0; i < 4; ++i)
+                {
+                    ModelContentCrc |= (uint32_t)mk[2 + i] << (8 * i);
+                    ModelBackupCrc |= (uint32_t)mk[6 + i] << (8 * i);
+                    ModelBackupEpoch |= (uint32_t)mk[10 + i] << (8 * i);
+                }
+        }
+    }
     SixBanks = six;
     if (!taken)
         BanksFromFour(); // (four banks, or the block missing or unsound: banks 5 and 6 are bank 4's twins until set)
@@ -1000,10 +1060,30 @@ FLASHMEM void SaveModelExtension()
                 if (!(s <= 8 && (s % 2) == 0) && CurveStore[b][c][s] != CURVE_UNSET)
                     curves = true; // (a height remembered beyond the five of old)
     }
+    // B170: the extension's content into the content CRC, in one canonical form whatever blocks the record has or gets (a slot
+    // and a .MOD of the same model give the same CRC)
+    if (ModelCrcOn)
+    {
+        ModelCrcByte(MaxRangeNarrow ? 1 : 0);
+        for (int c = 0; c < CHANNELSUSED; ++c)
+        {
+            ModelCrcByte(CurveN(c));
+            for (int b = 1; b <= 4; ++b)
+                ModelCrcFold(CurveStore[b][c], CURVE_STORE_MAX);
+        }
+        ModelCrcByte(SixBanks ? 1 : 0);
+        if (SixBanks)
+        {
+            uint8_t blk[BANKS_BLOCK_LEN];
+            BanksBlockBuild(blk);
+            ModelCrcFold(blk, BANKS_BLOCK_LEN);
+        }
+    }
     DoingCheckSm = true;
     if (size >= a + 5)
         had2 = SDRead8BITS(a + 3) == TX_EXT_MAGIC && (SDRead8BITS(a + 4) == TX_EXT_MAGIC4 || SDRead8BITS(a + 4) == TX_EXT_MAGIC3);
     int pos = a + 3; // B130: where the six-banks header goes
+    int end = pos;   // B170: where the mark goes - after everything else
     if (MaxRangeNarrow || curves || had2 || size > a || SixBanks)
     {
         SDUpdate8BITS(a, TX_EXT_MAGIC);
@@ -1024,6 +1104,7 @@ FLASHMEM void SaveModelExtension()
             for (int i = 0; i < MODEL_EXT2_LEN; ++i)
                 SDUpdate8BITS(a + 3 + i, blk[i]);
             pos = a + 3 + MODEL_EXT2_LEN;
+            end = pos;
         }
         // B130: the six-banks header - written when the model uses six banks, and kept (saying four) once it is there - then
         // the banks 5 and 6 block: in-line in a .MOD, in the slot's own file for models.dat. A four-bank model that never had
@@ -1036,17 +1117,50 @@ FLASHMEM void SaveModelExtension()
             SDUpdate8BITS(pos + 1, TX_EXT_MAGIC7);
             SDUpdate8BITS(pos + 2, flags);
             SDUpdate8BITS(pos + 3, (uint8_t)(TX_EXT_MAGIC7 + flags));
+            end = pos + 4;
             if (SixBanks)
             {
                 uint8_t blk[BANKS_BLOCK_LEN];
                 BanksBlockBuild(blk);
                 if (SingleModelFlag)
+                {
                     for (int i = 0; i < BANKS_BLOCK_LEN; ++i)
                         SDUpdate8BITS(pos + 4 + i, blk[i]);
+                    end = pos + 4 + BANKS_BLOCK_LEN;
+                }
                 else
                     BanksFileWrite(BanksSlot(), blk, BANKS_BLOCK_LEN);
             }
         }
+        // B170: the mark - this save's content CRC, the CRC the content had when the model was last backed up or restored (this
+        // save, when it is one) and the time of that - after everything else, so an older firmware reads exactly what it read.
+        if (ModelCrcOn)
+        {
+            ModelCrcOn = false;
+            ModelContentCrc = ~ModelCrcAcc;
+        }
+        if (MarkBackedUp)
+        {
+            ModelBackupCrc = ModelContentCrc;
+            ModelBackupEpoch = BackupEpochNow();
+        }
+        uint8_t mk[MODEL_MARK_LEN];
+        mk[0] = TX_EXT_MAGIC;
+        mk[1] = TX_EXT_MAGIC9;
+        for (int i = 0; i < 4; ++i)
+        {
+            mk[2 + i] = (uint8_t)(ModelContentCrc >> (8 * i));
+            mk[6 + i] = (uint8_t)(ModelBackupCrc >> (8 * i));
+            mk[10 + i] = (uint8_t)(ModelBackupEpoch >> (8 * i));
+        }
+        mk[MODEL_MARK_LEN - 1] = Ext2Sum(mk + 2, MODEL_MARK_LEN - 3);
+        for (int i = 0; i < MODEL_MARK_LEN; ++i)
+            SDUpdate8BITS(end + i, mk[i]);
+    }
+    if (ModelCrcOn)
+    { // (nothing after the checksum: a bare .MOD) the CRC is still this save's
+        ModelCrcOn = false;
+        ModelContentCrc = ~ModelCrcAcc;
     }
     DoingCheckSm = false;
 }
@@ -1545,6 +1659,8 @@ FLASHMEM void SaveOneModel(uint32_t mnum)
     if (SingleModelFlag)
         SDCardAddress = 0;
     StartLocation = SDCardAddress;
+    ModelCrcAcc = 0xFFFFFFFF;
+    ModelCrcOn = true; // B170: the content CRC, from here to the end of the extension
     ModelDefined = 42;
     SDUpdate8BITS(SDCardAddress, ModelDefined);
     ++SDCardAddress;

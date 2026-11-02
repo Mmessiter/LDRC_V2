@@ -151,6 +151,7 @@ static void SDUpdate8BITS(int a, uint8_t v) { if (!cardSeek((size_t) a)) ++seekW
 static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }
 // B130 (six banks): the extension functions reach for these; here the model has four banks and no banks file
 static bool SixBanks = false, SingleModelFlag = false;
+static bool ModelCrcOn = false, MarkBackedUp = false; static uint32_t ModelCrcAcc = 0xFFFFFFFFu, ModelContentCrc = 0, ModelBackupCrc = 0, ModelBackupEpoch = 0;   // (B170: the mark)
 #define TX_EXT_MAGIC7 0xC7
 #define TX_EXT_MAGIC8 0xC8
 #define BANKS_BLOCK_LEN 582
@@ -320,7 +321,7 @@ int main()
     // (a) every channel five and nothing else remembered: in a .MOD nothing follows the checksum; in models.dat the max range's bytes only
     record(2016); MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card.size() == 2016 && seekWriteFails == 0 && FileCheckSum == 0);
     record(512 + 5 * 3072); StartLocation = 512 + 3072; SDCardAddress = StartLocation + 2016; SaveModelExtension();
-    CHECK(card[SDCardAddress] == 0x5A && card[SDCardAddress + 1] == 0xC3 && card[SDCardAddress + 2] == 0 && card[SDCardAddress + 3] == 0 && seekWriteFails == 0);
+    CHECK(card[SDCardAddress] == 0x5A && card[SDCardAddress + 1] == 0xC3 && card[SDCardAddress + 2] == 0 && card[SDCardAddress + 3] == 0x5A && card[SDCardAddress + 4] == 0xC9 && seekWriteFails == 0);   // (B170: the mark follows)
     // (b) a channel with seven points and one with nine (their quarters still remembered from the five of old): the block, in a .MOD (an append) and read back whole
     legacyLoad();
     for (int b = 1; b <= 4; ++b) { CurvePointCount[5] = 7; for (int k = 0; k < 7; ++k) CurvePoint[b][5][k] = (uint8_t) (rnd() % 181); CurveStoreSync(b, 5); }
@@ -328,7 +329,7 @@ int main()
     uint8_t keep[5][CHANNELSUSED + 1][CURVE_POINTS_MAX]; memcpy(keep, CurvePoint, sizeof(keep)); uint8_t keepN[CHANNELSUSED + 1]; memcpy(keepN, CurvePointCount, sizeof(keepN));
     uint8_t keepS[5][CHANNELSUSED + 1][CURVE_STORE_MAX]; memcpy(keepS, CurveStore, sizeof(keepS));
     record(2016); MaxRangeNarrow = 1; SaveModelExtension();
-    CHECK(card.size() == 2016 + 3 + MODEL_EXT2_LEN && MODEL_EXT2_LEN == 851 && seekWriteFails == 0 && FileCheckSum == 0 && card[2019] == 0x5A && card[2020] == 0xC6);
+    CHECK(card.size() == 2016 + 3 + MODEL_EXT2_LEN + MODEL_MARK_LEN && MODEL_EXT2_LEN == 851 && seekWriteFails == 0 && FileCheckSum == 0 && card[2019] == 0x5A && card[2020] == 0xC6);   // (B170: + the mark)
     CHECK(2016 + 3 + MODEL_EXT2_LEN <= 3072);   // (inside a models.dat slot)
     legacyLoad(); CHECK(CurveN(5) == 5 && CurveN(11) == 5);
     MaxRangeNarrow = 0; ReadModelExtension();
@@ -351,7 +352,7 @@ int main()
         legacyLoad(); MaxRangeNarrow = 1; ReadModelExtension();
         CHECK(MaxRangeNarrow == 0 && CurveN(4) == 9 && CurveN(6) == 3 && CurveN(0) == 5);
         CHECK(CurvePoint[3][4][7] == (70 + 2 + 4) % 181 && CurveStore[3][4][7] == CurvePoint[3][4][7] && CurveStore[2][6][4] == CurvePoint[2][6][1] && CurveStore[2][6][2] != CURVE_UNSET);   // (bank 2, channel 6: three points; its quarters from the five of old)
-        MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card[2020] == 0xC6 && card.size() == 2016 + 3 + MODEL_EXT2_LEN);   // (saved again: B121's block over B118's)
+        MaxRangeNarrow = 0; SaveModelExtension(); CHECK(card[2020] == 0xC6 && card.size() == 2016 + 3 + MODEL_EXT2_LEN + MODEL_MARK_LEN);   // (saved again: B121's block over B118's, then the mark)
     }
     // (e) a .MOD too short for a block (an old one), and a record from before B113: nothing read
     record(2016); card.resize(2019); card[2016] = 0x5A; card[2017] = 0xC3; card[2018] = 1; legacyLoad(); MaxRangeNarrow = 0; ReadModelExtension(); CHECK(MaxRangeNarrow == 1 && CurveN(5) == 5);
@@ -364,6 +365,19 @@ int main()
     SaveModelExtension(); legacyLoad(); ReadModelExtension();
     CHECK(CurveN(5) == 5 && CurveN(11) == 5 && CurveStore[1][11][1] == keepS[1][11][1] && CurveStore[1][5][9] == keepS[1][5][9]);   // (the nine's odd eighths and the seven's sixths still there)
     ChanneltoSet = 12; CurveResample(11, 9); CHECK(memcmp(CurvePoint[1][11], keep[1][11], CURVE_POINTS_MAX) == 0);   // (and back come the nine)
+    // (g) B170: the mark. The content CRC is made over the extension's content in its canonical form: the same model saved twice
+    // gives the same CRC, a changed height another; a backup makes the two equal; read back whole; then the change shows.
+    record(512 + 5 * 3072); StartLocation = 512 + 2 * 3072; SDCardAddress = StartLocation + 2016; MaxRangeNarrow = 0; MarkBackedUp = false;
+    ModelCrcAcc = 0xFFFFFFFFu; ModelCrcOn = true; SaveModelExtension(); const uint32_t crc1 = ModelContentCrc; CHECK(!ModelCrcOn && crc1 != 0 && seekWriteFails == 0);
+    { const int m = SDCardAddress + 3 + MODEL_EXT2_LEN; CHECK(card[m] == 0x5A && card[m + 1] == 0xC9 && m + MODEL_MARK_LEN <= StartLocation + 3072); }   // (after the curves' block, inside the slot)
+    ModelCrcAcc = 0xFFFFFFFFu; ModelCrcOn = true; SaveModelExtension(); CHECK(ModelContentCrc == crc1);
+    ModelContentCrc = 1; ModelBackupCrc = 2; ModelBackupEpoch = 3; legacyLoad(); ReadModelExtension(); CHECK(ModelContentCrc == crc1 && ModelBackupCrc == 0 && ModelBackupEpoch == 0);
+    MarkBackedUp = true; ModelCrcAcc = 0xFFFFFFFFu; ModelCrcOn = true; SaveModelExtension(); MarkBackedUp = false; CHECK(ModelBackupCrc == crc1 && ModelContentCrc == crc1);
+    legacyLoad(); ReadModelExtension(); CHECK(ModelContentCrc == crc1 && ModelBackupCrc == crc1);
+    CurveStore[2][5][9] = (uint8_t) (CurveStore[2][5][9] == 77 ? 78 : 77); ModelCrcAcc = 0xFFFFFFFFu; ModelCrcOn = true; SaveModelExtension(); CHECK(ModelContentCrc != crc1 && ModelBackupCrc == crc1);
+    legacyLoad(); ReadModelExtension(); CHECK(ModelContentCrc != ModelBackupCrc && ModelBackupCrc == crc1);   // (changed since its backup: the Models page shows it in orange)
+    { const int m = SDCardAddress + 3 + MODEL_EXT2_LEN; card[m + 5] ^= 1; legacyLoad(); ReadModelExtension(); CHECK(ModelContentCrc == 0 && ModelBackupCrc == 0); card[m + 5] ^= 1; }   // (a byte of it wrong: no mark)
+    ModelCrcAcc = 0xFFFFFFFFu; ModelCrcOn = true; MaxRangeNarrow = 1; SaveModelExtension(); CHECK(ModelContentCrc != crc1); MaxRangeNarrow = 0;   // (the range is content too)
     // ---- 5. the curve page: the boxes and the radios for each count and shape
     ChanneltoSet = 1; Bank = 1; MaxRangeNarrow = 0;
     struct Want { int n, type, boxes; const char *first, *last; } wants[] = { {3, STRAIGHTLINES, 3, "n1", "n5"}, {5, STRAIGHTLINES, 5, "n1", "n5"}, {5, EXPONENTIALCURVES, 3, "n1", "n5"}, {7, SMOOTHEDCURVES, 7, "n1", "n5"}, {7, EXPONENTIALCURVES, 3, "n1", "n5"}, {9, STRAIGHTLINES, 9, "m1", "m9"}, {9, EXPONENTIALCURVES, 3, "n1", "n5"} };
@@ -438,7 +452,7 @@ prog = (PROGRAM.replace('@DEFS@', DEFS).replace('@MAP@', TEENSY_MAP).replace('@I
         .replace('@OLD@', OLD if HAVE_OLD else '#define NO_OLD 1\n')
         .replace('@GRAPHCMD@', lift('src/main.cpp', 'FLASHMEM static void GraphCmd('))
         .replace('@LAYOUT@', lift('src/main.cpp', 'FLASHMEM void CurveLayoutShow()'))
-        .replace('@EXT@', lift('include/SDcard.h', 'static uint8_t Ext2Sum(') + lift('include/SDcard.h', 'FLASHMEM void ReadModelExtension()') + lift('include/SDcard.h', 'FLASHMEM void SaveModelExtension()')))
+        .replace('@EXT@', lift('include/SDcard.h', 'static uint8_t Ext2Sum(') + lift('include/SDcard.h', 'static void ModelCrcByte(') + lift('include/SDcard.h', 'static void ModelCrcFold(') + lift('include/SDcard.h', 'static uint32_t BackupEpochNow()') + '#define MODEL_MARK_LEN 15\n#define TX_EXT_MAGIC9 0xC9\n' + lift('include/SDcard.h', 'FLASHMEM void ReadModelExtension()') + lift('include/SDcard.h', 'FLASHMEM void SaveModelExtension()')))
 LIB = os.path.join(TC, '.pio', 'libdeps', 'teensy41', 'InterpolationLib', 'src')
 if not os.path.isdir(LIB): sys.exit('InterpolationLib not found at ' + LIB + ' (build the Teensy once)')
 with tempfile.TemporaryDirectory() as d:

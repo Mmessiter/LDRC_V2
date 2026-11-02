@@ -852,6 +852,8 @@ void LoadModelSelector()
     char mn[] = "modelname";
 
     int32_t SavedModelNumber = ModelNumber;
+    char mark[] = {(char)0x7F, 0}; // B170: a name begun with DEL is drawn in orange by the screen (1.11.157)
+    buf[0] = 0;
     for (ModelNumber = 1; ModelNumber < MAXMODELNUMBER; ++ModelNumber)
     {
         ReadOneModel(ModelNumber);
@@ -865,24 +867,16 @@ void LoadModelSelector()
             strcpy(lb, " (");
             strcpy(rb, ")");
         }
-        if (ModelNumber == 1)
-        {
-            strcpy(buf, ModelName);
-            strcat(buf, lb);
-            Str(nb, ModelNumber, 0);
-            strcat(buf, nb);
-            strcat(buf, rb);
-            strcat(buf, crlf);
-        }
-        else
-        {
-            strcat(buf, ModelName);
-            strcat(buf, lb);
-            Str(nb, ModelNumber, 0);
-            strcat(buf, nb);
-            strcat(buf, rb);
-            strcat(buf, crlf);
-        }
+        // B170 (Malcolm, 2 Nov 2026): a model changed since it was last backed up or restored - its record's content CRC is
+        // not the one its mark remembers - is shown in orange: the backup is behind. Never backed up: plain.
+        if (ModelBackupCrc != 0 && ModelBackupCrc != ModelContentCrc)
+            strcat(buf, mark);
+        strcat(buf, ModelName);
+        strcat(buf, lb);
+        Str(nb, ModelNumber, 0);
+        strcat(buf, nb);
+        strcat(buf, rb);
+        strcat(buf, crlf);
     }
     SendOtherText(MMemsp, buf);
     ModelNumber = SavedModelNumber;

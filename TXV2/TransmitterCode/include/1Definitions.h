@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B169 02/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B170 02/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1710,6 +1710,7 @@ bool SwitchReversed[8] = {false, false, false, false, false, false, false, false
 #define TX_EXT_MAGIC2 0xC3
 #define TX_EXT_MAGIC3 0xC5 // B118: the curves' count and points followed the max range's bytes (read as a fallback)
 #define TX_EXT_MAGIC4 0xC6 // B121: the curves' count and store (every point's height) follow the max range's bytes
+#define TX_EXT_MAGIC9 0xC9 // B170: the mark - the record's content CRC, and the CRC it had when last backed up or restored (SDcard.h)
 uint16_t FrontSwitchRaw[4] = {0, 0, 0, 0}; // B32: the front switches' readings, taken once a frame (only when a job uses one, or their page shows)
 // B38 (Malcolm: a front switch's default marking should be its channel, "If anyone actually does select not used ... they
 // should do nothing at all"): bits 0-3 = switches 5-8 marked Not used: the input of that channel sits at its centre. With
@@ -1907,6 +1908,17 @@ uint16_t SFV = 0; // =StopFlyingVoltsPerCell * 100
 bool NewCompressNeeded = true;
 uint32_t FileCheckSum = 0;
 bool DoingCheckSm = false;
+// B170 (Malcolm, 2 Nov 2026: a model "edited since then but not backed up yet ... displayed in another colour, say orange, in
+// order to warn the user"): a model's CONTENT CRC is made as its record is written - every byte of the checked sequence as
+// SDUpdate* writes it (ModelCrcByte, SDcard.h), then the extension's content in one canonical form (SaveModelExtension) - and
+// kept after the record, with the CRC the content had when the model was last backed up or restored: the mark, 0x5A 0xC9.
+// The two differing = changed since its backup: the Models page shows the name in orange (LoadModelSelector, screen 1.11.157).
+bool ModelCrcOn = false;           // SaveOneModel is writing: fold the bytes
+uint32_t ModelCrcAcc = 0xFFFFFFFF; // the CRC-32 being made
+uint32_t ModelContentCrc = 0;      // the model in memory: its record's content CRC as last saved or read
+uint32_t ModelBackupCrc = 0;       // ... the content CRC when it was last backed up or restored (0: never)
+uint32_t ModelBackupEpoch = 0;     // ... when that was (seconds since 1970; 0 unknown)
+bool MarkBackedUp = false;         // the save in hand IS a backup or a restore: the mark follows the content
 bool RecursedAlready = false;
 bool TXLiPo = false;
 uint8_t CurrentPoint = 1;

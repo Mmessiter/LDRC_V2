@@ -670,6 +670,12 @@ def source_checks():
     chk('static void BackupFileTapped()' in mo and 'GetValue((char *)SCREEN_X)' in mo and '(now - lastTapMs) < 700' in mo and 'f.getModifyTime(dt)' in mo and 'MsgBox(pModelsView, msg);' in mo, 'B169 two taps on the same backup file within 700 ms, told from the left list by where the finger lifted, open the date box')
     chk('    if (CurrentView == MODELSVIEW)\n        BackupFileTapped();' in mo, 'B169 only on the Models page')
     chk('Teensy3Clock.set(chip);' in ut and 'if (tm.Year >= 54)' in ut, 'B169 the Teensy clock follows a set clock chip, so the card dates its files')
+    # B170 (2 Nov 2026): a model changed since its last backup shows in orange on the Models page - the content CRC and the mark
+    sdc = src('include/SDcard.h'); mo = src('include/MenuOptions.h'); mc = src('src/main.cpp'); me = src('include/ModelExchange.h')
+    chk('static void ModelCrcByte(uint8_t b)' in sdc and sdc.count('if (ModelCrcOn && !DoingCheckSm)') == 4 and 'ModelCrcAcc = 0xFFFFFFFF;\n    ModelCrcOn = true;' in sdc, 'B170 every byte of the checked sequence goes into the content CRC as it is written')
+    chk('mk[1] = TX_EXT_MAGIC9;' in sdc and 'SDUpdate8BITS(end + i, mk[i]);' in sdc and 'SDRead8BITS(q + 1) == TX_EXT_MAGIC9' in sdc and 'ModelCrcFold(CurveStore[b][c], CURVE_STORE_MAX);' in sdc, 'B170 the mark is written after everything else and read back; the extension\'s content is folded in one canonical form')
+    chk('wrote = WriteBackup();' in mc and 'MarkBackedUp = true;\n                SaveOneModel(ModelNumber);\n                MarkBackedUp = false;' in mc and 'MarkBackedUp = true; // B170: restored' in mc and 'MarkBackedUp = true; // B170: received' in me, 'B170 a backup, a restore and a received model set the mark')
+    chk('if (ModelBackupCrc != 0 && ModelBackupCrc != ModelContentCrc)\n            strcat(buf, mark);' in mo and '(char)0x7F' in mo, 'B170 the Models list begins a changed model\'s name with DEL: the screen draws it in orange')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

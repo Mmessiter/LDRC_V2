@@ -645,7 +645,9 @@ FLASHMEM void ReceiveModelFile()
         }
     }
     CloseModelsFile();
+    MarkBackedUp = true; // B170: received = as the file kept beside it: the mark follows
     SaveAllParameters();
+    MarkBackedUp = false;
     CloseModelsFile();
     NormaliseTheRadio();
     SendCommand(ProgressEnd);

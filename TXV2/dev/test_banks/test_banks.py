@@ -95,6 +95,7 @@ uint8_t CurvePointCount[CHANNELSUSED + 1], CurvePoint[BANKS_USED + 1][CHANNELSUS
 uint8_t BanksInUse[BANKS_USED] = {0, 1, 2, 3, 32, 33}, DualRateRate[BANKS_USED + 1];
 char ModelName[40] = "Havok"; uint32_t ModelNumber = 1;
 bool SixBanks = false, SingleModelFlag = false; uint8_t MaxRangeNarrow = 0;
+static bool ModelCrcOn = false, MarkBackedUp = false; static uint32_t ModelCrcAcc = 0xFFFFFFFFu, ModelContentCrc = 0, ModelBackupCrc = 0, ModelBackupEpoch = 0;   // (B170: the mark)
 // the card, as SdFat behaves (test_curve_points): a seek beyond the end fails and the position stays; a write at the end appends
 static std::vector<uint8_t> card; static long FileCheckSum = 0; static bool DoingCheckSm = false; static int StartLocation = 0, SDCardAddress = 0;
 static size_t cardPos = 0; static int seekWriteFails = 0;
@@ -110,7 +111,7 @@ bool BanksFileWrite(uint8_t slot, const uint8_t *blk, int n) { ++bankWrites; ban
 static bool CurveCountOk(uint8_t n) { return n == 3 || n == 5 || n == 7 || n == 9; }
 ''' + lift('include/Utilities.h', 'uint8_t CurveN(uint8_t ch)') + 'uint8_t CurveMid(uint8_t n) { return (n - 1) / 2; }\n' \
    + lift('include/Utilities.h', 'uint8_t CurveStorePos(uint8_t n, uint8_t k)') + lift('include/Utilities.h', 'void CurveStoreSync(uint8_t b, uint8_t ch)') + lift('include/Utilities.h', 'void CurveStoreClear(uint8_t b, uint8_t ch)') \
-   + lift('include/SDcard.h', 'static uint8_t Ext2Sum(') + one_liner(sdc, 'static uint8_t BanksSlot()') \
+   + lift('include/SDcard.h', 'static uint8_t Ext2Sum(') + lift('include/SDcard.h', 'static void ModelCrcByte(') + lift('include/SDcard.h', 'static void ModelCrcFold(') + lift('include/SDcard.h', 'static uint32_t BackupEpochNow()') + '#define MODEL_MARK_LEN 15\n#define TX_EXT_MAGIC9 0xC9\n' + one_liner(sdc, 'static uint8_t BanksSlot()') \
    + lift('include/SDcard.h', 'FLASHMEM void BanksCopy(') + lift('include/SDcard.h', 'FLASHMEM static void BanksFromFour()') \
    + lift('include/SDcard.h', 'FLASHMEM static int BanksBlockBuild(') + lift('include/SDcard.h', 'FLASHMEM static bool BanksBlockTake(') \
    + lift('include/SDcard.h', 'FLASHMEM void SixBanksSet(') + lift('include/SDcard.h', 'FLASHMEM void ReadModelExtension()') + lift('include/SDcard.h', 'FLASHMEM void SaveModelExtension()') \
@@ -149,6 +150,7 @@ int main()
 {
     CHECK(BANKS_BLOCK_LEN == 582);
     CHECK(SEQ + 3 + MODEL_EXT2_LEN + 4 <= MODELSIZE);                 // the header after the curves' block is still inside the record
+    CHECK(SEQ + 3 + MODEL_EXT2_LEN + 4 + MODEL_MARK_LEN <= MODELSIZE); // (B170: and the mark after it)
     CHECK(SEQ + 3 + MODEL_EXT2_LEN + 4 + BANKS_BLOCK_LEN > MODELSIZE); // (and the block would not be: hence the file of its own)
     // ---- a. four banks: B130 writes what B129 wrote, in a fresh .MOD and in a models.dat record, once and again
     int same = 0, trials = 0;
@@ -159,6 +161,13 @@ int main()
         const uint32_t s0 = seed;
         fill(); SaveModelExtensionOld(); if (t % 3 == 0) { SDCardAddress = StartLocation + SEQ; SaveModelExtensionOld(); } std::vector<uint8_t> a = card;
         seed = s0; fill(); SaveModelExtension(); if (t % 3 == 0) { SDCardAddress = StartLocation + SEQ; SaveModelExtension(); } std::vector<uint8_t> b = card;
+        // B170: the new firmware adds the mark (MODEL_MARK_LEN bytes, 0x5A 0xC9 ...) after what B129 wrote: a .MOD is that much longer,
+        // a record has it where B129 left zeros. Taken out, the bytes must be B129's.
+        auto unmarked = [&](std::vector<uint8_t> v, const std::vector<uint8_t> &ref) {
+            if (v.size() == ref.size() + MODEL_MARK_LEN && v[ref.size()] == TX_EXT_MAGIC && v[ref.size() + 1] == 0xC9) { v.resize(ref.size()); return v; }
+            for (size_t i = 0; i + MODEL_MARK_LEN <= v.size() && i < ref.size(); ++i) if (v[i] != ref[i]) { if (v[i] == TX_EXT_MAGIC && v[i + 1] == 0xC9) for (int k = 0; k < MODEL_MARK_LEN; ++k) v[i + k] = ref[i + k]; break; }
+            return v; };
+        b = unmarked(b, a);
         ++trials; if (a == b) ++same; else if (same + 3 > trials) fprintf(stderr, "differs: trial %d (%s), sizes %zu %zu\n", t, mod ? ".MOD" : "models.dat", a.size(), b.size());
         CHECK(seekWriteFails == 0 && bankWrites == 0);
         // and B130 reads B129's bytes as B129 does (what the extension holds is disturbed first: the range, banks 5 and 6, and
@@ -178,15 +187,15 @@ int main()
     for (int t = 0; t < 60; ++t) {
         randomModel(true); freshMod();
         SaveModelExtension();
-        const bool curves = card.size() > SEQ + 3 + 4 + BANKS_BLOCK_LEN;
-        CHECK(card.size() == (size_t) (SEQ + 3 + (curves ? MODEL_EXT2_LEN : 0) + 4 + BANKS_BLOCK_LEN) && seekWriteFails == 0 && bankWrites == 0);
+        const bool curves = card.size() > SEQ + 3 + 4 + BANKS_BLOCK_LEN + MODEL_MARK_LEN;
+        CHECK(card.size() == (size_t) (SEQ + 3 + (curves ? MODEL_EXT2_LEN : 0) + 4 + BANKS_BLOCK_LEN + MODEL_MARK_LEN) && seekWriteFails == 0 && bankWrites == 0);   // (B170: the mark after the in-line block)
         Snap s = snap(); scramble56(); SixBanks = false;
         SDCardAddress = SEQ; ReadModelExtension();
         CHECK(SixBanks && sameFiveSix(s) && sameFour(s));
         scramble56(); MaxRangeNarrow = !s.range; if (curves) memset(&CurvePoint[1][0][0], 0, sizeof(s.four)); SDCardAddress = SEQ; ReadModelExtensionOld();
         CHECK(sameFour(s));   // (B129: the four banks' curves and the range, nothing else)
         // the in-line block damaged: the model is read with four banks' twins, not garbage
-        const size_t at = card.size() - 1; card[at] ^= 1; SixBanks = false; scramble56(); SDCardAddress = SEQ; ReadModelExtension();
+        const size_t at = card.size() - 1 - MODEL_MARK_LEN; card[at] ^= 1; SixBanks = false; scramble56(); SDCardAddress = SEQ; ReadModelExtension();   // (the block's last byte: before the mark)
         CHECK(SixBanks && fourTwins()); card[at] ^= 1;
         // the header's sum damaged: four banks
         const size_t hdr = SEQ + 3 + (curves ? MODEL_EXT2_LEN : 0); CHECK(card[hdr] == TX_EXT_MAGIC && card[hdr + 1] == TX_EXT_MAGIC7 && card[hdr + 2] == 1);

@@ -4555,6 +4555,7 @@ FASTRUN void ButtonWasPressed()
 
         if (InStrng(Export, TextIn))
         {
+            bool wrote = false; // B170
             GetDefaultFilename();
             if (GetBackupFilename(pModelsView, SingleModelFile, ModelName, hhead, fprompt))
             {
@@ -4566,18 +4567,26 @@ FASTRUN void ButtonWasPressed()
                     strcat(Prompt, ques);
                     if (GetConfirmation(pModelsView, Prompt))
                     {
-                        WriteBackup();
+                        wrote = WriteBackup();
                     }
                 }
                 else
                 {
-                    WriteBackup();
+                    wrote = WriteBackup();
                 }
+            }
+            if (wrote)
+            { // B170: the model in memory IS what the file now holds: its record takes the mark (the content CRC as backed up)
+                MarkBackedUp = true;
+                SaveOneModel(ModelNumber);
+                MarkBackedUp = false;
             }
             strcpy(MOD, ".MOD");
             BuildDirectory();
             strcpy(Mfiles, "Mfiles");
             LoadFileSelector();
+            if (wrote)
+                LoadModelSelector(); // B170: the list again - the name loses its orange
             ClearText();
             return;
         }
@@ -4616,7 +4625,9 @@ FASTRUN void ButtonWasPressed()
                 CloseModelsFile();
                 SendValue(Progress, 75);
                 DelayWithDog(10);
+                MarkBackedUp = true; // B170: restored = as its file: the mark follows
                 SaveAllParameters();
+                MarkBackedUp = false;
                 CloseModelsFile();
                 UpdateModelsNameEveryWhere();
                 SendValue(Progress, 100);
