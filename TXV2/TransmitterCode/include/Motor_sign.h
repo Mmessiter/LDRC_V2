@@ -159,6 +159,7 @@ void MotorEnabledHasChanged() //
             Reading_RATES_Advanced_Now = false;
             Reading_GOV_Now = false;
             Reading_GOV_Config_Now = false;
+            LogFrontPageReason("the motor switch went on"); // B172
             GotoFrontView(); // (also wakes a blank screen)
         }
         ShowMotor();

@@ -88,6 +88,22 @@ void ReadWhyOff() // at start-up, once
     SNVS_LPGPR2 = 0;
     SnvsWriteCycles = ARM_DWT_CYCCNT - t0;
 }
+// B172 (Malcolm, 2 Nov 2026: the Models page "spontaneously returned to the front screen" several times): a restart of this
+// board comes up on the front page too, and the pilot sees nothing else. Said in the log once, at the next start (the
+// once-a-second chores, when the clock has been read and the log can be written): the watchdog (SRC_SRSR bit 7), or a
+// software reset nobody asked for (bit 1, no power-on bit, and no reason noted on the way out: a lock-up or a fault), with
+// where the code was (the breadcrumb), the page showing, and how long it had run.
+FLASHMEM void LogRestartCause()
+{
+    const bool watchdog = (LastResetCause & 0x80) != 0;
+    const bool fault = (LastResetCause & 0x02) != 0 && (LastResetCause & 0x01) == 0 && LastOffReason == OFF_NONE;
+    if (!watchdog && !fault)
+        return;
+    char line[170];
+    snprintf(line, sizeof(line), "Started after %s: it was on page %lu at crumb %u, %lu s after its start B172",
+             watchdog ? "the watchdog reset it" : "a reset nobody asked for (a fault)", (unsigned long)LastCrumbView, (unsigned)LastCrumb, (unsigned long)(LastCrumbUpMs / 1000));
+    LogText(line, strlen(line), true);
+}
 
 #define CONTROL_FINGERPRINT_VERSION 1
 

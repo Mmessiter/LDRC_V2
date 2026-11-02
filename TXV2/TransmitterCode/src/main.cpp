@@ -2548,6 +2548,7 @@ void BindNow()
     }
     else
     {
+        LogFrontPageReason("the model connected"); // B172
         GotoFrontView();
     }
 #ifdef DB_BIND
@@ -4768,6 +4769,7 @@ FASTRUN void ButtonWasPressed()
             // the picture, the trims, the bank, the names - and the page itself, should the screen have put back another.
             PreviousBank = 250; // sure to be different
             BankSoundHeld = true; // B147: the redraw must not SAY the bank - nothing changed (Malcolm, 27 Oct: "Bank 4!" after every update)
+            LogFrontPageReason("the screen restarted and said FrontView"); // B172
             GotoFrontView();
             return;
         }
@@ -5318,7 +5320,10 @@ void CheckPowerOffButton()
     if ((!digitalRead(BUTTON_SENSE_PIN)) && (millis() > POWERONOFFDELAY2) && ButtonUpSinceBoot) // no power off in the first seconds, nor while the button has been held since switch-on (B95: that hold enables binding, however long - it used to switch off at 4 s, often before 'Binding enabled' had been heard)
     {                                                                      // power button is pressed!
         if (BoundFlag && ModelMatched && CurrentView != FRONTVIEW)
+        {
+            LogFrontPageReason("the power button was pressed while connected"); // B172
             GotoFrontView();
+        }
 
         if (!LedWasGreen)
             Close_TX_Down(); // if not connected power off immediately
@@ -5468,6 +5473,12 @@ void FASTRUN ManageTransmitter()
         CRUMB(CRUMB_HOUSEKEEPING);
         CrumbView(CurrentView); // B14: the page showing, on the clock's coin cell
 
+        static bool RestartSaid = false; // B172: a restart by the watchdog or a fault, said in the log once the clock has been read
+        if (!RestartSaid && RightNow > 8000)
+        {
+            RestartSaid = true;
+            LogRestartCause();
+        }
         if (VersionMismatch)
         {
             ShowMismatchMsg(); // Show version mismatch message if needed

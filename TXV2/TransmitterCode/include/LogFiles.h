@@ -344,6 +344,19 @@ FASTRUN void LogModelNotFound() // Model Memory Log
     MMLog(TheText);
 }
 // ************************************************************************
+// B172 (Malcolm, 2 Nov 2026: "several times when playing around on the models screen, it spontaneously returned to the front
+// screen rather to my surprise. I wonder what is doing this?"): every way the front page comes up BY ITSELF writes a line that
+// says which it was, and the page it left - the model connected (BindNow), the motor switch went on (Motor_sign.h), the screen
+// restarted and said "FrontView" (B92), the power button was pressed while connected (CheckPowerOffButton). Straight to LogText,
+// as B163's lines are: a few lines a session at most, on the ground. A restart of this board itself comes up on the front page
+// too: that is said at the next start (LogRestartCause, FlightGuard.h).
+FLASHMEM void LogFrontPageReason(const char *why)
+{
+    char line[120];
+    snprintf(line, sizeof(line), "Front page by itself: %s (it was on page %u) B172", why, (unsigned)CurrentView);
+    LogText(line, strlen(line), true);
+}
+// ************************************************************************
 
 float GetOverallSuccessRate()
 {

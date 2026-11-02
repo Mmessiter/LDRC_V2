@@ -38,6 +38,7 @@ COMMON = r'''
 #define FLASHMEM
 #define PROGMEM
 #define DMAMEM
+static void LogFrontPageReason(const char *) {}   // (B172) the front page's log line: nothing on the host
 #define constrain(a, l, h) ((a) < (l) ? (l) : ((a) > (h) ? (h) : (a)))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
@@ -673,6 +674,11 @@ def source_checks():
     nx = src('include/Nextion.h')
     chk('uint32_t GetSysValue(const char *name)' in nx and 'static uint32_t GetNumberReply(const char *CB)' in nx and nx.count('return GetNumberReply(CB);') == 2 and 'GetValue((char *)SCREEN_' not in mo, 'B171 a system variable is asked for by its bare name through GetSysValue; nothing asks GetValue for one')
     chk('tap it so it is highlighted,|\nthen tap it again at once.|' in open(os.path.join(ROOT, 'Help files for SD', 'MODELS.TXT'), encoding='utf-8', errors='replace').read(), 'B171 the Models help says the second tap is on the highlighted band (the list is a wheel)')
+    # B172 (2 Nov 2026): every way the front page comes up by itself is logged with the page it left; a restart by the watchdog or a fault is logged at the next start
+    fg = src('include/FlightGuard.h'); lf = src('include/LogFiles.h'); ms = src('include/Motor_sign.h')
+    chk('void LogFrontPageReason(const char *why)' in lf and 'Front page by itself: %s (it was on page %u) B172' in lf, 'B172 the front-page-by-itself log line names the way and the page')
+    chk(mc.count('LogFrontPageReason(') == 3 and 'LogFrontPageReason("the model connected")' in mc and 'LogFrontPageReason("the screen restarted and said FrontView")' in mc and 'LogFrontPageReason("the power button was pressed while connected")' in mc and 'LogFrontPageReason("the motor switch went on")' in ms, 'B172 the four ways are logged: connected, screen restart, power button, motor switch')
+    chk('void LogRestartCause()' in fg and '(LastResetCause & 0x80) != 0' in fg and 'LastOffReason == OFF_NONE' in fg and 'LogRestartCause();' in mc and 'RightNow > 8000' in mc, 'B172 a watchdog or fault restart is logged at the next start with the breadcrumb, once the clock has been read')
     chk('Teensy3Clock.set(chip);' in ut and 'if (tm.Year >= 54)' in ut, 'B169 the Teensy clock follows a set clock chip, so the card dates its files')
     # B170 (2 Nov 2026): a model changed since its last backup shows in orange on the Models page - the content CRC and the mark
     sdc = src('include/SDcard.h'); mo = src('include/MenuOptions.h'); mc = src('src/main.cpp'); me = src('include/ModelExchange.h')
