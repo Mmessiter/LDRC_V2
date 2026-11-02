@@ -17,7 +17,7 @@
 
 ## Flash it once, then it updates itself
 
-1. **Install** [PlatformIO](https://platformio.org/). The panel's USB-C port is a CH340 serial chip. A Mac or a Windows PC may need its driver.
+1. **Install** [PlatformIO](https://platformio.org/). `platformio.ini` pins the ESP32 platform to **espressif32 7.0.1** (Arduino core 2.0.17): a newer platform brings the core 3 and the display library does not compile with it (errors inside `GFX Library for Arduino`, such as `'esp_lcd_rgb_panel_frame_trans_done_cb_t' does not name a type`). If you built before 2 Nov 2026 and see those, pull, delete the project's `.pio` folder and build again. The panel's USB-C port is a CH340 serial chip. A Mac or a Windows PC may need its driver.
 2. **Put a blank microSD card**, formatted **FAT32**, in the panel's slot **before** you power it. The card is read at power-up only.
 3. **Flash over USB**, before the screen is wired to the Teensy:
 
