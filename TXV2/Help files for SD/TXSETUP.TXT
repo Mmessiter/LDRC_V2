@@ -30,6 +30,12 @@ Channels to its right are outside it.|
 A hit is a signal heard on a channel.|
 'Average hits per second' counts the whole band.|
 Lower is quieter.|
+While it scans, the screen's own WiFi and Bluetooth are off.|
+At home the band is busy: your WiFi shows as broad humps.|
+In open country, far from anywhere, it can be almost silent.|
+At home, a transmitter that hears almost nothing while others|
+show the humps has a weak aerial path: check its aerial,|
+its leads and its range before you fly it.|
 'Quietest channel' and 'Noisiest channel' look only|
 inside the legal band.|
 Each shows the channel number and its hits since the scan began.|
