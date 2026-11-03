@@ -98,7 +98,7 @@
 | Main board | Printed circuit board from the Gerbers in `Circuits/Transmitter - CADCAM` | 1 | 2 layers, about 83 × 91 mm. Any PCB maker |
 | Microcontroller | PJRC **Teensy 4.1** | 1 | |
 | Radio | Ebyte **E01-ML01DP5** (nRF24L01+ with amplifier) | 1 | In a 2 × 4 socket |
-| Screen | Elecrow **CrowPanel 5.0" ESP32 HMI**, the **N4R8** version (4 MB flash, 8 MB PSRAM) | 1 | **Not** Elecrow's 16 MB 5-inch IPS panel: its pins differ and it shows a black screen |
+| Screen | For a new transmitter: Elecrow's **5-inch IPS panel, SKU DLE06050B** (ESP32-S3 N16R8: 16 MB flash, 8 MB PSRAM). Also supported: the **CrowPanel 5.0" ESP32 HMI, SKU DIS07050H, N4R8** (4 MB flash) | 1 | The firmware tells the two apart by itself; print the case front for the one you have. Not Elecrow's "Advance" series: its card slot is on other pins |
 | microSD card | For the Teensy. FAT32 or exFAT | 1 | |
 | microSD card | For the screen. **FAT32** (cards over 32 GB come as exFAT: reformat them) | 1 | The screen fills it itself |
 | Power switch | **Pololu 2808** pushbutton power switch | 1 | |
@@ -114,7 +114,7 @@
 | Status light | 5 mm RGB LED | 1 | The board and the firmware suit a common-cathode LED |
 | Speaker | 8 Ω (or 4 Ω), 1–2 W | 1 | On the screen's SPK socket (JST PH 2.0, 2-pin) |
 | Battery | 2S: LiPo, Li-ion or LiFePO4 | 1 | Always two cells |
-| Charger | 2S balance charger: a micro-USB module, or a USB-C 2S module | 1 | Must match the battery type: LiPo/Li-ion or LiFePO4 |
+| Charger | A small USB-C 2S charger module on the **IP2326** chip, in the charger bay on the back | 1 | Set it for two cells before the first charge. For a LiPo or Li-ion pack: a LiFePO4 pack needs a LiFePO4 charger |
 | Diodes | 1N5406 ×2, 1N4001 ×2 | 4 | |
 | Capacitors | Electrolytic 330 µF ×1, 100 µF ×1. Tantalum 330 µF (0E907) ×2, 47 µF 1206 ×2. Ceramic 1206: 330 nF ×2, 100 nF ×4, 10 µF ×1 | 13 | |
 | Aerial | RP-SMA 2.4 GHz aerial and a 20 cm RP-SMA extension | 1 | |
@@ -133,12 +133,12 @@
 
 <sub>The printed parts. Previews drawn from the CAD files.</sub>
 
-- **Version 2 parts** in [`STL files/V2`](STL%20files/V2): the case front cut for the 5-inch screen, the case back, and the charger bay. The front and back are STEP files; most slicers open them directly.
-- **Shared with Version 1** in `STL files/`: `TX_HANDLE`, `TX_SUPPORT`, `GimbalP` (gimbal protector), `LEDMOUNT`, `MODBAY` and `Blank`, `SPACER`.
+- **Version 2 parts** in [`STL files/V2`](STL%20files/V2): **two case fronts**, one for each screen (`TXV12_FRONT_16m_V2.step` for the 16 MB IPS panel, `TXV12a_Front_4meg_V2.step` for the 4 MB CrowPanel: their dimensions differ slightly), the case back `TXV12a_BACK_V2.step`, and the charger bay `CHARGERBAY.stl`, which takes the place of Version 1's JR module bay on the back and holds the USB-C charger module. The fronts and the back are STEP files; most slicers open them directly.
+- **Shared with Version 1** in `STL files/`: `TX_HANDLE`, `TX_SUPPORT`, `GimbalP` (gimbal protector), `LEDMOUNT`, `SPACER`. (`MODBAY` and `Blank` are Version 1's JR module bay: a Version 2 prints the charger bay there instead.)
 - `TX_FRONT.stl` and `TX_BACK12.stl` are **Version 1's** (cut for the old Nextion screen). Do not print them for a Version 2.
 - The CrowPanel has no mounting holes. The case front holds it.
 
-<!-- TODO Malcolm: STL files/V2 (TXV12a_Front_V2.step, TX_BACK12a_V2.step, CHARGERBAY.stl) is committed in TXV1B (d774bb9) and reaches LDRC_V2 at the next publish_public.py run; until then this link is a 404. Add print settings and how the CrowPanel is held. Is MODBAY + Blank still printed on a V2, or does the charger bay replace it? -->
+<!-- TODO Malcolm: print settings (layer height, walls, infill, supports) for each part, and how the screen is held in the front. -->
 
 ---
 
