@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.170"
+#define SCREEN_VERSION "1.11.171"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -232,6 +232,10 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // The top-right corner held 3 s opens the WiFi page on any screen showing no page (a full card, no Teensy wired yet).
 // (1.11.170, bench) POST /sdhide: the card's /hmi renamed aside and a restart - a blank card without taking the card
 // out of a built transmitter (Malcolm, 3 Nov 2026); switched off and on, the screen renames it back. 4 MB boards only.
+// (1.11.171) THE CURSOR WHERE THE LETTERS END. On a new screen (no fonts on its card yet) the letters are drawn in the one
+// font kept in flash but were measured in their own: the WiFi password's cursor stood well to the right of what had
+// been typed (Malcolm, 3 Nov 2026, the first password typed on a fresh 4 MB panel), and centred words were off centre.
+// textWidth and fontHeight measure in the font that draws (drawnFont).
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -664,19 +668,24 @@ static ldrc::CardReport sdProbe() {
 // (hmi/fonts/decode_zi.py → nextion_fonts.h). 1-bpp rows, MSB = leftmost pixel;
 // a glyph is blitted at pen − kern_left, then the pen advances by width.
 static const NextionFont *fontFor(int id) { return (id >= 0 && id < 7) ? nextion_fonts[id] : nextion_fonts[6]; }
-static int fontHeight(int id) { return fontFor(id)->height; }
-static int textWidth(int fontId, const std::string &s) {
-    const NextionFont *f = fontFor(fontId); int w = 0;
-    for (unsigned char c : s) { if (c < f->first || c > f->last) continue; w += f->glyphs[c - f->first].width; }
-    return w;
-}
-static int clipX0 = 0, clipY0 = 0, clipX1 = 800, clipY1 = 480;   // drawGlyphs paints inside this window only (a box's text must not spill)
 // The .zi fonts are anti-aliased (alpha 0..7 per pixel). The 1-bpp tables in flash are the fallback; the
 // 4-bpp alpha tables come off the card into PSRAM at boot and are blended over whatever is under the text,
 // which is what the Nextion draws — the hard 1-bit version looked like a pen running out of ink.
 static uint8_t *aaBits[7] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 static uint32_t *aaOffset[7] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 static int fontIdx(int id) { return (id >= 0 && id < 7) ? id : 6; }
+// (1.11.171) The font the letters are really drawn in: one whose smooth table has not come off the card, and whose
+// 1-bpp table is not kept in flash, is drawn in font 6 (drawGlyphs) - and so must be measured in it. Measured in its
+// own, the password field's cursor stood well to the right of the letters on a new screen's blank card (Malcolm,
+// 3 Nov 2026, the first WiFi password typed on a fresh 4 MB panel), and every centred word was off centre.
+static int drawnFont(int id) { return !aaBits[fontIdx(id)] && !fontFor(id)->bits ? NEXTION_FONT_BITS_KEEP : id; }
+static int fontHeight(int id) { return fontFor(drawnFont(id))->height; }
+static int textWidth(int fontId, const std::string &s) {
+    const NextionFont *f = fontFor(drawnFont(fontId)); int w = 0;
+    for (unsigned char c : s) { if (c < f->first || c > f->last) continue; w += f->glyphs[c - f->first].width; }
+    return w;
+}
+static int clipX0 = 0, clipY0 = 0, clipX1 = 800, clipY1 = 480;   // drawGlyphs paints inside this window only (a box's text must not spill)
 static File assetOpen(const char *path);                 // (1.11.138, flash_pack.h) the pack's copy on the 16 MB boards, else the card's
 static bool assetsOk();                                  // pages, fonts and sounds can be had: the card, or the pack
 static File sdOpenChecked(const char *path);             // the card's file; a card that has gone is given up, not asked again (1.2 s a time)
@@ -705,7 +714,7 @@ static void drawGlyphs(int x, int y, int fontId, uint16_t col, const std::string
     // (15 Oct 2026, 1.11.65: only font NEXTION_FONT_BITS_KEEP, 6, keeps its 1-bpp table in flash - nextion_fonts.h; ~120 kB
     // of the screen's flash back. A font whose smooth table did not come off the card draws in that one: legible, if not
     // its own size. Without the card there are no pages at all, so this is the boot line and the screen's own pages.)
-    if (!aaBits[fontIdx(fontId)] && !fontFor(fontId)->bits) fontId = NEXTION_FONT_BITS_KEEP;
+    fontId = drawnFont(fontId);
     const NextionFont *f = fontFor(fontId);
     const int h = f->height, fi = fontIdx(fontId);
     if (y >= clipY1 || y + h <= clipY0) return;
