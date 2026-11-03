@@ -39,6 +39,7 @@
 #include <esp_partition.h>
 #include "board.h"                                      // (1.11.111) which of the two boards this is: the pins that differ, the update slot
 #include "tls_memory.h"                                 // (1.11.146) the secure connection's ~70 kB come from the PSRAM, not the internal RAM
+#include "LdrcCard.h"                                   // (1.11.168) the card's own start, step by step, when the SD library will not mount it
 
 #ifndef NEXTION_BAUD
 #define NEXTION_BAUD 921600
@@ -46,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.167"
+#define SCREEN_VERSION "1.11.168"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -216,6 +217,13 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // "Install now": tapping Install twice in a hurry cancelled the update a moment after starting it ("This has happened
 // several times" - Malcolm, 3 Nov 2026; the 30 ms bounce guard of 1.11.158 made a quick second tap count). The lone
 // Cancel now sits bottom LEFT, and a button that has just appeared takes no tap for 700 ms (update_device.h).
+// (1.11.168) THE CARD SAYS WHY. Christoph in Germany, the first builder from the public repository: "sd=0" with three
+// FAT32 cards, a 3 A supply and the right board, and no WiFi page to reach (without a card there are no pages, and the
+// top-right corner said only "join a WiFi first"). When the SD library will not mount the card at any speed, the screen
+// now starts the card itself, step by step (lib/LdrcCard, hmi/test_card), reads its first sectors, and writes under the
+// first line what it found and what to do: no card answering on IO10-IO13, a card that will not start, exFAT, a GPT
+// table, a blank card. The boot log and /status "sd_why" carry the same line. On a screen with no pages, the top-right
+// corner held 3 s opens the WiFi page instead. POST /sdprobe (bench): the same start tried once on a card that works.
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -627,6 +635,22 @@ static void eraseLine(int x1, int y1, int x2, int y2) {
 TouchDrvGT911 touch;
 SPIClass sdSPI(HSPI);
 bool touchOk = false, sdOk = false; static uint32_t sdMhz = 0;   // (1.11.165) the SPI clock the card answered at, MHz (0: none)
+static std::string sdWhy;                                  // (1.11.168) "" while the card is read; else what its own start found (the glass, the boot log, /status "sd_why")
+// (1.11.168) The card's own start, step by step (lib/LdrcCard), on its own lines at the 400 kHz the SD library also starts it
+// at. Only once the library has failed at every speed, or before it starts (the bench's /sdprobe): its reset would pull a
+// card in use from under the library.
+static ldrc::CardReport sdProbe() {
+    struct Lines : ldrc::CardWire {
+        uint8_t xfer(uint8_t o) override { return sdSPI.transfer(o); }
+        void select(bool on) override { digitalWrite(SD_CS, on ? LOW : HIGH); }
+        uint32_t ms() override { return millis(); }
+    } lines;
+    pinMode(SD_CS, OUTPUT); digitalWrite(SD_CS, HIGH);
+    sdSPI.beginTransaction(SPISettings(400000, MSBFIRST, SPI_MODE0));
+    const ldrc::CardReport r = ldrc::cardProbe(lines);
+    sdSPI.endTransaction();
+    return r;
+}
 
 // ------------------------------------------------------------------ fonts: the HMI's own .zi glyphs
 // (hmi/fonts/decode_zi.py → nextion_fonts.h). 1-bpp rows, MSB = leftmost pixel;
@@ -3181,7 +3205,10 @@ static bool doorSet(bool open) {
 }
 static void doorToggle() {                                 // the corner was held
     if (!doorSsid.empty()) { doorSet(false); banner("Workshop door SHUT"); return; }
-    if (!doorSet(true)) { banner("Workshop door: join a WiFi first"); return; }
+    if (!doorSet(true)) {
+        if (pageNames.empty()) { wifiRequested = true; return; }   // (1.11.168) a screen with no pages (no card read yet) has no other way to its WiFi page (Christoph, 3 Nov 2026)
+        banner("Workshop door: join a WiFi first"); return;
+    }
     banner(("Workshop door OPEN on " + doorSsid).c_str());
 }
 static uint32_t bannerUntil = 0;                           // the user's switch: hold the top-left corner 1.5 s
@@ -3212,6 +3239,7 @@ static void webBegin() {
         out += ",\"touchgap\":{\"max\":" + std::to_string((unsigned long) touchGapMax) + ",\"over30\":" + std::to_string((unsigned long) touchGapOver30) + ",\"presses\":" + std::to_string((unsigned long) touchPresses) + "}";   // (1.11.158) the longest no-touch gap bridged inside a press (the chip's dropped samples): what the 80 ms lift filter must exceed
         out += "," + holdJson();                               // (1.11.164) the hold watch: interrupts held on this core, by whom, during what
         out += ",\"sd_mhz\":" + std::to_string((unsigned long) sdMhz);   // (1.11.165) the SPI clock the card answered at (0: no card)
+        if (!sdWhy.empty()) { std::string w = sdWhy; for (auto &c : w) if (c == '"' || c == '\\') c = '\''; out += ",\"sd_why\":\"" + w + "\""; }   // (1.11.168) what the card's own start found
         { char q[340]; snprintf(q, sizeof(q), ",\"quiet\":{\"frames\":%lu,\"frame_us\":%lu,\"n\":%lu,\"late\":%lu,\"over\":%lu,\"wait_ms\":%lu,\"copy_us\":%lu,\"copy_max\":%lu,\"draw_us\":%lu,\"draw_max\":%lu,\"kept\":%lu,\"full\":%lu,\"warmed\":%lu,\"step_max\":%lu,\"stores\":%lu,\"store_max\":%lu}",
                                 (unsigned long) frameEnds, (unsigned long) frameUs, (unsigned long) quietN, (unsigned long) quietLateN, (unsigned long) quietOverN, (unsigned long) quietWaitMs,
                                 (unsigned long) quietCopyUs, (unsigned long) quietCopyMax, (unsigned long) quietDrawUs, (unsigned long) quietDrawMax,
@@ -3372,6 +3400,7 @@ static void webBegin() {
         web.send(200, "text/plain", "ok");
     });
     doorOn("/bootlog", HTTP_GET, []() { web.send(200, "text/plain", bootLog.c_str()); });
+    doorOn("/sdprobe", HTTP_POST, []() { prefs.putInt("sdprobe", 1); web.send(200, "text/plain", "the card's own start is tried once at the next start-up, before the library's: /reboot, then /bootlog"); });   // (1.11.168, bench) lib/LdrcCard proven on a card that works
     doorOn("/coredump", HTTP_GET, []() {                   // (1.11.15) the whole core dump partition, for espcoredump on the Mac
         const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, NULL);
         if (!p) { web.send(404, "text/plain", "no core dump partition"); return; }
@@ -4080,9 +4109,20 @@ void setup() {
     ldrc::crc32((const uint8_t *) "", 0);                  // (its table is made now, by one task, not later by two at once)
     // (1.11.165) Four speeds, not two: a builder's board or card may want a slower clock than ours do (Christoph, 2 Nov 2026:
     // "sd=0" with three FAT32 cards on a fresh CrowPanel). The speed that worked goes in the boot log; /status "sd_mhz".
+    if (prefs.getInt("sdprobe", 0)) {                      // (1.11.168, bench: POST /sdprobe) the card's own start, once, on a card that works
+        prefs.putInt("sdprobe", 0);
+        const uint32_t t0 = millis(); const ldrc::CardReport r = sdProbe();
+        blog("boot", "sd probe (bench): step " + std::to_string((int) r.step) + ", " + r.what + (r.advice.empty() ? "" : " | " + r.advice) + " (" + std::to_string((unsigned long) (millis() - t0)) + " ms)");
+    }
     { static const uint32_t speeds[4] = { 40000000, 20000000, 10000000, 4000000 }; sdMhz = 0;
       for (int i = 0; i < 4 && !sdOk; ++i) if (SD.begin(SD_CS, sdSPI, speeds[i])) { sdOk = true; sdMhz = speeds[i] / 1000000; } }
-    blog("boot", sdOk ? "sd ok at " + std::to_string((unsigned long) sdMhz) + " MHz" : "sd FAILED at 40, 20, 10 and 4 MHz (no card answering on CS 10 / CLK 12 / MOSI 11 / MISO 13, or no FAT32 on it)");
+    if (!sdOk) {                                           // (1.11.168) why: the card started step by step, its first sectors read
+        const ldrc::CardReport r = sdProbe();
+        std::string a = r.advice.empty() ? std::string("yet the SD library would not mount it at 4 MHz or faster: a weak contact in the slot, or on one of IO10 to IO13") : r.advice;
+        a[0] = (char) toupper((unsigned char) a[0]);
+        sdWhy = r.what + ". " + a + ".";
+    }
+    blog("boot", sdOk ? "sd ok at " + std::to_string((unsigned long) sdMhz) + " MHz" : "sd FAILED at 40, 20, 10 and 4 MHz: " + sdWhy);
     updMend();                                             // a file that was being replaced when the power went is put back, before anything is read
     packMount();                                           // (1.11.138, flash_pack.h) the pack: pages, fonts and sounds in the chip's own flash, on the 16 MB boards
     if (assetsOk()) loadAaFonts();
@@ -4092,7 +4132,22 @@ void setup() {
         File f = assetOpen("/hmi/index.json");
         if (f) { JsonDocument doc; if (!deserializeJson(doc, f)) for (JsonObject p : doc["pages"].as<JsonArray>()) { int id = p["id"] | 0; std::string nm = p["name"] | ""; if ((int) pageNames.size() <= id) pageNames.resize(id + 1); pageNames[id] = nm; pageIds[nm] = id; } f.close(); }
     }
-    { char b[80]; snprintf(b, sizeof(b), "LDRC V2 screen  sd=%d pages=%d touch=%d", sdOk, (int) pageNames.size(), touchOk); gfx->startWrite(); drawGlyphs(20, 40, 6, 0xFF9C, b); gfx->endWrite(); present(0, 0, W, 80); }
+    {   // the first line; (1.11.168) and with no card, what the card's own start found, under it, word-wrapped
+        char b[80]; snprintf(b, sizeof(b), "LDRC V2 screen  sd=%d pages=%d touch=%d", sdOk, (int) pageNames.size(), touchOk);
+        gfx->startWrite(); drawGlyphs(20, 40, 6, 0xFF9C, b);
+        int y = 40;
+        if (!sdOk) {
+            const std::string s = "Card: " + sdWhy; std::string line; size_t i = 0;
+            while (i <= s.size()) {
+                size_t j = s.find(' ', i); if (j == std::string::npos) j = s.size();
+                const std::string word = s.substr(i, j - i), longer = line.empty() ? word : line + " " + word;
+                if (!line.empty() && textWidth(6, longer) > W - 40) { drawGlyphs(20, y += 34, 6, 0xFFFF, line); line = word; } else line = longer;
+                i = j + 1;
+            }
+            if (!line.empty()) drawGlyphs(20, y += 34, 6, 0xFFFF, line);
+        }
+        gfx->endWrite(); present(0, 0, W, y + 40);
+    }
     // Program.s: the globals, the power-on notice to the Teensy, then page 0.
     host.sys["sys0"] = 0; host.sys["sys1"] = 0; host.sys["sys2"] = 0; host.sys["sys3"] = 0;
     host.sys["Screen_Background"] = prefs.getInt("bg", 1); host.sys["Button_BackGround"] = 54938; host.sys["Button_ForeGround"] = 0;
