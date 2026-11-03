@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.166"
+#define SCREEN_VERSION "1.11.167"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -212,6 +212,10 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // WiFi and Bluetooth sit centimetres from the scan antenna. The main board now says so in its status word (bit 128, B175)
 // and the screen takes it as "radios off" with its own banner (lib/LdrcUpdate/TxState.h); the scan waits 1.5 s before it
 // counts, and the radios come back when the scan ends.
+// (1.11.167) NO CANCEL BY A DOUBLE TAP. The update panel's lone Cancel took the bottom-right slot, over the right half of
+// "Install now": tapping Install twice in a hurry cancelled the update a moment after starting it ("This has happened
+// several times" - Malcolm, 3 Nov 2026; the 30 ms bounce guard of 1.11.158 made a quick second tap count). The lone
+// Cancel now sits bottom LEFT, and a button that has just appeared takes no tap for 700 ms (update_device.h).
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };

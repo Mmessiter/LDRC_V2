@@ -493,6 +493,7 @@ static UpdButton updRow[4];                                 // the versions to c
 static int updBarX = 0, updBarY = 0, updBarW = 0, updBarH = 0; static bool updBarThere = false; static uint16_t updBack = 0;
 static int updPressed = 0;                                 // what is under the finger: a button (1..3) or a row (10..13)
 static std::string updPressedName;                         // ... and what it said when the finger came down
+static std::string updButtonsKey; static uint32_t updButtonsAt = 0;   // (1.11.167) the buttons drawn last, and since when: a new set takes no tap for UPD_ARM_MS
 static bool updRedraw = false;
 
 static void updText(int x, int y, int font, uint16_t col, const std::string &s) { gfx->startWrite(); drawGlyphs(x, y, font, col, s); gfx->endWrite(); }
@@ -622,7 +623,11 @@ static void updDrawPanel(const ldrc::UpdView &v) {
         }
         const int gap = 20, side = 16;
         const int bw = n == 1 ? 180 : n ? min(280, (w - 2 * side - (n - 1) * gap) / n) : 0;
-        int bx = n == 1 ? x + 605 : x + (w - (n * bw + (n - 1) * gap)) / 2;   // (one button alone where OK is on every page: the house slot at the bottom right)
+        // (one button alone where OK is on every page: the house slot at the bottom right. 1.11.167: but a lone CANCEL in the
+        // first slot, bottom LEFT - Malcolm, 3 Nov 2026: "the cancel button appears in exactly the same place where the update
+        // now button had been ... if I accidentally click twice, I cancel inadvertently a moment after starting the update")
+        const bool loneCancel = n == 1 && *labels[idx[0]] == "Cancel";
+        int bx = n == 1 ? (loneCancel ? x + 14 : x + 605) : x + (w - (n * bw + (n - 1) * gap)) / 2;
         for (int k = 0; k < n; ++k) { updBtn[idx[k]].x = bx; updBtn[idx[k]].w = bw; bx += bw + gap; }
         static const int fonts[3] = { 0, 6, 2 };
         updBtnFont = 2;
@@ -633,6 +638,8 @@ static void updDrawPanel(const ldrc::UpdView &v) {
         }
     }
     for (int i = 0; i < 3; ++i) { updBtn[i].y = by; updBtn[i].h = bh; }
+    { const std::string key = v.button1 + "|" + v.button2 + "|" + v.button3;   // (1.11.167) a new set of buttons: none of them takes a tap for 700 ms (updTouch)
+      if (key != updButtonsKey) { updButtonsKey = key; updButtonsAt = millis(); } }
     updDrawButton(0, v.button1); updDrawButton(1, v.button2); updDrawButton(2, v.button3);
     clipX0 = 0; clipY0 = 0; clipX1 = W; clipY1 = H;
 }
@@ -673,6 +680,11 @@ static int updButtonAt(int px, int py) {
 // Teensy has blanked the screen, the touch wakes it (the blank page's own event), as it always did.
 static bool updDown = false;                              // the finger is down on the panel (B59: file-wide, so a corner held can forget it)
 static void updTouchCancel() { if (!updDown) return; updDown = false; if (updPressed) { updPressed = 0; updRedraw = true; } }   // (B59) a corner held: not a press
+// (1.11.167) THE SECOND TAP OF A DOUBLE TAP. A button that has just appeared - the panel opened, or its buttons changed
+// ("Install now" became "Cancel") - takes no tap for 700 ms: a finger that tapped twice in a hurry meant the first button,
+// not the one that took its place. (The lone Cancel also moved to the bottom left, away from Install now; but the receiver
+// page's "Receiver updates" button lies over that slot, and this covers it.)
+static const uint32_t UPD_ARM_MS = 700;
 static void updTouch(bool pressed, int x, int y, uint32_t now) {
     { static uint32_t lastDownHere = 0; if (pressed) lastDownHere = now;   // a corner held (the door, the radios): that finger is not for this page (1.11.3)
       if (touchLockout) { if (!pressed && (int32_t) (now - lastDownHere) > 80) touchLockout = false; return; } }
@@ -683,6 +695,7 @@ static void updTouch(bool pressed, int x, int y, uint32_t now) {
         down = true;
         if (page.name == "BlankView") { if (!teensyLink.running()) runScript(page.evPress, ""); updPressed = 0; return; }
         updPressed = updButtonAt(x, y); updPressedName = updButtonName(updPressed);
+        if (updPressed && now - updButtonsAt < UPD_ARM_MS) updPressed = 0;   // (1.11.167) not yet armed: the second tap of a double tap
         if (updPressed) updRedraw = true;
         return;
     }
@@ -767,7 +780,7 @@ static void updPoll() {
             drawnBar = barKey; lastBar = millis();
             dirty(updBarX, updBarY, updBarW, updBarH);
         }
-    } else if (wasUp) { if (topWho == 1) { topOn = false; topWho = 0; } updPressed = 0; dirty(UPD_X, UPD_Y, UPD_W, UPD_H); touchPainted = true; goneAt = millis(); }   // the page, as the Teensy has drawn it meanwhile
+    } else if (wasUp) { if (topWho == 1) { topOn = false; topWho = 0; } updPressed = 0; updButtonsKey.clear(); dirty(UPD_X, UPD_Y, UPD_W, UPD_H); touchPainted = true; goneAt = millis(); }   // the page, as the Teensy has drawn it meanwhile (1.11.167: the next panel's buttons are new ones)
     if (!up && !updBusy && updBuf) { free(updBuf); updBuf = nullptr; updBufInternal = false; }   // (1.11.161) the buffer given back once the panel has gone and no job runs: the next job takes one afresh
     wasUp = up;
     // A new screen (a card with no pages on it) has nothing to show but this panel, and no button to bring it
