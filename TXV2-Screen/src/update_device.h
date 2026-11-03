@@ -793,6 +793,21 @@ static void updPoll() {
     if (hold != lightHeld) { lightHeld = hold; if (!quietActive) backlight(hold ? 255 : sysDim * 255 / 100); }
 }
 static void updWeb() {
+    // (1.11.170, bench) A BLANK CARD WITHOUT TAKING THE CARD OUT (Malcolm, 3 Nov 2026: the black's card is an hour's work
+    // from its slot). POST /sdhide renames the card's /hmi to /hmi.hidden and restarts: to the screen that is a blank card
+    // (no index.json, no fonts, no pages). Its own restarts keep it so (an update's); the next start from power - the
+    // transmitter switched off and on - renames it back (setup), a /hmi fetched meanwhile kept as /hmi.fetched. Nothing
+    // is deleted. The 4 MB boards only: on a 16 MB one the pack would carry the pages, and want building again after.
+    doorOn("/sdhide", HTTP_POST, []() {
+#ifdef LDRC_FULL
+        web.send(409, "text/plain", "the 4 MB boards only: here the pack carries the pages"); return;
+#endif
+        if (flyingNow() || updBusy || updHost.onTrial()) { web.send(409, "text/plain", "not now: flying, an update running, or new firmware still on trial"); return; }
+        if (!sdOk || !SD.exists("/hmi") || SD.exists("/hmi.hidden") || SD.exists("/hmi.fetched")) { web.send(409, "text/plain", "needs the card's /hmi, and no /hmi.hidden or /hmi.fetched"); return; }
+        if (!SD.rename("/hmi", "/hmi.hidden")) { web.send(500, "text/plain", "the rename failed: nothing has changed"); return; }
+        prefs.putInt("sdhide", 1); blog("card", "bench: /hmi hidden until a start from power");
+        web.send(200, "text/plain", "hidden: restarting as a blank card; switch the transmitter off and on to put it back"); delay(300); ESP.restart();
+    });
     doorOn("/update/check", HTTP_POST, []() { updRequested = true; web.send(200, "text/plain", "checking"); });
     doorOn("/update/press", HTTP_POST, []() { updater.press(web.arg("button").toInt()); web.send(200, "text/plain", "pressed"); });
     doorOn("/update/status", HTTP_GET, []() {

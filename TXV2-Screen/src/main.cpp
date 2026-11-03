@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.169"
+#define SCREEN_VERSION "1.11.170"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -230,6 +230,8 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // reads the card's first sector (flash_pack.h sdGoneMaybe): a card that answers is kept, so a blank card stays read and
 // the update panel opens to fetch its files. POST /sdprobe also reads that sector at the next start (the boot log).
 // The top-right corner held 3 s opens the WiFi page on any screen showing no page (a full card, no Teensy wired yet).
+// (1.11.170, bench) POST /sdhide: the card's /hmi renamed aside and a restart - a blank card without taking the card
+// out of a built transmitter (Malcolm, 3 Nov 2026); switched off and on, the screen renames it back. 4 MB boards only.
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -4124,6 +4126,15 @@ void setup() {
     { static const uint32_t speeds[4] = { 40000000, 20000000, 10000000, 4000000 }; sdMhz = 0;
       for (int i = 0; i < 4 && !sdOk; ++i) if (SD.begin(SD_CS, sdSPI, speeds[i])) { sdOk = true; sdMhz = speeds[i] / 1000000; } }
     if (sdBench && sdOk) blog("boot", std::string("sd first sector (bench): ") + (sdFirstSectorReads() ? "read" : "FAILED"));   // (1.11.169) the blank card's probe, proven on a full one
+    if (sdOk && prefs.getInt("sdhide", 0)) {               // (1.11.170, bench: POST /sdhide, update_device.h) the card's /hmi hidden: a start from power puts it back
+        const esp_reset_reason_t rr = esp_reset_reason();
+        if (rr == ESP_RST_POWERON || rr == ESP_RST_BROWNOUT || rr == ESP_RST_UNKNOWN) {
+            if (SD.exists("/hmi") && !SD.exists("/hmi.fetched")) SD.rename("/hmi", "/hmi.fetched");   // what the update panel fetched meanwhile
+            const bool back = !SD.exists("/hmi") && SD.rename("/hmi.hidden", "/hmi");
+            if (back || !SD.exists("/hmi.hidden")) prefs.putInt("sdhide", 0);
+            blog("boot", back ? "bench: /hmi put back" : "bench: /hmi NOT put back");
+        } else blog("boot", "bench: /hmi hidden (off and on puts it back)");
+    }
     if (!sdOk) {                                           // (1.11.168) why: the card started step by step, its first sectors read
         const ldrc::CardReport r = sdProbe();
         std::string a = r.advice.empty() ? std::string("yet the SD library would not mount it at 4 MHz or faster: a weak contact in the slot, or on one of IO10 to IO13") : r.advice;
