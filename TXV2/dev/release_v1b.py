@@ -31,7 +31,9 @@
      recent.txt                  the latest release and the three before it that are whole: what "Earlier versions" offers
      manifest.json               the same for people and other tools, with the history of releases
      v/<release>/release.txt     each release's own description (for going back)
-     files/<CRC32>-<size>.bin    every file, under the name of its content: uploaded once, shared by all releases"""
+     files/<CRC32>-<size>.bin    every file, under the name of its content: uploaded once, shared by all releases
+     flash-screen.json           (3 Nov 2026) the browser flasher's list (messiter.com/ldrc/flash-screen.html): for a screen
+                                 on USB, each build's bootloader, partition table, boot_app0 and firmware, at their offsets"""
 import argparse, datetime, json, os, re, shutil, subprocess, sys, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -123,6 +125,25 @@ def screen_firmware(build):
             try: shutil.move(os.path.join(keep, e), os.path.join(archive, e))
             except OSError as err: print(f'  (could not move {e} to the archive: {err})')
     return images[0], images[1], version
+
+FLASH_PARTS = (('bootloader', 0x0), ('partitions', 0x8000), ('boot_app0', 0xE000), ('firmware', 0x10000))
+BOOT_APP0 = os.path.expanduser('~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin')
+
+def flasher_builds(sf, sff):
+    """(3 Nov 2026) THE BROWSER FLASHER (messiter.com/ldrc/flash-screen.html, Christoph: a builder should not need
+       PlatformIO): everything a bare panel needs over its USB socket, for each build - the bootloader and the partition
+       table of the same build as the release's firmware, Arduino's boot_app0 (the first boot choice: the first app slot),
+       and the release's own firmware image. The page reads the flash size off the chip and writes the build for it."""
+    out = []
+    ba = open(BOOT_APP0, 'rb').read()
+    if len(ba) != 8192: sys.exit('boot_app0.bin is not the 8 kB the flasher expects')
+    for env, fw, mb, build in (('ota', sf, 4, 'standard'), ('ota_full', sff, 16, 'full')):
+        folder = os.path.join(CLEAN, '.pio', 'build', env)
+        bl = open(os.path.join(folder, 'bootloader.bin'), 'rb').read(); pt = open(os.path.join(folder, 'partitions.bin'), 'rb').read()
+        if bl[0] != 0xE9 or 1 << (bl[3] >> 4) != mb: sys.exit(f'the {build} build\'s bootloader is not for a {mb} MB flash')
+        if pt[:2] != b'\xAA\x50': sys.exit(f'the {build} build\'s partition table is not one')
+        out.append((mb, build, (bl, pt, ba, fw)))
+    return out
 
 def teensy_files():
     """The help texts: TXV1B/"Help files for SD" -> /help/NAME.TXT on the Teensy's card."""
@@ -258,6 +279,13 @@ def stage(notes, build, name, with_screen=True):
     if with_screen:
         d['screen'] = {'version': sv, 'file': names['screen'], 'size': len(sf), 'crc': f'{crc(sf):08X}'}
         d['screen_full'] = {'version': sv, 'file': names['screen_full'], 'size': len(sff), 'crc': f'{crc(sff):08X}'}   # the FULL build, for the 16 MB layout (screens on it take only this)
+        d['flash'] = {'version': sv, 'builds': []}             # the browser flasher's (not in release.txt: the screens never read it)
+        for mb, build, blobs in flasher_builds(sf, sff):
+            parts = []
+            for (what, offset), b in zip(FLASH_PARTS, blobs):
+                n, fresh = put_blob(b); new += fresh
+                parts.append({'what': what, 'path': n, 'offset': offset, 'size': len(b), 'crc': f'{crc(b):08X}'})
+            d['flash']['builds'].append({'flash_mb': mb, 'build': build, 'parts': parts})
     write_release(d)
     gone = tidy()
     if gone: print(f'  {gone} files that no release names any more were taken out of the staging folder')
@@ -302,6 +330,9 @@ def write_release(d, history=True):
     open(os.path.join(REL, 'v', slug(d['name']), 'release.txt'), 'w').write(text)
     json.dump(d, open(os.path.join(REL, 'v', slug(d['name']), 'release.json'), 'w'), indent=1)
     open(os.path.join(REL, 'latest.txt'), 'w').write(text)
+    if 'flash' in d:                                         # (an older release made latest again has none: the flasher keeps the newest it had)
+        json.dump({'product': 'LDRC V2 screen', 'release': d['name'], 'version': d['flash']['version'], 'builds': d['flash']['builds']},
+                  open(os.path.join(REL, 'flash-screen.json'), 'w'), indent=1)
     mpath = os.path.join(REL, 'manifest.json')
     versions = json.load(open(mpath))['versions'] if os.path.exists(mpath) else []
     versions = [v for v in versions if v['name'] != d['name']]
@@ -321,6 +352,8 @@ def referenced():
         jp = os.path.join(vdir, folder, 'release.json')
         if not os.path.exists(jp): continue
         r = json.load(open(jp))
+        for build in r.get('flash', {}).get('builds', []):   # the browser flasher's parts (3 Nov 2026)
+            for p in build['parts']: names.add(p['path'])
         for part in PARTS:
             if part not in r: continue
             names.add(r[part]['file'])
@@ -439,8 +472,22 @@ def purge(names):
     if still: sys.exit('STILL THERE: ' + ', '.join(still))
     print(f'{len(names)} files are off the website (each answers 404 now); {len(changed)} earlier releases no longer name them: ' + ', '.join(changed))
 
+def flasher_files():
+    """The browser flasher's list and its parts, as staged: {name on the site: bytes} (empty when there is no list)."""
+    p = os.path.join(REL, 'flash-screen.json')
+    if not os.path.exists(p): return {}
+    out = {'flash-screen.json': open(p, 'rb').read()}
+    for build in json.loads(out['flash-screen.json'])['builds']:
+        for part in build['parts']:
+            b = open(os.path.join(REL, part['path']), 'rb').read()
+            if len(b) != part['size'] or f'{crc(b):08X}' != part['crc']: sys.exit(f'{part["path"]} (the flasher\'s {part["what"]}) is damaged in the staging folder: stage again')
+            out[part['path']] = b
+    return out
+
 def publish():
     text, d = staged(); files = wanted(d)
+    flasher = flasher_files()
+    files.update({n: b for n, b in flasher.items() if n != 'flash-screen.json'})   # (read back with the rest, before anything points at them)
     private = private_values()
     for n, b in files.items(): refuse_private(n, b, private)
     searched = refuse_private_everywhere(private)            # ... and every other file that the upload will take along
@@ -486,11 +533,15 @@ def publish():
             if status != 200 or len(body) != int(rd[part + '.size']) or f'{crc(body):08X}' != rd[part + '.crc']: bad.append(f'{n} of {rd["name"]} ({status})')
     if bad: sys.exit('NOT PUBLISHED: an earlier release is not whole on messiter.com:\n  ' + '\n  '.join(bad[:20]))
     script = ('set ftp:ssl-allow yes\nset ssl:verify-certificate no\nset net:max-retries 3\n'
+              + ('put -O public_html/txv1b/release txv1b/release/flash-screen.json\n' if flasher else '') +
               'put -O public_html/txv1b/release txv1b/release/manifest.json\nput -O public_html/txv1b/release txv1b/release/recent.txt\nput -O public_html/txv1b/release txv1b/release/latest.txt\nquit\n')
     r = subprocess.run(['lftp', '--env-password', '-u', env['LDRC_FTP_USER'], env['LDRC_FTP_HOST']], input=script, cwd=SITE, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if r.returncode: sys.exit(r.stdout[-1500:] + '\nFAILED: the upload of latest.txt')
     status, body = fetch(conn, 'latest.txt?n=' + str(os.getpid()))
     if status != 200 or body.decode(errors='replace') != text: sys.exit(f'latest.txt on messiter.com is not the one staged ({status})')
+    if flasher:
+        status, body = fetch(conn, 'flash-screen.json?n=' + str(os.getpid()))
+        if status != 200 or body != flasher['flash-screen.json']: sys.exit(f'flash-screen.json on messiter.com is not the one staged ({status})')
     status, body = fetch(conn, 'recent.txt?n=' + str(os.getpid()))
     if status != 200 or body.decode(errors='replace') != rtext: sys.exit(f'recent.txt on messiter.com is not the one staged ({status})')
     print(f'{rcount} releases can be gone back to ("Earlier versions"):', ', '.join(l.split('=', 1)[1].split('|')[0] for l in rtext.splitlines() if l.startswith('release=')))
