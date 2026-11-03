@@ -464,6 +464,9 @@ FLASHMEM void CalibrationNote(char *out, size_t n)
 // stick's channels are left out, with the motor and arming channels: a collective curve has its own reasons. Nothing is
 // said when all is well. The frame's buffers are worked out again from the sticks afterwards. The front page shows the
 // note once, at power-up and when a model is chosen (CentreNoteTick, as the clock's message).
+// B176 (Malcolm, 3 Nov 2026, a model whose motor is not fed by the collective stick, the note naming "Collective is 1488"
+// in banks 1-3: "We don't need to check the collective position which, in this case, was channel 3. We only need to
+// check one, two, and four"): channels 1, 2 and 4 only - the cyclic and the tail - are looked at.
 static void StagesAfterInputs() // a frame's stages after GetAllInputs, less the slow servos (they keep time)
 {
     MixInputs();
@@ -490,11 +493,11 @@ FLASHMEM void CentreNote(char *out, size_t n) // out: "" when every bank is cent
             InputsBuffer[ch] = (dev < 8 && !InputIsSwitch(dev)) ? ChannelCentre[dev] : ReadThreePositionSwitch(dev); // (as GetAllInputs, the sticks centred)
         }
         StagesAfterInputs();
-        for (uint8_t ch = 0; ch < CHANNELSUSED && found < 3; ++ch)
+        for (uint8_t ch = 0; ch < 4 && found < 3; ++ch)
         {
             const uint8_t dev = InPutStick[ch];
-            if (dev > 3 || dev == collective || ch == MotorChannel || (ArmingChannel >= 1 && ch == ArmingChannel - 1))
-                continue; // a knob or a switch feeds it, the throttle or collective stick does, or the firmware forces it
+            if (ch == 2 || dev > 3 || dev == collective || ch == MotorChannel || (ArmingChannel >= 1 && ch == ArmingChannel - 1))
+                continue; // (B176) channel 3, the collective or throttle; a knob or a switch feeds it, the throttle or collective stick does, or the firmware forces it
             const uint8_t at = ChannelOutPut[ch] < CHANNELSUSED ? ChannelOutPut[ch] : ch; // where RerouteOutputs put it
             const int v = SendBuffer[at];
             if (abs(v - 1500) <= 10)

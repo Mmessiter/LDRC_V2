@@ -5,7 +5,7 @@ for this model, and if it also sees that the centre position of Aileron, elevato
 StagesAfterInputs are lifted out of main.cpp, with the real RerouteOutputs and ServoReverse, and run on the Mac over fake
 sticks and fake curve, trim and subtrim stages: nothing said without Rotorflight or when all is well; a bank's curve, trim
 or subtrim that moves a cyclic or tail channel off 1500 is named with its bank; the throttle or collective stick's
-channels, the motor channel, the arming channel and the knobs are left alone; a routed channel is read where it went; a
+channels, the motor channel, the arming channel and the knobs are left alone; (B176) channels 1, 2 and 4 only; a routed channel is read where it went; a
 reversed channel is read reversed; three lines at most, in bank order; the box's room; the bank and the frame's buffers
 put back from the sticks afterwards. Then the flow as source: the tick's guards, the sound, the two places it is set.
    python3 dev/test_centre/test_centre.py"""
@@ -109,6 +109,12 @@ int main() {
     // 8. the frame's buffers afterwards are the sticks', in the pilot's bank
     reset(); Bank = 2; stickRaw[0] = ChannelCentre[0] + 100; curveOff[4][1] = -44; curveOff[2][0] = 0; note();
     CHECK(Bank == 2 && SendBuffer[0] == 1600 && SendBuffer[1] == 1500);
+    // 10. B176 (Malcolm, 3 Nov 2026): channels 1, 2 and 4 only. A model whose motor is on a switch: its collective (channel
+    // 3, the collective stick's own) at 1488 in three banks was named; now not. Nor is a stick-fed channel beyond 4.
+    reset(); InPutStick[4] = 8; curveOff[1][2] = -12; curveOff[2][2] = -12; curveOff[3][2] = -12; CHECK(note() == "");
+    reset(); MotorChannel = 255; curveOff[1][2] = -12; CHECK(note() == "");                       // (no motor channel at all)
+    reset(); InPutStick[7] = 0; curveOff[1][7] = 40; CHECK(note() == "");                          // channel 8 from the aileron stick: not looked at
+    reset(); InPutStick[4] = 8; curveOff[1][2] = -12; curveOff[1][3] = 30; CHECK(note().rfind("Bank 1: Rudder is 1530\r\nwith", 0) == 0);   // the rudder still is
     // 9. the longest names in three banks still fit the box
     reset(); strcpy(ChannelNames[0], "Collective"); strcpy(ChannelNames[1], "Collective"); strcpy(ChannelNames[3], "Collective"); curveOff[1][0] = 389; curveOff[2][1] = -389; curveOff[3][3] = 389;
     { const std::string s = note(); CHECK(s.size() <= 180 && lines(s) <= 6 && longest(s) <= 40); CHECK(s.rfind("Bank 1: Collective is 1889\r\nBank 2: Collective is 1111\r\nBank 3: Collective is 1889\r\n", 0) == 0); }
