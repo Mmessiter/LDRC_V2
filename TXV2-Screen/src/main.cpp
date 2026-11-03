@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.171"
+#define SCREEN_VERSION "1.11.172"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -236,6 +236,12 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // font kept in flash but were measured in their own: the WiFi password's cursor stood well to the right of what had
 // been typed (Malcolm, 3 Nov 2026, the first password typed on a fresh 4 MB panel), and centred words were off centre.
 // textWidth and fontHeight measure in the font that draws (drawnFont).
+// (1.11.172) THE NODE LAST JOINED, ASKED FIRST: the WiFi joins a second or two after the radios may start, where the
+// look of every channel before the first try (1.11.151) cost ~4 s at every start (wifi_device.h, wifiLast). A node
+// asked by BSSID and channel is looked for on that channel first (WIFI_FAST_SCAN: the all-channel look cost 2-3 s more);
+// a node that refuses us (202) is asked again a second later (the driver never does; the step sat out 12 s). Green on
+// 3 Nov: 15.9 s and 27 s from power before; 2.9 s after a restart, ~9 s from power (there the first ask found no node
+// in three starts of three: the look after it did). The diary marks the node letting us in (ev 4): node, then address.
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -4009,6 +4015,7 @@ static void netPoll() {
     }
     if (downSince || !otaReady) { Part p("joined"); wifiJoined(); }
     downSince = 0;
+    { Part p("weak"); wifiWeakPoll(); }                    // (1.11.172) joined from memory and weakly: a look, and a stronger node
     if (!otaReady) {                                        // (the handlers are made ONCE: every web.on() is a new one, and they were made afresh at every join)
         static bool made = false, otaBegun = false;
         otaReady = true; MDNS.begin("ldrc-screen");

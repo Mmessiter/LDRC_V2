@@ -62,8 +62,20 @@ static void wifiStoreWrite() {
         }
     }
 }
+// (1.11.172) THE NODE LAST JOINED, ASKED FIRST (Malcolm, 3 Nov 2026: "joining the Wi-Fi sometimes takes 20 seconds ... are
+// we able to speed it up a bit?"). The look of 1.11.151 before the first try costs ~4 s at every start (13 channels at
+// 300 ms) for the strongest node of a mesh; yet a transmitter mostly starts where it stopped. The node it last joined is
+// asked first, by BSSID and channel - a second or two - and the look comes only when that node does not answer (2 s
+// after the radio says it is not there, 6 s at most), or answers weakly (below -67 dBm: a look while joined, and a node
+// 8 dB stronger is moved to - wifiWeakPoll). Kept in the preferences, written only when the node changes (a flash write
+// stalls the panel) and when the wire is quiet, as the networks are.
+struct WifiLastNode { char ssid[33]; uint8_t bssid[6]; uint8_t ch; };
+static WifiLastNode wifiLast = {};
+static bool wifiLastDirty = false, wifiLastFailed = false; static uint32_t wifiLastDirtyAt = 0;
+static uint32_t wifiWeakLookAt = 0; static bool wifiWeakLooking = false;
 static void wifiStorePoll() {                                  // when the wire has been quiet for a moment; after 3 s, quiet or not
     if (wifiDirty && ((int32_t) (millis() - lastRxMs) > 300 || millis() - wifiDirtyAt > 3000)) wifiStoreWrite();
+    if (wifiLastDirty && ((int32_t) (millis() - lastRxMs) > 300 || millis() - wifiLastDirtyAt > 3000)) { wifiLastDirty = false; wifiPrefs.putBytes("lastnode", &wifiLast, sizeof wifiLast); }
 }
 static void wifiChanged() { wifiDirty = true; wifiDirtyAt = millis(); }
 
@@ -77,9 +89,11 @@ static std::string wifiTrying;                                  // the network a
 // bars while it was on no network the Mac could see - a second House access point, or a dead network stack? - and
 // nothing on the screen could say which; the boot log is full by 20 s). The marks are made in the driver's event task:
 // numbers only, no logging there.
-struct WifiMark { uint32_t ms; uint8_t ev; uint8_t reason; int8_t rssi; uint8_t ch; uint8_t bssid[6]; };   // ev: 1 joined (an IP came), 2 dropped, 3 the IP was lost
+struct WifiMark { uint32_t ms; uint8_t ev; uint8_t reason; int8_t rssi; uint8_t ch; uint8_t bssid[6]; };   // ev: 1 joined (an IP came), 2 dropped, 3 the IP was lost, 4 associated (the IP still to come)
 static WifiMark wifiMarks[12]; static volatile uint32_t wifiMarkN = 0;   // the last twelve, round and round
 static volatile uint32_t wifiDrops = 0, wifiJoins = 0;
+static volatile bool wifiAssoc = false;                        // (1.11.172) the node has let us in: the address is on its way
+static volatile uint32_t wifiRefusedAt = 0; static int wifiAgainLeft = 0; static bool wifiRefusedOut = false;   // (1.11.172) a node's refusal (202): asked again (wifiAuto)
 static void wifiMark(uint8_t ev, uint8_t reason, int8_t rssi, const uint8_t *bssid) {
     WifiMark &m = wifiMarks[wifiMarkN % 12];
     m.ms = millis(); m.ev = ev; m.reason = reason; m.rssi = rssi; m.ch = (uint8_t) WiFi.channel();
@@ -108,8 +122,10 @@ static std::string wifiDiagJson() {                             // the tail of /
 static void wifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) { wifiJoins = wifiJoins + 1; wifiMark(1, 0, (int8_t) WiFi.RSSI(), WiFi.BSSID()); return; }
     if (event == ARDUINO_EVENT_WIFI_STA_LOST_IP) { wifiMark(3, 0, (int8_t) WiFi.RSSI(), nullptr); return; }
+    if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) { wifiAssoc = true; wifiMark(4, 0, (int8_t) WiFi.RSSI(), info.wifi_sta_connected.bssid); return; }   // (1.11.172) a join's time: to the node, then to the IP
     if (event != ARDUINO_EVENT_WIFI_STA_DISCONNECTED) return;
-    const int why = info.wifi_sta_disconnected.reason;
+    const int why = info.wifi_sta_disconnected.reason; wifiAssoc = false;
+    if (why == 202) wifiRefusedAt = millis() | 1;
     wifiDrops = wifiDrops + 1; wifiMark(2, (uint8_t) why, info.wifi_sta_disconnected.rssi, info.wifi_sta_disconnected.bssid);
     if (why == 202) wifiBadKey += 2;                            // authentication failed: the password
     else if (why == 15 || why == 204) wifiBadKey++;             // a handshake that timed out: the password - or a weak signal, so it takes two of them
@@ -138,15 +154,21 @@ static std::string wifiNodesText(const std::string &ssid) {        // "f32109 -5
     for (auto &w : wifiNodes) if (ldrc::wifiSameName(w.ssid, ssid)) s += (s.empty() ? "" : ", ") + wifiNodeTail(w.bssid) + " " + std::to_string(w.rssi) + " ch" + std::to_string(w.ch);
     return s;
 }
-static void wifiBeginWith(const std::string &ssid, const std::string &pass) {
+static void wifiBeginWith(const std::string &ssid, const std::string &pass, const WifiLastNode *last = nullptr) {   // (1.11.172) last: ask the node last joined
     const bool was = WiFi.status() == WL_CONNECTED;
     WiFi.disconnect();
-    wifiBadKey = 0; wifiExpired = 0; wifiNoAp = 0; wifiTrying = ssid; wifiBeganAt = millis();
-    const WifiNode *node = wifiStrongestNode(ssid);
-    wifiBy = node ? "node " + wifiNodeTail(node->bssid) : "name";
-    blog("wifi", node ? "asking " + ldrc::wifiShown(ssid) + " by node: " + wifiNodesText(ssid) : "asking " + ldrc::wifiShown(ssid) + " by name");   // (the strongest first; a boot log line holds 60 characters, /status wifi "nodes" the lot)
-    const wl_status_t said = node ? WiFi.begin(ssid.c_str(), pass.empty() ? nullptr : pass.c_str(), node->ch, node->bssid)
-                                  : pass.empty() ? WiFi.begin(ssid.c_str()) : WiFi.begin(ssid.c_str(), pass.c_str());
+    wifiBadKey = 0; wifiExpired = 0; wifiNoAp = 0; wifiAssoc = false; wifiTrying = ssid; wifiBeganAt = millis();
+    wifiRefusedAt = 0; wifiAgainLeft = 2; wifiRefusedOut = false;
+    const WifiNode *node = last ? nullptr : wifiStrongestNode(ssid);
+    const uint8_t *bssid = last ? last->bssid : node ? node->bssid : nullptr; const int ch = last ? last->ch : node ? node->ch : 0;
+    wifiBy = last ? "last node " + wifiNodeTail(bssid) : node ? "node " + wifiNodeTail(node->bssid) : "name";
+    blog("wifi", last ? "asking " + ldrc::wifiShown(ssid) + " by the node last joined: " + wifiNodeTail(bssid) + " ch" + std::to_string(ch)
+                      : node ? "asking " + ldrc::wifiShown(ssid) + " by node: " + wifiNodesText(ssid) : "asking " + ldrc::wifiShown(ssid) + " by name");   // (the strongest first; a boot log line holds 60 characters, /status wifi "nodes" the lot)
+    // (1.11.172) a node asked by BSSID and channel: the driver looks on that channel first and stops at the node; the
+    // all-channel look before it (1.11.148, for the strongest of a name) cost 2-3 s when the node is already chosen
+    WiFi.setScanMethod(bssid ? WIFI_FAST_SCAN : WIFI_ALL_CHANNEL_SCAN);
+    const wl_status_t said = bssid ? WiFi.begin(ssid.c_str(), pass.empty() ? nullptr : pass.c_str(), ch, bssid)
+                                   : pass.empty() ? WiFi.begin(ssid.c_str()) : WiFi.begin(ssid.c_str(), pass.c_str());
     if (was && said == WL_CONNECTED) esp_wifi_connect();        // the library's status had not caught up with our disconnect(): asked for the network in hand, it asks the radio for nothing
 }
 static void wifiCollect(int n, std::vector<ldrc::WifiNet> &out) {
@@ -222,16 +244,29 @@ static void wifiChoose(std::vector<ldrc::WifiNet> &seen, uint32_t now) {
 static void wifiAuto() {
     const uint32_t now = millis();
     if (wifiKnown.empty()) return;
+    // (1.11.172) A NODE THAT REFUSED US (reason 202) IS ASKED AGAIN a second later, twice at most. The radio's driver asks
+    // again by itself after every other failure, never after this one (its status then says so: WL_CONNECT_FAILED), and
+    // the step sat out its 12 s: on 3 Nov green's third start from power was refused once by the node it had just heard
+    // at -60 dBm, and joined at 28.8 s. Refused three times, the step ends at once.
+    if ((wifiAutoStep == 1 || wifiAutoStep == 6) && wifiRefusedAt && (int32_t) (now - wifiRefusedAt) > 1000 && WiFi.status() == WL_CONNECT_FAILED) {
+        wifiRefusedAt = 0;
+        if (wifiAgainLeft > 0) { wifiAgainLeft--; blog("wifi", "auto: refused by " + ldrc::wifiShown(wifiTrying) + ", asked again"); WiFi.begin(); }
+        else wifiRefusedOut = true;
+    }
     switch (wifiAutoStep) {
     case 0:
         wifiTried.clear(); wifiTried.push_back(wifiKnown[0].ssid);
+        if (wifiLast.ssid[0] && !wifiLastFailed && ldrc::wifiSameName(wifiLast.ssid, wifiKnown[0].ssid) && (!wifiNodesAt || now - wifiNodesAt > 60000)) {
+            wifiBeginWith(wifiKnown[0].ssid, wifiKnown[0].pass, &wifiLast); wifiAutoAt = now; wifiAutoStep = 6;   // (1.11.172) the node last joined, first
+            return;
+        }
         // (1.11.151) a look first, unless one is fresh: the newest network we know is then asked of its strongest node
         if ((!wifiNodesAt || now - wifiNodesAt > 60000) && wifiLook(true)) { blog("wifi", "auto: a look first, for the strongest node"); wifiAutoStep = 5; wifiAutoAt = now; return; }
         blog("wifi", "auto: trying " + ldrc::wifiShown(wifiKnown[0].ssid));
         wifiBeginWith(wifiKnown[0].ssid, wifiKnown[0].pass); wifiAutoAt = now; wifiAutoStep = 1;
         return;
     case 1:
-        if (now - wifiAutoAt > 12000 || (wifiNoAp && now - wifiAutoAt > 4000)) {   // (the radio says "no such network": no need to wait the whole while)
+        if (now - wifiAutoAt > 12000 || (wifiNoAp && now - wifiAutoAt > 4000) || wifiRefusedOut) {   // (the radio says "no such network": no need to wait the whole while)
             blog("wifi", "auto: " + ldrc::wifiShown(wifiTrying) + (wifiNoAp ? " not there" : wifiBadKey ? " refused" : " did not answer"));
             wifiAutoStep = wifiLook(true) ? 2 : 3; wifiAutoAt = now;
         }
@@ -244,6 +279,15 @@ static void wifiAuto() {
         wifiChoose(seen, now);
         return;
     }
+    case 6:     // (1.11.172) the node last joined is asked: 2 s after the radio says it is not there, 6 s at most (12 s once it has
+                // let us in: the address is on its way); then the look of 1.11.151
+        if (now - wifiAutoAt > 12000 || wifiRefusedOut || (!wifiAssoc && (now - wifiAutoAt > 6000 || (wifiNoAp && now - wifiAutoAt > 2000)))) {
+            blog("wifi", std::string("auto: the node last joined ") + (wifiNoAp ? "is not there" : wifiBadKey ? "refused" : "did not answer") + ": a look");
+            wifiLastFailed = true;                                   // (not asked again until a join puts it right)
+            if (wifiLook(true)) { wifiAutoStep = 5; wifiAutoAt = now; }
+            else { wifiBeginWith(wifiKnown[0].ssid, wifiKnown[0].pass); wifiAutoAt = now; wifiAutoStep = 1; }
+        }
+        return;
     case 5: {   // (1.11.151) the look before the first try is in
         const int st = wifiLookState();
         if (st == 0) return;
@@ -260,9 +304,41 @@ static void wifiAuto() {
         return;
     }
 }
+// (1.11.172) Joined weakly by node: a look while joined (the radio leaves its channel for the others a moment at a time),
+// and a node of the name 8 dB stronger is moved to - the transmitter started in another room than it stopped in, or the
+// look before the join heard badly (green on 3 Nov, from power: -72 dBm with a -50 node in the room). Never in flight,
+// never while "Check for update" is at work; once per weak join.
+static void wifiWeakPoll() {
+    if (!wifiWeakLookAt || (int32_t) (millis() - wifiWeakLookAt) < 0) return;
+    if (!wifiWeakLooking) {
+        if (updAtWork() || flyingNow()) { wifiWeakLookAt = millis() + 10000; return; }
+        if (wifiLook(false)) wifiWeakLooking = true; else wifiWeakLookAt = 0;
+        return;
+    }
+    const int st = wifiLookState(); if (st == 0) return;
+    wifiWeakLooking = false; wifiWeakLookAt = 0;
+    if (st < 0) return;
+    std::vector<ldrc::WifiNet> seen; wifiCollect(WiFi.scanComplete(), seen);
+    const std::string on = WiFi.SSID().c_str(); const int here = WiFi.RSSI();
+    const WifiNode *best = wifiStrongestNode(on); const uint8_t *in = WiFi.BSSID();
+    if (!best || best->rssi < here + 8 || (in && !memcmp(best->bssid, in, 6))) { blog("wifi", "joined weakly: no node 8 dB stronger (" + std::to_string(here) + ")"); return; }
+    for (auto &k : wifiKnown) if (ldrc::wifiSameName(k.ssid, on)) {
+        blog("wifi", "a stronger node: " + wifiNodeTail(best->bssid) + " " + std::to_string(best->rssi) + " against " + std::to_string(here));
+        wifiBeginWith(k.ssid, k.pass); return;                   // (by the strongest node the look heard)
+    }
+}
 static void wifiJoined() {                                     // netPoll(): we are on a network. The one we are on is the newest we know.
     wifiAutoStep = 1; wifiAutoAt = millis(); wifiTried.clear();
     blog("wifi", "joined " + std::string(ldrc::wifiShown(WiFi.SSID().c_str())) + " " + std::to_string(WiFi.RSSI()));
+    {   // (1.11.172) the node in hand is the one to ask first next time (written only when it changes); a weak one asked from memory owes a look
+        const uint8_t *b = WiFi.BSSID(); const int ch = (int) WiFi.channel(); const std::string on = WiFi.SSID().c_str();
+        wifiLastFailed = false;
+        if (b && ch >= 1 && ch <= 14 && !on.empty() && on.size() < sizeof wifiLast.ssid && (strcmp(wifiLast.ssid, on.c_str()) || memcmp(wifiLast.bssid, b, 6) || wifiLast.ch != ch)) {
+            memset(&wifiLast, 0, sizeof wifiLast); memcpy(wifiLast.ssid, on.data(), on.size()); memcpy(wifiLast.bssid, b, 6); wifiLast.ch = (uint8_t) ch;
+            wifiLastDirty = true; wifiLastDirtyAt = millis();
+        }
+        if (wifiBy != "name" && WiFi.RSSI() < -67) { wifiWeakLookAt = millis() + 3000; blog("wifi", "joined weakly: a look in 3 s"); }   // (a name: a phone's hotspot, one node)
+    }
     const std::string on = WiFi.SSID().c_str();
     if (on.empty() || wifiKnown.empty() || ldrc::wifiSameName(wifiKnown[0].ssid, on)) return;
     for (size_t k = 1; k < wifiKnown.size(); ++k)
@@ -272,6 +348,8 @@ static void wifiBegin() {                                      // once, at start
     wifiPrefs.begin("wifi", false);
     const bool fresh = !wifiPrefs.isKey("n") && !wifiPrefs.isKey("all");
     wifiStoreLoad();
+    if (wifiPrefs.getBytesLength("lastnode") == sizeof wifiLast) wifiPrefs.getBytes("lastnode", &wifiLast, sizeof wifiLast);   // (1.11.172)
+    wifiLast.ssid[sizeof wifiLast.ssid - 1] = 0; if (wifiLast.ch < 1 || wifiLast.ch > 14) wifiLast.ssid[0] = 0;
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     bool changed = false;
