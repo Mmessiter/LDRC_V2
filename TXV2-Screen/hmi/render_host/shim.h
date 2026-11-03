@@ -18,6 +18,8 @@ static inline uint32_t millis() { return hostClockMs; }
 static inline uint32_t micros() { return hostClockMs * 1000; }
 static inline void *ps_malloc(size_t n) { return malloc(n); }
 static int stripWant = 0; static bool stripOn = false, stripArm = false, ringOn = false; static inline bool stripBegin() { return false; }   // (26 Oct evening: the strips - none on the Mac)
+static const char *stripWhy = "off"; static bool stripSkipRun = false; static uint32_t updSeenMs = 0;   // (1.11.159) the strips waiting out the update page - none on the Mac
+static bool darkPage = false; static volatile bool updFlashingNow = false, updSessionHeld = false;   // (1.11.160, 1.11.165) the dark install, the flash being written, the update session - none on the Mac
 static volatile bool sfBusy = false; static volatile uint8_t slidePhase = 0;   // (31 Oct: the feeder's fill in flight, and the scroll step's phase - none on the Mac)
 struct SlideWin { volatile bool on; volatile int top, y0, y1; }; static SlideWin winNext = { false, 0, 0, 0 }; static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // (1.11.156: the window - the strips are off on the Mac, so it never opens)
 static bool stripStopWanted = false; static inline void stripRelease() {}   // (the strips stand down for the update page - none on the Mac)

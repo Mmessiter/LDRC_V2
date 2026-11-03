@@ -20,7 +20,7 @@
 1. **Install** [PlatformIO](https://platformio.org/). `platformio.ini` pins the ESP32 platform to **espressif32 7.0.1** (Arduino core 2.0.17): a newer platform brings the core 3 and the display library does not compile with it (errors inside `GFX Library for Arduino`, such as `'esp_lcd_rgb_panel_frame_trans_done_cb_t' does not name a type`). If you built before 2 Nov 2026 and see those, pull, delete the project's `.pio` folder and build again. The panel's USB-C port is a CH340 serial chip. A Mac or a Windows PC may need its driver.
 2. **Put a blank microSD card**, formatted **FAT32**, in the panel's slot **before** you power it. The card is read at power-up only.
    - Use a card of **32 GB or less**. Larger cards come as exFAT, which the screen cannot read; reformat them FAT32 if you must use one.
-   - **What the first line on the glass means:** `LDRC V2 screen sd=1 pages=0 touch=1` is a healthy fresh screen (no pages yet: the first fetch brings them). `sd=0` means the card did not answer at all: the card was put in after power-up, or it is not FAT32, or the board is not the classic CrowPanel 5.0 (Elecrow's **Advance** series wires its card slot to other pins, and this firmware would see no card). `touch=0` means the touch chip did not answer.
+   - **What the first line on the glass means:** `LDRC V2 screen sd=1 pages=0 touch=1` is a healthy fresh screen with a blank card (no pages yet: the first fetch brings them). With `sd=0`, the line under it (*Card: ...*) says what the screen found on the card and what to do. A screen older than 1.11.169 also said `sd=0` for a good blank card: flash the latest, or copy `sd/` onto the card (step 4). `touch=0` means the touch chip did not answer.
 3. **Flash over USB**, before the screen is wired to the Teensy:
 
    ```
@@ -34,7 +34,7 @@
    - The screen offers the latest release. Press **Install now**.
    - It fetches the whole card and the published firmware, then restarts as a complete screen. The help animations are most of
      the card (one for every help page), so the first fetch takes a while.
-   - (Or copy `sd/` to the card first. It then fetches only what differs. The animations themselves, `sd/hmi/films/*.ldf` and
+   - (Or copy what is inside `sd/`, the folders `hmi` and `images`, to the top of the card first. The screen then shows `pages=84` and waits for the Teensy (step 5); later, Transmitter setup's **Check for update** fetches only what differs. The animations themselves, `sd/hmi/films/*.ldf` and
      their sound, `*.ima` (or `*.wav`), are not kept in this repository: they are large and remade from scripts, and the
      release on messiter.com carries them.)
 5. **Connect it to the Teensy**, on the Version 1 board's Nextion header:

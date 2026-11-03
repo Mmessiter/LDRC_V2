@@ -34,12 +34,22 @@ static std::string packJson();                           // /status "pack"
 // page (Malcolm: "instead of being faster, I think it's slower. Quite a lot slower"). So a failed open of a card file is
 // followed, at most every 5 s, by one probe of a file every card holds; if that fails too the card is given up (sdOk
 // false) until the next start: the pack carries on with the pages, fonts and sounds, pictures and films stand aside.
+// (1.11.169) A BLANK CARD has not got that file: 1.11.138-168 gave it up at the first font the start looked for - sd=0,
+// and the update panel that fetches the files never came (the README asks for a blank FAT32 card; Christoph, 3 Nov
+// 2026, three good cards). Now a missing index.json is followed by a read of the card's first sector: a card that
+// answers is kept. A card that holds its files is probed exactly as before.
 static uint32_t sdGoneMs = 0, sdProbeAt = 0;
+static bool sdFirstSectorReads() {                         // (1.11.169) the card itself, files or none
+    static uint8_t *sector = (uint8_t *) heap_caps_malloc(512, MALLOC_CAP_SPIRAM);
+    return !sector || SD.readRAW(sector, 0);               // (no buffer: never give up a card untested)
+}
 static void sdGoneMaybe() {
     if (!sdOk) return;
     const uint32_t now = millis(); if (sdProbeAt && now - sdProbeAt < 5000) return; sdProbeAt = now;
     File f = SD.open("/hmi/index.json");
     if (f) { f.close(); return; }
+    static bool said = false;
+    if (sdFirstSectorReads()) { if (!said) { said = true; blog("card", "no /hmi/index.json, yet the card reads: kept"); } return; }
     sdOk = false; sdGoneMs = now ? now : 1;
     blog("card", "gone: no answer to a probe (the pack carries on; pictures and films wait for the next start)");
 }

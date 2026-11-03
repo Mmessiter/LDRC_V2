@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.168"
+#define SCREEN_VERSION "1.11.169"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -224,6 +224,12 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // first line what it found and what to do: no card answering on IO10-IO13, a card that will not start, exFAT, a GPT
 // table, a blank card. The boot log and /status "sd_why" carry the same line. On a screen with no pages, the top-right
 // corner held 3 s opens the WiFi page instead. POST /sdprobe (bench): the same start tried once on a card that works.
+// (1.11.169) A BLANK CARD IS A CARD. Christoph's photo of 1.11.168: "Card:" and nothing after it - the library HAD
+// mounted his card; the screen then gave it up as gone because it held no /hmi/index.json, the file the "card gone"
+// probe of 1.11.138 opened (and a blank card, which the README asks for, never has). Without that file the probe now
+// reads the card's first sector (flash_pack.h sdGoneMaybe): a card that answers is kept, so a blank card stays read and
+// the update panel opens to fetch its files. POST /sdprobe also reads that sector at the next start (the boot log).
+// The top-right corner held 3 s opens the WiFi page on any screen showing no page (a full card, no Teensy wired yet).
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };
@@ -3206,7 +3212,7 @@ static bool doorSet(bool open) {
 static void doorToggle() {                                 // the corner was held
     if (!doorSsid.empty()) { doorSet(false); banner("Workshop door SHUT"); return; }
     if (!doorSet(true)) {
-        if (pageNames.empty()) { wifiRequested = true; return; }   // (1.11.168) a screen with no pages (no card read yet) has no other way to its WiFi page (Christoph, 3 Nov 2026)
+        if (pageNames.empty() || page.name.empty()) { wifiRequested = true; return; }   // (1.11.168) a screen with no pages (no card read yet) has no other way to its WiFi page (Christoph, 3 Nov 2026); (1.11.169) nor has one showing none - pages on its card, no Teensy yet to ask for one
         banner("Workshop door: join a WiFi first"); return;
     }
     banner(("Workshop door OPEN on " + doorSsid).c_str());
@@ -4109,13 +4115,15 @@ void setup() {
     ldrc::crc32((const uint8_t *) "", 0);                  // (its table is made now, by one task, not later by two at once)
     // (1.11.165) Four speeds, not two: a builder's board or card may want a slower clock than ours do (Christoph, 2 Nov 2026:
     // "sd=0" with three FAT32 cards on a fresh CrowPanel). The speed that worked goes in the boot log; /status "sd_mhz".
-    if (prefs.getInt("sdprobe", 0)) {                      // (1.11.168, bench: POST /sdprobe) the card's own start, once, on a card that works
+    const bool sdBench = prefs.getInt("sdprobe", 0) != 0;
+    if (sdBench) {                                         // (1.11.168, bench: POST /sdprobe) the card's own start, once, on a card that works
         prefs.putInt("sdprobe", 0);
         const uint32_t t0 = millis(); const ldrc::CardReport r = sdProbe();
         blog("boot", "sd probe (bench): step " + std::to_string((int) r.step) + ", " + r.what + (r.advice.empty() ? "" : " | " + r.advice) + " (" + std::to_string((unsigned long) (millis() - t0)) + " ms)");
     }
     { static const uint32_t speeds[4] = { 40000000, 20000000, 10000000, 4000000 }; sdMhz = 0;
       for (int i = 0; i < 4 && !sdOk; ++i) if (SD.begin(SD_CS, sdSPI, speeds[i])) { sdOk = true; sdMhz = speeds[i] / 1000000; } }
+    if (sdBench && sdOk) blog("boot", std::string("sd first sector (bench): ") + (sdFirstSectorReads() ? "read" : "FAILED"));   // (1.11.169) the blank card's probe, proven on a full one
     if (!sdOk) {                                           // (1.11.168) why: the card started step by step, its first sectors read
         const ldrc::CardReport r = sdProbe();
         std::string a = r.advice.empty() ? std::string("yet the SD library would not mount it at 4 MHz or faster: a weak contact in the slot, or on one of IO10 to IO13") : r.advice;
@@ -4136,6 +4144,7 @@ void setup() {
         char b[80]; snprintf(b, sizeof(b), "LDRC V2 screen  sd=%d pages=%d touch=%d", sdOk, (int) pageNames.size(), touchOk);
         gfx->startWrite(); drawGlyphs(20, 40, 6, 0xFF9C, b);
         int y = 40;
+        if (!sdOk && sdWhy.empty()) sdWhy = "it was read at " + std::to_string((unsigned long) sdMhz) + " MHz, then stopped answering. Push it in until it clicks, or try another card.";   // (1.11.169: mounted, then given up - flash_pack.h sdGoneMaybe)
         if (!sdOk) {
             const std::string s = "Card: " + sdWhy; std::string line; size_t i = 0;
             while (i <= s.size()) {
