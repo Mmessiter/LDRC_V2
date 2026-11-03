@@ -103,7 +103,7 @@
 | microSD card | For the screen. **FAT32** (cards over 32 GB come as exFAT: reformat them) | 1 | The screen fills it itself |
 | Power switch | **Pololu 2808** pushbutton power switch | 1 | |
 | Push button | 16 mm vandal-resistant, momentary | 1 | The on/off button |
-| 5 V regulator, Teensy | Pololu 5 V 2 A step-up/step-down **S13V20F5** | 1 | It holds 5 V even when the pack runs low, so the radio link keeps flying the model if the screen drops out first |
+| 5 V regulator, Teensy | Pololu 5 V 1 A step-up/step-down **S13V10F5** (the 2 A **S13V20F5** fits too: 1 A is plenty) | 1 | Step-up/step-down: it holds 5 V even when the pack runs low, so the radio link keeps flying the model if the screen drops out first |
 | 5 V regulator, screen | **7805** | 1 | |
 | 3.3 V regulator | **AMS1117-3.3** | 1 | |
 | Battery sensor | **INA219** current/voltage sensor module (I²C) | 1 | Reads the transmitter's battery. Without it there is no battery reading |
@@ -126,7 +126,7 @@
 
 **Cost:** over £120 in parts (approximate, October 2026; the full total is coming). See [Build one](https://messiter.com/ldrc/build.html) for current figures.
 
-<!-- TODO Malcolm: (1) The old README said "common anode" for the RGB LED; the board's netlist and the firmware (analogWrite HIGH = on) suit common cathode. Which do you fit? (2) 5 V regulators: ANSWERED 3 Nov 2026 (S13V20F5 for the Teensy, 7805 for the screen); the screen's current draw has never been measured - does its 7805 need a heatsink? (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ML01DP5 aerial connector gender (SMA or RP-SMA). (6) Recommended battery pack and speaker part. (7) The exact three-position switch part, and whether any are two-position. (8) Re-cost the V2 parts. -->
+<!-- TODO Malcolm: (1) The old README said "common anode" for the RGB LED; the board's netlist and the firmware (analogWrite HIGH = on) suit common cathode. Which do you fit? (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen); the screen's current draw has never been measured - does its 7805 need a heatsink? (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ML01DP5 aerial connector gender (SMA or RP-SMA). (6) Recommended battery pack and speaker part. (7) The exact three-position switch part, and whether any are two-position. (8) Re-cost the V2 parts. -->
 
 ### The case
 
