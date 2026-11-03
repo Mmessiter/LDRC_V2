@@ -78,6 +78,8 @@ With no model connected it switches off at once.|
 The quality bar always counts the last 200 data packets.|
 'Radio scanner sensitivity' (1 to 255):|
 how slowly the bars of 'Scan RF' fall back.|
+While 'Scan RF' runs, the screen's own WiFi and Bluetooth|
+are switched off: they would be the loudest thing it hears.|
 Higher keeps them up longer.|
 'Sea-level pressure (QNH)' (hPa):|
 today's air pressure at sea level where you fly.|

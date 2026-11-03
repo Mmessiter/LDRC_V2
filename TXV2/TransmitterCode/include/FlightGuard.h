@@ -344,6 +344,8 @@ uint8_t ScreenStatusNow()
         s |= 8;
     if (ModelJustNow())
         s |= 16;
+    if (CurrentMode == SCANWAVEBAND)
+        s |= 128; // B175 (Malcolm, 3 Nov 2026, two transmitters scanning side by side - 4 hits a second against 162): the screen's own WiFi and Bluetooth, centimetres from the scan antenna, are the loudest thing in the band - off while the scan runs (screen 1.11.166)
     if (RadiosMustBeOff())
         s |= 32;
     if (BindingEnabled)

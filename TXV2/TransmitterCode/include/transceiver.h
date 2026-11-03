@@ -521,6 +521,7 @@ void DoScanEnd()
     ConfigureRadio();
     DontChangePipeAddress = false;
     CurrentMode = NORMAL;
+    TellScreen(true); // B175: the scan is over - the screen's radios may come back at once
 }
 /*********************************************************************************************************************************/
 
@@ -529,6 +530,8 @@ void DoScanInit()
     Radio1.setDataRate(RF24_1MBPS); // Scan only works at this default rate
     CurrentMode = SCANWAVEBAND;     // Fhss == No transmitting please, we are scanning.
     BoundFlag = false;
+    TellScreen(true);     // B175: the screen is told at once (status bit 128): its WiFi and Bluetooth go off for the scan ...
+    DelayWithDog(1500);   // ... and the counting starts once they have (a WiFi radio takes a moment to fall silent)
     ScanAllChannels(true);
 }
 //************************************************************************************************************/

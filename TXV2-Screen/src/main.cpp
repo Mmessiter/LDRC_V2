@@ -46,7 +46,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.165"
+#define SCREEN_VERSION "1.11.166"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -207,6 +207,11 @@ struct SlideWin { volatile bool on; volatile int top, y0, y1; };
 // task for the whole page, its 24 kB stack reserved when the page opens (update_device.h updSessionBegin), so the
 // strips' 19 kB can no longer take the piece that task needs, and the strips run with the page up (40 kB of internal RAM
 // remaining) - in a fresh-start run too. They stand down only while the flash is written (updFlashingNow).
+// (1.11.166) THE SCAN HEARS ITSELF NO MORE. Malcolm, 3 Nov 2026, two transmitters running the Interference scan side by side:
+// the one whose screen was on the house WiFi read 162 hits a second across 2.400-2.470 GHz, the other 4. The screen's own
+// WiFi and Bluetooth sit centimetres from the scan antenna. The main board now says so in its status word (bit 128, B175)
+// and the screen takes it as "radios off" with its own banner (lib/LdrcUpdate/TxState.h); the scan waits 1.5 s before it
+// counts, and the radios come back when the scan ends.
 static SlideWin winNext = { false, 0, 0, 0 };              // what the CPU asks for; the feeder copies it at a frame's first strip
 static uint16_t *winRing = nullptr; static const int WIN_ROWS = 512;   // 512 full rows in the PSRAM (800 kB): the box (348 rows) and up to 164 rows of lead
 struct PartMax { const char *name; uint32_t us, over5; };

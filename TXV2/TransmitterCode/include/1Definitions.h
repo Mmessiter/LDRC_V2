@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B174 02/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B175 03/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -662,6 +662,7 @@ void StoreNewCommsGap();
 FASTRUN void ParseAckPayload();
 void FailedPacket();
 void StartInactvityTimeout();
+void TellScreen(bool evenIfUnchanged); // FlightGuard.h: the status word to the screen (B175: the band scan calls it from transceiver.h)
 // V1B (FlightGuard.h): why the transmitter went off, written to the EEPROM on the way out and said at the next start
 enum
 {

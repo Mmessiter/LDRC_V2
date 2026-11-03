@@ -23,7 +23,7 @@
 
 namespace ldrc {
 
-enum { TX_MOTOR = 1, TX_SAFETY_OFF = 2, TX_MODEL = 4, TX_SAFETY_DEFINED = 8, TX_MODEL_JUST_NOW = 16, TX_RADIOS_OFF = 32, TX_BINDING = 64 };   // (TX_BINDING: B95, Teensy B95 - binding is enabled: the front screens say so)
+enum { TX_MOTOR = 1, TX_SAFETY_OFF = 2, TX_MODEL = 4, TX_SAFETY_DEFINED = 8, TX_MODEL_JUST_NOW = 16, TX_RADIOS_OFF = 32, TX_BINDING = 64, TX_SCANNING = 128 };   // (TX_BINDING: B95, Teensy B95 - binding is enabled: the front screens say so. TX_SCANNING: 1.11.166, Teensy B175 - the main board scans the 2.4 GHz band: this screen's own WiFi and Bluetooth, centimetres from the scan antenna, would be the loudest thing in it - Malcolm, 3 Nov 2026, two transmitters side by side: 4 hits a second against 162)
 enum { TX_HOLD_MS = 8000 };
 
 struct TxState {
@@ -31,16 +31,17 @@ struct TxState {
     bool held;                                    // start-up: the radios wait for the main board's word
     bool armed;                                   // the radios must be off
     bool binding;                                 // B95: binding is enabled (the main board's bit 64)
-    TxState() : status(-1), held(true), armed(false), binding(false) {}
+    bool scanning;                                // 1.11.166: the main board scans the band (bit 128): the radios off meanwhile, not "flying"
+    TxState() : status(-1), held(true), armed(false), binding(false), scanning(false) {}
 
     // Each of these answers with the words for the banner when the radios are to be switched (the caller applies
     // radiosAllowed()), or with 0 when nothing has changed.
     const char *said(int bits) {                  // "ldrcst=<bits>" came over the wire
         const bool was = radiosAllowed(), first = held;
-        binding = (bits & TX_BINDING) != 0;
-        status = bits & 63; held = false; armed = (bits & TX_RADIOS_OFF) != 0;
+        binding = (bits & TX_BINDING) != 0; scanning = (bits & TX_SCANNING) != 0;
+        status = bits & 63; held = false; armed = (bits & TX_RADIOS_OFF) != 0 || scanning;
         if (radiosAllowed() == was) return 0;
-        return armed ? ((bits & TX_SAFETY_DEFINED) ? "Safety off: WiFi and Bluetooth OFF" : "Motor on: WiFi and Bluetooth OFF") : first ? "WiFi ON - joining..." : "WiFi back ON";
+        return armed ? ((bits & TX_RADIOS_OFF) ? ((bits & TX_SAFETY_DEFINED) ? "Safety off: WiFi and Bluetooth OFF" : "Motor on: WiFi and Bluetooth OFF") : "Scanning the band: WiFi and Bluetooth OFF") : first ? "WiFi ON - joining..." : "WiFi back ON";
     }
     const char *motorText(bool on) {              // the front page's text, from a main board that says no "ldrcst="
         if (status >= 0) return 0;                // (one that does is believed, and the text is not)
