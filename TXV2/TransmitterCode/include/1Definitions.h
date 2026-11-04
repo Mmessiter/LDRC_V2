@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B177 04/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B178 04/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1456,8 +1456,10 @@ uint8_t MixNumber = 0;
 uint8_t CurrentView = FRONTVIEW;
 uint8_t SavedCurrentView = FRONTVIEW;
 bool FrontReasonLogged = false;  // B177: LogFrontPageReason wrote its line - GotoFrontView writes none then
-char LastScreenCmd[24] = "";     // B177: the screen's last command as the dispatcher read it (for the front page's line)
-uint32_t LastScreenCmdMs = 0;
+#define SCREEN_CMD_RING 3
+char LastScreenCmds[SCREEN_CMD_RING][20];   // B178: the screen's last three commands as the dispatcher read them, newest first (for the front page's line)
+uint32_t LastScreenCmdMs[SCREEN_CMD_RING];
+bool LastScreenCmdFramed[SCREEN_CMD_RING];  // ... and whether each came framed (Nextion.h)
 uint64_t DefaultPipe = DEFAULTPIPEADDRESS;      //          Default Radio pipe address
 uint64_t TeensyMACAddPipe = DEFAULTPIPEADDRESS; //          New Radio pipe address for binding will come from MAC address
 uint64_t BuddyMACAddPipe = DEFAULTPIPEADDRESS;  //          Buddy pipe address

@@ -3759,17 +3759,24 @@ FASTRUN void ButtonWasPressed()
         uint32_t NumberedCommand = Command_number & 0x7F; // NextionCommand.FirstDWord & 0x7F; // Just clear the hi BIT ( i.e. -128)
         uint32_t NumberedCommand1 = ((uint32_t)Command_number >> 8) & 0xFFFF; // the function's number (B105: 16 bits now) ...
         ScreenEventArg = (uint8_t)((uint32_t)Command_number >> 24);            // ... and the top byte a value the page sends with it (0: none)
-        LastScreenCmdMs = millis(); // B177: what the screen last said, for the front page's line (GotoFrontView)
+        for (uint8_t r = SCREEN_CMD_RING - 1; r > 0; --r)
+        { // B177/B178: what the screen last said - the last three, newest first - for the front page's line (GotoFrontView)
+            memcpy(LastScreenCmds[r], LastScreenCmds[r - 1], sizeof(LastScreenCmds[r]));
+            LastScreenCmdMs[r] = LastScreenCmdMs[r - 1];
+            LastScreenCmdFramed[r] = LastScreenCmdFramed[r - 1];
+        }
+        LastScreenCmdMs[0] = millis();
+        LastScreenCmdFramed[0] = TextInFramed;
         if (!TextIn[0])
-            snprintf(LastScreenCmd, sizeof(LastScreenCmd), "code24 %lu/%u", (unsigned long)NumberedCommand1, (unsigned)ScreenEventArg);
+            snprintf(LastScreenCmds[0], sizeof(LastScreenCmds[0]), "code24 %lu/%u", (unsigned long)NumberedCommand1, (unsigned)ScreenEventArg);
         else if ((uint8_t)TextIn[0] >= 128)
-            snprintf(LastScreenCmd, sizeof(LastScreenCmd), "code %lu", (unsigned long)NumberedCommand);
+            snprintf(LastScreenCmds[0], sizeof(LastScreenCmds[0]), "code %lu", (unsigned long)NumberedCommand);
         else
         {
             uint8_t i = 0;
-            for (; i < sizeof(LastScreenCmd) - 1 && TextIn[i] >= 32 && TextIn[i] < 127; ++i)
-                LastScreenCmd[i] = TextIn[i];
-            LastScreenCmd[i] = 0;
+            for (; i < sizeof(LastScreenCmds[0]) - 1 && TextIn[i] >= 32 && TextIn[i] < 127; ++i)
+                LastScreenCmds[0][i] = TextIn[i];
+            LastScreenCmds[0][i] = 0;
         }
 
 #ifdef DB_NEXTION
@@ -5116,16 +5123,24 @@ void GetBank() // ... and the other three switches
 void GotoFrontView()
 {
     char FrontView_Connected[] = "Connected";
-    if (CurrentView != FRONTVIEW && CurrentView != BLANKVIEW && !FrontReasonLogged)
-    { // B177: the front page from another page, not by a press just made (B172 names four ways; this names the rest, with
-      // what the screen last said) - a jump within half a second of the screen's command is that command's own doing
-        const uint32_t age = millis() - LastScreenCmdMs;
-        if (age > 500 || (!ScreenFramesBursts && LastScreenCmd[0] == 'c'))
+    if (CurrentView != FRONTVIEW && !FrontReasonLogged)
+    { // B177/B178: EVERY front page from another page leaves a line (B172 names four ways, this the rest): the page left, the
+      // screen's last three commands with their ages (f framed, u unframed), where the finger last lifted (the screen's
+      // tch2/tch3, asked on the ground only), and whether the screen frames. B177 left out a jump within half a second of a
+      // command as that command's own doing - and that hid the one Malcolm saw after 1.11.174 (4 Nov 2026).
+        char line[200];
+        int p = snprintf(line, sizeof(line), "Front page from page %u:", (unsigned)CurrentView);
+        for (uint8_t r = 0; r < SCREEN_CMD_RING && p < (int)sizeof(line) - 48; ++r)
+            if (LastScreenCmds[r][0])
+                p += snprintf(line + p, sizeof(line) - p, " '%s'%c %lu ms;", LastScreenCmds[r], LastScreenCmdFramed[r] ? 'f' : 'u', (unsigned long)(millis() - LastScreenCmdMs[r]));
+        if (!(BoundFlag && ModelMatched))
         {
-            char line[120];
-            snprintf(line, sizeof(line), "Front page by itself from page %u (the screen last sent '%s' %lu ms before) B177", (unsigned)CurrentView, LastScreenCmd, (unsigned long)age);
-            LogText(line, strlen(line), true);
+            const uint32_t tx = GetSysValue("tch2"), ty = GetSysValue("tch3");
+            if (tx != 65535 && ty != 65535)
+                p += snprintf(line + p, sizeof(line) - p, " lifted at %lu,%lu;", (unsigned long)tx, (unsigned long)ty);
         }
+        snprintf(line + p, sizeof(line) - p, " framing %s B178", ScreenFramesBursts ? "on" : "off");
+        LogText(line, strlen(line), true);
     }
     FrontReasonLogged = false;
     PupilIsAlive = 0;
