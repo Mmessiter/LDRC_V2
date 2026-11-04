@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.914-read-back-help";
+constexpr const char* FW_VERSION = "RXV2-0.9.915-read-back-window";
 
 //*********************************************************************
 //  Auto-update manifest URLs

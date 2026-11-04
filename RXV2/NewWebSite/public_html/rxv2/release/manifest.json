@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.915-read-back-window",
+      "url": "https://messiter.com/rxv2/release/v0.9.915/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.915/littlefs.bin",
+      "fs_md5": "6dee652fd16c0a9f01b7f11649d73a4f",
+      "notes": "A block just written to the flight controller keeps streaming to the transmitter for 3 s after the save is confirmed, so the transmitter's read-back sees the new values even when its own request was lost (with transmitter B177)."
+    },
+    {
       "name": "RXV2-0.9.914-read-back-help",
       "url": "https://messiter.com/rxv2/release/v0.9.914/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.914/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.904/littlefs.bin",
       "fs_md5": "e7ded912fb3be76b4c414918d41a063e",
       "notes": "The transmitter's bank count: a V2 transmitter tells the receiver how many banks the model has (Model options, Six banks). The tuning pages draw that many, the Bank selector on the Switches page is set to match, and both the app and the transmitter warn when the flight controller's bank line has another count."
-    },
-    {
-      "name": "RXV2-0.9.903-switches-and-knobs",
-      "url": "https://messiter.com/rxv2/release/v0.9.903/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.903/littlefs.bin",
-      "fs_md5": "8c91752d9eebcc4acb613a0c0e753030",
-      "notes": "Switches and knobs: the Switches page and the In-flight adjustments page are one page now - the switch jobs (arm, rescue, self-level ...), the bank and rates selectors, and the knobs and switches that change a setting, each written to its own Rotorflight table out of sight. Rotorflight keeps them on two tabs (Modes and Adjustments); many found that confusing, so we combined them, as the transmitter has. The old In-flight adjustments link points there."
     }
   ],
   "rotorflight": {

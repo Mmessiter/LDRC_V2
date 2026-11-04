@@ -1021,6 +1021,11 @@ inline void txParamsLoop() {
             if (mspAsyncReady) {              // FC acked EEPROM_WRITE — persisted
                 mspAsyncFunc = 0xFF;
                 pmUpdateCacheFromScratch();   // TX read-back shows the new values NOW
+                // 0.9.915: and the written block streams to the TX for 3 s whatever became of its read request - that request
+                // rides in one radio packet, never resent; lost, the TX's window ended with nothing and it said NOT CONFIRMED
+                // though the write had landed (Malcolm, 4 Nov 2026, a bank-2 P change). paramSend is already this block: the
+                // page read it before writing. (The TX, from B177, also asks again, three times.)
+                if ((int32_t)(paramSendUntil - now) < 3000) paramSendUntil = now + 3000;
                 tuneNoteEdit(false);       // new tune generation now; NVS once provably on the ground (tunePersistTick)
                 events.add(pmWriteKind == WK_PID ? "TX edit: PIDs -> FC (verified+saved)"
                          : pmWriteKind == WK_PID_ADV ? "TX edit: adv PID -> FC (verified+saved)"
