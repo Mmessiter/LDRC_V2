@@ -23,6 +23,8 @@ for f in ../sd/hmi/films/*.ima; do                         # (1.11.93) each film
 done
 out=$(python3 test_film/flow_test.py 2>&1); code=$?          # film_device.h itself: the menu, pause, Back, Next, the keep-awake
 echo "films flow: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
+out=$(python3 test_frames/check.py 2>&1); code=$?            # (1.11.174) the framed bursts: the enable answered in handle(), flushOut frames in one write
+echo "frames: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
 gate="$HOME/Documents/GitHub/TXV1B/dev/test_release_gate.py"
 if [ -f "$gate" ]; then out=$(python3 "$gate" 2>&1); code=$?; echo "release gate: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL; [ $code -ne 0 ] && bad=1; fi
 [ $bad -eq 0 ] && echo "ALL GOOD" || echo "SOMETHING FAILED"

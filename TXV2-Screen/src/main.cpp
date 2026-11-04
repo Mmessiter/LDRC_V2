@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.173"
+#define SCREEN_VERSION "1.11.174"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2305,7 +2305,6 @@ struct Host : public NextionHost {
     }
     std::map<std::string, int32_t> sys;
     void unknownCommand(const std::string &line) override {
-        if (line == "ldrcframe=1") { frameBursts = true; return; }   // (1.11.173) the main board reads framed bursts (flushOut)
         // "ldrc <word>": a button of our own, added to a page by hmi/overrides.json. Nothing goes to the Teensy.
         if (line.rfind("ldrc ", 0) == 0) { if (line == "ldrc update") updRequested = true; else if (line == "ldrc rxupdate") rxUpdRequested = true; else if (line == "ldrc wifi") wifiRequested = true; else if (line == "ldrc flight") flightRequested = true; else if (line == "ldrc colours") coloursRequested = true; else if (line == "ldrc appearance") appearanceRequested = true; else if (line == "ldrc defined") flightDefinedRequested = true; else if (line == "ldrc cli") cliJobWanted = 0; else if (line == "ldrc diff") cliJobWanted = 1; else if (line == "ldrc exec") cliJobWanted = 2; else if (line == "ldrc door") doorToggle(); return; }   // (1.11.4: Transmitter setup's "Workshop door" button, Malcolm: "an ordinary button that switches it on")
         unknownFromTeensy(line);
@@ -2320,6 +2319,7 @@ static void flushOut() {
         const uint16_t n = (uint16_t) outBuf.size();
         const char h[4] = { 0x7E, 0x7E, (char) (n & 0xFF), (char) (n >> 8) };
         outBuf.insert(0, h, 4);
+        sentTrace += "[framed] ";                          // (1.11.174) seen through the door: GET /sent
     }
     Serial.write((const uint8_t *) outBuf.data(), outBuf.size()); outBuf.clear();
 }
@@ -2664,6 +2664,7 @@ static void handle(const std::string &cmd) {
 #ifdef EMU_ECHO
     Serial.printf("[%lu:%s]\n", (unsigned long) cmdCount, cmd.c_str());
 #endif
+    if (cmd == "ldrcframe=1") { frameBursts = true; return; }   // (1.11.174) the main board reads framed bursts (flushOut) - HERE, before the "name=value" path below took it for a system variable (1.11.173 never framed)
     if (cmd.rfind("page ", 0) == 0) {
         std::string p = cmd.substr(5);
         if (!p.empty() && isdigit((unsigned char) p[0])) { int n = atoi(p.c_str()); if (n < (int) pageNames.size()) p = pageNames[n]; }
