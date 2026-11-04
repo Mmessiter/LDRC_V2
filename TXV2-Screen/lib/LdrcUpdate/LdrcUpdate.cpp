@@ -1068,7 +1068,9 @@ void Updater::trialPoll() {
     trialSeen_ = now;
     switch (trialStep_) {
     case 0:
-        if (now - since_ < 8000) return;                      // after a power cut the main board is starting up too
+        // after a power cut the main board is starting up too: 8 s; after an update's own restart (1.11.176) it was
+        // running all along, and 2 s is plenty - Malcolm, 3 Nov 2026, asked why an update takes so long to settle
+        if (now - since_ < (host_.softRestart() ? 2000u : 8000u)) return;
         if (!silent_ && stTeensyThere_) {
             if (link_.running()) return;                      // a job from the Mac holds the link: ours waits its turn
             link_.clear(); link_.hello(); linkGo(); trialStep_ = 1;

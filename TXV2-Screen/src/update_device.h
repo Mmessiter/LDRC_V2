@@ -462,6 +462,7 @@ struct ScreenHost : public ldrc::UpdateHost {
         const esp_partition_t *run = esp_ota_get_running_partition(); esp_ota_img_states_t st;
         return run && esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY;
     }
+    bool softRestart() override { return esp_reset_reason() == ESP_RST_SW; }   // (1.11.176) an update's restart, not a power-up: the trial asks the main board after 2 s, not 8
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
     bool reject() override { flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // comes back only if there is nothing to go back to
     void restart() override { flushOut(); delay(200); ESP.restart(); }

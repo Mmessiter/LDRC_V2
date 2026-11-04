@@ -227,7 +227,7 @@ void AddParameterstoQueue(uint8_t ID) // this queue is essentially a LIFO stack
             Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false;
             BlockBankChanges = false;
             PipeReadRefused = true;
-            SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), (char *)(PipeState == 1 ? "Bluetooth is joining: not read yet. Read again in a moment." : "No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."));
+            SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), (char *)(PipeState == 1 ? "Bluetooth is joining: not read yet. If the phone app is open, close it (one at a time), then read again." : "No Bluetooth to the receiver: NOT read. Close the phone app if it is running. It is tried again."));   // B179: the joining line says it too (Malcolm, 4 Nov 2026: "It has trouble connecting Bluetooth even when 1 foot away" - the app was open)
             SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,1" : "vis busy,1"));
             return;
         }

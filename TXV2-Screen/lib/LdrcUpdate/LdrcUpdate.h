@@ -81,6 +81,7 @@ public:
 
     // The screen's own firmware.
     virtual bool onTrial() = 0;                   // it has started for the first time and is not yet accepted
+    virtual bool softRestart() { return false; }  // (1.11.176) this start was a restart of the screen's own asking (an update's), not a power-up: the main board was running all along
     virtual void accept() = 0;
     virtual bool reject() = 0;                    // the previous firmware comes back (a restart); false: there is none to go back to
     virtual void restart() = 0;
