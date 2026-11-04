@@ -77,7 +77,7 @@ const $ = id => document.getElementById(id);
 function setFsStatus(set) {
     const el = $('fsStatus'); if (!el) return;
     el.innerHTML = set
-        ? '<b style="color:#2e7d32">Failsafe is SET</b> — these saved positions are output when the receiver boots with no transmitter.'
+        ? '<b style="color:#2e7d32">Failsafe is SET</b> — these saved positions are applied when the signal is lost in flight. Never at power-up: a receiver switched on without its transmitter always sits disarmed-safe (sticks centred, AUX channels low). On CRSF with Rotorflight, the flight controller’s own failsafe applies instead.'   // (0.9.917: it said "output when the receiver boots", the behaviour before B29 - Malcolm, 4 Nov 2026, saved a posture and saw it not come up at the next power-up)
         : 'No failsafe saved — using the built-in safe default (sticks centred, AUX channels low).';
 }
 
