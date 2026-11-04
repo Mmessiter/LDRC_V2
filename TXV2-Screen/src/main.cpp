@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.174"
+#define SCREEN_VERSION "1.11.175"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2664,7 +2664,11 @@ static void handle(const std::string &cmd) {
 #ifdef EMU_ECHO
     Serial.printf("[%lu:%s]\n", (unsigned long) cmdCount, cmd.c_str());
 #endif
-    if (cmd == "ldrcframe=1") { frameBursts = true; return; }   // (1.11.174) the main board reads framed bursts (flushOut) - HERE, before the "name=value" path below took it for a system variable (1.11.173 never framed)
+    if (cmd == "ldrcframe=1") {                              // (1.11.174) the main board reads framed bursts (flushOut) - HERE, before the "name=value" path below took it for a system variable (1.11.173 never framed)
+        frameBursts = true;
+        outBuf.append("\0\0\0\0", 4); flushOut();            // (1.11.175) answered at once with an empty framed burst (code 0, nothing): the main board is strict from this moment, not from the first press - until then an unframed stray (a late reply split from its q) was still obeyed
+        return;
+    }
     if (cmd.rfind("page ", 0) == 0) {
         std::string p = cmd.substr(5);
         if (!p.empty() && isdigit((unsigned char) p[0])) { int n = atoi(p.c_str()); if (n < (int) pageNames.size()) p = pageNames[n]; }

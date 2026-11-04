@@ -23,8 +23,12 @@ def check(cond, what):
 m = re.search(r'static void handle\(const std::string &cmd\) \{(.*?)\n\}\n', src, re.S)
 check(m is not None, 'handle(const std::string &cmd) found')
 body = m.group(1) if m else ''
-enable = body.find('if (cmd == "ldrcframe=1") { frameBursts = true; return; }')
-check(enable >= 0, 'handle() answers "ldrcframe=1" by setting frameBursts')
+enable = body.find('if (cmd == "ldrcframe=1") {')
+check(enable >= 0, 'handle() answers "ldrcframe=1"')
+block = body[enable:enable + 600] if enable >= 0 else ''
+check('frameBursts = true;' in block, 'the enable sets frameBursts')
+check('outBuf.append("\\0\\0\\0\\0", 4); flushOut();' in block and block.find('frameBursts = true;') < block.find('flushOut();'), '(1.11.175) the enable is answered at once with an empty framed burst, framed (frameBursts set first)')
+check(block.find('return;') > block.find('flushOut();'), 'the enable returns after the answer')
 for later in ('cmd.rfind("page ", 0)', 'cmd.rfind("get ", 0)', "cmd.find('=')", 'host.setSys(name'):
     at = body.find(later)
     check(at > enable >= 0, 'the enable comes before %s in handle()' % later)
