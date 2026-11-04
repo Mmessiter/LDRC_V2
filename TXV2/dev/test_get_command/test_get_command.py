@@ -82,9 +82,9 @@ struct FakeLink
 char TextIn[MAXTEXTIN + 2];
 bool NextionTextMissed = false;
 uint32_t NextionReplyWaitMs = 100;
-uint8_t PendingEvent[512];
-uint16_t PendingEventLen = 0;
 void StashFrame(const uint8_t *f, uint16_t n);
+static uint32_t micros() { static uint32_t us = 0; return us += 50; }   // B177
+static void LogGhostFrame(const char *, const uint8_t *, uint16_t) {}
 
 // ---- the Models page: the date box is recorded, not drawn
 static std::vector<uint32_t> boxes;
@@ -122,7 +122,10 @@ int main()
 '''
 
 def main():
-    body = (lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)') + lift(NEXTION, 'void StashPendingEventBytes()')
+    decl_start = NEXTION.index('#define MAXPENDINGFRAME'); decl_end = NEXTION.index('void PendingPush(')   # B177: PendingEvent and the frame globals as they are
+    decls = '\n'.join(l for l in NEXTION[decl_start:decl_end].split('\n') if not l.startswith('//'))
+    body = (decls + lift(NEXTION, 'void PendingPush(') + lift(NEXTION, 'int ReadFramedRest(') + lift(NEXTION, 'void StashFramed(')
+            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)') + lift(NEXTION, 'void StashPendingEventBytes()')
             + lift(NEXTION, 'bool CollectReply(uint8_t expected, uint16_t &k)') + lift(NEXTION, 'void EndSend()')
             + lift(NEXTION, 'static uint32_t GetNumberReply(const char *CB)') + lift(NEXTION, 'uint32_t getvalue(char *nbox)')
             + lift(NEXTION, 'uint32_t GetSysValue(const char *name)') + lift(NEXTION, 'uint32_t GetValue(char *nbox)')

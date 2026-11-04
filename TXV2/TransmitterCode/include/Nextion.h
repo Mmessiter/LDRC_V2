@@ -149,19 +149,106 @@ void SendOtherValue(char *nbox, int value)
 // waiting there (the restore button needed 2-3 presses). Instead of discarding,
 // printable bytes are rescued here and served to GetButtonPress afterwards.
 // (Return-code debris -- 0x01/0x1A + FF FF FF -- is non-printable and still dropped.)
-char PendingEvent[128];
+#define MAXPENDINGFRAME 512
+#define MAXPENDINGFRAMES 8
+char PendingEvent[MAXPENDINGFRAME];     // the frames kept for GetButtonPress, one after another (B177: 512 - a framed burst can be long)
 uint16_t PendingEventLen = 0;
 bool TextInWasStashed = false; // B163: the frame in TextIn came from PendingEvent (set aside by a get window or a send), not a read of the port
+uint16_t PendingLens[MAXPENDINGFRAMES]; // B177: each kept frame's length, so that GetButtonPress serves them one at a time ...
+bool PendingFramedFlags[MAXPENDINGFRAMES]; // ... and whether it came framed
+uint8_t PendingCount = 0;
 
-void StashPrintableBytes(const char *src, uint16_t len)
+// B177 (Malcolm, 4 Nov 2026: the Sounds page's switches "spontaneously turned off", the volume with them; the front page came
+// up by itself from the log page and others; 31 Oct's volume zero): THE SCREEN'S BURSTS ARE FRAMED. A page's event prints
+// its bytes raw - a button's code, or several numbers at once (the log page's lift prints its code, where it is scrolled to
+// and how far it can go: twelve bytes). The screen sends an event's output in one write, but its serial port is fed by an
+// interrupt that a busy moment holds back, and a pause of more than 200 us inside the burst ended the frame here
+// (GetTextIn): the tail came as a frame of its own and was obeyed as a command. A tail beginning 00 03 00 00 (the log text's
+// height, 768) is the 24-bit code 3 = the Sounds page's OK, which then read every box from a page that was not showing
+// (the screen answers 0 for a box it has not got): volume 0, the six switches off, the variometer's numbers 0 - exactly the
+// bytes that changed in models.dat between the copies kept on 3 Nov at 09:02 and 21:22. A tail whose first byte is 128 or
+// more is a 7-bit code: B0 (176) is 48 = GotoFrontView, and most pages' End functions go there too.
+// Now a screen told "ldrcframe=1" (screen 1.11.173 and later; sent at this board's start, again when the screen says
+// FrontView after its own restart, and when it answers a code unframed) wraps every burst: 7E 7E, two bytes of length (low
+// first), the bytes. A framed burst is read to its length - a pause inside it is waited out (20 ms), and what follows is the
+// next frame, never glued on (B162) - and once one framed burst has come (ScreenFramesBursts) an UNFRAMED binary frame (a
+// split tail, a late reply split from its q) is logged and dropped, never obeyed. Words still pass unframed (the screen's
+// own LDRCAWAKE, UKRULES, TIME= and the FrontView it says after a restart). An older screen never frames: nothing changes.
+#define FRAME_MARK 0x7E
+#define FRAME_GAP_US 20000           // the longest pause waited out inside a framed burst
+bool ScreenFramesBursts = false;     // the screen has framed a burst this session: an unframed binary frame is a ghost
+bool TextInFramed = false;           // the frame now in TextIn came framed
+uint32_t FrameEnableSentMs = 0;      // when "ldrcframe=1" was last sent
+
+void PendingPush(const uint8_t *f, uint16_t n, bool framed) // a frame kept for GetButtonPress
 {
-    for (uint16_t i = 0; i < len; ++i)
-    {
-        uint8_t b = (uint8_t)src[i];
-        if (b >= 32 && b < 0x7F && PendingEventLen < sizeof(PendingEvent) - 1)
-            PendingEvent[PendingEventLen++] = b;
-    }
+    if (n == 0 || PendingCount >= MAXPENDINGFRAMES || PendingEventLen + n >= sizeof(PendingEvent) - 1)
+        return;
+    memcpy(PendingEvent + PendingEventLen, f, n);
+    PendingEventLen += n;
     PendingEvent[PendingEventLen] = 0;
+    PendingLens[PendingCount] = n;
+    PendingFramedFlags[PendingCount] = framed;
+    ++PendingCount;
+}
+// Both marker bytes have been read: the two length bytes, then that many bytes, into dst (cap at most: more are read and
+// dropped). A pause of up to FRAME_GAP_US between bytes is waited out. The payload's length; -1 when the burst never
+// completed (what came is in dst, len bytes of it) - such a burst is never obeyed.
+int ReadFramedRest(uint8_t *dst, uint16_t cap, uint16_t &len)
+{
+    uint8_t hdr[2];
+    uint16_t have = 0, want = 0;
+    len = 0;
+    while (true)
+    {
+        const uint32_t quiet = micros();
+        while (!NEXTION.available())
+        {
+            if ((micros() - quiet) >= FRAME_GAP_US)
+                return -1;
+            delayMicroseconds(10);
+        }
+        const uint8_t b = (uint8_t)NEXTION.read();
+        KickTheDog();
+        if (have < 2)
+        {
+            hdr[have++] = b;
+            if (have == 2)
+            {
+                want = (uint16_t)(hdr[0] | (hdr[1] << 8));
+                if (want == 0)
+                    return 0;
+            }
+            continue;
+        }
+        if (len < cap)
+            dst[len] = b;
+        ++len;
+        if (len >= want)
+        {
+            if (len > cap)
+                len = cap;
+            return (int)len;
+        }
+    }
+}
+void StashFramed(const uint8_t *p, uint16_t len) // a framed burst, kept whole
+{
+    ScreenFramesBursts = true;
+    PendingPush(p, len, true);
+}
+void PendingShrinkFirst() // HelpNameFrom took the first kept frame's first byte: the queue follows (a frame used up goes)
+{
+    if (!PendingCount)
+        return;
+    if (--PendingLens[0])
+        return;
+    for (uint8_t i = 1; i < PendingCount; ++i)
+    {
+        PendingLens[i - 1] = PendingLens[i];
+        PendingFramedFlags[i - 1] = PendingFramedFlags[i];
+    }
+    --PendingCount;
 }
 
 void StashFrame(const uint8_t *f, uint16_t n);
@@ -172,6 +259,19 @@ void StashPendingEventBytes() // replaces the blind pre-get flush (B69: frame by
     while (NEXTION.available())
     {
         const uint8_t b = NEXTION.read();
+        if (n == 1 && f[0] == FRAME_MARK && b == FRAME_MARK)
+        { // B177: a framed burst: read to its length and kept whole; what follows is the next frame
+            uint8_t p[MAXPENDINGFRAME];
+            uint16_t len = 0;
+            if (ReadFramedRest(p, sizeof(p), len) < 0)
+                LogGhostFrame("an incomplete framed burst", p, len);
+            else
+                StashFramed(p, len);
+            n = 0;
+            ffs = 0;
+            delayMicroseconds(20);
+            continue;
+        }
         if (n < sizeof(f))
             f[n++] = b;
         if (b == 0xFF)
@@ -210,11 +310,7 @@ void StashFrame(const uint8_t *f, uint16_t n) // a frame without its FF FF FF
     const bool reply = first == 'p' || (first == 'q' && n == 5); // B162: a late reply to a get (no button's burst begins with p or q)
     if (reply || !(code7 || code24 || word))
         return;                                                // return-code debris (01, 1A ...), or a reply nobody waits for
-    if (PendingEventLen + n >= sizeof(PendingEvent) - 1)
-        return;
-    memcpy(PendingEvent + PendingEventLen, f, n);
-    PendingEventLen += n;
-    PendingEvent[PendingEventLen] = 0;
+    PendingPush(f, n, false);
 }
 // The reply to a "get": the frame that begins with `expected` ('q' a value, 'p' a text), into TextIn (k = its length,
 // terminator included). Other frames meanwhile are stashed. False: no such frame within 100 ms.
@@ -228,6 +324,18 @@ bool CollectReply(uint8_t expected, uint16_t &k)
         while (NEXTION.available())
         {
             const uint8_t b = NEXTION.read();
+            if (k == 1 && (uint8_t)TextIn[0] == FRAME_MARK && b == FRAME_MARK)
+            { // B177: a framed burst ahead of the reply: kept whole, by its length
+                uint8_t p[MAXPENDINGFRAME];
+                uint16_t len = 0;
+                if (ReadFramedRest(p, sizeof(p), len) < 0)
+                    LogGhostFrame("an incomplete framed burst", p, len);
+                else
+                    StashFramed(p, len);
+                k = 0;
+                ffs = 0;
+                continue;
+            }
             if (k < MAXTEXTIN)
                 TextIn[k++] = b;
             if (b != 0xFF)
@@ -264,10 +372,38 @@ bool CollectReply(uint8_t expected, uint16_t &k)
 void GetTextIn()
 {
     delayMicroseconds(20);
+    TextInFramed = false;
     if (NEXTION.available())
     {
         CRUMB(CRUMB_GETTEXT);
         int j = 0;
+        if (NEXTION.peek() == FRAME_MARK)
+        { // B177: a framed burst? (its second byte is the marker too; a lone 7E begins a word, read below as ever)
+            TextIn[0] = (char)NEXTION.read();
+            j = 1;
+            const uint32_t quiet = micros();
+            while (!NEXTION.available() && (micros() - quiet) < 200)
+                delayMicroseconds(20);
+            if (NEXTION.available() && NEXTION.peek() == FRAME_MARK)
+            {
+                NEXTION.read();
+                uint16_t len = 0;
+                const int got = ReadFramedRest((uint8_t *)TextIn, MAXTEXTIN - 4, len);
+                if (got < 0)
+                { // never completed: not obeyed
+                    LogGhostFrame("an incomplete framed burst", (const uint8_t *)TextIn, len);
+                    TextIn[0] = 0;
+                    return;
+                }
+                TextIn[len] = 0;
+                TextIn[len + 1] = 0; // (a short payload read as an int sees zeros, not what was there before)
+                TextIn[len + 2] = 0;
+                TextIn[len + 3] = 0;
+                TextInFramed = true;
+                ScreenFramesBursts = true;
+                return;
+            }
+        }
         while (true)
         {
             while (NEXTION.available())
@@ -293,19 +429,33 @@ void GetTextIn()
 
 /*********************************************************************************************************************************/
 void LinkStrayFrame(); // LinkMode.h
-bool GetButtonPress() 
+bool GetButtonPress()
 {
-    if (PendingEventLen)
-    {   // a touch event rescued from a get-reply window -- deliver it now
-        memcpy(TextIn, PendingEvent, PendingEventLen);
-        TextIn[PendingEventLen] = 0;
-        PendingEventLen = 0;
+    if (PendingCount)
+    {   // a touch event rescued from a get-reply window -- deliver it now (B177: one frame at a time, as it came)
+        const uint16_t n = PendingLens[0];
+        memcpy(TextIn, PendingEvent, n);
+        TextIn[n] = 0;
+        TextIn[n + 1] = 0;
+        TextIn[n + 2] = 0;
+        TextIn[n + 3] = 0;
+        TextInFramed = PendingFramedFlags[0];
+        PendingEventLen -= n;
+        memmove(PendingEvent, PendingEvent + n, PendingEventLen);
+        PendingEvent[PendingEventLen] = 0;
+        for (uint8_t i = 1; i < PendingCount; ++i)
+        {
+            PendingLens[i - 1] = PendingLens[i];
+            PendingFramedFlags[i - 1] = PendingFramedFlags[i];
+        }
+        --PendingCount;
         TextInWasStashed = true; // (B163)
         return true;
     }
     if (NEXTION.available())
     {
         TextInWasStashed = false;
+        TextInFramed = false;
         if (NEXTION.peek() == 0xA5)
         {   // V1B: A5 5A begins a frame of the screen's file link (LinkMode.h), which must never be read as a touch.
             // A5 alone begins the touch code 128+37: that one is put back together and handled as ever.
@@ -337,6 +487,31 @@ bool GetButtonPress()
         return true;
     }
     return false;
+}
+
+// B177: the frame in TextIn is to be obeyed? A framed one always. An unframed binary one (a 7-bit or 24-bit code) only while
+// the screen has never framed (an older screen, or one just restarted) - and then the screen is asked to frame, once in 2 s.
+// From a screen that frames, an unframed code is a split tail or a late reply's: logged, and not obeyed. Words always pass.
+bool TextInIsGenuine()
+{
+    if (TextInFramed)
+        return true;
+    const uint8_t first = (uint8_t)TextIn[0];
+    if (first != 0 && first < 0x80)
+        return true; // a word: LDRCAWAKE, UKRULES, TIME=, FrontView ...
+    if (first == 0 && TextIn[1] == 0 && TextIn[2] == 0)
+        return true; // the 24-bit code 0 (Blank): nothing to obey - the screen's power-on bytes, a burst that never completed
+    if (ScreenFramesBursts)
+    {
+        LogGhostFrame("an unframed code", (const uint8_t *)TextIn, 4);
+        return false;
+    }
+    if ((millis() - FrameEnableSentMs) > 2000)
+    {
+        FrameEnableSentMs = millis();
+        SendCommand((char *)"ldrcframe=1");
+    }
+    return true;
 }
 
 /*********************************************************************************************************************************/
@@ -378,13 +553,15 @@ bool HelpNameFrom(char *name) // name: room for 16
     while (!HelpNameWhole(name) && i < 15 && (millis() - began) < 30)
     {
         int c;
-        if (PendingEventLen)
+        if (PendingEventLen && !(PendingCount && PendingFramedFlags[0]))
         {   // set aside by a get-reply window: the rest of this word begins printable; a code or another frame is left alone
+            // (B177: a FRAMED frame is whole and its own - never the rest of this word)
             c = (uint8_t)PendingEvent[0];
             if (c <= 32 || c >= 127)
                 break;
             memmove(PendingEvent, PendingEvent + 1, PendingEventLen - 1);
             PendingEvent[--PendingEventLen] = 0;
+            PendingShrinkFirst();
         }
         else if (NEXTION.available())
         {

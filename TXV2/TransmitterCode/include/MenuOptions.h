@@ -633,9 +633,29 @@ void EndAudioVisualView()
     // themselves on and sliders jumped ("settings spontaneously change").
     // Before the 2-July read-back fix a bad read returned a stale-but-sane
     // value, which hid this; now an error keeps the previous setting.
+    // B177 (Malcolm, 4 Nov 2026: "all sound switches had been spontaneously turned off. I had not moved them"): this ran
+    // on a 24-bit code 3 that was no press - the tail of a split burst from the log page (Nextion.h) - with another page
+    // showing, and the screen answers 0 for every box it has not got: volume 0, the six switches off, the variometer's
+    // numbers 0 (the bytes that changed in models.dat on 3 Nov). Split bursts are gone; and this now reads nothing unless
+    // this board is on the Sounds page AND the screen shows it: the brightness box is never 0 there (10 at least).
+    if (CurrentView != AUDIOVIEW)
+    {
+        LogSoundsLine("Sounds page OK refused: not on the Sounds page");
+        ClearText();
+        return;
+    }
     uint32_t gv;
+    gv = GetValue(h0);
+    if (gv == 0)
+    {
+        LogSoundsLine("Sounds page OK refused: the screen answered 0 for the brightness - it is not showing the page");
+        ClearText();
+        return;
+    }
+    if (gv != 65535) Brightness = gv;
+    const uint8_t wasVolume = AudioVolume;
+    const bool was[6] = {PlayFanfare, TrimClicks, UseVariometer, SpeakingClock, AnnounceBanks, AnnounceConnected};
     gv = GetValue(Ex1); if (gv != 65535) AudioVolume = gv;
-    gv = GetValue(h0);  if (gv != 65535) Brightness = gv;
     gv = GetValue(n2);  if (gv != 65535) VariometerBank = CheckRange(gv, 0, 3);
     gv = GetValue(n0);  if (gv != 65535) VariometerThreshold = CheckRange(gv, 0, 1000);
     gv = GetValue(n3);  if (gv != 65535) VariometerSpacing = CheckRange(gv, 50, 1000);
@@ -645,6 +665,14 @@ void EndAudioVisualView()
     gv = GetValue(c3);  if (gv != 65535) SpeakingClock = gv;
     gv = GetValue(c4);  if (gv != 65535) AnnounceBanks = gv;
     gv = GetValue(c5);  if (gv != 65535) AnnounceConnected = gv;
+    if (wasVolume != AudioVolume || was[0] != PlayFanfare || was[1] != TrimClicks || was[2] != UseVariometer || was[3] != SpeakingClock || was[4] != AnnounceBanks || was[5] != AnnounceConnected)
+    { // B177: a change of the sounds is written down, old > new
+        char line[140];
+        snprintf(line, sizeof(line), "Sounds saved: volume %u>%u fanfare %u>%u clicks %u>%u vario %u>%u clock %u>%u banks %u>%u connected %u>%u",
+                 (unsigned)wasVolume, (unsigned)AudioVolume, (unsigned)was[0], (unsigned)PlayFanfare, (unsigned)was[1], (unsigned)TrimClicks, (unsigned)was[2], (unsigned)UseVariometer,
+                 (unsigned)was[3], (unsigned)SpeakingClock, (unsigned)was[4], (unsigned)AnnounceBanks, (unsigned)was[5], (unsigned)AnnounceConnected);
+        LogSoundsLine(line);
+    }
     SetAudioVolume(AudioVolume);
     CurrentView = TXSETUPVIEW;
     SendCommand(pTXSetupView);

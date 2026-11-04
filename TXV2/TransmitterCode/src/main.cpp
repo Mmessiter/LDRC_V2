@@ -1378,6 +1378,7 @@ FLASHMEM void setup()
     WarnUserIfBuddyBoxIsOn();
     ClearMostParameters();
     DelayWithDog(500);
+    SendCommand((char *)"ldrcframe=1"); // B177: the screen frames its bursts (Nextion.h; asked again should it answer a code unframed)
     GotoFrontView();
     RedLedOn();
     ClockMessageTick(); // V2 B30/B62/B63: a clock that did not answer, said once - but not while new firmware is on trial (below)
@@ -3743,6 +3744,11 @@ void HandleChannelNameEvents()
 FASTRUN void ButtonWasPressed()
 {
     CRUMB(CRUMB_BUTTON);
+    if (!TextInIsGenuine())
+    { // B177: an unframed code from a screen that frames its bursts is a split tail or a late reply, not a press (Nextion.h)
+        ClearText();
+        return;
+    }
     HandleChannelNameEvents(); // ClaudeFix-16-7-2026 names first — see comment above
 
     int Command_number = GetIntFromTextIn(0);
@@ -3753,6 +3759,18 @@ FASTRUN void ButtonWasPressed()
         uint32_t NumberedCommand = Command_number & 0x7F; // NextionCommand.FirstDWord & 0x7F; // Just clear the hi BIT ( i.e. -128)
         uint32_t NumberedCommand1 = ((uint32_t)Command_number >> 8) & 0xFFFF; // the function's number (B105: 16 bits now) ...
         ScreenEventArg = (uint8_t)((uint32_t)Command_number >> 24);            // ... and the top byte a value the page sends with it (0: none)
+        LastScreenCmdMs = millis(); // B177: what the screen last said, for the front page's line (GotoFrontView)
+        if (!TextIn[0])
+            snprintf(LastScreenCmd, sizeof(LastScreenCmd), "code24 %lu/%u", (unsigned long)NumberedCommand1, (unsigned)ScreenEventArg);
+        else if ((uint8_t)TextIn[0] >= 128)
+            snprintf(LastScreenCmd, sizeof(LastScreenCmd), "code %lu", (unsigned long)NumberedCommand);
+        else
+        {
+            uint8_t i = 0;
+            for (; i < sizeof(LastScreenCmd) - 1 && TextIn[i] >= 32 && TextIn[i] < 127; ++i)
+                LastScreenCmd[i] = TextIn[i];
+            LastScreenCmd[i] = 0;
+        }
 
 #ifdef DB_NEXTION
         if ((TextIn[0] < 128) && (TextIn[0] > 28))
@@ -4772,6 +4790,8 @@ FASTRUN void ButtonWasPressed()
             // the picture, the trims, the bank, the names - and the page itself, should the screen have put back another.
             PreviousBank = 250; // sure to be different
             BankSoundHeld = true; // B147: the redraw must not SAY the bank - nothing changed (Malcolm, 27 Oct: "Bank 4!" after every update)
+            ScreenFramesBursts = false;               // B177: a restarted screen frames nothing until told again (Nextion.h)
+            SendCommand((char *)"ldrcframe=1");
             LogFrontPageReason("the screen restarted and said FrontView"); // B172
             GotoFrontView();
             return;
@@ -5096,6 +5116,18 @@ void GetBank() // ... and the other three switches
 void GotoFrontView()
 {
     char FrontView_Connected[] = "Connected";
+    if (CurrentView != FRONTVIEW && CurrentView != BLANKVIEW && !FrontReasonLogged)
+    { // B177: the front page from another page, not by a press just made (B172 names four ways; this names the rest, with
+      // what the screen last said) - a jump within half a second of the screen's command is that command's own doing
+        const uint32_t age = millis() - LastScreenCmdMs;
+        if (age > 500 || (!ScreenFramesBursts && LastScreenCmd[0] == 'c'))
+        {
+            char line[120];
+            snprintf(line, sizeof(line), "Front page by itself from page %u (the screen last sent '%s' %lu ms before) B177", (unsigned)CurrentView, LastScreenCmd, (unsigned long)age);
+            LogText(line, strlen(line), true);
+        }
+    }
+    FrontReasonLogged = false;
     PupilIsAlive = 0;
     MasterIsAlive = 0;
     PipeOff(); // B41: the Rotorflight pages are left: the screen lets go of the receiver's Bluetooth

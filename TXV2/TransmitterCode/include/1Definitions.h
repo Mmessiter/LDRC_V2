@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B176 03/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B177 04/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -889,6 +889,9 @@ FASTRUN void BufferTeensyMACAddPipe();
 void ExecuteMacro();
 void LogTimer(uint32_t Mins);
 FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp);
+void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n); // B177: LogFiles.h - a frame of the screen's that was not obeyed
+void LogSoundsLine(const char *what);                               // B177: LogFiles.h - what the Sounds page's OK did
+bool TextInIsGenuine();                                             // B177: Nextion.h - the frame in TextIn is to be obeyed
 void LogAverageFrameRate();
 void ShowBank();
 void UpdateModelsNameEveryWhere();
@@ -1452,6 +1455,9 @@ uint8_t LastMixNumber = 1;
 uint8_t MixNumber = 0;
 uint8_t CurrentView = FRONTVIEW;
 uint8_t SavedCurrentView = FRONTVIEW;
+bool FrontReasonLogged = false;  // B177: LogFrontPageReason wrote its line - GotoFrontView writes none then
+char LastScreenCmd[24] = "";     // B177: the screen's last command as the dispatcher read it (for the front page's line)
+uint32_t LastScreenCmdMs = 0;
 uint64_t DefaultPipe = DEFAULTPIPEADDRESS;      //          Default Radio pipe address
 uint64_t TeensyMACAddPipe = DEFAULTPIPEADDRESS; //          New Radio pipe address for binding will come from MAC address
 uint64_t BuddyMACAddPipe = DEFAULTPIPEADDRESS;  //          Buddy pipe address

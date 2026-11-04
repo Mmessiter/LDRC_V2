@@ -12,7 +12,10 @@ def fn(sig):
     m = re.search(re.escape(sig) + r'[^\n;]*\n\{.*?\n\}\n', src, re.S)   # the definition (a line ending in "{"), not a forward declaration
     assert m, sig
     return m.group(0)
-parts = [fn('void StashFrame(const uint8_t *f, uint16_t n)'), fn('void StashPendingEventBytes()'), fn('bool CollectReply(uint8_t expected, uint16_t &k)'),
+decl_start = src.index('#define MAXPENDINGFRAME'); decl_end = src.index('void PendingPush(')   # B177: PendingEvent and the frame globals as they are
+decls = '\n'.join(l for l in src[decl_start:decl_end].split('\n') if not l.startswith('//')) + '\n'
+parts = [decls, fn('void PendingPush(const uint8_t *f, uint16_t n, bool framed)'), fn('int ReadFramedRest(uint8_t *dst, uint16_t cap, uint16_t &len)'), fn('void StashFramed(const uint8_t *p, uint16_t len)'), fn('void PendingShrinkFirst()'),
+         fn('void StashFrame(const uint8_t *f, uint16_t n)'), fn('void StashPendingEventBytes()'), fn('bool CollectReply(uint8_t expected, uint16_t &k)'),
          fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('static uint32_t GetNumberReply(const char *CB)'), fn('uint32_t getvalue(char *nbox)'),   # (B171: getvalue's exchange lives in GetNumberReply)
          fn('bool HelpNameWhole(const char *name)'), fn('bool HelpNameFrom(char *name)'),   # (B160)
          fn('void GetReturnCode(char *tbox)')]   # (B162: keeps a press that arrives during a send)
@@ -28,7 +31,7 @@ prog = r'''
 #define CRUMB_GETVALUE 0
 #define CRUMB_GETTEXT 0
 char TextIn[MAXTEXTIN + 2];
-char PendingEvent[128]; uint16_t PendingEventLen = 0; bool TextInWasStashed = false;   // (B163)
+static void LogGhostFrame(const char *, const uint8_t *, uint16_t) {}   // (B177: PendingEvent and its companions come with the lifted code)
 uint32_t NextionReplyWaitMs = 100; bool NextionTextMissed = false;   // (B152)
 static uint32_t fakeMs = 1000, fakeUs = 0;
 static uint32_t millis() { return fakeMs; }

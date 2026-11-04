@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.172"
+#define SCREEN_VERSION "1.11.173"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1054,6 +1054,15 @@ static std::string lastDateTime;                       // the Teensy has the clo
 static uint32_t teensyCommands = 0;                    // display commands that came over the wire (not from the Mac)
 static std::string sentTrace;                          // last bytes sent to the Teensy, hex, for GET /sent
 static std::string outBuf; static int scriptDepth = 0;   // a script's prints, sent as ONE burst when it ends
+// (1.11.173) FRAMED BURSTS. One write per event (above) keeps a script's bytes together in this chip, but the port is fed
+// by an interrupt that a busy moment holds back, and the main board took a pause of over 200 us inside a burst as its end:
+// the tail then arrived as a frame of its own and was obeyed as a command - the log page's lift prints its code, its scroll
+// position and its height, twelve bytes, and a tail of 00 03 00 00 (a height of 768) is the 24-bit code 3, the Sounds page's
+// OK, which read every box from a page not showing (Malcolm, 4 Nov 2026: "all sound switches had been spontaneously turned
+// off"; the front page by itself from the log page; 31 Oct's volume zero). A main board that says "ldrcframe=1" (B177 and
+// later) has every burst framed: 7E 7E, two bytes of length (low first), the bytes - it reads a burst to its length, waits
+// out a pause inside it, and drops an unframed code once it has seen a framed burst. An older main board never asks.
+static bool frameBursts = false;
 static void flushOut();
 static void audioStart(int id, bool loopIt);           // `play ch,id,loop`: a clip from /hmi/audio/<id>.wav
 static void audioFill();
@@ -2296,6 +2305,7 @@ struct Host : public NextionHost {
     }
     std::map<std::string, int32_t> sys;
     void unknownCommand(const std::string &line) override {
+        if (line == "ldrcframe=1") { frameBursts = true; return; }   // (1.11.173) the main board reads framed bursts (flushOut)
         // "ldrc <word>": a button of our own, added to a page by hmi/overrides.json. Nothing goes to the Teensy.
         if (line.rfind("ldrc ", 0) == 0) { if (line == "ldrc update") updRequested = true; else if (line == "ldrc rxupdate") rxUpdRequested = true; else if (line == "ldrc wifi") wifiRequested = true; else if (line == "ldrc flight") flightRequested = true; else if (line == "ldrc colours") coloursRequested = true; else if (line == "ldrc appearance") appearanceRequested = true; else if (line == "ldrc defined") flightDefinedRequested = true; else if (line == "ldrc cli") cliJobWanted = 0; else if (line == "ldrc diff") cliJobWanted = 1; else if (line == "ldrc exec") cliJobWanted = 2; else if (line == "ldrc door") doorToggle(); return; }   // (1.11.4: Transmitter setup's "Workshop door" button, Malcolm: "an ordinary button that switches it on")
         unknownFromTeensy(line);
@@ -2303,7 +2313,16 @@ struct Host : public NextionHost {
     void unknownFromTeensy(const std::string &line) { badCount++; oddTrace += "script:" + line + " | "; if (oddTrace.size() > 400) oddTrace.erase(0, oddTrace.size() - 400); }
 };
 static Host host;
-static void flushOut() { if (!outBuf.empty()) { Serial.write((const uint8_t *) outBuf.data(), outBuf.size()); outBuf.clear(); } }
+static void flushOut() {
+    if (outBuf.empty()) return;
+    if (frameBursts) {                                     // (1.11.173) 7E 7E, the length low byte first, the bytes - in ONE write
+        if (outBuf.size() > 4000) outBuf.resize(4000);     // (the main board's buffer is 4 kB)
+        const uint16_t n = (uint16_t) outBuf.size();
+        const char h[4] = { 0x7E, 0x7E, (char) (n & 0xFF), (char) (n >> 8) };
+        outBuf.insert(0, h, 4);
+    }
+    Serial.write((const uint8_t *) outBuf.data(), outBuf.size()); outBuf.clear();
+}
 static void filmNoteHelp(const std::string &script);           // (src/film_device.h)
 static void runScript(const std::string &code, const std::string &self) {
     if (code.empty()) return;

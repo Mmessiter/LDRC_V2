@@ -355,6 +355,29 @@ FLASHMEM void LogFrontPageReason(const char *why)
     char line[120];
     snprintf(line, sizeof(line), "Front page by itself: %s (it was on page %u) B172", why, (unsigned)CurrentView);
     LogText(line, strlen(line), true);
+    FrontReasonLogged = true; // B177: GotoFrontView writes no second line
+}
+// B177: a frame of the screen's that was not obeyed - a split tail, a late reply, a burst that never completed (Nextion.h):
+// its first bytes and the page. One line in two seconds at most.
+FLASHMEM void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n)
+{
+    static uint32_t last = 0;
+    if (last && (millis() - last) < 2000)
+        return;
+    last = millis();
+    char line[120];
+    int p = snprintf(line, sizeof(line), "Screen frame dropped (%s):", why);
+    for (uint16_t i = 0; i < n && i < 8 && p < (int)sizeof(line) - 24; ++i)
+        p += snprintf(line + p, sizeof(line) - p, " %02X", (unsigned)f[i]);
+    snprintf(line + p, sizeof(line) - p, " (page %u) B177", (unsigned)CurrentView);
+    LogText(line, strlen(line), true);
+}
+// B177: what the Sounds page's OK did (MenuOptions.h EndAudioVisualView), with the page it was on
+FLASHMEM void LogSoundsLine(const char *what)
+{
+    char line[160];
+    snprintf(line, sizeof(line), "%s (page %u) B177", what, (unsigned)CurrentView);
+    LogText(line, strlen(line), true);
 }
 // ************************************************************************
 

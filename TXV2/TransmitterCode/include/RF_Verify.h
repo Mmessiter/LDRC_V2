@@ -24,6 +24,13 @@
 // checks, saves and RESTARTS the flight controller, and answers from its verified copy meanwhile), compared with
 // GovWritePayload, told on the page's own line (t4), and the page's edited flag stays up until the read-back says saved,
 // so OK's "Save now?" waits for the verdict as on the other pages.
+// B177 (Malcolm, 4 Nov 2026, after a flight: "I had to reduce P on bank 2 and the transmitter failed to confirm it, but had
+// indeed written it"): one window was one chance. The read request rides in one radio packet, never resent, and the
+// receiver's own write takes five exchanges with the flight controller - a lost request, or a slow one (the receiver was
+// saving flight data in 100-700 ms pauses that day), and the window ended with nothing, or with the receiver's older
+// copy. Now the block is asked for again, up to three times (RF_VERIFY_ASKS), each with its own window, before any verdict:
+// "Reading back again (2 of 3) ..." on the page's line. A match in any window is a save confirmed. (The receiver, from
+// 0.9.915, also keeps the written block streaming for three seconds after its own confirmation, request or no request.)
 #ifndef RF_VERIFY_H
 #define RF_VERIFY_H
 #include <Arduino.h>
@@ -36,6 +43,9 @@ static bool     VfSetSeen = false;                 // a whole set came, and diff
 static uint32_t VfBannerUntil = 0;                 // the "Saved" line goes at this time
 static int      VfBannerView = -1;
 static const char *VfBannerLine = "busy";          // the box the "Saved" line was put in (B165: the governor's global page says it on t4)
+#define RF_VERIFY_ASKS 3                           // B177: how many times the block is asked for before a verdict
+static uint8_t  VfAsks = 0;                        // B177: asks made so far in this read-back
+static void   (*VfAskFn)() = nullptr;              // B177: the page's own read, to ask again
 
 FLASHMEM static uint8_t VfCount(uint8_t k)
 {
@@ -259,6 +269,8 @@ FLASHMEM bool RfVerifyArm(uint8_t kind, void (*ask)())
     VfWindow(kind, kind == VK_GOV_CFG ? RF_VERIFY_GOVCFG_WAIT_MS : RF_VERIFY_WAIT_MS);   // the receiver writes first, then answers: longer than a read's own window (B165: and restarts the flight controller for the governor's global settings)
     VfReadStart = VfStart(kind);
     VfSetSeen = false;
+    VfAsks = 1;                             // B177
+    VfAskFn = ask;
     VfKind = kind;
     VfMsg(kind, "Sent: reading back from the flight controller ...");
     SendCommand((char *)"vis b3,0");        // (no second Save until the first is known)
@@ -311,13 +323,29 @@ FLASHMEM bool RfVerifyEnd(uint8_t kind)
     if (VfKind != kind || !VfStillThisRead())
         return false;
     const uint8_t k = VfKind, n = VfCount(k);
+    if (VfAsks < RF_VERIFY_ASKS && VfAskFn)
+    { // B177: not a verdict yet - the block is asked for again, with a window of its own (the page's own read: its start
+      // time is the read-back's identity afresh; the BlockSeen bits clear when the request is sent, Parameters.h)
+        VfAskFn();
+        if (VfReading(k))
+        {
+            VfWindow(k, k == VK_GOV_CFG ? RF_VERIFY_GOVCFG_WAIT_MS : RF_VERIFY_WAIT_MS);
+            VfReadStart = VfStart(k);
+            VfSetSeen = false;
+            ++VfAsks;
+            char again[56];
+            snprintf(again, sizeof(again), "Reading back again (%u of %u) ...", (unsigned)VfAsks, (unsigned)RF_VERIFY_ASKS);
+            VfMsg(k, again);
+            return true;
+        }
+    }
     VfKind = VK_NONE;
     RfValueWasCut = false;                  // (B07's note is moot: the values go back on the page as they were sent)
     VfHide(k);
     PlaySound(WHAHWHAHMSG);
     if (!VfSetSeen)
-    { // nothing came back: the page still shows what was sent
-        MsgBox((char *)VfPage(k), (char *)"NOT CONFIRMED: the flight controller did\r\nnot answer when the values were read\r\nback. Press Save again, and check them.");
+    { // nothing came back in any window: the page still shows what was sent (B177: three asks; the write may well have landed)
+        MsgBox((char *)VfPage(k), (char *)"NOT CONFIRMED after 3 read-backs: the\r\nflight controller did not answer. Leave the\r\npage and come back to check what it holds.");
         VfEdited(k);
         return true;
     }

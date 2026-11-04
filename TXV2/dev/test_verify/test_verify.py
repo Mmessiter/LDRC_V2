@@ -101,6 +101,10 @@ static void reset() { cmds.clear(); msgs.clear(); hides.clear(); displays.clear(
     Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false; }
 static bool has(const std::vector<std::string> &v, const char *s) { for (auto &x : v) if (x == s) return true; return false; }
 static int count(const std::vector<std::string> &v, const char *s) { int n = 0; for (auto &x : v) if (x == s) ++n; return n; }
+// B177: the verdict comes after three asks. EndDiffer: the stream brings the (differing) set again in each new window, as the
+// receiver does; EndNothing: nothing comes in any window.
+static bool EndDiffer(uint8_t k) { for (int i = 0; i < 3; ++i) { if (!RfVerifyEnd(k)) return false; if (!RfVerifyPending()) return true; RfVerifySet(); } return false; }
+static bool EndNothing(uint8_t k) { for (int i = 0; i < 3; ++i) { if (!RfVerifyEnd(k)) return false; if (!RfVerifyPending()) return true; } return false; }
 int main() {
     for (int i = 0; i < MAX_RATES_BYTES; ++i) Rate_Values[i] = (uint8_t)(10 + i);
     // 1. not without the pipe, not offline, not on another page, not when the queue refuses the read: nothing asked or said
@@ -130,12 +134,12 @@ int main() {
     CHECK(RfVerifySet() == 2 && RfVerifyPending() && Reading_RATES_Now && boxes == 0 && hides.empty());
     CHECK(RfVerifySet() == 2);   // (the same again: still waiting)
     RfValueWasCut = true;
-    CHECK(RfVerifyEnd(VK_RATES) && !RfVerifyPending() && !RfValueWasCut && has(hides, "rates") && boxes == 1 && lastBoxPage == "page RatesView");
+    CHECK(EndDiffer(VK_RATES) && !RfVerifyPending() && !RfValueWasCut && has(hides, "rates") && boxes == 1 && lastBoxPage == "page RatesView");
     CHECK(lastBox.find("NOT SAVED: the flight controller holds\r\nother values for 1 box, shown in red.") == 0 && Rate_Values[1] == 11 && has(displays, "rates 0-13") && reds.size() == 1 && reds[0] == "tn0" && has(edited, "rates") && sounds.size() == 1 && sounds[0] == "whah" && leaves == 0 && cutNotes == 0);
     // two boxes differ, the type among them (its box is t10)
-    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); Rate_Values[0] = 4; Rate_Values[12] = 99; CHECK(RfVerifySet() == 2); CHECK(RfVerifyEnd(VK_RATES) && lastBox.find("other values for 2 boxes") != std::string::npos && reds.size() == 2 && reds[0] == "t10" && reds[1] == "tn11" && Rate_Values[0] == 10 && Rate_Values[12] == 22);
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); Rate_Values[0] = 4; Rate_Values[12] = 99; CHECK(RfVerifySet() == 2); CHECK(EndDiffer(VK_RATES) && lastBox.find("other values for 2 boxes") != std::string::npos && reds.size() == 2 && reds[0] == "t10" && reds[1] == "tn11" && Rate_Values[0] == 10 && Rate_Values[12] == 22);
     // 4. nothing came in the window: "NOT CONFIRMED", Save shown, the page left as it is
-    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(RfVerifyEnd(VK_RATES) && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0 && displays.empty() && reds.empty() && has(edited, "rates") && has(hides, "rates") && sounds.size() == 1 && sounds[0] == "whah" && !RfVerifyPending());
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(EndNothing(VK_RATES) && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0 && displays.empty() && reds.empty() && has(edited, "rates") && has(hides, "rates") && sounds.size() == 1 && sounds[0] == "whah" && !RfVerifyPending());
     // 5. a bank change read afresh (a new start time) or the page left: nothing compared, nothing said, the page's own hide runs as ever
     reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty() && !RfVerifyEnd(VK_RATES)); Rate_Values[1] = 11;
     reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty()); CurrentView = RATESVIEW_RF;
@@ -144,7 +148,7 @@ int main() {
     // 6. the PIDs: 17 words - the twelve, three boosts, two HSI offsets - on n0..n16; a boost that differs is n13
     CurrentView = PIDVIEW; for (int i = 0; i < MAX_PID_WORDS; ++i) PID_Values[i] = 100 + i; PID_Boost_Values[0] = 1; PID_Boost_Values[1] = 2; PID_Boost_Values[2] = 3; PID_HSI_Offset_Values[0] = 4; PID_HSI_Offset_Values[1] = 5;
     reset(); nowMs = 6000; CHECK(RfVerifyArm(VK_PID, PidAskValues) && Reading_PIDS_Now && PID_Send_Duration == 4000 && msgs[0].find("pid:Sent") == 0);
-    PID_Boost_Values[1] = 7; PID_HSI_Offset_Values[1] = 9; CHECK(RfVerifySet() == 2); CHECK(RfVerifyEnd(VK_PID) && lastBoxPage == "page PIDView" && reds.size() == 2 && reds[0] == "n13" && reds[1] == "n16" && PID_Boost_Values[1] == 2 && PID_HSI_Offset_Values[1] == 5);
+    PID_Boost_Values[1] = 7; PID_HSI_Offset_Values[1] = 9; CHECK(RfVerifySet() == 2); CHECK(EndDiffer(VK_PID) && lastBoxPage == "page PIDView" && reds.size() == 2 && reds[0] == "n13" && reds[1] == "n16" && PID_Boost_Values[1] == 2 && PID_HSI_Offset_Values[1] == 5);
     CHECK(count(displays, "pid 0") == 1 && count(displays, "pid 10") == 1 && count(displays, "boost") == 1 && displays.size() == 7 && has(edited, "pid") && has(hides, "pid"));
     reset(); nowMs = 6000; RfVerifyArm(VK_PID, PidAskValues); CHECK(RfVerifySet() == 1 && has(hides, "pid") && leaves == 1 && !Reading_PIDS_Now);
     // 7. the governor's bank page: what was sent is GovWritePayload 1..17 (byte 0 is never written), the read fills GovAckPayload; the headspeed's two bytes are n0, byte 3 is n1, byte 15 n13, the flags have no box
@@ -152,14 +156,14 @@ int main() {
     reset(); nowMs = 7000; CHECK(RfVerifyArm(VK_GOV, GovAskValues) && Reading_GOV_Now && GOV_Send_Duration == 4000 && msgs[0].find("gov:Sent") == 0);
     CHECK(RfVerifySet() == 1 && has(hides, "gov") && leaves == 1);   // (byte 0 differs, and does not matter)
     reset(); nowMs = 7000; RfVerifyArm(VK_GOV, GovAskValues); GovAckPayload[2] = 0; GovAckPayload[3] = 0; GovAckPayload[15] = 0; GovAckPayload[17] = 0; CHECK(RfVerifySet() == 2);
-    CHECK(RfVerifyEnd(VK_GOV) && lastBoxPage == "page RFGovView" && lastBox.find("other values for 4 boxes") != std::string::npos && reds.size() == 3 && reds[0] == "n0" && reds[1] == "n1" && reds[2] == "n13" && GovAckPayload[2] == 52 && GovAckPayload[17] == 67 && has(displays, "gov 1-18") && has(edited, "gov"));
+    CHECK(EndDiffer(VK_GOV) && lastBoxPage == "page RFGovView" && lastBox.find("other values for 4 boxes") != std::string::npos && reds.size() == 3 && reds[0] == "n0" && reds[1] == "n1" && reds[2] == "n13" && GovAckPayload[2] == 52 && GovAckPayload[17] == 67 && has(displays, "gov 1-18") && has(edited, "gov"));
     // 8. the advanced pages: their own boxes
     CurrentView = RATESADVANCEDVIEW; for (int i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i) Rate_Advanced_Values[i] = (uint8_t)(30 + i);
     reset(); nowMs = 8000; CHECK(RfVerifyArm(VK_RATES_ADV, RatesAdvAskValues) && Reading_RATES_Advanced_Now && Rates_Advanced_Send_Duration == 4000 && msgs[0].find("ratesadv:Sent") == 0);
-    Rate_Advanced_Values[14] = 1; CHECK(RfVerifySet() == 2 && RfVerifyEnd(VK_RATES_ADV) && lastBoxPage == "page Rates_A_View" && reds.size() == 1 && reds[0] == "t14" && Rate_Advanced_Values[14] == 44 && has(displays, "ratesadv 0-15") && has(edited, "ratesadv") && has(hides, "ratesadv"));
+    Rate_Advanced_Values[14] = 1; CHECK(RfVerifySet() == 2 && EndDiffer(VK_RATES_ADV) && lastBoxPage == "page Rates_A_View" && reds.size() == 1 && reds[0] == "t14" && Rate_Advanced_Values[14] == 44 && has(displays, "ratesadv 0-15") && has(edited, "ratesadv") && has(hides, "ratesadv"));
     CurrentView = PIDADVANCEDVIEW; for (int i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i) PID_Advanced_Values[i] = (uint8_t)(60 + i);
     reset(); nowMs = 9000; CHECK(RfVerifyArm(VK_PID_ADV, PidAdvAskValues) && Reading_PIDS_Advanced_Now && PID_Advanced_Send_Duration == 4000 && msgs[0].find("pidadv:Sent") == 0);
-    PID_Advanced_Values[0] = 0; PID_Advanced_Values[25] = 0; CHECK(RfVerifySet() == 2 && RfVerifyEnd(VK_PID_ADV) && lastBoxPage == "page PID_A_View" && reds.size() == 2 && reds[0] == "sw0" && reds[1] == "t25" && PID_Advanced_Values[0] == 60 && has(displays, "pidadv 0-26") && has(edited, "pidadv") && has(hides, "pidadv"));
+    PID_Advanced_Values[0] = 0; PID_Advanced_Values[25] = 0; CHECK(RfVerifySet() == 2 && EndDiffer(VK_PID_ADV) && lastBoxPage == "page PID_A_View" && reds.size() == 2 && reds[0] == "sw0" && reds[1] == "t25" && PID_Advanced_Values[0] == 60 && has(displays, "pidadv 0-26") && has(edited, "pidadv") && has(hides, "pidadv"));
     reset(); nowMs = 9000; RfVerifyArm(VK_PID_ADV, PidAdvAskValues); CHECK(RfVerifySet() == 1 && leaves == 1 && !Reading_PIDS_Advanced_Now);
     // 9. B165 the governor's global page: the 24 bytes 18..41 (what was sent is GovWritePayload[18..41], the read fills GovAckPayload[18..41]), an
     //    8 s window, the word on t4, and the page's edited flag let go only when the read-back matches (OK's "Save now?" waits for the verdict)
@@ -171,14 +175,33 @@ int main() {
     // different: the spool-up's high byte (23 = n17), the throttle type (39 = n28) and an off-page byte (20: counted, no box) - the verdict at the window's end
     reset(); nowMs = 20000; GOVS_GLOBAL_Were_Edited = true; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); GovAckPayload[23] = 0; GovAckPayload[39] = 9; GovAckPayload[20] = 1;
     CHECK(RfVerifySet() == 2 && RfVerifyPending() && Reading_GOV_Config_Now && GOVS_GLOBAL_Were_Edited && boxes == 0 && hides.empty());
-    CHECK(RfVerifyEnd(VK_GOV_CFG) && lastBoxPage == "page RFGovViewGlbl" && lastBox.find("other values for 3 boxes") != std::string::npos && reds.size() == 2 && reds[0] == "n17" && reds[1] == "n28");
+    CHECK(EndDiffer(VK_GOV_CFG) && lastBoxPage == "page RFGovViewGlbl" && lastBox.find("other values for 3 boxes") != std::string::npos && reds.size() == 2 && reds[0] == "n17" && reds[1] == "n28");
     CHECK(GovAckPayload[23] == 23 && GovAckPayload[39] == 39 && GovAckPayload[20] == 20 && has(displays, "govcfg 18-42") && has(edited, "govcfg") && has(hides, "govcfg") && GOVS_GLOBAL_Were_Edited && !RfVerifyPending());
     // nothing came back: NOT CONFIRMED, Save shown, the edits kept
     reset(); nowMs = 30000; GOVS_GLOBAL_Were_Edited = true; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues);
-    CHECK(RfVerifyEnd(VK_GOV_CFG) && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0 && has(edited, "govcfg") && has(hides, "govcfg") && GOVS_GLOBAL_Were_Edited && !RfVerifyPending() && displays.empty());
+    CHECK(EndNothing(VK_GOV_CFG) && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0 && has(edited, "govcfg") && has(hides, "govcfg") && GOVS_GLOBAL_Were_Edited && !RfVerifyPending() && displays.empty());
     // another kind's window end is not ours; the page left drops it with nothing said
     reset(); nowMs = 31000; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); CHECK(!RfVerifyEnd(VK_GOV) && RfVerifyPending());
     CurrentView = ROTORFLIGHTVIEW; CHECK(!RfVerifyEnd(VK_GOV_CFG) && !RfVerifyPending() && boxes == 0); CurrentView = RFGOVERNORVIEW_GLOBAL;
+    // 14. B177: the block is asked for again before any verdict - nothing in the first window asks again (2 of 3), then (3 of 3), then NOT CONFIRMED
+    CurrentView = RATESVIEW_RF; reset(); nowMs = 40000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(asks == 1 && RATES_Send_Duration == 4000);
+    uint32_t t1 = RATES_Start_Time; nowMs = 44100; Reading_RATES_Now = false;   // (Hide_msg_if_needed lowers the flag before it asks for the verdict)
+    CHECK(RfVerifyEnd(VK_RATES) && RfVerifyPending() && asks == 2 && Reading_RATES_Now && RATES_Start_Time != t1 && RATES_Send_Duration == 4000 && boxes == 0 && has(msgs, "rates:Reading back again (2 of 3) ...") && hides.empty());
+    nowMs = 48200; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && RfVerifyPending() && asks == 3 && has(msgs, "rates:Reading back again (3 of 3) ...") && boxes == 0);
+    nowMs = 52300; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && !RfVerifyPending() && asks == 3 && boxes == 1 && lastBox.find("NOT CONFIRMED after 3 read-backs") == 0 && has(edited, "rates") && has(hides, "rates"));
+    // the same set in the second window: confirmed there, no third ask
+    reset(); nowMs = 60000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 64100; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 2);
+    CHECK(RfVerifySet() == 1 && !RfVerifyPending() && texts["busy"] == "Saved, and confirmed by reading it back." && leaves == 1 && boxes == 0);
+    CHECK(!RfVerifyEnd(VK_RATES) && boxes == 0);   // (the window's end says nothing more)
+    // a different set in the first window, the right one in the second: saved
+    reset(); nowMs = 70000; RfVerifyArm(VK_RATES, RatesAskValues); Rate_Values[0] = 4; CHECK(RfVerifySet() == 2); nowMs = 74100; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 2 && boxes == 0 && Rate_Values[0] == 4);
+    Rate_Values[0] = 10; CHECK(RfVerifySet() == 1 && leaves == 1 && boxes == 0);
+    // the page left between asks: nothing more said
+    reset(); nowMs = 80000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 84100; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 2); CurrentView = ROTORFLIGHTVIEW; nowMs = 88200; CHECK(!RfVerifyEnd(VK_RATES) && !RfVerifyPending() && boxes == 0); CurrentView = RATESVIEW_RF;
+    // the queue refusing the second ask (the pipe went): the verdict comes at once
+    reset(); nowMs = 90000; RfVerifyArm(VK_RATES, RatesAskValues); VfAskFn = RefusedAsk; nowMs = 94100; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && !RfVerifyPending() && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0);
+    // the governor's global page: its longer window at every ask
+    reset(); CurrentView = RFGOVERNORVIEW_GLOBAL; nowMs = 100000; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); CHECK(GOV_Config_Send_Duration == 8000); nowMs = 108100; Reading_GOV_Config_Now = false; CHECK(RfVerifyEnd(VK_GOV_CFG) && asks == 2 && GOV_Config_Send_Duration == 8000 && has(msgs, "govcfg:Reading back again (2 of 3) ...")); CurrentView = RATESVIEW_RF;
     printf("test_verify: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
