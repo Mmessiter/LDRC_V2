@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.917-fc-armed-word": "With a Rotorflight flight controller answering, its own word on ARMED now rules the radios: Bluetooth and WiFi stay up while it says disarmed, transmitter on or off, and go down when it says armed. The arming channel is only a fallback. The Receiver settings page says when the saved failsafe applies.",
   "RXV2-0.9.916-servo-copy-honest": "The Servos page's 'Copy to servos 2 & 3' now says plainly when a write did not happen; it said Copied whatever became of the writes. The receiver takes one Bluetooth connection at a time: with the transmitter on a Rotorflight page the app cannot write, and the other way round.",
   "RXV2-0.9.915-read-back-window": "A block just written to the flight controller keeps streaming to the transmitter for 3 s after the save is confirmed, so the transmitter's read-back sees the new values even when its own request was lost (with transmitter B177).",
   "RXV2-0.9.914-read-back-help": "The Rotorflight help says it plainly: every save is read back from the flight controller and compared with what you typed; the app never says saved on trust.",

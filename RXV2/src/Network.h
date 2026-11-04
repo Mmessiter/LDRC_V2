@@ -371,9 +371,11 @@ inline void netStep() {
         // back on one pass later — with a second wiggle (Malcolm 2026-09-16:
         // "two wiggles for the price of one", walking out to the field). So
         // leave it up; arming takes it down exactly as before.
-        const bool disarmedOnGround = autoFlyActive() && armingChannel >= 1 && armingChannel <= 16 &&
-            rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
-            channelMicros[armingChannel - 1] < 1500;
+        const bool disarmedOnGround = autoFlyActive() && (fcArmedWordFresh()
+            ? !fcInfo.armed                                               // 0.9.917: the flight controller's own word, transmitter or no transmitter
+            : (armingChannel >= 1 && armingChannel <= 16 &&
+               rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+               channelMicros[armingChannel - 1] < 1500));
         if (disarmedOnGround) {
             events.add("Bluetooth boot window: staying up while disarmed (arming turns it off)");
         } else if (txBleWanted()) {                      // 0.9.875: the transmitter's screen is joining, or about to
@@ -391,7 +393,8 @@ inline void netStep() {
     // use is untouched (home WiFi up), and a phone mid-configuration is
     // grandfathered until it disconnects.
     static uint32_t bleFlyOffAtMs = 0;
-    const bool armedNow = (armingChannel >= 1 && armingChannel <= 16 &&
+    const bool armedNow = fcArmedWordFresh() ? fcInfo.armed                 // (0.9.917: the flight controller's word when it is fresh)
+                        : (armingChannel >= 1 && armingChannel <= 16 &&
                            rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
                            channelMicros[armingChannel - 1] > 1500);
     // With an arming channel known, ARMED is the definition of flying and
@@ -399,7 +402,7 @@ inline void netStep() {
     // stand down or it fights the disarm revival in an endless 5 s flap
     // (Malcolm's bench log, 2026-08-25). It remains for models with no
     // arming function, where link-age is the only flying signal we have.
-    if (armingChannel == 0 &&
+    if (armingChannel == 0 && !fcArmedWordFresh() &&   // (0.9.917: a flight controller that says disarmed is not flying, whatever the link's age)
         netMode == NET_NO_WIFI && bleAdvertising() && !bleHasClient() &&
         rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
         (uint32_t)(millis() - linkStats.connStartMs) >= 30000 &&
@@ -697,7 +700,7 @@ inline void netStep() {
                 static uint32_t bleReviveAnnouncedMs = 0, wifiReviveAnnouncedMs = 0;
                 const bool armLink = rx.lastMillis &&
                                      (uint32_t)(millis() - rx.lastMillis) < 1000;
-                const bool disarmedNow = autoFlyActive() && (dongleEnabled
+                const bool disarmedNow = autoFlyActive() && ((dongleEnabled || fcArmedWordFresh())   // (0.9.917: the flight controller's word on a receiver too)
                     ? (fcInfo.detected && !fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)
                     : (armingChannel >= 1 && armingChannel <= 16 && armLink &&
                        channelMicros[armingChannel - 1] < 1500));

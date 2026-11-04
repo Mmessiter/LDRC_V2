@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.916-servo-copy-honest";
+constexpr const char* FW_VERSION = "RXV2-0.9.917-fc-armed-word";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -1259,6 +1259,13 @@ struct FcInfo {
     uint32_t lastResponseMs   = 0;
 };
 inline FcInfo fcInfo;
+// 0.9.917 (Malcolm, 4 Nov 2026, Black Thunder 1: "if the receiver boots up with the transmitter already on, we can never have
+// a Bluetooth connection from the app without rebooting the receiver first"): a flight controller that answers KNOWS whether
+// it is armed, and its word beats the receiver's arming-channel guess - the switch's sense, the channel number, a model whose
+// arming channel was never set all make that guess wrong, and a wrong "armed" keeps the radios down for good. Fresh = within
+// 2.5 s (the dongle's rule, dongleDisarmedConfirmed); stale or none = the arming channel, as before. Used by the auto fly
+// mode's teardown (main.cpp), the Bluetooth boot window, the flying heuristic and the disarm revival (Network.h).
+inline bool fcArmedWordFresh() { return fcInfo.detected && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 2500; }
 inline bool   fcInfoNvsDirty = false;   // throttleCh/govMode changed in RAM; written to NVS at the next quiet moment
 inline bool   txBanksNvsDirty = false;  // the transmitter's bank count changed in RAM (0.9.904); written to NVS at the next quiet moment
 

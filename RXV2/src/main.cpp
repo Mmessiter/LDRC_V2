@@ -1354,8 +1354,8 @@ void loop() {
         const bool radiosUp = (netMode != NET_NO_WIFI) || bleAdvertising() || bleHasClient();
         const bool linkLive = rx.lastMillis &&
                               (uint32_t)(millis() - rx.lastMillis) < 1000;
-        const bool armedNow = dongleEnabled
-                              ? (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)   // the FC's own word
+        const bool armedNow = (dongleEnabled || fcArmedWordFresh())
+                              ? (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)   // the FC's own word (0.9.917: on a receiver too, whenever it is fresh)
                               : (armingChannel >= 1 && armingChannel <= 16 &&
                                  linkLive && channelMicros[armingChannel - 1] > 1500);
         if (radiosUp && armedNow) {
