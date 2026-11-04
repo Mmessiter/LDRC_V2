@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Servos &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=413">
-<script src="/app.js?v=413" defer></script>
+<link rel=stylesheet href="/style.css?v=414">
+<script src="/app.js?v=414" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -164,20 +164,30 @@ async function load() {
 // geometry correction) to servos 2 and 3 and save them. Each servo keeps
 // its own centre (that is its mechanical levelling) and its own Reversed
 // flag (depends on how it is mounted).
+// 0.9.916 (Malcolm, 4 Nov 2026: "copying servo 1 to 2 and 3 didn't happen using the app"): saveServo keeps its own
+// failures to itself, so this said "Copied ... and saved" whatever became of the two writes - that evening the receiver's
+// one Bluetooth connection was the transmitter's, and both writes had failed. Now each save answers, and the word is honest.
 async function copyToSwash() {
     for (const j of [1, 2]) {
         for (const f of ['min','max','rneg','rpos','rate','speed'])
             $('s'+j+'_'+f).value = $('s0_'+f).value;
         $('s'+j+'_geo').checked = $('s0_geo').checked;
     }
-    await saveServo(1);
-    await saveServo(2);
-    flashMsg(0, '✅ Copied to servos 2 & 3 and saved (centres and Reversed kept)');
+    const ok2 = await saveServo(1);
+    const ok3 = await saveServo(2);
+    if (ok2 && ok3) flashMsg(0, '✅ Copied to servos 2 & 3 and saved (centres and Reversed kept)');
+    else {
+        $('status').className = 'banner bad';
+        $('status').textContent = '⚠ NOT copied: ' + (!ok2 && !ok3 ? 'servos 2 and 3 were' : !ok2 ? 'servo 2 was' : 'servo 3 was')
+            + ' not saved. If the transmitter is on a Rotorflight page it holds the receiver’s Bluetooth (one at a time): leave that page, then try again.';
+        flashMsg(0, '⚠️ Not copied — see above');
+    }
 }
 function flashMsg(i, t){ const m=$('s'+i+'_msg'); if(m){ m.textContent=t; setTimeout(()=>{ m.textContent=''; }, 6000); } }
 
-async function saveServo(i) {
+async function saveServo(i) {                         // true: written, stored and read back the same (0.9.916: the copy above asks)
     const btn = $('s'+i+'_save'), msg = $('s'+i+'_msg');
+    let saved = false;
     btn.disabled = true; msg.textContent = 'writing…';
     try {
         const s = gather(i);
@@ -194,6 +204,7 @@ async function saveServo(i) {
         for (let k = 0; ok && k < 16; k++) if (check[o + k] !== want[k]) ok = false;
         if (ok) {
             servos[i] = s;
+            saved = true;
             msg.textContent = '✅ Saved & verified';
         } else {
             msg.textContent = '⚠️ The flight controller adjusted the values — re-reading';
@@ -207,6 +218,7 @@ async function saveServo(i) {
     }
     btn.disabled = false;
     setTimeout(() => { msg.textContent = ''; }, 6000);
+    return saved;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

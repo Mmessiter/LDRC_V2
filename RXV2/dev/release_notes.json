@@ -1,4 +1,5 @@
 {
+  "RXV2-0.9.916-servo-copy-honest": "The Servos page's 'Copy to servos 2 & 3' now says plainly when a write did not happen; it said Copied whatever became of the writes. The receiver takes one Bluetooth connection at a time: with the transmitter on a Rotorflight page the app cannot write, and the other way round.",
   "RXV2-0.9.915-read-back-window": "A block just written to the flight controller keeps streaming to the transmitter for 3 s after the save is confirmed, so the transmitter's read-back sees the new values even when its own request was lost (with transmitter B177).",
   "RXV2-0.9.914-read-back-help": "The Rotorflight help says it plainly: every save is read back from the flight controller and compared with what you typed; the app never says saved on trust.",
   "RXV2-0.9.913-read-back": "Every page that writes to the flight controller now reads the values back and compares them with what you sent: Filters, Ports, the channel wizard, the channel order and the level calibration join the pages that already did. A difference is said plainly, never Saved.",

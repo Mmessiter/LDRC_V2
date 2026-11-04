@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.915-read-back-window";
+constexpr const char* FW_VERSION = "RXV2-0.9.916-servo-copy-honest";
 
 //*********************************************************************
 //  Auto-update manifest URLs

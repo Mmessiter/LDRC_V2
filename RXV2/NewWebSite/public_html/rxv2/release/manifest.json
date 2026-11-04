@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.916-servo-copy-honest",
+      "url": "https://messiter.com/rxv2/release/v0.9.916/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.916/littlefs.bin",
+      "fs_md5": "9088ae106b33562ffc4da702636ebaa5",
+      "notes": "The Servos page's 'Copy to servos 2 & 3' now says plainly when a write did not happen; it said Copied whatever became of the writes. The receiver takes one Bluetooth connection at a time: with the transmitter on a Rotorflight page the app cannot write, and the other way round."
+    },
+    {
       "name": "RXV2-0.9.915-read-back-window",
       "url": "https://messiter.com/rxv2/release/v0.9.915/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.915/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.905/littlefs.bin",
       "fs_md5": "e7ded912fb3be76b4c414918d41a063e",
       "notes": "The command line from a linked transmitter: when the receiver does not yet know which switch arms the model, it asks Rotorflight there and then, and a refusal says plainly why (Mehul's RAW 420 said 'arming channel 0')."
-    },
-    {
-      "name": "RXV2-0.9.904-bank-count-sync",
-      "url": "https://messiter.com/rxv2/release/v0.9.904/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.904/littlefs.bin",
-      "fs_md5": "e7ded912fb3be76b4c414918d41a063e",
-      "notes": "The transmitter's bank count: a V2 transmitter tells the receiver how many banks the model has (Model options, Six banks). The tuning pages draw that many, the Bank selector on the Switches page is set to match, and both the app and the transmitter warn when the flight controller's bank line has another count."
     }
   ],
   "rotorflight": {
