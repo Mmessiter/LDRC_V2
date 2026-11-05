@@ -495,6 +495,7 @@ void Updater::asked() {
         case LE_MODEL_JUST_NOW: message("A model was connected just now", "Wait a minute, then check again."); return;
         case LE_MOTOR_ON:       message("The motor is on", "Switch the motor off,", "then check again."); return;
         case LE_SAFETY_OFF:     message("The safety is off", "Put the safety on,", "then check again."); return;
+        case LE_PAGE_OPEN:      message("A page is open on the transmitter", "Go to its front page,", "then check again."); return;   // (1.11.177 / B179)
         default:                message("The transmitter is busy", "Finish what is on its screen,", "then check again."); return;
         }
         std::string r = link_.result(); if (startsWith(r, "FAILED at ")) r = r.substr(10);

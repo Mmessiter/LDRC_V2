@@ -152,6 +152,7 @@ struct FakeTeensy : public LinkPlatform {
     std::string version, previous, state, pending;
     bool knowsLink, linkMode, restarting, swapPending, brokenNew, modelConnected, absent;
     bool motorOn, safetyOff, safetyDefined, modelJustNow, saysSettings, savesOnEntry, goingBack;
+    bool pageOpen = false;                            // (B179) the pilot is on a page other than the front page or Transmitter setup
     std::map<std::string, uint32_t> reads;            // how each firmware reads the settings (none given: 1)
     std::map<std::string, bool> says;                 // whether a firmware says how it reads them (none given: saysSettings)
     std::vector<uint8_t> settings; bool loaded;
@@ -184,7 +185,7 @@ struct FakeTeensy : public LinkPlatform {
     // matter; with none, the motor decides.
     bool radiosMustBeOff() const { return safetyDefined ? safetyOff : motorOn; }
     uint8_t status() const { return (uint8_t) ((motorOn ? 1 : 0) | ((safetyDefined && safetyOff) ? 2 : 0) | (modelConnected ? 4 : 0) | (safetyDefined ? 8 : 0) | (modelJustNow ? 16 : 0) | (radiosMustBeOff() ? 32 : 0)); }
-    uint8_t refusal() const { return modelConnected ? LE_BUSY : modelJustNow ? LE_MODEL_JUST_NOW : radiosMustBeOff() ? (safetyDefined ? LE_SAFETY_OFF : LE_MOTOR_ON) : (uint8_t) LE_OK; }
+    uint8_t refusal() const { return modelConnected ? LE_BUSY : modelJustNow ? LE_MODEL_JUST_NOW : radiosMustBeOff() ? (safetyDefined ? LE_SAFETY_OFF : LE_MOTOR_ON) : pageOpen ? LE_PAGE_OPEN : (uint8_t) LE_OK; }   // (the order is LinkRefusal()'s, FlightGuard.h)
     const char *extra() {
         char b[64];
         if (says.count(version) ? says[version] : saysSettings) snprintf(b, sizeof b, "mfp=1.%08lX;st=%u", (unsigned long) fingerprint(), (unsigned) status()); else b[0] = 0;

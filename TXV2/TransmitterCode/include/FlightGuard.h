@@ -365,7 +365,19 @@ uint8_t LinkRefusal()
         return SafetyIsDefined() ? ldrc::LE_SAFETY_OFF : ldrc::LE_MOTOR_ON;
     if (ModalWaits || CurrentMode != NORMAL)
         return ldrc::LE_NOT_NOW; // a question is on screen, or the radio is calibrating or scanning
+    if (!LinkPageAllows())
+        return ldrc::LE_PAGE_OPEN; // B179: the pilot is on a page
     return ldrc::LE_OK;
+}
+
+// B179 (Malcolm, 5 Nov 2026, on the Governor page: "I just saw it jump again to the front screen" - a knock from the screen, 52 s
+// after power-on, opened the link, and the link's end draws the front page afresh). The link opens only when the pilot is on the
+// front page (or its screen saver), or on Transmitter setup, where Check for update is - the one link the pilot asks for by hand
+// and expects to end on the front page. Anywhere else the knock is answered (who we are, and this as the reason) and the link
+// stays shut: the screen's updater takes the answer as the answer, a job from the Mac is told to wait. 254 is "no page yet".
+bool LinkPageAllows()
+{
+    return CurrentView == FRONTVIEW || CurrentView == TXSETUPVIEW || CurrentView == BLANKVIEW || CurrentView == 254;
 }
 
 // "mfp=1.89ABCDEF;st=8;off=0;rst=0x1": what the Teensy adds when it says who it is (LinkServer::hello).

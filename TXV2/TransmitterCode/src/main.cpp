@@ -5133,12 +5133,14 @@ void GotoFrontView()
         for (uint8_t r = 0; r < SCREEN_CMD_RING && p < (int)sizeof(line) - 48; ++r)
             if (LastScreenCmds[r][0])
                 p += snprintf(line + p, sizeof(line) - p, " '%s'%c %lu ms;", LastScreenCmds[r], LastScreenCmdFramed[r] ? 'f' : 'u', (unsigned long)(millis() - LastScreenCmdMs[r]));
-        if (!(BoundFlag && ModelMatched))
+        if (!(BoundFlag && ModelMatched) && p < (int)sizeof(line) - 40)
         {
             const uint32_t tx = GetSysValue("tch2"), ty = GetSysValue("tch3");
             if (tx != 65535 && ty != 65535)
                 p += snprintf(line + p, sizeof(line) - p, " lifted at %lu,%lu;", (unsigned long)tx, (unsigned long)ty);
         }
+        if (p > (int)sizeof(line) - 20)
+            p = (int)sizeof(line) - 20; // (B179: snprintf tells the length it WANTED; past the end, sizeof - p would wrap)
         snprintf(line + p, sizeof(line) - p, " framing %s B178", ScreenFramesBursts ? "on" : "off");
         LogText(line, strlen(line), true);
     }

@@ -554,6 +554,7 @@ FLASHMEM void LinkMode()
         server.hello(reply, 0);
         reply.payload[0] = refusal;
         LinkSend(reply);
+        LogLinkRefused(ldrc::errorText(refusal)); // B179: the log says who knocked when, and why the link stayed shut
         return;
     }
     BlueLedOn(); // busy, and not even trying to connect (Malcolm, 4-10-2026: red = trying to connect, green = connected,

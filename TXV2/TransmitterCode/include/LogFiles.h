@@ -379,6 +379,18 @@ FLASHMEM void LogSoundsLine(const char *what)
     snprintf(line, sizeof(line), "%s (page %u) B177", what, (unsigned)CurrentView);
     LogText(line, strlen(line), true);
 }
+// B179: the screen knocked for the file link and was answered with the link kept shut (LinkMode.h): the page and the reason.
+// One line in ten seconds at most (the screen knocks again every 1.5 s while it waits).
+FLASHMEM void LogLinkRefused(const char *why)
+{
+    static uint32_t last = 0;
+    if (last && (millis() - last) < 10000)
+        return;
+    last = millis();
+    char line[160];
+    snprintf(line, sizeof(line), "Link knock refused (page %u): %s B179", (unsigned)CurrentView, why);
+    LogText(line, strlen(line), true);
+}
 // ************************************************************************
 
 float GetOverallSuccessRate()

@@ -23,6 +23,7 @@ const char *errorText(uint8_t code) {
         case LE_MOTOR_ON: return "the motor is on";
         case LE_SAFETY_OFF: return "the safety is off";
         case LE_MODEL_JUST_NOW: return "a model was connected less than a minute ago";
+        case LE_PAGE_OPEN: return "a page is open on the transmitter. Go to its front page and try again";
         default: return "error";
     }
 }

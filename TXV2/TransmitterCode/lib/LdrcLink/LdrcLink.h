@@ -57,7 +57,8 @@ enum : uint8_t {
     LE_OK = 0, LE_BAD_REQUEST = 1, LE_NO_FILE = 2, LE_IO = 3, LE_SEQUENCE = 4, LE_CRC = 5, LE_SIZE = 6,
     LE_PROTECTED = 7, LE_BUSY = 8, LE_NO_CARD = 9, LE_BAD_IMAGE = 10, LE_BATTERY = 11, LE_UNSUPPORTED = 12,
     LE_NO_PREVIOUS = 13, LE_NOT_NOW = 14,
-    LE_MOTOR_ON = 15, LE_SAFETY_OFF = 16, LE_MODEL_JUST_NOW = 17     // (2.5.6 B8) the link stays shut: flying comes first
+    LE_MOTOR_ON = 15, LE_SAFETY_OFF = 16, LE_MODEL_JUST_NOW = 17,    // (2.5.6 B8) the link stays shut: flying comes first
+    LE_PAGE_OPEN = 18                                                // (B179 / 1.11.177) the pilot is on a page: the link's end would throw him to the front page
 };
 const char *errorText(uint8_t code);
 

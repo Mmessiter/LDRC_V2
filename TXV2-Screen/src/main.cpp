@@ -47,7 +47,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.176"
+#define SCREEN_VERSION "1.11.177"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2320,6 +2320,7 @@ static void flushOut() {
         const char h[4] = { 0x7E, 0x7E, (char) (n & 0xFF), (char) (n >> 8) };
         outBuf.insert(0, h, 4);
         sentTrace += "[framed] ";                          // (1.11.174) seen through the door: GET /sent
+        if (sentTrace.size() > 600) sentTrace.erase(0, sentTrace.size() - 600);   // (1.11.177: it grew without end - 9 bytes a burst)
     }
     Serial.write((const uint8_t *) outBuf.data(), outBuf.size()); outBuf.clear();
 }
@@ -2917,8 +2918,16 @@ static void linkPoll() {
     if (linkResultAt && now >= linkResultAt) { linkResultAt = 0; linkPanel(true); presentDirty(true); linkResultUntil = now + 12000; }
     if (linkResultUntil && now >= linkResultUntil) { linkResultUntil = 0; linkPanelGone(); }
 }
-static bool linkStart() {                                  // the jobs are queued: go, unless flying
-    if (flyingNow()) { teensyLink.clear(); return false; }
+// (1.11.177 / B179, Malcolm, 5 Nov 2026, on the Governor page: "I just saw it jump again to the front screen" - a knock opened the
+// link, whose end draws the front page afresh.) The Teensy now keeps the link shut while the pilot is on a page other than the front
+// page, its screen saver, or Transmitter setup (where Check for update is). A job from the Mac is not even queued then: it is told
+// to wait, in words, instead of knocking and being refused - and nothing is left queued to run the moment the pilot moves.
+static bool linkPageAllows() { return page.name.empty() || page.name == "FrontView" || page.name == "BlankView" || page.name == "TXSetupView"; }
+static String linkWhyNot;                                  // why the last linkStart() queued nothing
+static bool linkStart() {                                  // the jobs are queued: go, unless flying or a page is open
+    if (flyingNow()) { teensyLink.clear(); linkWhyNot = "flying comes first: the model is on, or was a minute ago"; return false; }
+    if (!linkPageAllows()) { teensyLink.clear(); linkWhyNot = String("the pilot is on page ") + page.name.c_str() + ": the transmitter keeps the link shut there (B179). Wait for its front page"; return false; }
+    linkWhyNot = "";
     return teensyLink.start();
 }
 
@@ -3266,6 +3275,9 @@ static std::string psramJson();                        // (1.11.132) defined aft
 static std::string wifiDiagJson();                     // (1.11.147) wifi_device.h, included later: the access point, the IP, the drops and joins
 static std::string iramJson();                         // (1.11.137) likewise
 static bool filmProbe(const String &kind, int kb, uint32_t &us, char *extra, size_t extraN);   // (26 Oct evening, bench) src/film_device.h: a film played from the bench, stopped, its frames through the flip or not
+// (1.11.177) a job for the Teensy's link, asked for through the door: queued (200, and what was queued) or not (500, and why - flying,
+// or the pilot is on a page). A script on the Mac reads the reason instead of waiting for a job that would never start.
+static void linkReply(const String &queued) { if (linkStart()) web.send(200, "text/plain", queued); else web.send(500, "text/plain", linkWhyNot.length() ? linkWhyNot : String("not started")); }
 static void webBegin() {
     web.on("/status", HTTP_GET, []() {                   // (the one page that answers when the workshop door is shut)
         char b[520]; snprintf(b, sizeof(b), "{\"fw\":\"" SCREEN_VERSION "\",\"door\":%s,\"door_kept\":%s,\"tx\":%d,\"flying\":%d,\"rx\":{\"phase\":%d,\"why\":%d,\"outcome\":%d,\"release\":\"%lX\",\"wanted\":\"%lX\",\"left\":%lu,\"flags\":%lu,\"age\":%ld},\"page\":\"%s\",\"id\":%d,\"cmds\":%lu,\"odd\":%lu,\"minheap\":%u,\"heap\":%u,\"psram\":%u,\"sd\":%d,\"touch\":%d,\"ip\":\"%s\",\"audio\":%d,\"boot\":%lu,\"up\":%lu}",
@@ -3512,29 +3524,29 @@ static void webBegin() {
         if (updAtWork()) { web.send(409, "text/plain", "\"Check for update\" is at work on the screen: the link is its own"); return true; }   // (its install went in behind a job from here, once)
         teensyLink.clear(); return false;
     };
-    doorOn("/teensy/hello", HTTP_POST, [linkBusy]() { if (linkBusy()) return; teensyLink.hello(); web.send(linkStart() ? 200 : 500, "text/plain", "asked"); });
+    doorOn("/teensy/hello", HTTP_POST, [linkBusy]() { if (linkBusy()) return; teensyLink.hello(); linkReply("asked"); });
     doorOn("/teensy/put", HTTP_POST, [linkBusy]() {             // ?local=/teensy/sd/help/AUDIO.TXT&remote=/help/AUDIO.TXT[&user=1][&always=1]
         if (linkBusy()) return;
         teensyLink.put(web.arg("local").c_str(), web.arg("remote").c_str(), web.arg("user") == "1" ? ldrc::LF_USER_DATA : 0, web.arg("always") != "1");
-        web.send(linkStart() ? 200 : 500, "text/plain", "queued");
+        linkReply("queued");
     });
     doorOn("/teensy/get", HTTP_POST, [linkBusy]() {             // ?remote=/MODELS.DAT&local=/teensy/fetched/MODELS.DAT
         if (linkBusy()) return;
         const String local = web.arg("local");                // what is fetched goes below /teensy, and never into the sets of copies
         if (!local.startsWith("/teensy/") || local.startsWith("/teensy/backup/") || !ldrc::plainPath(local.c_str())) { web.send(403, "text/plain", "what is fetched goes below /teensy (and not into /teensy/backup: POST /teensy/keep makes a copy there)"); return; }
         teensyLink.get(web.arg("remote").c_str(), web.arg("local").c_str());
-        web.send(linkStart() ? 200 : 500, "text/plain", "queued");
+        linkReply("queued");
     });
     doorOn("/teensy/delete", HTTP_POST, [linkBusy]() {          // ?remote=/help/OLD.TXT[&user=1]
         if (linkBusy()) return;
         teensyLink.del(web.arg("remote").c_str(), web.arg("user") == "1" ? ldrc::LF_USER_DATA : 0);
-        web.send(linkStart() ? 200 : 500, "text/plain", "queued");
+        linkReply("queued");
     });
     doorOn("/teensy/list", HTTP_POST, [linkBusy]() {            // ?dir=/mod : what is in that folder of the Teensy's card (names and sizes, in /teensy/status)
         if (linkBusy()) return;
         String dir = web.arg("dir"); if (dir.isEmpty()) dir = "/";
         teensyLink.list(dir.c_str());
-        web.send(linkStart() ? 200 : 500, "text/plain", "asked");
+        linkReply("asked");
     });
     doorOn("/teensy/sync", HTTP_POST, [linkBusy]() {            // ?dir=/teensy/sd : every file below it goes to the same place on the Teensy's card, if it differs
         if (linkBusy()) return;
@@ -3552,7 +3564,7 @@ static void webBegin() {
             }
         }
         if (!files) { web.send(404, "text/plain", "nothing to send below that folder"); return; }
-        web.send(linkStart() ? 200 : 500, "text/plain", String(files) + " files queued");
+        linkReply(String(files) + " files queued");
     });
     doorOn("/teensy/install", HTTP_POST, [linkBusy]() {         // ?package=/teensy/TXFW.BIN : keep the models, send the package, install, wait, check, confirm
         if (linkBusy()) return;
@@ -3563,14 +3575,14 @@ static void webBegin() {
         if (web.arg("backup") != "0") { keepPending = keepQueue("before " + std::string(h.version)); keepAbout = "Kept before " + std::string(h.version) + " went in, from the Mac.\n"; }   // the pilot's files, kept on OUR card first
         teensyLink.put(pkg.c_str(), "/FW/TXFW.BIN", 0, true);
         teensyLink.install("/FW/TXFW.BIN", h.version);
-        web.send(linkStart() ? 200 : 500, "text/plain", String("installing ") + h.version);
+        linkReply(String("installing ") + h.version);
     });
     // The pilot's own files: a copy now (POST /teensy/keep), the copies there are (GET /teensy/sets), one of them put back
     // (POST /teensy/restore?set=<its folder's name>: models.dat and every *.MOD of that copy replace what is on the Teensy's card).
     doorOn("/teensy/keep", HTTP_POST, [linkBusy]() {
         if (linkBusy()) return;
         keepPending = keepQueue("asked for"); keepAbout = "Kept because it was asked for, from the Mac.\n";
-        web.send(linkStart() ? 200 : 500, "text/plain", keepPending.c_str());
+        linkReply(keepPending.c_str());
     });
     doorOn("/teensy/sets", HTTP_GET, []() {
         std::string out;
@@ -3601,10 +3613,10 @@ static void webBegin() {
             if (d) d.close();
         }
         if (!n) { web.send(404, "text/plain", "that copy holds none of the pilot's files"); return; }
-        web.send(linkStart() ? 200 : 500, "text/plain", (String(n) + " files to put back").c_str());
+        linkReply((String(n) + " files to put back").c_str());
     });
-    doorOn("/teensy/rollback", HTTP_POST, [linkBusy]() { if (linkBusy()) return; teensyLink.rollback(); web.send(linkStart() ? 200 : 500, "text/plain", "asked"); });
-    doorOn("/teensy/confirm", HTTP_POST, [linkBusy]() { if (linkBusy()) return; teensyLink.confirm(); teensyLink.hello(); web.send(linkStart() ? 200 : 500, "text/plain", "asked"); });
+    doorOn("/teensy/rollback", HTTP_POST, [linkBusy]() { if (linkBusy()) return; teensyLink.rollback(); linkReply("asked"); });
+    doorOn("/teensy/confirm", HTTP_POST, [linkBusy]() { if (linkBusy()) return; teensyLink.confirm(); teensyLink.hello(); linkReply("asked"); });
     doorOn("/teensy/cancel", HTTP_POST, []() { teensyLink.cancel("cancelled"); web.send(200, "text/plain", "cancelled"); });
     doorOn("/file", HTTP_GET, []() {                     // a file from the screen's own card
         File f = SD.open(web.arg("path"));

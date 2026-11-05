@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B178 04/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B179 05/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -891,6 +891,8 @@ void LogTimer(uint32_t Mins);
 FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp);
 void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n); // B177: LogFiles.h - a frame of the screen's that was not obeyed
 void LogSoundsLine(const char *what);                               // B177: LogFiles.h - what the Sounds page's OK did
+void LogLinkRefused(const char *why);                               // B179: LogFiles.h - a knock for the file link answered with the link kept shut
+bool LinkPageAllows();                                              // B179: FlightGuard.h - the pilot is on the front page or Transmitter setup: the link may open
 bool TextInIsGenuine();                                             // B177: Nextion.h - the frame in TextIn is to be obeyed
 void LogAverageFrameRate();
 void ShowBank();

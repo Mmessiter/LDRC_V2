@@ -455,7 +455,13 @@ void BankHasChanged()
         UpdateModelsNameEveryWhere();
     }
     if (CurrentView == GRAPHVIEW)
+    { // B179 (Malcolm, 4 Nov 2026: "I am more used to simply switching to another bank and assuming that my edits for that bank have
+      // been saved"): the curve edits go to the card now, as the page's OK puts them (WriteNewCurve) - not while a model is connected,
+      // when the card's write would hold the packets. Then the new bank's curve.
+        if (!(BoundFlag && ModelMatched))
+            SaveOneModel(ModelNumber);
         DisplayCurveAndServoPos();
+    }
     if (CurrentView == SLOWSERVOVIEW)
     {
         ReadSpeedsScreen(PreviousBank - 1, true); // B37: with the edits made so far
