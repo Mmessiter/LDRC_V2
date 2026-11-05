@@ -252,12 +252,35 @@ void PendingShrinkFirst() // HelpNameFrom took the first kept frame's first byte
 }
 
 void StashFrame(const uint8_t *f, uint16_t n);
+// B186 (Malcolm, 5 Nov 2026, PID plus: "The screen did not answer for one of the boxes, so NOTHING was sent", twice - the screen's
+// own log showed all 26 answers sent): a PIPE LINE ("ldrctel ...\n", "ldrcrep ...\n") has no FF FF FF, and since screen 1.11.179
+// the block's line is told again every 600 ms while its read window is open (up to 15 s after a page loads). One that came while
+// a get waited was glued to the reply in front of it - "ldrctel 25:... p2.5 FF FF FF" - and the whole frame was stashed as a word:
+// the reply lost, the save refused. A pipe line now ends at its newline wherever it is met, and is kept for GetButtonPress.
+static bool PipeLineDone(const uint8_t *f, uint16_t n)
+{
+    return n >= 5 && f[n - 1] == '\n' && memcmp(f, "ldrc", 4) == 0;
+}
+static bool PipeLineOpen(const uint8_t *f, uint16_t n) // a pipe line begun and not yet ended
+{
+    return n >= 4 && memcmp(f, "ldrc", 4) == 0 && f[n - 1] != '\n';
+}
 void StashPendingEventBytes() // replaces the blind pre-get flush (B69: frame by frame, so a button's code is kept too, not only a word)
 {
-    uint8_t f[64];
+    uint8_t f[MAXPENDINGFRAME];   // (B186: was 64 - a pipe line of ten items is ~130 bytes)
     uint16_t n = 0, ffs = 0;
-    while (NEXTION.available())
+    while (true)
     {
+        if (!NEXTION.available())
+        { // B186: a pipe line still arriving is waited for (5 ms of quiet, as GetTextIn), not stashed in two halves
+            if (!PipeLineOpen(f, n))
+                break;
+            const uint32_t quiet = micros();
+            while (!NEXTION.available() && (micros() - quiet) < 5000)
+                delayMicroseconds(20);
+            if (!NEXTION.available())
+                break;
+        }
         const uint8_t b = NEXTION.read();
         if (n == 1 && f[0] == FRAME_MARK && b == FRAME_MARK)
         { // B177: a framed burst: read to its length and kept whole; what follows is the next frame
@@ -274,6 +297,13 @@ void StashPendingEventBytes() // replaces the blind pre-get flush (B69: frame by
         }
         if (n < sizeof(f))
             f[n++] = b;
+        if (PipeLineDone(f, n))
+        { // B186: a pipe line, whole
+            StashFrame(f, n);
+            n = 0;
+            ffs = 0;
+            continue;
+        }
         if (b == 0xFF)
         {
             if (++ffs >= 3)
@@ -338,6 +368,13 @@ bool CollectReply(uint8_t expected, uint16_t &k)
             }
             if (k < MAXTEXTIN)
                 TextIn[k++] = b;
+            if (PipeLineDone((const uint8_t *)TextIn, k))
+            { // B186: a pipe line ahead of the reply: kept whole, and the reply still awaited
+                StashFrame((const uint8_t *)TextIn, k);
+                k = 0;
+                ffs = 0;
+                continue;
+            }
             if (b != 0xFF)
             {
                 ffs = 0;

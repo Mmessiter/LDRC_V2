@@ -125,7 +125,7 @@ def main():
     decl_start = NEXTION.index('#define MAXPENDINGFRAME'); decl_end = NEXTION.index('void PendingPush(')   # B177: PendingEvent and the frame globals as they are
     decls = '\n'.join(l for l in NEXTION[decl_start:decl_end].split('\n') if not l.startswith('//'))
     body = (decls + lift(NEXTION, 'void PendingPush(') + lift(NEXTION, 'int ReadFramedRest(') + lift(NEXTION, 'void StashFramed(')
-            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)') + lift(NEXTION, 'void StashPendingEventBytes()')
+            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)') + lift(NEXTION, 'static bool PipeLineDone(') + lift(NEXTION, 'static bool PipeLineOpen(') + lift(NEXTION, 'void StashPendingEventBytes()')
             + lift(NEXTION, 'bool CollectReply(uint8_t expected, uint16_t &k)') + lift(NEXTION, 'void EndSend()')
             + lift(NEXTION, 'static uint32_t GetNumberReply(const char *CB)') + lift(NEXTION, 'uint32_t getvalue(char *nbox)')
             + lift(NEXTION, 'uint32_t GetSysValue(const char *name)') + lift(NEXTION, 'uint32_t GetValue(char *nbox)')

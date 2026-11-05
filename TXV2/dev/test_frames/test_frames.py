@@ -137,6 +137,23 @@ int main()
     // 17. a reply line from the pipe ("ldrcrep <id> <code> <body>\n") with the pause: whole too
     fresh(); size_t at17 = NEXTION.rx.size(); feedWord("ldrcrep 12 200 0102030405060708\n"); NEXTION.pauseAt[at17 + 16] = 40;
     CHECK(pressSoon() && strcmp(TextIn, "ldrcrep 12 200 0102030405060708\n") == 0);
+    // 18. B186 (PID plus: "The screen did not answer for one of the boxes", the screen's log showing every answer sent): a pipe line
+    //     told again while a get waits (screen 1.11.179: every 600 ms in the read window) comes ahead of the reply, with no FF FF FF -
+    //     the reply is still the reply, and the line is kept and served whole afterwards
+    fresh(); feedWord("ldrctel 25:AABBCCDD 26:EEFF0011\n"); feed({'p', '2', '.', '5', 0xFF, 0xFF, 0xFF});
+    k = 0; CHECK(CollectReply('p', k) && TextIn[0] == 'p' && memcmp(TextIn, "p2.5", 4) == 0 && PendingCount == 1);
+    CHECK(GetButtonPress() && strcmp(TextIn, "ldrctel 25:AABBCCDD 26:EEFF0011\n") == 0 && PendingCount == 0);
+    // 19. ... and before a value reply (the Piro switch's q)
+    fresh(); feedWord("ldrcrep 12 200 0102\n"); feed({'q', 0x01, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF});
+    k = 0; CHECK(CollectReply('q', k) && TextIn[0] == 'q' && TextIn[1] == 1 && PendingCount == 1);
+    CHECK(GetButtonPress() && strcmp(TextIn, "ldrcrep 12 200 0102\n") == 0);
+    // 20. the pre-get drain meets a pipe line half there (a pause inside it): it waits for the newline and keeps the line whole,
+    //     and the reply that follows the ask is not glued to its tail
+    fresh(); at = NEXTION.rx.size(); feedWord("ldrctel 25:AABBCCDD 26:EEFF0011 27:22334455 28:66778899 29:AABBCCDD 30:EEFF0011 31:22334455 32:66778899 33:AABBCCDD\n");
+    NEXTION.pauseAt[at + 20] = 40;
+    StashPendingEventBytes(); CHECK(PendingCount == 1 && PendingLens[0] == 116 && NEXTION.available() == 0);
+    feed({'p', '1', '0', 0xFF, 0xFF, 0xFF}); k = 0; CHECK(CollectReply('p', k) && memcmp(TextIn, "p10", 3) == 0);
+    CHECK(GetButtonPress() && memcmp(TextIn, "ldrctel 25:", 11) == 0 && TextIn[115] == '\n');
     printf("test_frames: %d checks, %d failures\n", checks, fails);
     if (fails == 0) printf("ALL GOOD\n");
     return fails ? 1 : 0;
@@ -149,7 +166,8 @@ def main():
     decl_end = NEXTION.index('void PendingPush(')
     decls = '\n'.join(l for l in NEXTION[decl_start:decl_end].split('\n') if not l.startswith('//'))
     body = (decls + lift(NEXTION, 'void PendingPush(') + lift(NEXTION, 'int ReadFramedRest(') + lift(NEXTION, 'void StashFramed(') + lift(NEXTION, 'void PendingShrinkFirst()')
-            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)') + lift(NEXTION, 'void StashPendingEventBytes()')
+            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)')
+            + lift(NEXTION, 'static bool PipeLineDone(') + lift(NEXTION, 'static bool PipeLineOpen(') + lift(NEXTION, 'void StashPendingEventBytes()')
             + lift(NEXTION, 'bool CollectReply(uint8_t expected, uint16_t &k)')
             + lift(NEXTION, 'void GetTextIn()') + lift(NEXTION, 'bool GetButtonPress()') + lift(NEXTION, 'bool TextInIsGenuine()'))
     d = tempfile.mkdtemp()
