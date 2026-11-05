@@ -55,5 +55,8 @@ if os.path.isdir(teensy):
     fg = open(os.path.join(os.path.dirname(teensy), '..', 'include', 'FlightGuard.h'), encoding='utf-8', errors='replace').read()
     check('return ldrc::LE_PAGE_OPEN;' in fg and 'CurrentView == FRONTVIEW || CurrentView == TXSETUPVIEW || CurrentView == BLANKVIEW || CurrentView == 254' in fg,
           "the Teensy's LinkRefusal() refuses for a page, and names the same pages as linkPageAllows()")
+# 1.11.179: the block's items line ends with a newline and is sent again every 600 ms while the read window is open (B181 reads a pipe line to its newline)
+b = src('src/ble_device.h')
+check('bleMailPost(tel + "\\n")' in b and 'if (tel == bleTelLast && millis() - bleTelAt < 600) return;' in b, "ble_device.h: the items line ends with a newline and is repeated every 600 ms while unchanged")
 print('%d checks, %d failures' % (checks, fails))
 sys.exit(1 if fails else 0)

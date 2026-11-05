@@ -417,8 +417,17 @@ void GetTextIn()
             // B160: a touch word comes in one burst, but its bytes can reach this board with a short pause among them,
             // and a pause of 20 us used to end the word ("HelpView:" was read without its name). The word is over when
             // nothing more has come for 200 us.
+            // B181 (Malcolm, 5 Nov 2026, "PIDs: only PART came back in 2 s (Bluetooth 2)" - often, with the bigger blocks): a
+            // PIPE LINE from the screen ("ldrctel 25:... 26:...", the block's items; "ldrcrep ...", a reply) is long, and a
+            // pause on the screen's side (an interrupt held while it draws) can fall inside it: ended at the pause, the line's
+            // second half had no name and was lost - the items in it never came. A pipe line ends at its newline (screen
+            // 1.11.179 ends every pipe line with one), or after 5 ms of quiet (an older screen's items line, or a line cut).
+            const bool pipeLine = j >= 8 && (memcmp(TextIn, "ldrctel ", 8) == 0 || memcmp(TextIn, "ldrcrep ", 8) == 0);
+            if (pipeLine && TextIn[j - 1] == '\n')
+                break;
+            const uint32_t quietUs = pipeLine ? 5000 : 200;
             const uint32_t quiet = micros();
-            while (!NEXTION.available() && (micros() - quiet) < 200)
+            while (!NEXTION.available() && (micros() - quiet) < quietUs)
                 delayMicroseconds(20);
             if (!NEXTION.available())
                 break;

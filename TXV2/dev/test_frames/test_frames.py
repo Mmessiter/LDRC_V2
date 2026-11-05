@@ -123,6 +123,20 @@ int main()
     StashPendingEventBytes(); CHECK(PendingCount == 1 && PendingLens[0] == 12 && ghosts.empty());
     // 13. an empty frame of zeros (the screen's power-on 00 00 00 FF FF FF 88 FF FF FF) says nothing, framed or not
     fresh(); ScreenFramesBursts = true; feed({0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x88, 0xFF, 0xFF, 0xFF}); CHECK(GetButtonPress() && TextInIsGenuine() && ghosts.empty());
+    // 14. B181: a PIPE LINE ("ldrctel 25:... 26:...") with a pause inside it (an interrupt held on the screen's side, a hold):
+    //     read whole, to its newline - before, the pause ended the word and the second half, with no name, was lost ("PIDs:
+    //     only PART came back in 2 s", Malcolm, 5 Nov 2026)
+    fresh(); size_t at14 = NEXTION.rx.size(); feedWord("ldrctel 25:AABBCCDD 26:EEFF0011 27:22334455\n"); NEXTION.pauseAt[at14 + 20] = 40;   // (2 ms after "25:AABBCCDD ")
+    CHECK(pressSoon() && strcmp(TextIn, "ldrctel 25:AABBCCDD 26:EEFF0011 27:22334455\n") == 0);
+    // 15. ... an older screen's items line, without the newline: whole after 5 ms of quiet
+    fresh(); size_t at15 = NEXTION.rx.size(); feedWord("ldrctel 25:AABBCCDD 26:EEFF0011"); NEXTION.pauseAt[at15 + 20] = 40;
+    CHECK(pressSoon() && strcmp(TextIn, "ldrctel 25:AABBCCDD 26:EEFF0011") == 0);
+    // 16. ... whereas a touch word still ends at a 200 us pause, as B160 had it: what follows is a word of its own
+    fresh(); size_t at16 = NEXTION.rx.size(); feedWord("HelpView:MODELS.TXT"); NEXTION.pauseAt[at16 + 9] = 40;
+    CHECK(pressSoon() && strcmp(TextIn, "HelpView:") == 0); CHECK(pressSoon() && strcmp(TextIn, "MODELS.TXT") == 0);
+    // 17. a reply line from the pipe ("ldrcrep <id> <code> <body>\n") with the pause: whole too
+    fresh(); size_t at17 = NEXTION.rx.size(); feedWord("ldrcrep 12 200 0102030405060708\n"); NEXTION.pauseAt[at17 + 16] = 40;
+    CHECK(pressSoon() && strcmp(TextIn, "ldrcrep 12 200 0102030405060708\n") == 0);
     printf("test_frames: %d checks, %d failures\n", checks, fails);
     if (fails == 0) printf("ALL GOOD\n");
     return fails ? 1 : 0;

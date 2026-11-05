@@ -220,11 +220,16 @@ static bool bleServeNow(const std::string &method, const std::string &path, cons
     out = bleLast; return true;
 }
 static void bleMailPost(const std::string &s) { if (!bleMutex) bleMutex = xSemaphoreCreateMutex(); if (bleMutex && xSemaphoreTake(bleMutex, pdMS_TO_TICKS(100)) == pdTRUE) { bleMail.push_back(s); xSemaphoreGive(bleMutex); } }   // (1.11.29: before any join the mutex did not exist, and a request with no model crashed the screen)
-// The block the receiver has, told to the main board as telemetry items - only when they changed
+// The block the receiver has, told to the main board as telemetry items - when they changed, and again every 600 ms while the
+// read window is open (1.11.179: a line the main board missed - split by a pause, or glued to a reply it was waiting for - is
+// sent again within its 2.5 s window; before, one line was the only chance). The line ends with a newline: the main board (B181)
+// reads a pipe line to its newline, not to the first 200 us pause, so a hold on this side can no longer cut it in two.
+static uint32_t bleTelAt = 0;
 static void bleTellItems(const std::string &json) {
     const std::string tel = ldrc::bleItemsWord(json);          // "ldrctel 25:AABBCCDD 26:..."
-    if (tel.empty() || tel == bleTelLast) return;
-    bleTelLast = tel; bleMailPost(tel);
+    if (tel.empty()) return;
+    if (tel == bleTelLast && millis() - bleTelAt < 600) return;
+    bleTelLast = tel; bleTelAt = millis(); bleMailPost(tel + "\n");
 }
 static void bleTxServe() {                                     // in the task: the next parameter packet, and the block being read
     std::string words;
