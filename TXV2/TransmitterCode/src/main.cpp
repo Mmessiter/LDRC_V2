@@ -4818,7 +4818,14 @@ FASTRUN void ButtonWasPressed()
             SendCommand((char *)"ldrcframe=1");
             ScreenWarmup(); // B184 (Malcolm, 5 Nov 2026, after the screen's watchdog restart: "returned to the front screen but without the image"):
                             // the background picture, the colours and the volume are this board's to tell, as at power-on
-            LogFrontPageReason("the screen restarted and said FrontView"); // B172
+            { // B185: the screen says why it restarted ("FrontView rst=N", screen 1.11.180): the log keeps it - the one record a power-off does not lose
+                const char *r = strstr(TextIn, "rst=");
+                const int rst = r ? atoi(r + 4) : -1;
+                const char *why = rst == 3 ? "its own restart (an update, a fresh start for memory)" : rst == 4 ? "a PANIC (a core dump should be on it)" : rst == 5 ? "its interrupt watchdog" : rst == 6 ? "its task watchdog (the main loop hung)" : rst == 7 ? "another watchdog" : rst == 9 ? "a BROWN-OUT (its supply dipped)" : rst < 0 ? "an older screen that gives no reason" : "an unexpected reason";
+                char line[160];
+                snprintf(line, sizeof(line), "the screen restarted (rst=%d: %s) and said FrontView", rst, why);
+                LogFrontPageReason(line); // B172
+            }
             GotoFrontView();
             return;
         }

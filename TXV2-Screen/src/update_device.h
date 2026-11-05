@@ -465,8 +465,8 @@ struct ScreenHost : public ldrc::UpdateHost {
     bool softRestart() override { return esp_reset_reason() == ESP_RST_SW; }   // (1.11.176) an update's restart, not a power-up: the trial asks the main board after 2 s, not 8
     bool linkPageOk() override { return linkPageAllows(); }                    // (1.11.178) the page the Teensy shows lets the link open (B179): FrontView, BlankView, TXSetupView
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
-    bool reject() override { flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // comes back only if there is nothing to go back to
-    void restart() override { flushOut(); delay(200); ESP.restart(); }
+    bool reject() override { blSet(0); gpio_hold_en((gpio_num_t) LCD_BL); flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // (1.11.180: dark, as restartDark)   // comes back only if there is nothing to go back to
+    void restart() override { restartDark(); }   // (1.11.180) dark through the reboot
     void beforeFreshStart(const std::string &kind) override { (void) kind; prefs.putInt("stripskip", 1); }   // (1.11.134) the install's fresh start runs without the strips (src/strip_feed.h): the install path exactly as proven before them; the restart after the install brings them back
     uint32_t roomForTls() override { return (uint32_t) ESP.getMaxAllocHeap(); }
     void fetchBegins() override { updAskMs = 0; updReadMs = 0; updCardUs = 0; updCheckMs = 0; updFreeMs = 0; updFiles = 0; updRssiSum = 0; updRssiMin = 0; }
@@ -808,7 +808,7 @@ static void updWeb() {
         if (!sdOk || !SD.exists("/hmi") || SD.exists("/hmi.hidden") || SD.exists("/hmi.fetched")) { web.send(409, "text/plain", "needs the card's /hmi, and no /hmi.hidden or /hmi.fetched"); return; }
         if (!SD.rename("/hmi", "/hmi.hidden")) { web.send(500, "text/plain", "the rename failed: nothing has changed"); return; }
         prefs.putInt("sdhide", 1); blog("card", "bench: /hmi hidden until a start from power");
-        web.send(200, "text/plain", "hidden: restarting as a blank card; switch the transmitter off and on to put it back"); delay(300); ESP.restart();
+        web.send(200, "text/plain", "hidden: restarting as a blank card; switch the transmitter off and on to put it back"); delay(300); restartDark();
     });
     doorOn("/update/check", HTTP_POST, []() { updRequested = true; web.send(200, "text/plain", "checking"); });
     doorOn("/update/press", HTTP_POST, []() { updater.press(web.arg("button").toInt()); web.send(200, "text/plain", "pressed"); });

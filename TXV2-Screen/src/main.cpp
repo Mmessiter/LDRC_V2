@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.179"
+#define SCREEN_VERSION "1.11.180"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -965,6 +965,7 @@ static int blWant = 255, blNow = 0, blFrom = 0, blTo = 0; static uint32_t blAt =
 static void blSet(int v) { blNow = constrain(v, 0, 255); ledcWrite(1, blNow); }
 static void backlight(int v) { blWant = constrain(v, 0, 255); if (blDark) return; blFading = false; blSet(blWant); }
 static void blFadeTo(int to, uint32_t ms) { blFrom = blNow; blTo = constrain(to, 0, 255); blAt = millis(); blMs = ms ? ms : 1; blFading = true; }
+static void restartDark();                             // (1.11.180) a restart with the backlight held off through the reboot: below, before update_device.h
 static void blPoll() {
     if (blDark && millis() > 6000) { blDark = false; blFadeTo(blWant, 800); }   // no word from a Teensy: a screen on its own
     if (!blFading) return;
@@ -3473,7 +3474,7 @@ static void webBegin() {
     doorOn("/pack/build", HTTP_POST, []() {               // (1.11.138) the pack built afresh from the card: at the next start, which this is
         packMarkStale();
         web.send(200, "text/plain", "the pack is marked stale: the screen restarts and copies the card's pages, fonts and sounds into the chip\n");
-        flushOut(); delay(200); ESP.restart();
+        restartDark();
     });
     doorOn("/kept", HTTP_GET, []() {                    // /kept[?page=Name]: the values that outlive a page, as the screen holds them (a workshop look)
         const std::string want = web.hasArg("page") ? std::string(web.arg("page").c_str()) + "." : std::string();
@@ -3658,7 +3659,7 @@ static void webBegin() {
     doorOn("/awake", HTTP_POST, []() { if (teensyLink.running()) { web.send(409, "text/plain", "a job is on the link"); return; } flushOut(); Serial.print("UKRULES"); web.send(200, "text/plain", "poked"); });   // resets the Teensy's screen timeout
     doorOn("/radios", HTTP_POST, []() { const bool on = web.arg("on") != "0"; web.send(200, "text/plain", on ? "on" : "off"); delay(50); setRadios(on); });
     doorOn("/nodraw", HTTP_POST, []() { noDraw = web.arg("on") == "1"; web.send(200, "text/plain", noDraw ? "drawing off" : "drawing on"); });
-    doorOn("/reboot", HTTP_POST, []() { web.send(200, "text/plain", "rebooting"); delay(100); ESP.restart(); });
+    doorOn("/reboot", HTTP_POST, []() { web.send(200, "text/plain", "rebooting"); delay(100); restartDark(); });
     // (1.11.33) The pilot's look, to copy from one transmitter to another: the six defined screens and the one in use, the
     // themes, the background. GET gives it as key=value lines; POST the same lines back on the other screen, which keeps
     // them and restarts to show them (Malcolm, 7 Oct: "copy all defined screens so that I need not set them all up again").
@@ -3686,7 +3687,7 @@ static void webBegin() {
         if (!kept) { web.send(400, "text/plain", "nothing I know in that"); return; }
         web.send(200, "text/plain", (std::to_string(kept) + " settings kept; restarting to show them").c_str());
         blog("look", std::to_string(kept) + " settings came from another transmitter");
-        delay(200); ESP.restart();
+        restartDark();
     });
     doorOn("/door", HTTP_POST, []() {                   // /door?on=1 : open on the network we are on, and remembered; /door?on=0 : shut (and this was the last request to be answered)
         const bool on = web.arg("on") != "0";
@@ -4069,6 +4070,15 @@ static void netPoll() {
     { Part p("time"); timePoll(); }
 }
 
+// (1.11.180) Every restart of the screen's own asking goes DARK: the backlight is put out and its pin HELD through the reset
+// (gpio_hold_en keeps the pad's level across a software reset; setup() releases it before it drives the pin), so the panel
+// shows nothing while the chip reboots - not the garbage an RGB panel shows when its clocks stop (Malcolm, 5 Nov 2026, a
+// fresh start for memory before a receiver check: "it crashed. The screen was full of junk, then it returned to the front
+// screen"). The boot's own dark-until-"dim=" rule then lights it when the Teensy has drawn.
+static void restartDark() {
+    blSet(0); gpio_hold_en((gpio_num_t) LCD_BL);
+    flushOut(); delay(200); ESP.restart();
+}
 #include "update_device.h"
 #include "pics_device.h"
 #include "flight_device.h"
@@ -4133,6 +4143,7 @@ void setup() {
         if (xipMode) { const size_t pic = (size_t) W * H * 2, took = ((size_t) (xipTextPages + xipRodataPages) * MMU_PAGE_SIZE + pic - 1) / pic; bgCacheMax = took >= 3 ? 2 : 5 - took; }   // the code's share of the PSRAM (1.4 MB = two pictures' worth) comes out of the resident pictures, 4 -> 3 (2 at the least); a film short of room gives up another (psMallocRoom)
         blog("boot", std::string("xip ") + xipWhy);
     }
+    gpio_hold_dis((gpio_num_t) LCD_BL);                    // (1.11.180) a dark restart held the pin low through the reset: let go before driving it
     pinMode(LCD_BL, OUTPUT); ledcSetup(1, 20000, 8); ledcAttachPin(LCD_BL, 1); blSet(0);   // dark: see "The backlight" above
     screen->begin(); screen->fillScreen(0); screenFb = screen->getFramebuffer();
     hookFrameEnd();   // (1.11.67: the front screen's switch drawn and copied in the panel's quiet time)
@@ -4258,7 +4269,9 @@ void setup() {
     // Teensy still thinks the screen is showing everything: nudge it to the front page, which it fills in by itself -
     // the word "FrontView" is one of its legacy text commands. (1.11.34: whatever page it was: a page put back from
     // the card alone has none of the words the Teensy wrote on it, and the Teensy would never write them again.)
-    if (why == ESP_RST_SW && !pageNames.empty()) { delay(300); Serial.print("FrontView"); }
+    // (1.11.180) ... after ANY restart that is not a power-on (a watchdog's, a panic's, a brown-out's too: the Teensy ran on through
+    // them all), and with the reason, which the Teensy writes in its log (B185): 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
+    if (why != ESP_RST_POWERON && !pageNames.empty()) { delay(300); Serial.printf("FrontView rst=%d", (int) why); }
     holdWatchBegin();                                      // (1.11.164) the hold watch, on this core, from here on
     // (1.11.178) The loop task goes on the task watchdog: 20 s without a pass of loop() is a hang (Malcolm, 4 Nov 2026, the
     // curves page's Reset: "it locked up the transmitter completely, and I had to switch everything off" - nothing watched

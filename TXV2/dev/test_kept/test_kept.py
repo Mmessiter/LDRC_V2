@@ -108,6 +108,7 @@ def main():
     check('Saved_GOV_Config_Values[i] = 0;' in sd and 'Saved_GOV_Profiles_Values[i][j] = 0;' in sd, 'a new model clears the governor copies and the mark')
     check('#include "RF_Kept.h"' in m and m.index('#include "RF_Kept.h"') < m.index('#include "RF_PIDs.h"'), 'RF_Kept.h comes before the pages')
     b92 = m[m.index('if (InStrng(Front_View, TextIn))'):]; b92 = b92[:b92.index('GotoFrontView();')]
+    check('strstr(TextIn, "rst=")' in b92 and 'a BROWN-OUT' in b92 and 'the screen restarted (rst=%d: %s) and said FrontView' in b92, 'B185: the reason the screen gives for its restart goes in the log line')
     check('ScreenWarmup();' in b92 and 'FLASHMEM void ScreenWarmup()' in m and 'SendOtherValue((char *)"FrontView.pic", BackGroundSelection);' in m[m.index('FLASHMEM void ScreenWarmup()'):], 'B184: after the screen restarts, the background picture, colours and volume are sent again before the front page')
     sr = src('include/RF_Save_Restore.h')
     check(sr.count('MarkKept(') == 5, "the Version 1 picker's five saves mark too")
