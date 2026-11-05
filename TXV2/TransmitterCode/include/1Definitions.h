@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B183 05/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B184 05/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1305,6 +1305,7 @@ void TuningFromNext();                                                    // B18
 void CopyTuning();
 void GovGlobalDefaults();                                                 // B183: RF_Governor_Global.h / RF_Governor_Profile.h - the Defaults buttons
 void GovProfileDefaults();
+void ScreenWarmup();                                                      // B184: main.cpp - the colours, the volume, the background picture: at power-on and after the screen's restart
 void CurveLayoutShow();
 bool CurveDotShown(uint8_t k);
 void RatesCurvePoll();

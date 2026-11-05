@@ -1240,6 +1240,20 @@ void SetBrightness(uint8_t B) // 0 to 100
 /*********************************************************************************************************************************/
 // SETUP
 /*********************************************************************************************************************************/
+// B184: what the screen is told at power-on and after its own restart - the front page's colours, the volume, the background
+// picture (Screen_Background and FrontView.pic). A screen that restarts mid-session (an update, a watchdog) puts its pages back
+// from its card with none of this; B92 then rebuilds the front page, and this with it.
+FLASHMEM void ScreenWarmup()
+{
+    SendValue((char *)"FrontView.BackGround", BackGroundColour); // Get colours ready (setup()'s own names for these, as literals)
+    SendValue((char *)"FrontView.ForeGround", ForeGroundColour);
+    SendValue((char *)"FrontView.Special", SpecialColour);
+    SendValue((char *)"FrontView.Highlight", HighlightColour);
+    SetAudioVolume(AudioVolume);
+    SendOtherValue((char *)"Screen_Background", BackGroundSelection); // also set screen background
+    SendOtherValue((char *)"FrontView.pic", BackGroundSelection);
+}
+
 FLASHMEM void setup()
 {
     char FrontView_BackGround[] = "FrontView.BackGround";
@@ -1313,14 +1327,8 @@ FLASHMEM void setup()
     ForeGroundColour = White;
     SpecialColour = Red;
     HighlightColour = Yellow;
-    SendValue(FrontView_BackGround, BackGroundColour); // Get colours ready
-    SendValue(FrontView_ForeGround, ForeGroundColour);
-    SendValue(FrontView_Special, SpecialColour);
-    SendValue(FrontView_Highlight, HighlightColour);
+    ScreenWarmup(); // the colours, the volume, the background picture (B184: again after the screen's own restart)
     CurrentView = 254;
-    SetAudioVolume(AudioVolume);
-    SendOtherValue((char *)"Screen_Background", BackGroundSelection); // also set screen background
-    SendOtherValue((char *)"FrontView.pic", BackGroundSelection);
     if (PlayFanfare)
     {
         Force_Early_Sound = true; // Force sound to play
@@ -4808,6 +4816,8 @@ FASTRUN void ButtonWasPressed()
             BankSoundHeld = true; // B147: the redraw must not SAY the bank - nothing changed (Malcolm, 27 Oct: "Bank 4!" after every update)
             ScreenFramesBursts = false;               // B177: a restarted screen frames nothing until told again (Nextion.h)
             SendCommand((char *)"ldrcframe=1");
+            ScreenWarmup(); // B184 (Malcolm, 5 Nov 2026, after the screen's watchdog restart: "returned to the front screen but without the image"):
+                            // the background picture, the colours and the volume are this board's to tell, as at power-on
             LogFrontPageReason("the screen restarted and said FrontView"); // B172
             GotoFrontView();
             return;

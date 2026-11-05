@@ -107,6 +107,8 @@ def main():
     sd = m[m.index('void SetDefaultValues(bool Calibrating)'):]; sd = sd[:sd.index('\n}\n') + 3]
     check('Saved_GOV_Config_Values[i] = 0;' in sd and 'Saved_GOV_Profiles_Values[i][j] = 0;' in sd, 'a new model clears the governor copies and the mark')
     check('#include "RF_Kept.h"' in m and m.index('#include "RF_Kept.h"') < m.index('#include "RF_PIDs.h"'), 'RF_Kept.h comes before the pages')
+    b92 = m[m.index('if (InStrng(Front_View, TextIn))'):]; b92 = b92[:b92.index('GotoFrontView();')]
+    check('ScreenWarmup();' in b92 and 'FLASHMEM void ScreenWarmup()' in m and 'SendOtherValue((char *)"FrontView.pic", BackGroundSelection);' in m[m.index('FLASHMEM void ScreenWarmup()'):], 'B184: after the screen restarts, the background picture, colours and volume are sent again before the front page')
     sr = src('include/RF_Save_Restore.h')
     check(sr.count('MarkKept(') == 5, "the Version 1 picker's five saves mark too")
     import re as _re; _v = _re.search(r'#define TXVERSION_EXTRA "B(\d+) ', src('include/1Definitions.h'))
