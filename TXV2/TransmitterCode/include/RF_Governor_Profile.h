@@ -20,6 +20,7 @@ char GOV_Labels[GOVERNOR_LABELS_COUNT][4] = {
 // ====================================================
 FLASHMEM void ShowLocalGovBank()
 {
+    const bool kept = KeptCopy(KEPT_GOV_PROFILE, Bank); // B180: a copy never kept is not shown as values
     for (int i = 0; i < GOVERNOR_LABELS_COUNT; ++i)
     {
         uint16_t v;
@@ -28,15 +29,18 @@ FLASHMEM void ShowLocalGovBank()
         case 0: // Headspeed U16
             v = (uint16_t)Saved_GOV_Profiles_Values[1][Bank - 1] |
                 ((uint16_t)Saved_GOV_Profiles_Values[2][Bank - 1] << 8);
-            SendValue(GOV_Labels[0], v);
+            SendValue(GOV_Labels[0], kept ? v : 0);
             break;
         default: // single byte fields — payload index is i+2 (bytes 3-15 → labels 1-13)
-            SendValue(GOV_Labels[i], Saved_GOV_Profiles_Values[i + 2][Bank - 1]);
+            SendValue(GOV_Labels[i], kept ? Saved_GOV_Profiles_Values[i + 2][Bank - 1] : 0);
             break;
         }
     }
     GOV_Loaded = true; // (the model file's own copy: editable)
-    HideGOVMsg();
+    if (kept)
+        HideGOVMsg();
+    else
+        ShowGOVMsg(KeptNoneText(Bank), Gray);
     BlockBankChanges = false;
 }
 
@@ -54,6 +58,7 @@ FLASHMEM void SaveToLocalGovBank()
     // Copy into saved array for current bank
     for (int i = 0; i < GOV_PROFILE_PAYLOAD_SIZE; ++i)
         Saved_GOV_Profiles_Values[i][Bank - 1] = GovWritePayload[i];
+    MarkKept(KEPT_GOV_PROFILE, Bank); // B180
 
     SaveOneModel(ModelNumber);       // save to SD card
     SendCommand((char *)"vis b3,0"); // hide Save button

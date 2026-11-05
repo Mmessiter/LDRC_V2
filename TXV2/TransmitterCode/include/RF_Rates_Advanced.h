@@ -67,21 +67,26 @@ FLASHMEM void RatesAdvancedMsg(const char *msg, uint16_t Colour)
 // ************************************************************************************************************/
 FLASHMEM void ShowLocalRatesAdvancedBank()
 {
+    const bool kept = KeptCopy(KEPT_RATES_ADV, Bank); // B180: a copy never kept is not shown as values
     for (uint8_t i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
     {
         float ThisValue;
+        const uint8_t v = kept ? Saved_Rate_Advanced_Values[i][Bank - 1] : 0;
         if (i == 14) // last one is divided by 10 and therefore must be text
         {
-            ThisValue = (Saved_Rate_Advanced_Values[i][Bank - 1] / (float)10);
+            ThisValue = (v / (float)10);
             char temp[10];
             snprintf(temp, sizeof(temp), "%.1f", ThisValue);
             SendText(RatesAWindows[i], temp);
             continue;
         }
-        ThisValue = (float)Saved_Rate_Advanced_Values[i][Bank - 1];
+        ThisValue = (float)v;
         SendValue(RatesAWindows[i], (uint8_t)ThisValue);
     }
-    Hide_Advanced_Rates_Msg();
+    if (kept)
+        Hide_Advanced_Rates_Msg();
+    else
+        RatesAdvancedMsg(KeptNoneText(Bank), Gray);
     SendCommand((char *)"vis b3,0"); // hide "Send" button
 }
 
@@ -212,6 +217,7 @@ FLASHMEM void SaveLocalRatesAdvancedBank()
     {
         Saved_Rate_Advanced_Values[i][Bank - 1] = Rate_Advanced_Values[i];
     }
+    MarkKept(KEPT_RATES_ADV, Bank);  // B180
     SaveOneModel(ModelNumber);       // save all to SD card
     Hide_Advanced_Rates_Msg();       // ...because this queue is a LIFO stack
     SendCommand((char *)"vis b3,0"); // hide "Send" button

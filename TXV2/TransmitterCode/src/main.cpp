@@ -156,6 +156,7 @@
 #include "Switches.h"
 #include "ADC-master/ADC.h"
 #include "Parameters.h"
+#include "RF_Kept.h"    // B180: which of the model's kept copies are real (before the Rotorflight pages)
 #include "PipeHttp.h" // B50: the main board's own requests to the receiver over the screen's Bluetooth pipe
 #include "RF_PIDs.h"
 #include "RF_Rates.h"
@@ -1966,7 +1967,11 @@ FLASHMEM void SetDefaultValues(bool Calibrating) // B16: the calibration branch 
             Saved_Rate_Advanced_Values[i][j] = 0;
         for (i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
             Saved_PID_Advanced_Values[i][j] = 0;
+        for (i = 0; i < GOV_PROFILE_PAYLOAD_SIZE; ++i)
+            Saved_GOV_Profiles_Values[i][j] = 0; // B180: the governor copies too (a new model kept the last model's in memory)
     }
+    for (i = 0; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)
+        Saved_GOV_Config_Values[i] = 0; // B180: and with them the mark: a new model has kept nothing (RF_Kept.h)
     strcpy(ModelImageFileName, "Noimage");
     ShowModelImage();
     ModelDefined = 42;

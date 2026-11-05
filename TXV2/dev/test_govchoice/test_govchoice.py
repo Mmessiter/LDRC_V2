@@ -122,6 +122,13 @@ int main() {
     CHECK(queued.size() == 3); CHECK(armedKind == VK_GOV_CFG); CHECK(sounds.empty()); CHECK(!GOVS_GLOBAL_Were_Edited);
     verifyArmed = false; armedKind = -1;
 
+    // B180: a copy never kept (no mark, whatever its bytes - Black Thunder 1's "mode 100") is not offered, let alone sent
+    page(3, 0); ClearKept(); Saved_GOV_Config_Values[18] = 3; Saved_GOV_Config_Values[39] = 0;
+    RestoreFromSDGlobalGOV();
+    CHECK(queued.empty()); CHECK(questions == 0); CHECK(boxes == 1); CHECK(said("No copy of the governor settings"));
+    page(3, 0); MarkKept(KEPT_GOV_GLOBAL, 0); RestoreFromSDGlobalGOV();
+    CHECK(queued.size() == 3); CHECK(questions == 1);
+
     // Armed: the old refusal still comes first
     armed = true; page(3, 3); SendEditedGovConfigValues(); CHECK(queued.empty()); CHECK(said("armed")); armed = false;
 
@@ -131,8 +138,11 @@ int main() {
 }
 '''
 
+KEPT = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Kept.h'), encoding='utf-8', errors='replace').read()
+KEPT_BODY = KEPT[KEPT.index('enum : uint8_t { KEPT_PIDS'):KEPT.index('#endif')]   # (B180: the kept-copy mark the page's keep and restore use)
+
 def main():
-    body = PRE
+    body = PRE + KEPT_BODY
     body += lift('FLASHMEM bool GovChoiceBad(')
     body += lift('FLASHMEM void LoadGovConfigWritePayload()')
     body += lift('FLASHMEM void SaveToLocalGovGLOBAL()')

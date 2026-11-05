@@ -87,24 +87,29 @@ FLASHMEM void PIDsAdvancedWereEdited()
 FLASHMEM void ShowLocalPIDsAdvancedBank()
 {
     char TextFloat[10];
+    const bool kept = KeptCopy(KEPT_PIDS_ADV, Bank); // B180: a copy never kept is not shown as values
     for (uint8_t i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
     {
         if (i < MAX_PIDS_ADVANCED_BYTES)
         {
+            const uint8_t v = kept ? Saved_PID_Advanced_Values[i][Bank - 1] : 0;
             if (i == 0) // piro compensation is boolean switch
             {
-                SendValue(PID_Advanced_Labels[i], (bool)Saved_PID_Advanced_Values[i][Bank - 1]);
+                SendValue(PID_Advanced_Labels[i], (bool)v);
                 continue;
             }
             if ((i == 1) || (i == 25)) // these two are floats divided by 10
-                snprintf(TextFloat, sizeof(TextFloat), "%.1f", (float)Saved_PID_Advanced_Values[i][Bank - 1] / 10.0f);
+                snprintf(TextFloat, sizeof(TextFloat), "%.1f", (float)v / 10.0f);
             else
-                snprintf(TextFloat, sizeof(TextFloat), "%u", (unsigned)Saved_PID_Advanced_Values[i][Bank - 1]);
+                snprintf(TextFloat, sizeof(TextFloat), "%u", (unsigned)v);
 
             SendText(PID_Advanced_Labels[i], TextFloat); // Send to screen
         }
     }
-    HidePID_Advanced_Msg();
+    if (kept)
+        HidePID_Advanced_Msg();
+    else
+        PIDAdvancedMsg(KeptNoneText(Bank), Gray);
 }
 //************************************************************************************************************/
 // B102: the read, and the write once the flight controller is known to be on this bank (PipeHttp.h BankCheck)
@@ -182,6 +187,7 @@ FLASHMEM void SaveToLocalABank()
     {
         Saved_PID_Advanced_Values[i][Bank - 1] = PID_Advanced_Values[i];
     }
+    MarkKept(KEPT_PIDS_ADV, Bank);   // B180
     SendCommand((char *)"vis b3,0"); // hide "Send" button
     SaveOneModel(ModelNumber);       // save all to SD card
     HidePID_Advanced_Msg();

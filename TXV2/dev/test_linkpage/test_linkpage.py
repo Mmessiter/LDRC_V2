@@ -109,7 +109,8 @@ def main():
           'Switches.h: a bank change on the curves page saves the edits first (not with a model connected), then draws the new bank')
     defs = src('include/1Definitions.h')
     check('bool LinkPageAllows();' in defs and 'void LogLinkRefused(const char *why);' in defs, '1Definitions.h: both prototypes')
-    check('"B179 ' in defs, 'the version is B179')
+    import re as _re; _v = _re.search(r'#define TXVERSION_EXTRA "B(\d+) ', defs)
+    check(_v is not None and int(_v.group(1)) >= 179, 'the version is B179 or later')
     screen = os.path.expanduser('~/Documents/GitHub/ESP32-board2/board4/nextion-emulator/lib/LdrcLink')
     if os.path.isdir(screen):
         for f in ('LdrcLink.h', 'LdrcLink.cpp'):

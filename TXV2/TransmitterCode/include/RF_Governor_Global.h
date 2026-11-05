@@ -319,25 +319,33 @@ FLASHMEM void DisplayGovConfigValues(uint8_t n, uint8_t m)
 // ====================================================
 FLASHMEM void ShowLocalGovConfigBank()
 {
-    SendValue((char *)"n14", Saved_GOV_Config_Values[18]); // Gov mode
-    SendValue((char *)"n15", Saved_GOV_Config_Values[19]); // Handover thr %
+    const bool kept = KeptCopy(KEPT_GOV_GLOBAL, 0); // B180: a copy never kept is not shown as values (Black Thunder 1's "mode 100")
+    const uint8_t *c = Saved_GOV_Config_Values;
+    uint8_t zero[GOV_CONFIG_PAYLOAD_SIZE] = {0};
+    if (!kept)
+        c = zero;
+    SendValue((char *)"n14", c[18]); // Gov mode
+    SendValue((char *)"n15", c[19]); // Handover thr %
 
     // Startup off-screen — skip
 
-    SendValue((char *)"n17", (uint16_t)Saved_GOV_Config_Values[22] | ((uint16_t)Saved_GOV_Config_Values[23] << 8)); // Spoolup
-    SendValue((char *)"n18", (uint16_t)Saved_GOV_Config_Values[24] | ((uint16_t)Saved_GOV_Config_Values[25] << 8)); // Spooldown
-    SendValue((char *)"n19", (uint16_t)Saved_GOV_Config_Values[26] | ((uint16_t)Saved_GOV_Config_Values[27] << 8)); // Tracking
-    SendValue((char *)"n20", (uint16_t)Saved_GOV_Config_Values[28] | ((uint16_t)Saved_GOV_Config_Values[29] << 8)); // Recovery
-    SendValue((char *)"n21", (uint16_t)Saved_GOV_Config_Values[30] | ((uint16_t)Saved_GOV_Config_Values[31] << 8)); // Hold timeout
-    SendValue((char *)"n22", (uint16_t)Saved_GOV_Config_Values[32] | ((uint16_t)Saved_GOV_Config_Values[33] << 8)); // Autorot timeout
+    SendValue((char *)"n17", (uint16_t)c[22] | ((uint16_t)c[23] << 8)); // Spoolup
+    SendValue((char *)"n18", (uint16_t)c[24] | ((uint16_t)c[25] << 8)); // Spooldown
+    SendValue((char *)"n19", (uint16_t)c[26] | ((uint16_t)c[27] << 8)); // Tracking
+    SendValue((char *)"n20", (uint16_t)c[28] | ((uint16_t)c[29] << 8)); // Recovery
+    SendValue((char *)"n21", (uint16_t)c[30] | ((uint16_t)c[31] << 8)); // Hold timeout
+    SendValue((char *)"n22", (uint16_t)c[32] | ((uint16_t)c[33] << 8)); // Autorot timeout
 
     // Filter bytes off-screen — skip
 
-    SendValue((char *)"n28", Saved_GOV_Config_Values[39]); // Throttle type
-    SendValue((char *)"n29", Saved_GOV_Config_Values[40]); // Idle thr ×.1%
-    SendValue((char *)"n30", Saved_GOV_Config_Values[41]); // Auto thr ×.1%
+    SendValue((char *)"n28", c[39]); // Throttle type
+    SendValue((char *)"n29", c[40]); // Idle thr ×.1%
+    SendValue((char *)"n30", c[41]); // Auto thr ×.1%
 
-    HideGOVConfigMsg();
+    if (kept)
+        HideGOVConfigMsg();
+    else
+        ShowGOVConfigMsg(KeptNoneText(0), Gray);
     BlockBankChanges = false;
 }
 
@@ -360,6 +368,7 @@ FLASHMEM void SaveToLocalGovGLOBAL() // "Save FC to SD" button
 
     for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)
         Saved_GOV_Config_Values[i] = GovWritePayload[i];
+    MarkKept(KEPT_GOV_GLOBAL, 0); // B180
 
     SaveOneModel(ModelNumber);
     HideGOVConfigMsg();
@@ -397,12 +406,8 @@ FLASHMEM void RestoreFromSDGlobalGOV()
         return;
     }
 
-    { // B42: only a copy that was kept: never 24 zeros (the governor off) from a model that never kept one
-        bool kept = false;
-        for (int i = 18; i < GOV_CONFIG_PAYLOAD_SIZE && !kept; ++i)
-            if (Saved_GOV_Config_Values[i])
-                kept = true;
-        if (!kept)
+    { // B42: only a copy that was kept: never 24 zeros (the governor off) from a model that never kept one. B180: the mark says
+        if (!KeptCopy(KEPT_GOV_GLOBAL, 0))
         {
             MsgBox((char *)"page RFGovViewGlbl", (char *)"No copy of the governor settings has\r\nbeen kept on the card for this model.\r\nUse 'Keep a copy' first.");
             return;

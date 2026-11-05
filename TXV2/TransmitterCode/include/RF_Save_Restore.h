@@ -262,6 +262,7 @@ FLASHMEM void Save_SOME_RF_Parameters()
             Saved_PID_Values[i + MAX_PID_WORDS][LocalBank - 1] = PID_Boost_Values[i];
         for (int i = 0; i < 2; ++i)
             Saved_PID_Values[i + MAX_PID_WORDS + 3][LocalBank - 1] = PID_HSI_Offset_Values[i];
+        MarkKept(KEPT_PIDS, LocalBank); // B180
 
         Which_Case_Now = 3;                           // move to next stage
         ProgressSoFar += OneProgressItem;             // update progress bar
@@ -291,6 +292,7 @@ FLASHMEM void Save_SOME_RF_Parameters()
     case 5:                                             // save Advanced PIDs for this LocalBank
         for (int i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
             Saved_PID_Advanced_Values[i][LocalBank - 1] = PID_Advanced_Values[i];
+        MarkKept(KEPT_PIDS_ADV, LocalBank); // B180
         Which_Case_Now = 6;                           // move to next stage
         ProgressSoFar += OneProgressItem;             // update progress bar
         SendValue((char *)"Progress", ProgressSoFar); // update progress bar
@@ -319,6 +321,7 @@ FLASHMEM void Save_SOME_RF_Parameters()
     case 8:                                      // save RATES for this LocalBank
         for (int i = 0; i < MAX_RATES_BYTES; ++i)
             Saved_Rate_Values[i][LocalBank - 1] = Rate_Values[i];
+        MarkKept(KEPT_RATES, LocalBank); // B180
         Which_Case_Now = 9;                           // move to next stage
         ProgressSoFar += OneProgressItem;             // update progress bar
         SendValue((char *)"Progress", ProgressSoFar); // update progress bar
@@ -349,6 +352,7 @@ FLASHMEM void Save_SOME_RF_Parameters()
         {
             Saved_Rate_Advanced_Values[i][LocalBank - 1] = Rate_Advanced_Values[i];
         }
+        MarkKept(KEPT_RATES_ADV, LocalBank); // B180
         Rates_Advanced_Send_Duration = MSP_WAIT_TIME; // how many milliseconds to await RATES Advanced values
         SendValue((char *)"Progress", 100);           // update progress bar
         Reading_RATES_Advanced_Now = true;            // This tells the Ack payload parser to get RATES Advanced values .... extra sec
@@ -384,6 +388,7 @@ FLASHMEM void Save_SOME_RF_Parameters()
             // Save received values into local saved array
             for (int i = 0; i < GOV_PROFILE_PAYLOAD_SIZE; ++i)
                 Saved_GOV_Profiles_Values[i][LocalBank - 1] = GovAckPayload[i];
+            MarkKept(KEPT_GOV_PROFILE, LocalBank); // B180
             ProgressSoFar += OneProgressItem;
             SendValue((char *)"Progress", ProgressSoFar);
             Which_Case_Now = 200;

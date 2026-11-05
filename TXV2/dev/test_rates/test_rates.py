@@ -16,6 +16,8 @@ on the curve, rubbed out and drawn anew only when a stick moves, within the wire
 import json, math, os, random, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HDR = os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Rates.h')
+KEPT = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Kept.h'), encoding='utf-8', errors='replace').read()
+KEPT_BODY = KEPT[KEPT.index('enum : uint8_t { KEPT_PIDS'):KEPT.index('#endif')]   # (B180: the kept-copy mark the pages' keeps and shows use)
 prog = r'''
 #include <cstdio>
 #include <cstdlib>
@@ -95,7 +97,7 @@ static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); 
 enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV };
 static bool readBackOn = false; static int readBackKind = -1;
 static bool RfVerifyArm(uint8_t kind, void (*ask)()) { readBackKind = kind; if (!readBackOn) return false; ask(); RATES_Send_Duration = 4000; RatesMsg("Sent: reading back from the flight controller ...", Gray); return true; }
-''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + r'''
+''' + open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_SaveNow.h')).read() + '\nstatic uint8_t Saved_GOV_Config_Values[42];   // (B180: the kept-copy mark lives here)\n' + KEPT_BODY + r'''
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -137,7 +139,7 @@ int main() {
     readBackOn = false; RfLeaveAfterSave = false; Reading_RATES_Now = false; BlockBankChanges = false; HideRATESMsg();
     // 5. a local save keeps the bank's own type (it was always made Actual, so a type-6 bank came back with Actual's scales);
     // B106: the page's type, which ShowRatesLocalBank takes from the saved bank (and the picker may change)
-    live = false; DualRateInUse = 1; Saved_Rate_Values[0][0] = 6; ShowRatesLocalBank(); typed("250", "40", "20", "12.5"); saves = 0; SendEditedRates();
+    live = false; DualRateInUse = 1; Saved_Rate_Values[0][0] = 6; MarkKept(KEPT_RATES, 1); /* B180: a copy shown is one that was kept */ ShowRatesLocalBank(); typed("250", "40", "20", "12.5"); saves = 0; SendEditedRates();
     CHECK(saves == 1 && Saved_Rate_Values[0][0] == 6 && Saved_Rate_Values[1][0] == 50 && Saved_Rate_Values[2][0] == 40 && Saved_Rate_Values[10][0] == 100);
     Saved_Rate_Values[0][1] = 0; DualRateInUse = 2; ShowRatesLocalBank(); typed("250", "40", "20", "12.5"); SendEditedRates();
     CHECK(Saved_Rate_Values[0][1] == 0 && Saved_Rate_Values[1][1] == 25);   // (B106: NONE kept - it was made Actual with zero rates; x10 as before)
@@ -199,7 +201,7 @@ int main() {
         RotorFlight_V = 2; Rate_Values[0] = 9; Rates_Were_Edited = true; saveNowAnswer = 1; boxes = 0; RfLeaveAfterSave = false; EndRFRatesView();
         CHECK(boxes == 1 && Rates_Were_Edited && queued.empty()); saveNowAnswer = 0; RfLeaveAfterSave = false; Rates_Were_Edited = false;
         // a local (not connected) bank: the chosen type and its values kept on Save
-        live = false; DualRateInUse = 3; Saved_Rate_Values[0][2] = 6; CurrentView = RATESVIEW_RF; ShowRatesLocalBank(); RatesTypeTapped(); listVal = 4; RatesTypePickOk(); saves = 0; SendEditedRates();
+        live = false; DualRateInUse = 3; Saved_Rate_Values[0][2] = 6; MarkKept(KEPT_RATES, 3); CurrentView = RATESVIEW_RF; ShowRatesLocalBank(); RatesTypeTapped(); listVal = 4; RatesTypePickOk(); saves = 0; SendEditedRates();
         CHECK(saves == 1 && Saved_Rate_Values[0][2] == 4 && Saved_Rate_Values[1][2] == 18 && Saved_Rate_Values[2][2] == 24 && Saved_Rate_Values[8][2] == 40 && Saved_Rate_Values[10][2] == 50);
     }
     // 7. B107: the curves page

@@ -110,6 +110,9 @@ static void GovCfgAskValues() {}
 static void ShowLocalGovConfigBank() {}
 static bool allGlobalIn = true; static bool AllGlobalConfigBytesReceived() { return allGlobalIn; }
 '''
+KEPT = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Kept.h'), encoding='utf-8', errors='replace').read()
+KEPT_BODY = KEPT[KEPT.index('enum : uint8_t { KEPT_PIDS'):KEPT.index('#endif')]   # (B180: the kept-copy mark the pages' keeps and shows use)
+
 
 MAIN = r'''
 static void screen() {   // every box answers: PIDs n0..n16 = 10..26, governor profile n0 = 2100 and n1..n13 = 1..13, global as the Havoc
@@ -202,6 +205,7 @@ def main():
     pre = PRE % {'MAX_PID_WORDS': define('MAX_PID_WORDS'), 'GOV_PROFILE_PAYLOAD_SIZE': define('GOV_PROFILE_PAYLOAD_SIZE'),
                  'GOV_CONFIG_PAYLOAD_SIZE': define('GOV_CONFIG_PAYLOAD_SIZE'), 'GOV_ACK_PAYLOAD_SIZE': define('GOV_ACK_PAYLOAD_SIZE'),
                  'GETVALUE': lift(NEXTION, 'uint32_t GetValue(char *nbox)'), 'FIELDSMISSED': lift(NEXTION, 'FLASHMEM bool RfFieldsMissed(const char *page)')}
+    pre += KEPT_BODY   # (B180: the kept-copy mark the keeps set)
     body = (lift(PIDS, 'FLASHMEM void ReadEditedPIDs()') + lift(PIDS, 'FLASHMEM void SaveToLocalBank()') + lift(PIDS, 'FLASHMEM void SendEditedPIDs()')
             + lift(GOVP, 'FLASHMEM void LoadGovWritePayload()') + lift(GOVP, 'FLASHMEM void SaveToLocalGovBank()') + lift(GOVP, 'FLASHMEM void SendEditedGovValues()')
             + lift(GOVG, 'FLASHMEM bool GovChoiceBad(const uint8_t *p, const char *what)') + lift(GOVG, 'FLASHMEM void LoadGovConfigWritePayload()')

@@ -74,6 +74,7 @@ FLASHMEM void SaveRatesLocalBank()
     {
         Saved_Rate_Values[i][DualRateInUse - 1] = Rate_Values[i];
     }
+    MarkKept(KEPT_RATES, DualRateInUse); // B180
     SaveOneModel(ModelNumber);       // save all to SD card
     HideRATESMsg();                  // ...because this queue is a LIFO stack
     SendCommand((char *)"vis b3,0"); // hide "Send" button
@@ -218,21 +219,25 @@ FLASHMEM void HideRATESMsg()
 // ******************************************************************************************************************************/
 FLASHMEM void ShowRatesLocalBank()
 {
-    Rate_Values[0] = Saved_Rate_Values[0][DualRateInUse - 1]; // B08: the saved bank's type chooses the scales (and the edits' later)
+    const bool kept = KeptCopy(KEPT_RATES, DualRateInUse); // B180: a copy never kept is not shown as values
+    Rate_Values[0] = kept ? Saved_Rate_Values[0][DualRateInUse - 1] : 0; // B08: the saved bank's type chooses the scales (and the edits' later)
     const float *f = RatesFactors(Rate_Values[0]);
     Modify_Labels_For_RATES_View();
     for (int i = 0; i < MAX_RATES_BYTES; ++i)
     {
         float ThisValue;
         char temp[10];
-        ThisValue = (Saved_Rate_Values[i][DualRateInUse - 1] * f[i]); // MULTIPLY BY factor to get display value
+        ThisValue = ((kept ? Saved_Rate_Values[i][DualRateInUse - 1] : 0) * f[i]); // MULTIPLY BY factor to get display value
         FixDecimalDisplay(temp, ThisValue, i, sizeof(temp));
         if (i == 0)
             SendText(RatesWindows[0], (char *)(Rate_Values[0] <= 6 ? Rate_Types[Rate_Values[0]] : "?")); // the rates type (B106: tapped, its picker)
         else
             SendText(RatesWindows[i], temp);
     }
-    HideRATESMsg();    
+    if (kept)
+        HideRATESMsg();
+    else
+        RatesMsg(KeptNoneText(DualRateInUse), Gray);
     SendCommand((char *)"vis b3,0"); // hide "Send" button
     BlockBankChanges = false;
 }

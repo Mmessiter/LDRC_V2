@@ -124,11 +124,15 @@ FLASHMEM void HidePIDMsg()
 //***********************************************************************************************************/
 FLASHMEM void ShowLocalBank()
 {
+    const bool kept = KeptCopy(KEPT_PIDS, Bank); // B180: a copy never kept is not shown as values
     for (int i = 0; i < MAX_PID_WORDS + 5; ++i)
         if (CurrentView == PIDVIEW && i < MAX_PID_WORDS + 5) // Must be in PID view and a valid index
-            SendValue(PID_Labels[i], Saved_PID_Values[i][Bank - 1]);
+            SendValue(PID_Labels[i], kept ? Saved_PID_Values[i][Bank - 1] : 0);
     PIDS_Loaded = true; // (the model file's own copy: editable)
-    HidePIDMsg();
+    if (kept)
+        HidePIDMsg();
+    else
+        PIDMsg(KeptNoneText(Bank), Gray);
     BlockBankChanges = false;
 }
 //************************************************************************************************************/
@@ -212,6 +216,7 @@ FLASHMEM void SaveToLocalBank()
     {
         Saved_PID_Values[i + MAX_PID_WORDS + 3][Bank - 1] = PID_HSI_Offset_Values[i];
     }
+    MarkKept(KEPT_PIDS, Bank);       // B180
     SaveOneModel(ModelNumber);       // save all to SD card
     SendCommand((char *)"vis b3,0"); // hide "Send" button
     HidePIDMsg();
