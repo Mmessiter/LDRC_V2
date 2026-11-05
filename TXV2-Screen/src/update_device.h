@@ -463,7 +463,12 @@ struct ScreenHost : public ldrc::UpdateHost {
         return run && esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY;
     }
     bool softRestart() override { return esp_reset_reason() == ESP_RST_SW; }   // (1.11.176) an update's restart, not a power-up: the trial asks the main board after 2 s, not 8
-    bool linkPageOk() override { return linkPageAllows(); }                    // (1.11.178) the page the Teensy shows lets the link open (B179): FrontView, BlankView, TXSetupView
+    // (1.11.181, Malcolm 5 Nov 2026: on Transmitter setup after B186's install, "a moment later the whole thing crashed with junk on the
+    // screen, and it returned to the front screen"; reproduced at the next power-up as a jump to the front page) The quiet look asks only on
+    // the FRONT page or the screen saver: the link's end puts the Teensy on its front page, so a look on Transmitter setup threw him off it
+    // (and the first time the screen crashed in the page change that followed - core dump: loadPage("FrontView") freeing a damaged
+    // TXSetupView). Transmitter setup stays open to the link for the pilot's OWN Check for update (linkPageAllows, B179).
+    bool linkPageOk() override { return page.name == "FrontView" || page.name == "BlankView"; }
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
     bool reject() override { blSet(0); gpio_hold_en((gpio_num_t) LCD_BL); flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // (1.11.180: dark, as restartDark)   // comes back only if there is nothing to go back to
     void restart() override { restartDark(); }   // (1.11.180) dark through the reboot

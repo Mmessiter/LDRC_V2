@@ -159,3 +159,4 @@ struct Gfx {
         for (; y <= y2; y++) { a = x1 + sa / dy12; b = x0 + sb / dy02; sa += dx12; sb += dx02; if (a > b) _swap_int16_t(a, b); writeFastHLine(a, y, b - a + 1, color); }
     }
 };
+static bool frameBursts = false;   // (1.11.173) the framed bursts - none on the Mac
