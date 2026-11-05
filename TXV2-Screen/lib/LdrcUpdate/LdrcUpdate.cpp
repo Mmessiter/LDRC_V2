@@ -558,7 +558,11 @@ void Updater::decide() {
     if (!choosing_) { view_.button3 = "Earlier versions"; changed(); }
     note(std::string(choosing_ ? "chosen" : "update available") + ", release " + rel_.name + ":" + what);
     phase_ = P_OFFER;
-    if (freshKind_ == "install") { freshKind_.clear(); note("fresh start: the install goes on by itself"); install(); }
+    if (freshKind_ == "install") { freshKind_.clear(); note("fresh start: the install goes on by itself"); install(); return; }
+    // (1.11.183, Malcolm 5 Nov 2026: "when user hits 'check for update', we can assume he DOES want the update so if there's a new
+    // one, carry on installing it without asking for a further click") The pilot's own Check for update installs what it finds. A
+    // version chosen from the list, or the same release again, still asks (they go backwards, or redo).
+    if (!choosing_ && !again_ && host_.installWhenFound()) { note("the pilot asked: the install goes on by itself"); install(); }
 }
 
 // ------------------------------------------------------------------ going back: the few releases before this one

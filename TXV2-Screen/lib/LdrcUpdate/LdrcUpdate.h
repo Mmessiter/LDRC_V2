@@ -82,6 +82,7 @@ public:
     // The screen's own firmware.
     virtual bool onTrial() = 0;                   // it has started for the first time and is not yet accepted
     virtual bool softRestart() { return false; }  // (1.11.176) this start was a restart of the screen's own asking (an update's), not a power-up: the main board was running all along
+    virtual bool installWhenFound() { return false; }   // (1.11.183) the pilot's own Check for update installs what it finds, no "Install now" (the screen: true)
     virtual bool linkPageOk() { return true; }    // (1.11.178) the main board is on a page on which it lets the file link open (B179: its front page, its screen saver, Transmitter setup): the quiet look asks it only then
     virtual void accept() = 0;
     virtual bool reject() = 0;                    // the previous firmware comes back (a restart); false: there is none to go back to

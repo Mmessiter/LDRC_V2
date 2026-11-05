@@ -46,8 +46,8 @@ channel 12 is 2.412 GHz.|
 How slowly the bars fall back: 'Radio scanner sensitivity'|
 on the Advanced page of 'System'.||
 TRANSMITTER UPDATES:|
-'Transmitter updates' asks messiter.com for the latest version.|
-Nothing is installed unless you press 'Install now'.|
+'Transmitter updates' asks messiter.com for the latest version,|
+and if there is a newer one it installs it straight away.|
 Your models, settings and logs are copied|
 to the screen's card first.|
 'Earlier versions' puts a previous version back.|
@@ -57,7 +57,7 @@ Switch the model off and wait a minute.|
 At power-up on a WiFi it knows, with no model connected, the|
 transmitter looks for a newer version by itself. If there is|
 one, it says so along the top of the screen for a few seconds.|
-Nothing is installed until you press 'Install now' here.|
+Nothing is installed until you press 'Transmitter updates' here.|
 The safety must be on (with no safety switch: the motor off).|
 Firmware that reads a model's settings differently is not kept:|
 the old firmware comes back by itself, and the screen says so.|

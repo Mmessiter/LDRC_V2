@@ -471,6 +471,7 @@ struct ScreenHost : public ldrc::UpdateHost {
     // (1.11.182: the screen saver over Transmitter setup let the look in after two untouched minutes - the same jump, 13:14:51)
     // The screen saver counts only when the page under it is the front page.
     bool linkPageOk() override { return page.name == "FrontView" || (page.name == "BlankView" && saverPage == "FrontView"); }
+    bool installWhenFound() override { return true; }   // (1.11.183, Malcolm 5 Nov 2026) Check for update = he wants it: no second press
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
     bool reject() override { blSet(0); gpio_hold_en((gpio_num_t) LCD_BL); flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // (1.11.180: dark, as restartDark)   // comes back only if there is nothing to go back to
     void restart() override { restartDark(); }   // (1.11.180) dark through the reboot
