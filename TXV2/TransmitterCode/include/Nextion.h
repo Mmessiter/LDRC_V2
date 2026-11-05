@@ -349,8 +349,14 @@ bool CollectReply(uint8_t expected, uint16_t &k)
     const uint32_t begun = millis();
     uint8_t ffs = 0;
     k = 0;
-    while ((millis() - begun) < NextionReplyWaitMs)   // (B152: 100 ms, or 400 round a get - GetText and getvalue set it)
+    uint32_t radioAt = begun;
+    while ((millis() - begun) < NextionReplyWaitMs)   // (B152: 100 ms; B188: 2000 round a get - GetText and getvalue set it)
     {
+        if (NextionReplyWaitMs > 400 && k == 0 && !NEXTION.available() && (millis() - radioAt) >= 20 && (millis() - begun) >= 100)
+        { // B188: a long wait keeps the radio's packets going (between frames only: a reply half in is read on at once)
+            radioAt = millis();
+            DelayWithDog(1);
+        }
         while (NEXTION.available())
         {
             const uint8_t b = NEXTION.read();
@@ -670,6 +676,21 @@ void SendValue(char *nbox, int value)
 /*********************************************************************************************************************************/
 // The number the screen answers to a "get" command (CB = "get Mfiles.val", "get tch2"): 65535 when no reply came.
 // (B171: lifted out of getvalue so that a system variable can be asked for by its bare name, GetSysValue below.)
+// B188 (Malcolm, 5 Nov 2026 ~18:38, PID plus after B187: refused again; the B187 log line named box sw0 - the FIRST box - and
+// "the screen had settled"; the screen's /sent showed its q1 sent, nothing glued ahead of it): the answer came LATE. The screen
+// takes the next serial bytes only between its loop's other jobs (its /perf: touch up to 193 ms, the WiFi up to 325 ms, one
+// serial pass 606 ms), so now and then a get waited longer than 400 ms. Each get now waits up to 2 s for its own answer -
+// still ONE ask, so a late answer is still this box's - with the radio kept going meanwhile (CollectReply). A slow answer
+// (over 400 ms) or none at all is written in the log with its box and time, so the next report says how late they come.
+#define NEXTION_GET_WAIT_MS 2000
+static void NoteLateReply(const char *cmd, uint32_t ms, bool got)
+{
+    if (got && ms <= 400)
+        return;
+    char m[80];
+    snprintf(m, sizeof(m), "Screen answer %s: '%s' after %lu ms B188", got ? "late" : "MISSING", cmd, (unsigned long)ms);
+    LogText(m, strlen(m), true);
+}
 static uint32_t GetNumberReply(const char *CB)
 {
     uint32_t ValueIn = 0;
@@ -683,9 +704,11 @@ static uint32_t GetNumberReply(const char *CB)
     EndSend();
     {
         uint16_t k = 0;
-        NextionReplyWaitMs = 400;                // (B152: as GetText - a get queued behind a page's commands is answered late, not never)
+        NextionReplyWaitMs = NEXTION_GET_WAIT_MS; // (B152: 400; B188: 2000 - see NoteLateReply)
+        const uint32_t asked = millis();
         const bool got = CollectReply('q', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
         NextionReplyWaitMs = 100;
+        NoteLateReply(CB, millis() - asked, got);
         if (!got)
             TextIn[0] = 0;
     }
@@ -786,9 +809,11 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
         // gathering its boxes for a save stops and says so (RfFieldsMissed) instead of sending zeros. ONE ask only: a
         // second ask would leave the first's late reply to be read as the NEXT box's answer.
         uint16_t k = 0;
-        NextionReplyWaitMs = 400;
+        NextionReplyWaitMs = NEXTION_GET_WAIT_MS; // (B188: 2000)
+        const uint32_t asked = millis();
         const bool got = CollectReply('p', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
         NextionReplyWaitMs = 100;
+        NoteLateReply(CB, millis() - asked, got);
         if (!got)
         {
             TextIn[0] = 0;
@@ -852,7 +877,7 @@ FLASHMEM bool RfFieldsMissed(const char *page)
     NextionTextMissed = false;
     {   // B187: the box and the page go in the log - the next "did not answer" names itself
         char m[90];
-        snprintf(m, sizeof(m), "Save refused: the screen did not answer for box %s (%s; the screen %s) B187", NextionMissedBox, page,
+        snprintf(m, sizeof(m), "Save refused: the screen did not answer for box %s (%s; the screen %s) B188", NextionMissedBox, page,
                  NextionSettledOk ? "had settled" : "never settled");
         LogText(m, strlen(m), true);
     }
@@ -875,9 +900,11 @@ int GetOtherValue(char *nbox)
     EndSend();
     {
         uint16_t k = 0;
-        NextionReplyWaitMs = 400;                // (B152: as GetText - a get queued behind a page's commands is answered late, not never)
+        NextionReplyWaitMs = NEXTION_GET_WAIT_MS; // (B152: 400; B188: 2000 - see NoteLateReply)
+        const uint32_t asked = millis();
         const bool got = CollectReply('q', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
         NextionReplyWaitMs = 100;
+        NoteLateReply(CB, millis() - asked, got);
         if (!got)
             TextIn[0] = 0;
     }

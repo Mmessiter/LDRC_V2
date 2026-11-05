@@ -83,6 +83,10 @@ char TextIn[MAXTEXTIN + 2];
 bool NextionTextMissed = false;
 char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 uint32_t NextionReplyWaitMs = 100;
+static void DelayWithDog(uint32_t) {}   // (B188)
+#define NEXTION_GET_WAIT_MS 2000
+static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
+
 void StashFrame(const uint8_t *f, uint16_t n);
 static uint32_t micros() { static uint32_t us = 0; return us += 50; }   // B177
 static void LogGhostFrame(const char *, const uint8_t *, uint16_t) {}

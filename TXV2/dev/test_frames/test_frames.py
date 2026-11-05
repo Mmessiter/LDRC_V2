@@ -62,6 +62,10 @@ static void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n) { char 
 // ---- the Teensy's globals the lifted code uses
 char TextIn[MAXTEXTIN + 2];
 uint32_t NextionReplyWaitMs = 100;
+static void DelayWithDog(uint32_t) {}   // (B188)
+#define NEXTION_GET_WAIT_MS 2000
+static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
+
 '''
 
 MAIN = r'''
