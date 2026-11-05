@@ -85,6 +85,7 @@ char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGa
 uint32_t NextionReplyWaitMs = 100;
 static void DelayWithDog(uint32_t) {}   // (B188)
 #define NEXTION_GET_WAIT_MS 2000
+bool NextionGetPending = false;   // (B189)
 static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
 
 void StashFrame(const uint8_t *f, uint16_t n);

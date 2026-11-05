@@ -35,6 +35,7 @@ static void LogGhostFrame(const char *, const uint8_t *, uint16_t) {}   // (B177
 uint32_t NextionReplyWaitMs = 100; bool NextionTextMissed = false;   // (B152)
 static void DelayWithDog(uint32_t) {}   // (B188)
 #define NEXTION_GET_WAIT_MS 2000
+bool NextionGetPending = false;   // (B189)
 static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
 
 char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)

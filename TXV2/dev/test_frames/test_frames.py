@@ -64,6 +64,7 @@ char TextIn[MAXTEXTIN + 2];
 uint32_t NextionReplyWaitMs = 100;
 static void DelayWithDog(uint32_t) {}   // (B188)
 #define NEXTION_GET_WAIT_MS 2000
+bool NextionGetPending = false;   // (B189)
 static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
 
 '''
@@ -158,6 +159,13 @@ int main()
     StashPendingEventBytes(); CHECK(PendingCount == 1 && PendingLens[0] == 116 && NEXTION.available() == 0);
     feed({'p', '1', '0', 0xFF, 0xFF, 0xFF}); k = 0; CHECK(CollectReply('p', k) && memcmp(TextIn, "p10", 3) == 0);
     CHECK(GetButtonPress() && memcmp(TextIn, "ldrctel 25:", 11) == 0 && TextIn[115] == '\n');
+    // 21. B189: the answer arrives while the 55 ms after the ask flies the model, whose telemetry SendText drains the line
+    //     (GetReturnCode -> StashPendingEventBytes): with the get pending the drain leaves it; without, it is thrown away
+    fresh(); feed({'q', 1, 0, 0, 0, 0xFF, 0xFF, 0xFF}); NextionGetPending = true; StashPendingEventBytes();
+    CHECK(NEXTION.available() == 8 && PendingCount == 0);
+    k = 0; CHECK(CollectReply('q', k) && TextIn[0] == 'q' && TextIn[1] == 1); NextionGetPending = false;
+    fresh(); feed({'q', 1, 0, 0, 0, 0xFF, 0xFF, 0xFF}); StashPendingEventBytes();
+    CHECK(NEXTION.available() == 0 && PendingCount == 0);   // (the old way: the answer read and dropped - what B189 stops)
     printf("test_frames: %d checks, %d failures\n", checks, fails);
     if (fails == 0) printf("ALL GOOD\n");
     return fails ? 1 : 0;

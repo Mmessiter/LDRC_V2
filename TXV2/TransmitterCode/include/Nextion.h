@@ -265,8 +265,17 @@ static bool PipeLineOpen(const uint8_t *f, uint16_t n) // a pipe line begun and 
 {
     return n >= 4 && memcmp(f, "ldrc", 4) == 0 && f[n - 1] != '\n';
 }
+// B189 (Malcolm, 5 Nov 2026 ~18:48, PID plus after B188: "Screen answer MISSING: 'get sw0.val' after 2001 ms" and 't20.txt',
+// while the screen's /sent showed both answers SENT): the answer was read and THROWN AWAY by the transmitter itself. After a get,
+// EndSend waits 55 ms in DelayWithDog, which flies the model (SendData); the model's telemetry is written to the screen meanwhile
+// ("StillConnected.txt=Amps ..."), every SendText ends in GetReturnCode -> here, and here a frame beginning with p or q is "a late
+// reply nobody waits for" (StashFrame) - so the answer that arrived in those 55 ms was dropped. Only with a model connected, any
+// box at random. While a get waits for its answer (NextionGetPending), nothing else drains the line: the bytes stay for CollectReply.
+bool NextionGetPending = false;
 void StashPendingEventBytes() // replaces the blind pre-get flush (B69: frame by frame, so a button's code is kept too, not only a word)
 {
+    if (NextionGetPending)
+        return; // B189
     uint8_t f[MAXPENDINGFRAME];   // (B186: was 64 - a pipe line of ten items is ~130 bytes)
     uint16_t n = 0, ffs = 0;
     while (true)
@@ -700,6 +709,7 @@ static uint32_t GetNumberReply(const char *CB)
     // for the framed 'q' reply instead of hoping it already arrived.
     StashPendingEventBytes(); // ClaudeFix-14-7-2026 rescue any waiting button press, don't flush it
     TextIn[0] = 0;
+    NextionGetPending = true; // B189: the answer is ours - no nested drain may take it
     NEXTION.print(CB);
     EndSend();
     {
@@ -708,6 +718,7 @@ static uint32_t GetNumberReply(const char *CB)
         const uint32_t asked = millis();
         const bool got = CollectReply('q', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
         NextionReplyWaitMs = 100;
+        NextionGetPending = false; // B189
         NoteLateReply(CB, millis() - asked, got);
         if (!got)
             TextIn[0] = 0;
@@ -793,6 +804,7 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
     StashPendingEventBytes(); // ClaudeFix-14-7-2026 rescue any waiting button press, don't flush it
     TextIn[0] = 0; // if no reply arrives, stale TextIn content must not be re-parsed
 
+    NextionGetPending = true; // B189: the answer is ours - no nested drain may take it
     NEXTION.print(CB);
     EndSend();
 
@@ -813,6 +825,7 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
         const uint32_t asked = millis();
         const bool got = CollectReply('p', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
         NextionReplyWaitMs = 100;
+        NextionGetPending = false; // B189
         NoteLateReply(CB, millis() - asked, got);
         if (!got)
         {
@@ -852,6 +865,7 @@ FLASHMEM void RfGatherStart()
     NextionMissedBox[0] = 0;
     NextionSettledOk = false;
     StashPendingEventBytes();
+    NextionGetPending = true; // B189
     NEXTION.print("sendme");
     EndSend();
     const uint32_t t0 = millis();
@@ -868,6 +882,7 @@ FLASHMEM void RfGatherStart()
         }
         DelayWithDog(2); // the radio's packets go on between windows
     }
+    NextionGetPending = false; // B189
 }
 /*********************************************************************************************************************************/
 FLASHMEM bool RfFieldsMissed(const char *page)
@@ -896,6 +911,7 @@ int GetOtherValue(char *nbox)
     strcat(CB, nbox);
     StashPendingEventBytes(); // ClaudeFix-14-7-2026 rescue any waiting button press, don't flush it
     TextIn[0] = 0;
+    NextionGetPending = true; // B189: the answer is ours - no nested drain may take it
     NEXTION.print(CB);
     EndSend();
     {
@@ -904,6 +920,7 @@ int GetOtherValue(char *nbox)
         const uint32_t asked = millis();
         const bool got = CollectReply('q', k);   // (B69: frame by frame; a touch word ahead of the reply is kept, binary or not)
         NextionReplyWaitMs = 100;
+        NextionGetPending = false; // B189
         NoteLateReply(CB, millis() - asked, got);
         if (!got)
             TextIn[0] = 0;
@@ -989,9 +1006,11 @@ int GetIntFromTextBox(char *tbox)
     strcpy(CB, get);
     strcat(CB, tbox);
     strcat(CB, _txt);
+    NextionGetPending = true; // B189: the answer is ours - no nested drain may take it
     NEXTION.print(CB);
     EndSend();
     GetTextIn();
+    NextionGetPending = false; // B189
     if (TextIn[0] == 'p')
     {
         while (TextIn[j + 1] < 0xFF && j < sizeof(Text) - 1) // ClaudeFix-2-7-2026 bounded: a fragment reply used to copy forever (uint8_t j wraps, smashing the stack past Text[50])
@@ -1017,9 +1036,11 @@ float GetFloatFromTextBox(char *tbox)
     strcpy(CB, get);
     strcat(CB, tbox);
     strcat(CB, _txt);
+    NextionGetPending = true; // B189: the answer is ours - no nested drain may take it
     NEXTION.print(CB);
     EndSend();
     GetTextIn();
+    NextionGetPending = false; // B189
     if (TextIn[0] == 'p')
     {
         while (TextIn[j + 1] < 0xFF && j < sizeof(Text) - 1) // ClaudeFix-2-7-2026 bounded: a fragment reply used to copy forever (uint8_t j wraps, smashing the stack past Text[50])
