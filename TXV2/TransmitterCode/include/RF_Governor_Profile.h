@@ -362,6 +362,19 @@ FLASHMEM void SendEditedGovValues()
 }
 
 // ====================================================
+// B183: Rotorflight 2.3's own governor profile (src/main/pg/pid.c, resetPidProfile .governor) into the boxes; Save sends them
+FLASHMEM void GOVS_P_Were_Edited();
+FLASHMEM void GovProfileDefaults()
+{
+    if (CurrentView != RFGOVERNORVIEW_PROFILE)
+        return;
+    if (!GetConfirmation((char *)"page RFGovView", (char *)"Put Rotorflight's defaults in every box\r\nof this bank? Nothing goes to the flight\r\ncontroller until you press Save."))
+        return;
+    static const uint16_t d[GOVERNOR_LABELS_COUNT] = {1000, 40, 40, 50, 0, 10, 0, 20, 100, 10, 10, 10, 10, 50};   // headspeed, gain, P, I, D, F, TTA gain, TTA limit, max thr, min thr, fallback drop, yaw, cyclic, collective weights
+    for (int i = 0; i < GOVERNOR_LABELS_COUNT; ++i)
+        SendValue(GOV_Labels[i], d[i]);
+    GOVS_P_Were_Edited();
+}
 FLASHMEM void GOVS_P_Were_Edited()
 {
     if (RfBlockNotLoaded(GOV_Loaded, "page RFGovView", "governor values")) // B41

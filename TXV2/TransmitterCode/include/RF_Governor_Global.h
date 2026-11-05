@@ -578,6 +578,28 @@ FLASHMEM void Gov_Global_Were_Edited()
     SendCommand((char *)"vis b3,1");
     GOVS_GLOBAL_Were_Edited = true;
 }
+// B183 (Malcolm, 5 Nov 2026: "a button that offers Defaults"): Rotorflight 2.3's own values (src/main/pg/governor.c) into
+// every box on the page - a starting point for a new model, not a tune. Nothing reaches the flight controller until Save,
+// which reads the boxes as it reads typed values. The off-screen bytes (startup time, the filters) stay as they were read.
+FLASHMEM void GovGlobalDefaults()
+{
+    if (CurrentView != RFGOVERNORVIEW_GLOBAL)
+        return;
+    if (!GetConfirmation((char *)"page RFGovViewGlbl", (char *)"Put Rotorflight's defaults in every box?\r\nNothing goes to the flight controller\r\nuntil you press Save."))
+        return;
+    SendValue((char *)"n14", 0);  // Governor mode: OFF
+    SendValue((char *)"n15", 25); // Handover %
+    SendValue((char *)"n22", 15); // Autorotation timeout (s)
+    SendValue((char *)"n17", 10); // Spool-up (s)
+    SendValue((char *)"n18", 3);  // Spool-down (s)
+    SendValue((char *)"n19", 5);  // Speed change / tracking (s)
+    SendValue((char *)"n20", 3);  // Quick restart / recovery (s)
+    SendValue((char *)"n21", 5);  // Throttle-hold timeout (s)
+    SendValue((char *)"n28", 0);  // Throttle type: NORMAL
+    SendValue((char *)"n29", 0);  // Idle throttle (tenths of %)
+    SendValue((char *)"n30", 0);  // Auto throttle (tenths of %)
+    Gov_Global_Were_Edited();
+}
 
 // ====================================================
 FLASHMEM void Save_Gov_Global()

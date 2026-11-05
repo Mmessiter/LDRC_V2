@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B182 05/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B183 05/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1303,6 +1303,8 @@ void CurveResetTapped();                                                  // B13
 void CurveFlatTapped();
 void TuningFromNext();                                                    // B182: RF_Backup.h - the Backup page's "Tuning from ..." and "Copy tuning"
 void CopyTuning();
+void GovGlobalDefaults();                                                 // B183: RF_Governor_Global.h / RF_Governor_Profile.h - the Defaults buttons
+void GovProfileDefaults();
 void CurveLayoutShow();
 bool CurveDotShown(uint8_t k);
 void RatesCurvePoll();

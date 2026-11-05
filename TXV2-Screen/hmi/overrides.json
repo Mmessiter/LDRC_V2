@@ -173,6 +173,74 @@
           "r": "ldrc defined"
         }
       }
+    ],
+    "RFGovViewGlbl": [
+      {
+        "n": "defaults",
+        "i": 52,
+        "t": "button",
+        "g": "l",
+        "x": 285,
+        "y": 332,
+        "w": 230,
+        "h": 40,
+        "font": 2,
+        "sta": 1,
+        "c": {
+          "bco2": 1024,
+          "pco": 0,
+          "borderc": 0,
+          "bco": 54938,
+          "pco2": 65535
+        },
+        "txt": "Defaults",
+        "val": 0,
+        "a": {
+          "style": 4,
+          "borderw": 2,
+          "xcen": 1,
+          "ycen": 1,
+          "txt_maxl": 20,
+          "isbr": 0
+        },
+        "ev": {
+          "r": "va0.val=229<<8\nprint va0.val"
+        }
+      }
+    ],
+    "RFGovView": [
+      {
+        "n": "defaults",
+        "i": 39,
+        "t": "button",
+        "g": "l",
+        "x": 21,
+        "y": 389,
+        "w": 160,
+        "h": 50,
+        "font": 6,
+        "sta": 1,
+        "c": {
+          "bco2": 1024,
+          "pco": 0,
+          "borderc": 0,
+          "bco": 54938,
+          "pco2": 0
+        },
+        "txt": "Defaults",
+        "val": 0,
+        "a": {
+          "style": 4,
+          "borderw": 2,
+          "xcen": 1,
+          "ycen": 1,
+          "txt_maxl": 20,
+          "isbr": 0
+        },
+        "ev": {
+          "r": "va0.val=230<<8\nprint va0.val"
+        }
+      }
     ]
   },
   "TXSetupView": {
@@ -406,5 +474,6 @@
   },
   "_comment_centre": "Channel bars that grow from the middle (screen 1.7.0, Malcolm 2026-10-04): \"centre\": true on a progress bar.",
   "_comment_front": "FrontView bottom row (screen 1.7.3, 1.8.6): three equal buttons, Transmitter / Defined screen / Model; the link word and bar side by side above them (hmi/front_buttons.py). BackGround.val starts at 0 (black), as the main board sets it at every power-on; the HMI had 214, an old blue, which showed when only the screen had restarted (1.9.7).",
-  "_comment_title": "FrontView title (B92, Malcolm 10 Oct: \"let's add V2 to the title at the top as we did to the opening splash screen\"): \"LockDownRadioControl V2\" is 375 px in font 0, more than the old 355 px box; the box (and the date under it) runs 221..607, and Help is 160 wide at 610 (it was 170 at 595), clear of the right-hand trim at 780."
+  "_comment_title": "FrontView title (B92, Malcolm 10 Oct: \"let's add V2 to the title at the top as we did to the opening splash screen\"): \"LockDownRadioControl V2\" is 375 px in font 0, more than the old 355 px box; the box (and the date under it) runs 221..607, and Help is 160 wide at 610 (it was 170 at 595), clear of the right-hand trim at 780.",
+  "_comment_defaults": "B183 (5 Nov 2026, Malcolm's 'Defaults' idea): a Defaults button on both governor pages - Rotorflight 2.3's own values into the boxes (codes 229 global, 230 profile); nothing reaches the flight controller until Save."
 }

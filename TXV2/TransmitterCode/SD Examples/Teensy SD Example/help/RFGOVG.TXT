@@ -2,6 +2,10 @@ The governor settings shared by every bank:|
 its mode, the throttle and the timings.|
 Each bank's head speed and gains are on the Governor page.|
 It needs Rotorflight 2.3.||
+DEFAULTS:|
+'Defaults' puts Rotorflight's own values (2.3) in every box - a|
+starting point for a new model, not a tune. Nothing reaches the|
+flight controller until you press Save.||
 TO CHANGE THEM:|
 Touch a value, or its name, and type the new value.|
 Governor mode and Throttle type take only the numbers listed|

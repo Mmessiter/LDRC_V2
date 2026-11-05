@@ -20,6 +20,8 @@ def lift(head):
     raise SystemExit('cannot lift ' + head)
 
 PRE = r'''
+#define RFGOVERNORVIEW_GLOBAL 60
+static int CurrentView = 60;
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
@@ -46,7 +48,8 @@ static void SendValue(char *n, int v) { values[n] = v; }
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void PlaySound(int s) { sounds.push_back(s); }
 static void MsgBox(char *, char *m) { ++boxes; lastBox = m; }
-static bool GetConfirmation(char *, char *p) { ++questions; lastBox = p; return true; }
+static bool confirmAnswer = true;
+static bool GetConfirmation(char *, char *p) { ++questions; lastBox = p; return confirmAnswer; }
 static void SaveOneModel(uint32_t) { ++saves; }
 static void DelayWithDog(int) {}
 static bool RfLive() { return live; }
@@ -129,6 +132,14 @@ int main() {
     page(3, 0); MarkKept(KEPT_GOV_GLOBAL, 0); RestoreFromSDGlobalGOV();
     CHECK(queued.size() == 3); CHECK(questions == 1);
 
+    // B183: Defaults - Rotorflight 2.3's own values into every box, the page marked edited (Save shown); No leaves the boxes alone
+    values.clear(); GOVS_GLOBAL_Were_Edited = false; confirmAnswer = false; GovGlobalDefaults();
+    CHECK(values.empty() && !GOVS_GLOBAL_Were_Edited);
+    confirmAnswer = true; GovGlobalDefaults();
+    CHECK(values["n14"] == 0 && values["n15"] == 25 && values["n22"] == 15 && values["n17"] == 10 && values["n18"] == 3 && values["n19"] == 5 && values["n20"] == 3 && values["n21"] == 5 && values["n28"] == 0 && values["n29"] == 0 && values["n30"] == 0);
+    CHECK(GOVS_GLOBAL_Were_Edited && values.size() == 11);
+    { uint8_t p[GOV_ACK_PAYLOAD_SIZE] = {0}; p[18] = (uint8_t) values["n14"]; p[39] = (uint8_t) values["n28"]; boxes = 0; CHECK(!GovChoiceBad(p, "x") && boxes == 0); }   // (the defaults pass the page's own gate)
+
     // Armed: the old refusal still comes first
     armed = true; page(3, 3); SendEditedGovConfigValues(); CHECK(queued.empty()); CHECK(said("armed")); armed = false;
 
@@ -148,6 +159,7 @@ def main():
     body += lift('FLASHMEM void SaveToLocalGovGLOBAL()')
     body += lift('FLASHMEM void RestoreFromSDGlobalGOV()')
     body += lift('FLASHMEM void SendEditedGovConfigValues()')
+    body += lift('FLASHMEM void Gov_Global_Were_Edited()') + lift('FLASHMEM void GovGlobalDefaults()')   # (B183)
     body += MAIN
     d = tempfile.mkdtemp(prefix='test_govchoice_')
     import atexit, shutil as _sh; atexit.register(_sh.rmtree, d, True)   # (17 Oct 2026: 1,800 left behind filled the Mac's disk)
@@ -156,7 +168,19 @@ def main():
                         '-o', os.path.join(d, 'test_govchoice'), cpp], capture_output=True, text=True)
     if r.returncode:
         print(r.stdout + r.stderr); print('test_govchoice: DID NOT COMPILE'); return 1
-    return subprocess.run([os.path.join(d, 'test_govchoice')]).returncode
+    rc = subprocess.run([os.path.join(d, 'test_govchoice')]).returncode
+    # B183: the profile page's defaults are Rotorflight 2.3's (pg/pid.c resetPidProfile .governor), and both pages carry the button
+    import json
+    prof = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Governor_Profile.h'), encoding='utf-8', errors='replace').read()
+    ok = 'static const uint16_t d[GOVERNOR_LABELS_COUNT] = {1000, 40, 40, 50, 0, 10, 0, 20, 100, 10, 10, 10, 10, 50};' in prof and 'GOVS_P_Were_Edited();' in prof[prof.index('void GovProfileDefaults()'):]
+    pages = os.path.expanduser('~/Documents/GitHub/ESP32-board2/board4/nextion-emulator/sd/hmi/pages')
+    for pid, code in ((5, 229), (6, 230)):
+        f = os.path.join(pages, '%d.json' % pid)
+        if os.path.exists(f):
+            comps = json.load(open(f))['comps']
+            ok = ok and any(c.get('n') == 'defaults' and c.get('txt') == 'Defaults' and ('va0.val=%d<<8' % code) in (c.get('ev') or {}).get('r', '') for c in comps)
+    print('test_govchoice (B183 source + pages): %s' % ('ok' if ok else 'FAIL'))
+    return rc or (0 if ok else 1)
 
 if __name__ == '__main__':
     sys.exit(main())
