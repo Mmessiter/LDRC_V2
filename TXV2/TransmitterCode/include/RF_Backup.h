@@ -134,9 +134,12 @@ FLASHMEM static bool BakSave()
     BakDirty = false;
     return true;
 }
+static bool BakTuningOnly = false;      // B182: the run in hand copies another model's tuning only (the job below; BakForModel leaves that file in place)
 FLASHMEM void BakForModel() // the file of the model in use, when it changes (ChangeModel): loaded, or none
 {
     static uint32_t triedMs = 0;
+    if (BakTuningOnly)
+        return; // B182: another model's file serves the copy of its tuning; this model's comes back when the run ends (BakFinish)
     if (strcmp(BakModel, ModelName) == 0 && (BakLoaded || (uint32_t)(millis() - triedMs) < 5000))
         return; // (B71: a model with no file is looked for on the card at most every five seconds, not at every ask)
     triedMs = millis();
@@ -703,6 +706,15 @@ FLASHMEM bool BakOfflineWords(uint8_t id) // a Version 1 parameter word packet, 
 
 // ---------------------------------------------------------------- the jobs: back up, restore, write the edits
 enum { BAK_JOB_NONE = 0, BAK_JOB_BACKUP, BAK_JOB_RESTORE, BAK_JOB_EDITS };
+// B182 (Malcolm, 5 Nov 2026, Black Thunder 1 and 2 "very similar": "Copy settings from another model"): a restore that takes
+// another model's backup, and only its TUNING - PIDs, advanced PIDs, governor profile and rescue of every bank this flight
+// controller has, rates of every rates bank, the governor global - never its hardware (servos, mixer, motor, ports, failsafe,
+// meters, switches: each heli's own). The other model's file is loaded in this model's place for the run; this model's own
+// file comes back at the end, and the verdict asks for a fresh backup.
+// (BakTuningOnly, the run-in-hand flag, is declared above BakForModel)
+static char BakFromModel[32] = "";      // the source chosen on the page ("": none yet)
+static char BakFromDate[24] = "";
+static int BakFromIdx = -1;             // its place among the other models' files (the next press takes the next)
 static int BakJob = BAK_JOB_NONE, BakStep = 0, BakReq = 0, BakTries = 0, BakIdx = 0, BakSub = 0;
 static int BakDone = 0, BakTotal = 0, BakFails = 0, BakWritten = 0, BakUnchanged = 0;
 static char BakFailed[160] = "";
@@ -767,6 +779,7 @@ FLASHMEM static void BakFinish(const char *verdict)
     BakShowPage();
     PlaySound((BakFails || BakCardFailed) ? WHAHWHAHMSG : BEEPCOMPLETE);
     MsgBox((char *)"page RFBackUpView", (char *)verdict);
+    if (BakTuningOnly) { BakTuningOnly = false; BakLoad(ModelName); }   // B182: this model's own file is back (the other model's served the copy)
     BakShowPage();
 }
 FLASHMEM static void BakStart(int job)
@@ -867,14 +880,16 @@ FLASHMEM static void BakBuildList()
     };
     static const char *bankedNames[4] = {"PIDs", "advanced PIDs", "governor profile", "rescue"};
     static const uint8_t bankedWrite[4] = {202, 95, 149, 147};
-    for (int b = 0; b < 6 && BakListN < 80; ++b)
+    const int pidBanks = BakTuningOnly ? BakPidBanks : 6, rateBanks = BakTuningOnly ? BakRateBanks : 6;   // B182: another model's file may hold more banks than this flight controller has
+    for (int b = 0; b < pidBanks && BakListN < 80; ++b)
         for (int k = 0; k < 4 && BakListN < 80; ++k)
             if (want(BAK_PER_BANK[k], b, -1)) BakList[BakListN++] = {BAK_PER_BANK[k], bankedWrite[k], BK_WHOLE, (int8_t)b, -1, bankedNames[k]};
-    for (int r = 0; r < 6 && BakListN < 80; ++r)
+    for (int r = 0; r < rateBanks && BakListN < 80; ++r)
         if (want(111, r, -1)) BakList[BakListN++] = {111, 204, BK_WHOLE, (int8_t)(0x40 | r), -1, "rates"};   // (0x40 marks a rates bank)
     for (int i = 0; i < BAK_RESTORE_N && BakListN < 80; ++i)
     {
         const BakRestoreItem &it = BAK_RESTORE[i];
+        if (BakTuningOnly && it.readFn != 142) continue;   // B182: of the bankless settings only the governor global is tuning
         if (want(it.readFn, -1, it.idx)) BakList[BakListN++] = {it.readFn, it.writeFn, it.kind, -1, it.idx, it.label};
         if (it.kind == BK_MODES && BakListN < 80 && want(238, -1, -1) && !want(34, -1, -1)) {}   // (238 goes with 34)
     }
@@ -1049,6 +1064,7 @@ FLASHMEM void BackupRun()
         char v[220];
         if (BakJob == BAK_JOB_BACKUP && BakCardFailed) snprintf(v, sizeof(v), "Not backed up: the card would not take\r\nthe file.");
         else if (BakJob == BAK_JOB_BACKUP) snprintf(v, sizeof(v), BakFails ? "Not backed up: %d could not be read:\r\n%.90s\r\nThe copy on the card is as it was." : "Backed up: %d settings on the card.", BakFails ? BakFails : BakDone, BakFailed);
+        else if (BakTuningOnly) snprintf(v, sizeof(v), "From %s: %d written, %d the same%s%.70s\r\nBack up now: the copy on the card is\r\nolder than the flight controller.", BakFromModel, BakWritten, BakUnchanged, BakFails ? ".\r\nNot written: " : ".", BakFails ? BakFailed : "");   // B182
         else snprintf(v, sizeof(v), "%d written, %d were the same already%s%s%.90s", BakWritten, BakUnchanged, BakFails ? ".\r\nNot restored: " : ".", BakFails ? "" : "", BakFails ? BakFailed : "");
         BakFinish(v);
         return;
@@ -1168,6 +1184,98 @@ FLASHMEM static void BakShowPage()
     SendText((char *)"i1", b);
     SendCommand((char *)(e[0] ? "vis b4,1" : "vis b4,0"));
     SendCommand((char *)(BakHaveFile() ? "vis b2,1" : "vis b2,0"));
+    if (BakFromModel[0]) snprintf(b, sizeof(b), "Copy tuning from: %s (%s). 'Tuning from' again: another model.", BakFromModel, BakFromDate);   // B182
+    else snprintf(b, sizeof(b), "Back up after every setup you are happy with.");
+    SendText((char *)"i2", b);
+}
+// B182: the idx-th backup on the card that is not this model's - the model's name and the date from the file's own first lines
+#ifndef BAK_OTHER_FILE_FAKE
+FLASHMEM static bool BakOtherFile(int idx, char *model, size_t mn, char *date, size_t dn)
+{
+    char own[48];
+    BakPath(own, sizeof(own), ModelName);
+    File d = SD.open(BAK_DIR);
+    if (!d) return false;
+    int seen = 0; bool found = false;
+    while (!found)
+    {
+        File e = d.openNextFile();
+        if (!e) break;
+        char name[64];
+        snprintf(name, sizeof(name), "%s/%s", BAK_DIR, e.name());
+        const size_t L = strlen(name);
+        if (!e.isDirectory() && L > 4 && strcasecmp(name + L - 4, ".rfb") == 0 && strcasecmp(name, own) != 0)
+        {
+            if (seen == idx)
+            {
+                char head[160];
+                const int n = e.read(head, sizeof(head) - 1);
+                head[n > 0 ? n : 0] = 0;
+                model[0] = 0; date[0] = 0;
+                for (const char *p = head; p && *p; )
+                {
+                    const char *nl = strchr(p, '\n');
+                    const size_t len = nl ? (size_t)(nl - p) : strlen(p);
+                    if (len > 6 && strncmp(p, "model=", 6) == 0) snprintf(model, mn, "%.*s", (int)(len - 6), p + 6);
+                    if (len > 5 && strncmp(p, "date=", 5) == 0) snprintf(date, dn, "%.*s", (int)(len - 5), p + 5);
+                    p = nl ? nl + 1 : nullptr;
+                }
+                found = model[0] != 0;
+            }
+            ++seen;
+        }
+        e.close();
+    }
+    d.close();
+    return found;
+}
+#endif
+FLASHMEM void TuningFromNext() // B182: the page's "Tuning from ...": the next other model that has a backup on the card
+{
+    if (BakJob != BAK_JOB_NONE) return;
+    char m[32], d[24];
+    int idx = BakFromIdx + 1;
+    if (!BakOtherFile(idx, m, sizeof(m), d, sizeof(d)))
+    {
+        idx = 0;
+        if (!BakOtherFile(0, m, sizeof(m), d, sizeof(d)))
+        {
+            BakFromIdx = -1; BakFromModel[0] = 0; BakFromDate[0] = 0;
+            PlaySound(WHAHWHAHMSG);
+            MsgBox((char *)"page RFBackUpView", (char *)"No other model has a backup on the card.\r\nSelect that model, connect it, and\r\nBack up; then come back here.");
+            BakShowPage();
+            return;
+        }
+    }
+    BakFromIdx = idx;
+    strncpy(BakFromModel, m, sizeof(BakFromModel) - 1); BakFromModel[sizeof(BakFromModel) - 1] = 0;
+    strncpy(BakFromDate, d, sizeof(BakFromDate) - 1); BakFromDate[sizeof(BakFromDate) - 1] = 0;
+    BakShowPage();
+}
+FLASHMEM void CopyTuning() // B182: the page's "Copy tuning": the chosen model's tuning into this flight controller
+{
+    if (BakJob != BAK_JOB_NONE) return;
+    if (!BakFromModel[0])
+    {
+        MsgBox((char *)"page RFBackUpView", (char *)"Choose the model to copy from first:\r\npress 'Tuning from ...'.");
+        BakShowPage();
+        return;
+    }
+    char q[230];
+    snprintf(q, sizeof(q), "Write %.24s's tuning into this model's\r\nflight controller? PIDs, rates, governor\r\nand rescue, every bank. Its own are replaced.\r\nServos, mixer and motor are not touched.", BakFromModel);
+    if (!GetConfirmation((char *)"page RFBackUpView", q)) { BakShowPage(); return; }
+    if (!BakLoad(BakFromModel))
+    {
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RFBackUpView", (char *)"That model's backup could not be read.");
+        BakLoad(ModelName);
+        BakShowPage();
+        return;
+    }
+    BakTuningOnly = true;
+    BakShowPage();
+    BakStart(BAK_JOB_RESTORE);
+    if (BakJob == BAK_JOB_NONE) { BakTuningOnly = false; BakLoad(ModelName); BakShowPage(); }   // (refused: armed, no pipe, no model - this model's file back at once)
 }
 FLASHMEM void StartBackupView() // the menu's Backup/Restore
 {
@@ -1178,6 +1286,7 @@ FLASHMEM void StartBackupView() // the menu's Backup/Restore
 FLASHMEM void EndBackupView()
 {
     if (BakJob != BAK_JOB_NONE) return;   // (a run is on: wait for it)
+    BakFromIdx = -1; BakFromModel[0] = 0; BakFromDate[0] = 0;   // B182: the choice of a source model lasts the visit
     RotorFlightStart();
 }
 FLASHMEM void BackupNow()

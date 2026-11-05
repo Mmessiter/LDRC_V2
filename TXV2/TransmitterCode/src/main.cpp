@@ -3389,7 +3389,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 227 // One more than final one
+#define LASTFUNCTION1 229 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3618,7 +3618,9 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     CurvePoints7Tapped,   // 223
     CurvePoints9Tapped,   // 224 B113: ... 945 to 2055
     CurveResetTapped,     // 225 B135: the curve page's Reset (a straight line from corner to corner, no expo)
-    CurveFlatTapped       // 226 B135: its Flat (every point the ringed point's height)
+    CurveFlatTapped,      // 226 B135: its Flat (every point the ringed point's height)
+    TuningFromNext,       // 227 B182: the Backup page's "Tuning from ...": the next other model with a backup on the card
+    CopyTuning            // 228 B182: its "Copy tuning": that model's PIDs, rates, governor and rescue into this flight controller
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big

@@ -5,7 +5,8 @@ Re-run after a change here: python3 hmi/backup_pages.py"""
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rescue_pages as rp
-# codes (the main board's NumberedFunctions1): 48 open (the menu), 111 Back up, 112 Restore all, 113 Write edits, 114 Forget edits, 115 OK
+# codes (the main board's NumberedFunctions1): 48 open (the menu), 111 Back up, 112 Restore all, 113 Write edits, 114 Forget edits, 115 OK,
+# 227 Tuning from ... (B182: the next other model with a backup), 228 Copy tuning (that model's PIDs, rates, governor and rescue into this FC)
 comps = []; i = [1]
 def add(c): c['i'] = i[0]; i[0] += 1; comps.append(c); return c
 add(rp.comp(rp.TITLE, n='t0', txt='Backup & restore'))   # (15 Oct 2026: the phone app's name; "Backup (Rotorflight)" before)
@@ -32,7 +33,7 @@ for nm, y, h, txt in (('i0', Y, 36, 'No backup of this model on the card yet'), 
     add(f)
 # Fix (11 Oct): the guidance is the one thing to do; the why (the pages edit this backup with no model connected, Write
 # edits sends them later) is BACKUP.TXT's "Without the model" and "Write edits" paragraphs - explanations live in the help
-g = rp.comp(rp.LABEL_L, n='i2', x=X, y=Y + GY, w=W - GW - 16, h=GH, g='g', font=2,
+g = rp.comp(rp.LABEL_L, n='i2', x=X, y=Y + GY, w=W - GW - 16, h=2 * rp.C_BTN_H + 10, g='g', font=2,   # (B182: two rows; the third row of this column is Tuning from ... / Copy tuning)
             txt='Back up after every setup you are happy with.')   # (1.11.40: do first, why second, and shorter)
 g['c'] = {'pco': 65535, 'borderc': rp.CARD['c']['bco'], 'bco': rp.CARD['c']['bco']}; g['a'] = dict(g['a'], borderw=0, xcen=0, ycen=0, txt_maxl=300, isbr=1); add(g)
 gx = X + W - GW
@@ -44,9 +45,16 @@ gx = X + W - GW
 # wait) is the block's LAST row, so a hidden button leaves its gap at the foot, by OK, not in the middle of the block -
 # rows: Back up / Restore all, Diff to card / Execute diff, Write edits / Forget edits. (The list keeps its order: the
 # buttons keep their ids; only the rows change.)
-for nm, txt, col, row, code in (('b3', 'Back up', 0, 0, 111), ('b2', 'Restore all', 1, 0, 112), ('b4', 'Send to model', 0, 2, 113), ('b5', 'Discard edits', 1, 2, 114), ('ldrcDiff', 'Diff to card', 0, 1, 'ldrc diff'), ('ldrcExec', 'Execute diff', 1, 1, 'ldrc exec')):
+for nm, txt, col, row, code in (('b3', 'Back up', 0, 0, 111), ('b2', 'Restore all', 1, 0, 112), ('b4', 'Send to model', 0, 2, 113), ('b5', 'Discard edits', 1, 2, 114),  ('ldrcDiff', 'Diff to card', 0, 1, 'ldrc diff'), ('ldrcExec', 'Execute diff', 1, 1, 'ldrc exec')):
     b = rp.comp(rp.BUTTON, n=nm, x=gx + col * (BW + rp.C_BTN_GAP), y=Y + GY + row * (rp.C_BTN_H + 10), w=BW, h=rp.C_BTN_H, txt=txt)
     b['ev'] = {'r': code} if isinstance(code, str) else {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
+# B182 (Malcolm, 5 Nov 2026: "Copy settings from another model"): the guidance column's third row - "Tuning from ..." cycles
+# through the other models' backups on the card (the guidance line names the one chosen), "Copy tuning" writes that model's
+# PIDs, advanced PIDs, rates, governor and rescue into this flight controller (RF_Backup.h TuningFromNext / CopyTuning).
+LW = W - GW - 16; LBW = (LW - rp.C_BTN_GAP) // 2
+for nm, txt, col, code in (('b6', 'Tuning from ...', 0, 227), ('b7', 'Copy tuning', 1, 228)):
+    b = rp.comp(rp.BUTTON, n=nm, x=X + col * (LBW + rp.C_BTN_GAP), y=Y + GY + 2 * (rp.C_BTN_H + 10), w=LBW, h=rp.C_BTN_H, txt=txt)
+    b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
 for (nm, txt, x, y, w, code) in isl['btn']:
     b = rp.comp(rp.BUTTON, n=nm, x=x, y=y, w=w, h=rp.C_BTN_H, txt=txt); b['ev'] = {'r': 'va0.val=%d<<8\nprint va0.val' % code}; add(b)
 # Fix (11 Oct, touch audit): the progress ("Reading 12 of 65: bank 3, advanced PIDs", BakBusy / BakProgress) in the

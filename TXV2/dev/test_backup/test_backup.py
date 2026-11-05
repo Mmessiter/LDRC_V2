@@ -152,6 +152,21 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     if (fc.count(k)) fcReply(200, fc[k]); else fcReply(404, "unknown");
     return PipeReqId;
 }
+// ---- B182: the other models' backups on the card (the real one lists /rfbak with the card library; here, the fake card's keys)
+#define BAK_OTHER_FILE_FAKE
+static bool BakOtherFile(int idx, char *model, size_t mn, char *date, size_t dn) {
+    std::string own = std::string("/rfbak/") + ModelName + ".rfb"; int seen = 0;
+    for (auto &kv : card) {
+        const std::string &k = kv.first;
+        if (k.rfind("/rfbak/", 0) != 0 || k.size() < 5 || k.substr(k.size() - 4) != ".rfb" || k == own) continue;
+        if (seen++ != idx) continue;
+        const std::string &t = kv.second; model[0] = 0; date[0] = 0;
+        size_t m = t.find("model="); if (m != std::string::npos) snprintf(model, mn, "%s", t.substr(m + 6, t.find('\n', m) - m - 6).c_str());
+        size_t d = t.find("date=");  if (d != std::string::npos) snprintf(date, dn, "%s", t.substr(d + 5, t.find('\n', d) - d - 5).c_str());
+        return model[0] != 0;
+    }
+    return false;
+}
 ''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -350,6 +365,30 @@ int main() {
       if (!(w33 == 1 && w81 == 1 && w57 >= 1 && w41 >= 1 && w239 == 1)) fprintf(stderr, "writes 33 %d 81 %d 57 %d 41 %d 239 %d fails %d '%s'\n", w33, w81, w57, w41, w239, BakFails, lastBox.c_str());
       CHECK(w33 == 1 && w81 == 1 && w57 >= 1 && w41 >= 1 && w239 == 1); }
     CHECK(!BakEditsWaiting() && fc["80"] == "01404142434445464748494A4B" && fc["240"] == "0F00ECFF" && fc["56"].substr(24, 10) == "73000B0002");
+    // 12. B182: tuning from another model's backup - its PIDs, advanced PIDs, rates, governor and rescue only (never its servos,
+    //     mixer, motor, failsafe ...), every write read back; this model's own file is back afterwards, and the verdict asks for a backup
+    BoundFlag = true; ModelMatched = true; confirmAnswer = true; CurrentView = RFBACKUP_RESTOREVIEW; fillFc(); fcUsb = false; card.clear(); strcpy(BakModel, ""); BakLoaded = false; Bak[0] = 0;
+    BackupNow(); runUntilDone(); CHECK(BakFails == 0 && BakHaveFile() && strcmp(BakModel, "Goblin") == 0);
+    boxes = 0; TuningFromNext(); CHECK(boxes == 1 && lastBox.find("No other model") == 0 && !BakFromModel[0]);   // (only this model's backup on the card)
+    { std::string other = card["/rfbak/Goblin.rfb"];
+      other.replace(other.find("model=Goblin"), 12, "model=Other"); other.replace(other.find("date=2026-10-08 12:30"), 21, "date=2026-11-03 15:34");
+      auto swap = [&](const char *key, char fill) { const size_t k = other.find(std::string("\n") + key + "="); CHECK(k != std::string::npos); const size_t v = k + 2 + strlen(key); const size_t e = other.find('\n', v); for (size_t i = v; i < e; ++i) other[i] = fill; };
+      swap("112.0", '2'); swap("111.0", '3'); swap("142", '4'); swap("120", '5');   // the other heli's PIDs (bank 1), rates (bank 1), governor global - and its servos, which must stay its own
+      card["/rfbak/Other.rfb"] = other; }
+    TuningFromNext(); CHECK(strcmp(BakFromModel, "Other") == 0 && strcmp(BakFromDate, "2026-11-03 15:34") == 0 && fields["i2"].find("Copy tuning from: Other (2026-11-03 15:34)") == 0);
+    TuningFromNext(); CHECK(strcmp(BakFromModel, "Other") == 0);   // (the one other: round again to it)
+    const std::string servosBefore = fc["120"], pid0Before = fc["112.0"];
+    fcLog.clear(); boxes = 0; CopyTuning(); runUntilDone();
+    CHECK(BakJob == BAK_JOB_NONE && BakFails == 0 && !BakTuningOnly && strcmp(BakModel, "Goblin") == 0 && BakHaveFile());
+    CHECK(lastBox.find("From Other:") == 0 && lastBox.find("Back up now") != std::string::npos);
+    { int w202 = 0, w204 = 0, w143 = 0, w212 = 0, w173 = 0, w78 = 0, w43 = 0, w250 = 0, w68 = 0, sel = 0;
+      for (auto &r : fcLog) { if (r.fn == 202) ++w202; if (r.fn == 204) ++w204; if (r.fn == 143) ++w143; if (r.fn == 212) ++w212; if (r.fn == 173) ++w173; if (r.fn == 78) ++w78; if (r.fn == 43) ++w43; if (r.fn == 250) ++w250; if (r.fn == 68) ++w68; if (r.fn == 210) ++sel; }
+      CHECK(w202 == 1 && w204 == 1 && w143 == 1 && w250 == 1 && w68 == 1); CHECK(w212 == 0 && w173 == 0 && w78 == 0 && w43 == 0); CHECK(sel > 0); }
+    CHECK(fc["112.0"] != pid0Before && fc["112.0"] == std::string(pid0Before.size(), '2') && fc["120"] == servosBefore && fc["142"] == std::string(fc["142"].size(), '4'));
+    CHECK(card["/rfbak/Goblin.rfb"].find("model=Goblin") != std::string::npos && card["/rfbak/Other.rfb"].find("edits=\n") != std::string::npos);   // (neither file was changed by the copy)
+    EndBackupView(); CHECK(!BakFromModel[0] && BakFromIdx == -1);   // (the choice lasts the visit)
+    // ... and "No" to the question leaves everything as it was, this model's file in place
+    TuningFromNext(); confirmAnswer = false; CopyTuning(); CHECK(BakJob == BAK_JOB_NONE && !BakTuningOnly && strcmp(BakModel, "Goblin") == 0); confirmAnswer = true;
     printf("test_backup: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

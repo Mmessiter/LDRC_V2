@@ -493,7 +493,7 @@ check('TX_EXT_MAGIC4' in sd and 'MODEL_EXT2_AT_B118' in sd, "the file: B121's bl
 dcs = lift('src/main.cpp', 'FASTRUN void DisplayCurveAndServoPos()')
 check('ClearBox' not in dcs and 'DelayWithDog' not in dcs and 'delay(' not in dcs and 'DisplayCurve();' in dcs, "B135: a redraw no longer sets the page's picture first, nor waits")
 check('"GraphView.pic"' not in main and '"GraphView.pic"' not in util and 'void ClearBox()' not in util, "B135: nothing but the page itself sets the curve page's picture")
-check('CurveResetTapped,     // 225' in main and 'CurveFlatTapped       // 226' in main and '#define LASTFUNCTION1 227' in main, 'B135: Reset is numbered function 225, Flat 226')
+check('CurveResetTapped,     // 225' in main and re.search(r'CurveFlatTapped,?\s*// 226', main) is not None and re.search(r'#define LASTFUNCTION1 (\d+)', main) is not None and int(re.search(r'#define LASTFUNCTION1 (\d+)', main).group(1)) >= 227, 'B135: Reset is numbered function 225, Flat 226 (B182: more follow)')
 import json
 SCREEN = os.path.join(ROOT, '..', 'ESP32-board2', 'board4', 'nextion-emulator')
 p21 = os.path.join(SCREEN, 'sd', 'hmi', 'pages', '21.json')

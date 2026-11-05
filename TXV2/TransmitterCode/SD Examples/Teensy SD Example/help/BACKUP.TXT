@@ -26,6 +26,16 @@ It restarts only for a changed governor global or motor setting.|
 What the model has now is replaced by the backup:|
 be sure it is the backup you mean.|
 'Restore all' shows only when there is a backup.||
+TUNING FROM ANOTHER MODEL:|
+Two helis much alike: press 'Tuning from ...' until it names|
+the model whose backup you want (each press takes the next), then|
+'Copy tuning'. With this model connected, it writes that model's|
+PIDs, advanced PIDs, rates, governor (every bank, and the global)|
+and rescue into this flight controller, each read back. Servos,|
+mixer, motor, ports, failsafe, meters and switches are not touched:|
+they are each heli's own. Then back this model up: its copy on|
+the card is older than the flight controller now. A heavier or|
+lighter heli will still want its own tuning checked in the air.||
 DIFF TO CARD:|
 Asks the flight controller for all its settings as text (the|
 command line's diff all), and keeps them on the screen's card|

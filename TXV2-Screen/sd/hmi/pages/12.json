@@ -238,7 +238,7 @@
    "x": 48,
    "y": 206,
    "w": 324,
-   "h": 170,
+   "h": 110,
    "font": 2,
    "sta": 1,
    "c": {
@@ -451,8 +451,72 @@
    }
   },
   {
-   "n": "b1",
+   "n": "b6",
    "i": 16,
+   "t": "button",
+   "g": "l",
+   "x": 48,
+   "y": 326,
+   "w": 156,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Tuning from ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=227<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b7",
+   "i": 17,
+   "t": "button",
+   "g": "l",
+   "x": 216,
+   "y": 326,
+   "w": 156,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Copy tuning",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=228<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 18,
    "t": "button",
    "g": "l",
    "x": 592,
@@ -484,7 +548,7 @@
   },
   {
    "n": "busy",
-   "i": 17,
+   "i": 19,
    "t": "text",
    "g": "l",
    "x": 48,
