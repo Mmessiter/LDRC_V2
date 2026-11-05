@@ -916,6 +916,21 @@ inline bool isSetupWriteFn(uint8_t fn) {
     }
 }
 
+// (0.9.918) The one switch "a flight controller is on this line", by itself: the home page's banner puts it back on when it
+// finds it off with a Rotorflight FC remembered here (Black Thunder 1, 5 Nov 2026: unticked by an old firmware, the heli had
+// no volts or RPM, the receiver's own failsafe, and a swash on its stops at every power-up without the transmitter).
+inline void handleFcTelemSet() {
+    if (!server.hasArg("on")) { server.send(400, "text/plain", "on=0|1?"); return; }
+    const bool on = server.arg("on").toInt() != 0;
+    if (on != fcTelemetryEnabled) {
+        fcTelemetryEnabled = on;
+        prefs.putUChar(NVS_KEY_FC_TELEM, on ? 1 : 0);
+        events.add(on ? "FC on this line: switched ON (the app's banner)"
+                      : "FC on this line: switched OFF (the app) - a plain servo converter now: no telemetry, the receiver's own failsafe, the throttle-channel hold at power-up");
+    }
+    server.send(200, "application/json", String("{\"ok\":true,\"fc_telem\":") + (fcTelemetryEnabled ? "true" : "false") + "}");
+}
+
 inline void handleMspApi() {
     // ARMED = configuration locked, instantly (Malcolm 2026-08-24, after the
     // crash: "if arming is switched on, go directly to fly mode — without
@@ -2939,6 +2954,9 @@ inline void handleProtocolSet() {
     }
     if (fullForm) {
         bool fcOn = server.hasArg("fc_telem");
+        if (fcOn != fcTelemetryEnabled)                     // (0.9.918) a change of this switch is always on record: it decides the line's whole treatment
+            events.add(fcOn ? "FC on this line: switched ON (Protocol page)"
+                            : "FC on this line: switched OFF (Protocol page) - a plain servo converter now: no telemetry, the receiver's own failsafe, the throttle-channel hold at power-up");
         prefs.putUChar(NVS_KEY_FC_TELEM, fcOn ? 1 : 0);
         fcTelemetryEnabled = fcOn;                          // live: gates parser + probes
     }
@@ -4199,6 +4217,7 @@ inline void registerWebRoutes() {
     server.on("/fly_arm",     HTTP_POST, handleFlyArm);
     server.on("/api/autofly", HTTP_GET,  handleAutoFlyGet);
     server.on("/api/autofly", HTTP_POST, handleAutoFlySet);
+    server.on("/api/fc_telem", HTTP_POST, handleFcTelemSet);   // (0.9.918) the "flight controller on this line" switch alone
 
     // Misc
     server.on("/retest",      handleRetest);

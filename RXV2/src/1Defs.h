@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.917-fc-armed-word";
+constexpr const char* FW_VERSION = "RXV2-0.9.918-fc-line-switch";
 
 //*********************************************************************
 //  Auto-update manifest URLs

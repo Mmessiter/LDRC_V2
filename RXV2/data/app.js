@@ -731,6 +731,33 @@
             const fc = (st && st.fcinfo) || {};
             const doneAt = +el.dataset.telemDone || 0;
             if (doneAt && Date.now() - doneAt < 25000) return true;   // let the "restored" note be read
+            // (0.9.918) The switch "a flight controller is on this line" is OFF while a Rotorflight FC is remembered here
+            // (its throttle channel or governor mode, kept across power-ups). Black Thunder 1, 5 Nov 2026: an old firmware
+            // unticked it by itself; the heli then had no volts or RPM on the transmitter, the receiver's own failsafe, and
+            // a swash on its stops at every power-up without the transmitter. One button puts it back.
+            const p = (st && st.protocol) || {};
+            const remembered = !!(fc.detected || (fc.throttle_ch | 0) >= 1 || (fc.gov_mode !== undefined && fc.gov_mode !== null && fc.gov_mode !== 255));
+            if (p.current === 'CRSF' && p.fc_telem === false && remembered && !this.replay) {
+                if (el.dataset.fcOffShown === '1') return true;
+                el.dataset.fcOffShown = '1';
+                el.style.cssText = 'display:block;background:#f2b8a8;color:#5a1e12;padding:1em;border-radius:10px;margin:0 0 1em;text-align:left;font-size:1.05em';
+                el.innerHTML = '<b>Switch “a flight controller is on this line” back on — until you do, no volts, RPM or battery reach the transmitter.</b><br>' +
+                    'A Rotorflight flight controller has answered on this line, but the switch (Protocol page) is off, so the receiver treats the line as a plain servo converter: ' +
+                    'it parses nothing from it, its own failsafe replaces Rotorflight’s, and at a power-up without the transmitter it holds the Throttle channel setting (ch ' +
+                    ((p.thr_ch | 0) || '?') + ') low — the collective on a Rotorflight heli, so the swash goes to its stops. An old firmware unticked this by itself when the Transmitter channels page was saved.<br>' +
+                    '<button class="btn" style="background:#b8432b;color:#fff;margin:.7em 0 0;width:100%" id=fcTelemOnBtn><span class=ico>🔛</span>Switch it on</button>';
+                const b = document.getElementById('fcTelemOnBtn');
+                b.onclick = async () => {
+                    b.disabled = true; b.textContent = 'Switching on…';
+                    let ok = false, msg = '';
+                    try { const r = await fetch('/api/fc_telem?on=1', { method: 'POST', cache: 'no-store' }); ok = r.ok; if (!ok) msg = await r.text(); } catch (e) { msg = 'no answer from the receiver'; }
+                    if (ok) { el.dataset.telemDone = Date.now(); delete el.dataset.fcOffShown;
+                              el.innerHTML = '<b>✓ On. The flight controller’s telemetry, failsafe and throttle channel are in charge again.</b><br>Check volts and RPM show on the transmitter before any spool-up.'; }
+                    else { b.disabled = false; b.innerHTML = '<span class=ico>🔛</span>Switch it on'; await this.alert(msg || 'not switched', {title: 'Not switched on', icon: '⚠️', kind: 'danger'}); }
+                };
+                return true;
+            }
+            if (el.dataset.fcOffShown === '1') { delete el.dataset.fcOffShown; el.style.display = 'none'; }
             if (!fc.telem_cfg_bad || this.replay) { el.style.display = 'none'; delete el.dataset.telemShown; return false; }
             if (el.dataset.telemShown === '1') return true;   // keep the button's state while it works
             el.dataset.telemShown = '1';

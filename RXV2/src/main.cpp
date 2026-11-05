@@ -459,8 +459,11 @@ void setup() {
         uint8_t chz = prefs.isKey(NVS_KEY_CRSF_HZ) ? prefs.getUChar(NVS_KEY_CRSF_HZ, 250) : 250;
         crsfRateHz = (chz == 50 || chz == 100) ? chz : 250;
         fcTelemetryEnabled = !prefs.isKey(NVS_KEY_FC_TELEM) || prefs.getUChar(NVS_KEY_FC_TELEM, 1) != 0;
-        if (!fcTelemetryEnabled)
+        if (!fcTelemetryEnabled) {
             Serial.printf("[out] FC telemetry DISABLED — ignoring telemetry-line input, no Rotorflight probes\n");
+            if (currentProtocol == PROTO_CRSF && (fcInfo.throttleCh >= 1 || fcInfo.govMode != 0xFF))   // (0.9.918) a Rotorflight FC was seen on this line before: say so, every power-up
+                events.add("FC on this line is OFF, yet a Rotorflight flight controller was seen here before: no telemetry, the receiver's own failsafe, the throttle-channel hold at power-up. The home page has the switch");
+        }
         if (currentProtocol == PROTO_CRSF)
             Serial.printf("[out] CRSF frame rate = %u Hz\n", crsfRateHz);
         Serial.printf("[out] protocol = %s — %s  (PPM polarity: %s)\n",
