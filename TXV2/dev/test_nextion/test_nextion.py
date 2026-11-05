@@ -33,6 +33,7 @@ prog = r'''
 char TextIn[MAXTEXTIN + 2];
 static void LogGhostFrame(const char *, const uint8_t *, uint16_t) {}   // (B177: PendingEvent and its companions come with the lifted code)
 uint32_t NextionReplyWaitMs = 100; bool NextionTextMissed = false;   // (B152)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static uint32_t fakeMs = 1000, fakeUs = 0;
 static uint32_t millis() { return fakeMs; }
 static uint32_t micros() { return fakeUs; }

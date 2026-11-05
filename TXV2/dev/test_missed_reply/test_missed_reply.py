@@ -66,6 +66,8 @@ static uint32_t getvalue(char *nbox)   // (Nextion.h's own: 'q' + four bytes, or
     return values.count(n) ? (uint32_t) values[n] : 0;
 }
 static bool NextionTextMissed = false;
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+static std::string loggedMiss; static void LogText(char *t, uint16_t, bool) { loggedMiss = t; }   // (B187: the miss is logged with its box)
 static std::vector<int> sounds; static int boxes = 0; static std::string lastBox;
 static void PlaySound(int s) { sounds.push_back(s); }
 static void MsgBox(char *, char *m) { ++boxes; lastBox = m; }

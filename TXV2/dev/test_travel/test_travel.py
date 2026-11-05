@@ -46,6 +46,7 @@ static bool RfNeedsModel(char *, size_t) { return false; }
 static bool BakOffline() { return offline; }
 static void GetText(char *n, char *out, int len) { snprintf(out, len, "%s", fields[n].c_str()); }
 bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; return true; }   // (B152)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static long FieldNumber(const char *name, long lo, long hi) { char t[24] = ""; GetText((char *)name, t, sizeof(t) - 1); long v = strtol(t, nullptr, 10); return v < lo ? lo : v > hi ? hi : v; }
 void EndTravelView(); void StartTravel3View(); void StartTravel4View(); void TravelWasEdited();
 // ---- the pipe and a fake flight controller

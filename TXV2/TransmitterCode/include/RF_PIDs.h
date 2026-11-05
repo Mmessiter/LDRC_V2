@@ -201,7 +201,7 @@ FLASHMEM void PIDs_Were_edited()
 FLASHMEM void SaveToLocalBank()
 {
     PIDMsg((char *)"Saving edited PIDs ...", Gray); // Show sending message
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadEditedPIDs();                               // read the edited PIDs from the screen;
     if (RfFieldsMissed("page PIDView")) { HidePIDMsg(); return; }   // B156: a box unanswered (GetValue 65535): nothing kept
     for (int i = 0; i < MAX_PID_WORDS; ++i)
@@ -248,7 +248,7 @@ FLASHMEM void SendEditedPIDs()
     HidePIDMsg();
     PIDMsg((char *)"Sending edited PIDs ...", Gray); // Show sending message
     DelayWithDog(100);                               // allow LOTS of time for screen to update BEFORE sending another Nextion command
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadEditedPIDs();                                // read the edited PIDs from the screen;
     if (RfFieldsMissed("page PIDView")) { HidePIDMsg(); return; }   // B156: a box unanswered (GetValue 65535 = a word of 65535): nothing sent
     BlockBankChanges = true;

@@ -438,7 +438,7 @@ FLASHMEM void SaveTravel()
     }
     // B59: the fields FIRST. The question is a page of its own, and the travel page comes back from it reloaded, every
     // field blank: read after the question, they were zeros, and zeros were written (Malcolm, 7 Oct: "It wrote zero").
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     TravGather();
     if (RfFieldsMissed(TravPageWord())) return;   // B152: a box unanswered: nothing written
     if (!GetConfirmation((char *)TravPageWord(), (char *)"Save the travel extents?\r\nThey change how FAR the swash and tail move:\r\ncheck them on the bench, blades off."))
@@ -455,7 +455,7 @@ FLASHMEM void SaveTravel()
 }
 FLASHMEM void StartTravel2View() // Next > on page 1 (and < Previous on page 3, B66)
 {
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     TravGather();
     if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page Travel2View");
@@ -465,7 +465,7 @@ FLASHMEM void StartTravel2View() // Next > on page 1 (and < Previous on page 3, 
 }
 FLASHMEM void EndTravel2View() // < Previous on page 2
 {
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     TravGather();
     if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page TravelView");
@@ -476,7 +476,7 @@ FLASHMEM void EndTravel2View() // < Previous on page 2
 FLASHMEM void StartTravel3View() // Next > on page 2 (B66); < Previous on page 4 (B98)
 {
     if (BenchHeld) { if (TravStep == TRV_IDLE) BenchRelease(BENCH_AFTER_PREV); return; }   // B98: the swash let go first; back here once it is
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     TravGather();
     if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page Travel3View");
@@ -487,7 +487,7 @@ FLASHMEM void StartTravel3View() // Next > on page 2 (B66); < Previous on page 4
 // ---------------------------------------------------------------- B98: the bench measure (page 4)
 FLASHMEM void StartTravel4View() // Next > on page 3
 {
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     TravGather();
     if (RfFieldsMissed(TravPageWord())) return;   // B156: a box unanswered: the page is not left (its clamped value would have been saved later)
     SendCommand((char *)"page Travel4View");

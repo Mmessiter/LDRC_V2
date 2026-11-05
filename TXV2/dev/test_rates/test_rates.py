@@ -72,6 +72,7 @@ static std::map<std::string, std::string> fields; static std::vector<std::string
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendCommand(char *c) { cmds.push_back(c); }
 bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; ++sounds; ++boxes; lastBox = "The screen did not answer for one of\r\nthe boxes, so NOTHING was sent.\r\nPlease press Save again."; return true; }   // (B152: as Nextion.h)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static uint16_t GetText(char *n, char *out, size_t sz) { if (!fields.count(n)) NextionTextMissed = true; strncpy(out, fields.count(n) ? fields[n].c_str() : "", sz - 1); out[sz - 1] = 0; return (uint16_t) strlen(out); }   // (B152: a box not on the page = the screen silent)
 static void SendForegroundColour(const char *, uint16_t) {}
 static void MsgBox(char *page, char *msg) { ++boxes; lastBox = msg; }

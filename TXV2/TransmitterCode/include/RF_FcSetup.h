@@ -314,7 +314,7 @@ FLASHMEM void SaveBattery()
 {
     if (!BatHave || BatStep != BAT_IDLE) return;
     if (FsRefused(BatPage(), false)) { BatHead(); BatShow(); return; }
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     BatGather();
     if (RfFieldsMissed(BatPage())) return;   // B152: a box unanswered: nothing written
     const int full = RdU16(BatWant, 9), warn = RdU16(BatWant, 11), empty = RdU16(BatWant, 5), top = RdU16(BatWant, 7);

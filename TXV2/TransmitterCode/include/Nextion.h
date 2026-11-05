@@ -736,7 +736,11 @@ uint32_t GetValue(char *nbox)
     uint32_t ValueIn = getvalue(nbox);   // B156: ONE ask of 400 ms, as GetText since B152 - a second ask would leave the first's late
                                          // reply to be read as the NEXT box's answer (box N+1 = box N: plausible, and undetectable)
     if (ValueIn == 65535)
-        NextionTextMissed = true;   // B156: as GetText - a page gathering its boxes for a save checks RfFieldsMissed and sends NOTHING
+    {
+        if (!NextionTextMissed)
+            snprintf(NextionMissedBox, sizeof(NextionMissedBox), "%s", nbox);   // B187
+        NextionTextMissed = true;
+    }   // B156: as GetText - a page gathering its boxes for a save checks RfFieldsMissed and sends NOTHING
                                     // (the PIDs and governor pages took 65535 as the value: 255 in a byte, 65535 in a word)
     return ValueIn;
 }
@@ -788,6 +792,8 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
         if (!got)
         {
             TextIn[0] = 0;
+            if (!NextionTextMissed)
+                snprintf(NextionMissedBox, sizeof(NextionMissedBox), "%s", TextBoxName);   // B187: the first box missed, for the log
             NextionTextMissed = true;
         }
     }
@@ -809,11 +815,47 @@ uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen)
 // B152: after a page has gathered its boxes for a save - true = the screen left one unanswered (GetText, 400 ms); the pilot
 // is told and the caller sends NOTHING. A box read as "" went to the flight controller as 0: Mehul's RAW 420 took off with no
 // aileron (28 Oct 2026) after the rates were saved from this transmitter, bank by bank.
+// B187 (Malcolm, 5 Nov 2026 evening, PID plus after B186: "The screen did not answer for one of the boxes, so NOTHING was sent",
+// again): the screen's own /perf showed its loop held for 604 ms in one serial pass (loop_max_ms 604) - a get that waits 400 ms
+// behind a page's queued commands (PID plus: 26 colour changes + the "Sending ..." message) is answered too late. Before a save
+// gathers its boxes the screen is now asked "sendme" and its answer awaited (up to 2.5 s, in 100 ms windows with the radio kept
+// going between them): the screen answers commands in order, so once it has answered, everything queued ahead is done and the
+// gets that follow are answered at once. ONE ask per box stays (a second ask could be read as the next box's answer).
+FLASHMEM void RfGatherStart()
+{
+    NextionTextMissed = false;
+    NextionMissedBox[0] = 0;
+    NextionSettledOk = false;
+    StashPendingEventBytes();
+    NEXTION.print("sendme");
+    EndSend();
+    const uint32_t t0 = millis();
+    while ((millis() - t0) < 2500)
+    {
+        uint16_t k = 0;
+        NextionReplyWaitMs = 100;
+        const bool got = CollectReply(0x66, k);
+        NextionReplyWaitMs = 100;
+        if (got)
+        {
+            NextionSettledOk = true;
+            break;
+        }
+        DelayWithDog(2); // the radio's packets go on between windows
+    }
+}
+/*********************************************************************************************************************************/
 FLASHMEM bool RfFieldsMissed(const char *page)
 {
     if (!NextionTextMissed)
         return false;
     NextionTextMissed = false;
+    {   // B187: the box and the page go in the log - the next "did not answer" names itself
+        char m[90];
+        snprintf(m, sizeof(m), "Save refused: the screen did not answer for box %s (%s; the screen %s) B187", NextionMissedBox, page,
+                 NextionSettledOk ? "had settled" : "never settled");
+        LogText(m, strlen(m), true);
+    }
     PlaySound(WHAHWHAHMSG);
     MsgBox((char *)page, (char *)"The screen did not answer for one of\r\nthe boxes, so NOTHING was sent.\r\nPlease press Save again.");
     return true;

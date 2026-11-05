@@ -328,7 +328,7 @@ FLASHMEM void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< 
 {
     if (Rescue_Was_Edited)
     {
-        NextionTextMissed = false;
+        RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
         if (CurrentView == RESCUEVIEW) RescueGatherPage1(); else RescueGatherPage2();   // (B59) the edits, before the question's page takes the fields away
         if (RfFieldsMissed(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView")) return;   // B156: a box unanswered: the page is not left
         if (!RfSaveFirst(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView", "The edited rescue values are", RescueSaveNow, EndRescueView, &Rescue_Was_Edited)) return;   // B102
@@ -380,7 +380,7 @@ FLASHMEM void SaveRescue()
         MsgBox((char *)(CurrentView == RESCUEVIEW ? "page RescueView" : "page Rescue2View"), why);
         return;
     }
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     if (CurrentView == RESCUEVIEW)
         RescueGatherPage1();
     else
@@ -393,7 +393,7 @@ FLASHMEM void StartRescue2View() // Next >
 {
     if (CurrentView == RESCUEVIEW)
     {
-        NextionTextMissed = false;
+        RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
         RescueGatherPage1(); // page 1's edits travel with us, unsaved: a save on page 2 writes both
         if (RfFieldsMissed("page RescueView")) return;   // B156: a box unanswered: the page is not left (a clamped value would have been saved from page 2)
     }
@@ -411,7 +411,7 @@ FLASHMEM void StartRescue2View() // Next >
 }
 FLASHMEM void EndRescue2View() // < Previous: back to page 1 (its fields from the bytes in hand, edits kept)
 {
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     RescueGatherPage2();
     if (RfFieldsMissed("page Rescue2View")) return;   // B156: a box unanswered: the page is not left
     memcpy(RescueRaw, RescueWant, RESCUE_BYTES); // (what page 1 shows next is the edited set; a save or a re-read settles it)

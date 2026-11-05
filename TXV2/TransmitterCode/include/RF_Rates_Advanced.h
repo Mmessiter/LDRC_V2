@@ -210,7 +210,7 @@ FLASHMEM void SaveLocalRatesAdvancedBank()
 {
     RatesAdvancedMsg((char *)"Saving edited advanced rates ...", Gray); // Show sending message
     Rates_Advanced_Were_Edited = false;
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadRatesAdvanced();
     if (RfFieldsMissed("page Rates_A_View")) { Rates_Advanced_Were_Edited = true; Hide_Advanced_Rates_Msg(); return; }   // B152
     for (uint8_t i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
@@ -250,7 +250,7 @@ FLASHMEM void SendEditedRatesAdvanced()
     BlockBankChanges = true;
     DelayWithDog(100);                                           //  allow LOTS of time for screen to update BEFORE sending another Nextion command
     RatesAdvancedMsg((char *)"Sending edited dynamics ...", Gray); // Show sending message
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadRatesAdvanced();
     if (RfFieldsMissed("page Rates_A_View")) { BlockBankChanges = false; Hide_Advanced_Rates_Msg(); return; }   // B152: nothing sent
     BankCheck(true, DualRateInUse, RatesAdvQueueWrite, "page Rates_A_View");   // B102: into this rates bank, or not at all (the edited flag stays until then)

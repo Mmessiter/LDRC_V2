@@ -1099,7 +1099,7 @@ FLASHMEM void SaveAdjustments()
     if (!AdjHave || AdjStep_ != ADJ_IDLE) return;
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page AdjustView", why); AdjHead(); AdjShow(); return; }
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     AdjGather();
     if (RfFieldsMissed("page AdjustView")) { AdjHead(); AdjShow(); return; }   // B156: a box unanswered: nothing written (a missed end went as 0)
     { char problem[240]; if (AdjRowsProblem(AdjRows, AdjN, problem, sizeof(problem))) { PlaySound(WHAHWHAHMSG); MsgBox((char *)"page AdjustView", problem); AdjHead(); AdjShow(); return; } }

@@ -81,6 +81,7 @@ struct FakeLink
 // ---- the Teensy's globals the lifted code uses
 char TextIn[MAXTEXTIN + 2];
 bool NextionTextMissed = false;
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 uint32_t NextionReplyWaitMs = 100;
 void StashFrame(const uint8_t *f, uint16_t n);
 static uint32_t micros() { static uint32_t us = 0; return us += 50; }   // B177

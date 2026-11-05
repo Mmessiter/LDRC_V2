@@ -51,7 +51,7 @@ FLASHMEM void ShowLocalGovBank()
 FLASHMEM void SaveToLocalGovBank()
 {
     ShowGOVMsg((char *)"Saving governor values ...", Gray);
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     LoadGovWritePayload(); // read from Nextion into GovWritePayload[]
     if (RfFieldsMissed("page RFGovView")) { HideGOVMsg(); return; }   // B156: a box unanswered (GetValue 65535): nothing kept
 
@@ -353,7 +353,7 @@ FLASHMEM void SendEditedGovValues()
 
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     LoadGovWritePayload(); // read all 14 profile fields from Nextion (now: what the screen shows is what goes)
     if (RfFieldsMissed("page RFGovView")) return;   // B156: a box unanswered (GetValue 65535: head speed 65535, a byte 255): nothing sent
     ShowGOVMsg((char *)"Saving governor values ...", Gray);

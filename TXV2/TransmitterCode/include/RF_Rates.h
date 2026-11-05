@@ -67,7 +67,7 @@ FLASHMEM void SaveRatesLocalBank()
     // (B08 took the saved bank's own type here - before, every local save made it "Actual". B106: the page's type, which
     // ShowRatesLocalBank set from the saved bank and the picker may have changed; one Rotorflight does not have is refused
     // by SendEditedRates. NONE (0) is kept: a never-filled bank was made "Actual" with zero rates, NONE flies 500 deg/s.)
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadEditedRateValues();
     if (RfFieldsMissed("page RatesView")) { Rates_Were_Edited = true; HideRATESMsg(); return; }   // B152: a box unanswered: nothing saved
     for (int i = 0; i < MAX_RATES_BYTES; ++i)
@@ -109,7 +109,7 @@ FLASHMEM void SendEditedRates()
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);                                  // allow LOTS of time for screen to update BEFORE sending another Nextion command
     RatesMsg((char *)"Sending edited rates ...", Gray); // Show sending message
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadEditedRateValues();                             // read the edited RATES from the screen
     if (RfFieldsMissed("page RatesView")) { BlockBankChanges = false; HideRATESMsg(); return; }   // B152: a box unanswered: nothing sent
     BankCheck(true, DualRateInUse, RatesQueueWrite, "page RatesView");   // B102: into this rates bank, or not at all (the edited flag stays until then)

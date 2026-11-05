@@ -180,7 +180,7 @@ FLASHMEM void ShowPIDAdvancedBank() // this is called when bank is changed so ne
 FLASHMEM void SaveToLocalABank()
 {
     PIDAdvancedMsg((char *)"Saving edited advanced PIDs ...", Gray); // Show sending message
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadEditedPIDAdvancedValues();   // read the edited PID Advanced values from the screen
     if (RfFieldsMissed("page PID_A_View")) { HidePID_Advanced_Msg(); return; }   // B152: a box unanswered: nothing saved
     for (int i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
@@ -218,7 +218,7 @@ FLASHMEM void SendEditedPID_Advanced()
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);                                                      // allow LOTS of time for screen to update BEFORE sending another Nextion command
     PIDAdvancedMsg((char *)"Sending edited advanced PIDs ...", Gray); // Show sending message
-    NextionTextMissed = false;
+    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadEditedPIDAdvancedValues();   // read the edited PID Advanced values from the screen
     if (RfFieldsMissed("page PID_A_View")) { HidePID_Advanced_Msg(); return; }   // B152: a box unanswered: nothing sent
     BlockBankChanges = true;
