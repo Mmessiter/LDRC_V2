@@ -11,6 +11,7 @@
 // src/board.h) and never a whole-screen redraw except on a page change (PSRAM
 // contention flickers otherwise).
 #include <Arduino.h>
+#include <esp_task_wdt.h>                                  // (1.11.178) the loop task on the task watchdog
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
@@ -47,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.177"
+#define SCREEN_VERSION "1.11.178"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2973,6 +2974,7 @@ static void pumpSerial() {
 static void breathe() {
     static bool in = false;
     if (in) return;
+    esp_task_wdt_reset();                                  // (1.11.178) a long pass of loop() that breathes is alive: the watchdog is fed (nothing happens when this task is not on it)
     in = true; pumpSerial(); teensyLink.poll(); audioFill(); flipTick(); in = false;
 }
 
@@ -3711,7 +3713,9 @@ static void netBegin() {
     // main board, or none): txStatusSaid() and netPoll() let it go.
     radiosLive = false; radioHeld = true; wifiStop();
     ArduinoOTA.setHostname("ldrc-screen");
-    ArduinoOTA.onStart([]() { gfx->fillRect(0, 0, W, 30, 0xF800); gfx->startWrite(); drawGlyphs(8, 3, 4, 0xFFFF, "Updating firmware..."); gfx->endWrite(); });
+    ArduinoOTA.onStart([]() { disableLoopWDT(); gfx->fillRect(0, 0, W, 30, 0xF800); gfx->startWrite(); drawGlyphs(8, 3, 4, 0xFFFF, "Updating firmware..."); gfx->endWrite(); });   // (1.11.178) the whole write happens inside one pass of loop(): off the watchdog meanwhile
+    ArduinoOTA.onEnd([]() { enableLoopWDT(); });
+    ArduinoOTA.onError([](ota_error_t) { enableLoopWDT(); });
 }
 // ------------------------------------------------------------------ audio: the HMI's clips through the NS4168 amp (SPK)
 // Every clip in TX_NEXTION.HMI is PCM 16-bit mono 22.05 kHz. loop() feeds a ring buffer; a task on the other
@@ -4256,7 +4260,16 @@ void setup() {
     // the card alone has none of the words the Teensy wrote on it, and the Teensy would never write them again.)
     if (why == ESP_RST_SW && !pageNames.empty()) { delay(300); Serial.print("FrontView"); }
     holdWatchBegin();                                      // (1.11.164) the hold watch, on this core, from here on
-    bootMs = millis(); blog("boot", std::string("loop ") + (warm ? "(warm)" : "(cold)"));
+    // (1.11.178) The loop task goes on the task watchdog: 20 s without a pass of loop() is a hang (Malcolm, 4 Nov 2026, the
+    // curves page's Reset: "it locked up the transmitter completely, and I had to switch everything off" - nothing watched
+    // this task, so nothing restarted it). The watchdog panics (sdkconfig: ESP_TASK_WDT_PANIC), which writes a core dump
+    // with every task's backtrace to flash (/status "crash", /coredump through the door), and the screen restarts: the
+    // Teensy sees the restart (B92) and draws its page again. Nothing in loop() takes 20 s - the fetches, the card's
+    // build and the Bluetooth are tasks of their own; a long file sent through the door breathes (breathe() feeds it),
+    // and firmware pushed by espota takes the loop task off the watchdog while it writes (ArduinoOTA.onStart).
+    esp_task_wdt_init(20, true);
+    enableLoopWDT();
+    bootMs = millis(); blog("boot", std::string("loop ") + (warm ? "(warm)" : "(cold)") + ", loop watchdog 20 s");
     netBegin();
     updater.resume();                                      // a verdict nobody has seen, an update cut short, or new firmware on trial
     // A new screen: its card is there and has no pages on it, so there is no page to show and no button to

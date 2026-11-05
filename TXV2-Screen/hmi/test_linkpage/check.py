@@ -31,6 +31,23 @@ check('LE_PAGE_OPEN = 18' in h and 'case LE_PAGE_OPEN: return "a page is open on
       "the link library: the code and its words")
 sim = src('hmi/test_link/sim.h')
 check('pageOpen ? LE_PAGE_OPEN' in sim, "test_link's fake Teensy refuses for a page in LinkRefusal()'s order")
+# 1.11.178: the quiet look at power-up asks the main board only on a page that lets the link open (it knocked 52 s after every power-up)
+uh = src('lib/LdrcUpdate/LdrcUpdate.h')
+check('virtual bool linkPageOk() { return true; }' in uh and 'P_PAGE_WAIT' in uh, "the host says whether the main board's page lets the link open; the look has a phase to wait in")
+check('if (quiet_ && !host_.linkPageOk()) { note("quiet look: a page is open on the transmitter: waiting for its front page"); since_ = now; phase_ = P_PAGE_WAIT; return; }' in u
+      and 'case P_PAGE_WAIT:' in u and 'now - since_ > 600000' in u, "LdrcUpdate.cpp: the quiet look waits for the front page, ten minutes at most, and knocks only then")
+begin = u[u.index('void Updater::begin()'):u.index('note("---- check for update')]
+check('if (!quiet_ || link_.running()) return;' in begin and 'quietEnd(3);' in begin, "the pilot's own Check for update is not ignored while a quiet look waits")
+d = src('src/update_device.h')
+check('bool linkPageOk() override { return linkPageAllows(); }' in d, "the device answers from the page the Teensy shows")
+# 1.11.178: the loop task on the task watchdog
+check('#include <esp_task_wdt.h>' in m and 'esp_task_wdt_init(20, true);\n    enableLoopWDT();' in m, "main.cpp: the loop task goes on the task watchdog, 20 s, panic (a core dump)")
+setup_hold = m.index('holdWatchBegin();                                      // (1.11.164) the hold watch')
+check(m.index('enableLoopWDT();', setup_hold) < m.index('void loop() {'), "switched on at the end of setup(), after the card's build and the page")
+check('disableLoopWDT(); gfx->fillRect(0, 0, W, 30, 0xF800);' in m and 'ArduinoOTA.onEnd([]() { enableLoopWDT(); });' in m and 'ArduinoOTA.onError([](ota_error_t) { enableLoopWDT(); });' in m,
+      "firmware pushed by espota (one long pass of loop) takes the loop task off the watchdog, and puts it back")
+br = m[m.index('static void breathe() {'):m.index('in = true; pumpSerial();')]
+check('esp_task_wdt_reset();' in br, "breathe() feeds the watchdog: a file sent through the door, an upload, a screenshot")
 teensy = os.path.expanduser('~/Documents/GitHub/TXV1B/TransmitterCode/lib/LdrcLink')
 if os.path.isdir(teensy):
     for f in ('LdrcLink.h', 'LdrcLink.cpp'):

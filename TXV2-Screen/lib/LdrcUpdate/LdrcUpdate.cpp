@@ -397,7 +397,10 @@ bool Updater::linkBusy() const { return linkWanted_ || (linkOurs_ && linkStarted
 
 // ------------------------------------------------------------------ check
 void Updater::begin() {
-    if (phase_ != P_IDLE) return;
+    if (phase_ != P_IDLE) {
+        if (!quiet_ || link_.running()) return;
+        quietEnd(3);                               // (1.11.178) a quiet look waiting for the front page gives way to the pilot's own press
+    }
     log_.clear(); choosing_ = false; again_ = false;
     freshDone_ = false; freshCount_ = 0;   // (1.11.116) the pilot's own press: one fresh start of its own. Set by a fresh start's resume, it lasted the whole power-on: after an install begun from a fresh start was cancelled, every later check failed with the memory in pieces (24 Oct: "No connection to messiter.com (-1, -0x7F00) [largest 19444]", no restart offered)
     { const size_t cut = latestUrl_.rfind('/'); recentUrl_ = latestUrl_.substr(0, cut + 1) + "recent.txt"; }
@@ -1185,7 +1188,17 @@ void Updater::poll() {
             note((freshChoosing_ ? "chosen release: " : "latest release: ") + rel_.name + " (" + rel_.date + ")");
             choosing_ = freshChoosing_;
         }
+        // (1.11.178 / B179, Malcolm, 5 Nov 2026: the quiet look's knock, 52 s after every power-up, threw him from the Governor
+        // page to the front page three times in a morning - the link's end draws the front page afresh.) The look asks the
+        // main board only when it is on its front page, its screen saver, or Transmitter setup - where the Teensy lets the
+        // link open; on any other page it waits, for ten minutes at most.
+        if (quiet_ && !host_.linkPageOk()) { note("quiet look: a page is open on the transmitter: waiting for its front page"); since_ = now; phase_ = P_PAGE_WAIT; return; }
         askTeensy();
+        return;
+    case P_PAGE_WAIT:
+        if (host_.linkPageOk()) { askTeensy(); return; }
+        if (flyingNow() != UpdateHost::FLY_NO) { note("quiet look: the model is on: not asked"); quietEnd(3); return; }
+        if (now - since_ > 600000) { note("quiet look: a page stayed open on the transmitter for ten minutes: not asked"); quietEnd(3); }
         return;
     case P_ASK:
         if (!linkBusy()) asked();

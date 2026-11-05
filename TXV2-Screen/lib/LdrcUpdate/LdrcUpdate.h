@@ -82,6 +82,7 @@ public:
     // The screen's own firmware.
     virtual bool onTrial() = 0;                   // it has started for the first time and is not yet accepted
     virtual bool softRestart() { return false; }  // (1.11.176) this start was a restart of the screen's own asking (an update's), not a power-up: the main board was running all along
+    virtual bool linkPageOk() { return true; }    // (1.11.178) the main board is on a page on which it lets the file link open (B179: its front page, its screen saver, Transmitter setup): the quiet look asks it only then
     virtual void accept() = 0;
     virtual bool reject() = 0;                    // the previous firmware comes back (a restart); false: there is none to go back to
     virtual void restart() = 0;
@@ -193,7 +194,7 @@ public:
 private:
     enum Phase { P_IDLE, P_WIFI, P_LATEST, P_ASK, P_NOTE, P_OFFER, P_RECENT, P_PICK, P_DESCR,
                  P_LISTS, P_COMPARE, P_FETCH, P_TEENSY, P_PLACE, P_FLASH, P_RESTART,
-                 P_TRIAL, P_RESULT, P_FRESH,
+                 P_TRIAL, P_RESULT, P_FRESH, P_PAGE_WAIT,      // (1.11.178) the quiet look waits for the main board's front page before it asks
                  P_RX_WIFI, P_RX_LATEST, P_RX_OFFER, P_RX_RUN };     // the receiver's update, through the main board
     // (1.11.32: one string each. Three hundred items with four strings apiece - the website's name of each file, where it
     //  is staged, its name on the main board - held some 60 kB of the chip's internal memory in a thousand small pieces,

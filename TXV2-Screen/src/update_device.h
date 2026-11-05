@@ -463,6 +463,7 @@ struct ScreenHost : public ldrc::UpdateHost {
         return run && esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY;
     }
     bool softRestart() override { return esp_reset_reason() == ESP_RST_SW; }   // (1.11.176) an update's restart, not a power-up: the trial asks the main board after 2 s, not 8
+    bool linkPageOk() override { return linkPageAllows(); }                    // (1.11.178) the page the Teensy shows lets the link open (B179): FrontView, BlankView, TXSetupView
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
     bool reject() override { flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // comes back only if there is nothing to go back to
     void restart() override { flushOut(); delay(200); ESP.restart(); }
