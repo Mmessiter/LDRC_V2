@@ -459,11 +459,18 @@ void setup() {
         uint8_t chz = prefs.isKey(NVS_KEY_CRSF_HZ) ? prefs.getUChar(NVS_KEY_CRSF_HZ, 250) : 250;
         crsfRateHz = (chz == 50 || chz == 100) ? chz : 250;
         fcTelemetryEnabled = !prefs.isKey(NVS_KEY_FC_TELEM) || prefs.getUChar(NVS_KEY_FC_TELEM, 1) != 0;
-        if (!fcTelemetryEnabled) {
-            Serial.printf("[out] FC telemetry DISABLED — ignoring telemetry-line input, no Rotorflight probes\n");
-            if (currentProtocol == PROTO_CRSF && (fcInfo.throttleCh >= 1 || fcInfo.govMode != 0xFF))   // (0.9.918) a Rotorflight FC was seen on this line before: say so, every power-up
-                events.add("FC on this line is OFF, yet a Rotorflight flight controller was seen here before: no telemetry, the receiver's own failsafe, the throttle-channel hold at power-up. The home page has the switch");
+        if (!fcTelemetryEnabled && currentProtocol == PROTO_CRSF && (fcInfo.throttleCh >= 1 || fcInfo.govMode != 0xFF)) {
+            // (0.9.919) A Rotorflight flight controller was seen on this line before (its throttle channel or governor mode are
+            // remembered): the switch goes back ON by itself. An old firmware unticked it whenever the Transmitter channels page
+            // was saved (Black Thunder 1, 5 Nov 2026: no volts or RPM, the receiver's own failsafe, the collective held low at a
+            // power-up without the transmitter). Unticking it on purpose (Protocol page) forgets the flight controller, so this
+            // never undoes that.
+            fcTelemetryEnabled = true;
+            prefs.putUChar(NVS_KEY_FC_TELEM, 1);
+            events.add("FC on this line: switched ON by itself - a Rotorflight flight controller was seen here before");
         }
+        if (!fcTelemetryEnabled)
+            Serial.printf("[out] FC telemetry DISABLED — ignoring telemetry-line input, no Rotorflight probes\n");
         if (currentProtocol == PROTO_CRSF)
             Serial.printf("[out] CRSF frame rate = %u Hz\n", crsfRateHz);
         Serial.printf("[out] protocol = %s — %s  (PPM polarity: %s)\n",

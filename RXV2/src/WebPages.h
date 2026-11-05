@@ -916,6 +916,12 @@ inline bool isSetupWriteFn(uint8_t fn) {
     }
 }
 
+// (0.9.919) The pilot says there is no flight controller on this line: the one remembered is forgotten, so that the switch is
+// not put back on by itself at the next power-up (main.cpp) - only a Rotorflight answering MSP again does that (MspFc.h).
+inline void fcForget() {
+    fcInfo.detected = false; fcInfo.variant[0] = '\0'; fcInfo.throttleCh = 0; fcInfo.govMode = 0xFF;
+    prefs.remove(NVS_KEY_FC_THR_CH); prefs.remove(NVS_KEY_FC_GOV_MODE);
+}
 // (0.9.918) The one switch "a flight controller is on this line", by itself: the home page's banner puts it back on when it
 // finds it off with a Rotorflight FC remembered here (Black Thunder 1, 5 Nov 2026: unticked by an old firmware, the heli had
 // no volts or RPM, the receiver's own failsafe, and a swash on its stops at every power-up without the transmitter).
@@ -927,6 +933,7 @@ inline void handleFcTelemSet() {
         prefs.putUChar(NVS_KEY_FC_TELEM, on ? 1 : 0);
         events.add(on ? "FC on this line: switched ON (the app's banner)"
                       : "FC on this line: switched OFF (the app) - a plain servo converter now: no telemetry, the receiver's own failsafe, the throttle-channel hold at power-up");
+        if (!on) fcForget();
     }
     server.send(200, "application/json", String("{\"ok\":true,\"fc_telem\":") + (fcTelemetryEnabled ? "true" : "false") + "}");
 }
@@ -2957,8 +2964,10 @@ inline void handleProtocolSet() {
         if (fcOn != fcTelemetryEnabled)                     // (0.9.918) a change of this switch is always on record: it decides the line's whole treatment
             events.add(fcOn ? "FC on this line: switched ON (Protocol page)"
                             : "FC on this line: switched OFF (Protocol page) - a plain servo converter now: no telemetry, the receiver's own failsafe, the throttle-channel hold at power-up");
+        const bool wasOn = fcTelemetryEnabled;
         prefs.putUChar(NVS_KEY_FC_TELEM, fcOn ? 1 : 0);
         fcTelemetryEnabled = fcOn;                          // live: gates parser + probes
+        if (wasOn && !fcOn) fcForget();                     // (0.9.919) unticked on purpose: the flight controller is forgotten, so the switch stays off
     }
     if (server.hasArg("thr_ch")) {
         long tc = server.arg("thr_ch").toInt();

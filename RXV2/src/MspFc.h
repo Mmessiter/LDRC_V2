@@ -521,6 +521,15 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
                 memcpy(fcInfo.variant, payload, 4);
                 fcInfo.variant[4] = '\0';
                 fcInfo.detected = true;
+                // (0.9.919) Proof of a Rotorflight flight controller - it answered MSP, on this line or on the USB socket - puts
+                // the switch "a flight controller is on this line" ON by itself (Malcolm, 5 Nov 2026: "if Rotorflight is detected,
+                // then the switch should default on and stay on"). A plain servo converter never answers MSP, so it is never
+                // mistaken for one; unticking the switch on purpose forgets the flight controller (fcForget) until one answers again.
+                if (!fcTelemetryEnabled && currentProtocol == PROTO_CRSF && strncmp(fcInfo.variant, "RTFL", 4) == 0) {
+                    fcTelemetryEnabled = true;
+                    prefs.putUChar(NVS_KEY_FC_TELEM, 1);
+                    events.add("FC on this line: switched ON by itself - Rotorflight answered");
+                }
             }
             break;
         case MSP_FC_VERSION:

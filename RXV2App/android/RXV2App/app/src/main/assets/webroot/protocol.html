@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Output protocol &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=416">
-<script src="/app.js?v=416" defer></script>
+<link rel=stylesheet href="/style.css?v=417">
+<script src="/app.js?v=417" defer></script>
 </head>
 <body>
 <button class=helpBtn aria-label=Help title=Help onclick="LDRC.showHelp()">?</button>
@@ -46,7 +46,7 @@
                 <label style="display:flex;align-items:flex-start">
                     <input type=checkbox name=fc_telem value=1 id=fcTelem checked style="margin:.25em .6em 0 0;transform:scale(1.2)">
                     <span><b>A flight controller (Rotorflight) is on this line</b><br>
-                    <span class=muted style="font-size:.88em">Ticked: its telemetry (volts, RPM, battery) goes to the transmitter, its own failsafe is in charge, its tuning pages work here, and at a power-up without the transmitter the receiver holds the flight controller&rsquo;s throttle channel low and centres the rest. Untick ONLY for a plain CRSF&rarr;PWM servo converter (some echo junk that reads as phantom telemetry): the receiver then parses nothing from this line, runs its own failsafe, and holds the <b>Throttle channel</b> setting low at power-up &mdash; on a Rotorflight heli that is the collective.</span></span>
+                    <span class=muted style="font-size:.88em">Ticked: its telemetry (volts, RPM, battery) goes to the transmitter, its own failsafe is in charge, its tuning pages work here, and at a power-up without the transmitter the receiver holds the flight controller&rsquo;s throttle channel low and centres the rest. It switches itself on when a Rotorflight flight controller answers on this line or on the USB socket. Untick ONLY for a plain CRSF&rarr;PWM servo converter (some echo junk that reads as phantom telemetry): the receiver then forgets the flight controller it saw, parses nothing from this line, runs its own failsafe, and holds the <b>Throttle channel</b> setting low at power-up &mdash; on a Rotorflight heli that is the collective.</span></span>
                 </label>
             </p>
             <button class="btn btn-fw" type=submit id=saveBtn><span class=ico>&#128190;</span>Save</button>
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let seen = false;
             try { const s = await (await fetch('/api/state.json', { cache: 'no-store' })).json(); const fc = s.fcinfo || {};
                   seen = !!(fc.detected || (fc.throttle_ch | 0) >= 1 || (fc.gov_mode !== undefined && fc.gov_mode !== 255)); } catch (e) {}
-            if (seen && !(await LDRC.confirm('A Rotorflight flight controller has answered on this line. Unticked, the receiver parses NOTHING from it: no volts, RPM or battery reach the transmitter, the receiver’s own failsafe replaces Rotorflight’s, and at a power-up without the transmitter it holds the Throttle channel setting low — the collective on a Rotorflight heli. Untick only for a plain servo converter. Untick anyway?',
+            if (seen && !(await LDRC.confirm('A Rotorflight flight controller has answered on this line. Unticked, the receiver parses NOTHING from it: no volts, RPM or battery reach the transmitter, the receiver’s own failsafe replaces Rotorflight’s, and at a power-up without the transmitter it holds the Throttle channel setting low — the collective on a Rotorflight heli. Untick only for a plain servo converter: the receiver then forgets this flight controller until one answers again. Untick anyway?',
                                               { title: 'Flight controller on this line', icon: '⚠️', yes: 'Untick anyway', kind: 'danger' }))) {
                 document.getElementById('fcTelem').checked = true; paintSaveBtn(f); return;
             }

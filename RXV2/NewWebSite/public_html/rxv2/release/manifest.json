@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.919-fc-line-auto-on",
+      "url": "https://messiter.com/rxv2/release/v0.9.919/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.919/littlefs.bin",
+      "fs_md5": "e9a0ab2ece7b9e4585440e99cdae701f",
+      "notes": "0.9.919: the 'a flight controller is on this line' switch turns itself on when Rotorflight answers (on the line or over USB) or was seen here before; unticking it on purpose forgets the flight controller, so the receiver never fights the pilot. A plain servo converter never answers MSP, so it is never mistaken for one."
+    },
+    {
       "name": "RXV2-0.9.918-fc-line-switch",
       "url": "https://messiter.com/rxv2/release/v0.9.918/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.918/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.908/littlefs.bin",
       "fs_md5": "0a78a584c16f0bf3e8f67b6156fc3f9a",
       "notes": "With the transmitter on, the tuning pages now open on the bank its switch has the flight controller on, read fresh, and keep following the switch over WiFi too. Before, a page opened on the bank it remembered and sent the flight controller there, so the switch seemed ignored until it was moved."
-    },
-    {
-      "name": "RXV2-0.9.907-flight-index",
-      "url": "https://messiter.com/rxv2/release/v0.9.907/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.907/littlefs.bin",
-      "fs_md5": "162aafdda5213cb2dda9856a8cd56439",
-      "notes": "The flight list now comes from a RAM index: the receiver no longer stops for half a second when the app asks for its flights (a bind failed on the bench while the phone was connected). Bluetooth replies wait 40 ms at most with a transmitter linked, and a loop stall names the request."
     }
   ],
   "rotorflight": {
