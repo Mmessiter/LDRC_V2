@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.184"
+#define SCREEN_VERSION "1.11.185"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1089,6 +1089,7 @@ static int16_t toneShape(int16_t x);                   // (1.11.116, below audio
 static int audioId = -1;                               // the clip playing, for /status
 static uint32_t bootMs = 0;                            // when loop() first ran (ms after power), for /status
 static std::string bootLog;                            // the first ~4 kB of traffic after power, timestamped: GET /bootlog
+static std::string bootBefore;                         // (1.11.185) what the screen was doing before a panic or watchdog restart (/status "before")
 static void blog(const char *tag, const std::string &what) { if (bootLog.size() > 4000) return; char b[24]; snprintf(b, sizeof(b), "%lu %s ", (unsigned long) millis(), tag); bootLog += b; bootLog += what.substr(0, 60); bootLog += "\n"; }
 static std::string oddTrace;                           // commands the parser did not understand, for GET /status
 static std::string radioLog;                           // when the radio went on and off, and why: GET /radiolog (the last twenty lines)
@@ -3289,6 +3290,7 @@ static void webBegin() {
                  page.name.c_str(), page.id, (unsigned long) cmdCount, (unsigned long) badCount, ESP.getMinFreeHeap(), ESP.getFreeHeap(), ESP.getFreePsram(), sdOk, touchOk, WiFi.localIP().toString().c_str(), audioId, (unsigned long) bootMs, (unsigned long) millis());
         std::string out = b;                                 // (1.11.3) the Bluetooth pipe's state, readable with the door shut
         out.pop_back(); out += ",\"ble\":" + bleStatusJson();
+        if (!bootBefore.empty()) { out += ",\"before\":\""; for (char c : bootBefore) if (c != '"' && c != '\\') out += c; out += "\""; }   // (1.11.185)
         out += ",\"rst\":" + std::to_string((int) esp_reset_reason());   // (1.11.7) why we last started: 1 power, 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
         out += ",\"stack\":{\"loop\":" + std::to_string((unsigned) uxTaskGetStackHighWaterMark(NULL)) + ",\"ble\":" + std::to_string(bleStackSpare()) + "}";   // (1.11.8) the least each task's stack has ever had to spare, in bytes
         out += ",\"largest\":" + std::to_string((unsigned) ESP.getMaxAllocHeap()) + ",\"rssi\":" + std::to_string((int) WiFi.RSSI());   // (1.11.11) the largest piece of free memory (a TLS connection wants ~45 kB), and the WiFi signal
@@ -4262,6 +4264,13 @@ void setup() {
         for (int i = 0; i < rtcGlobalN; ++i) { rtcGlobals[i].name[sizeof(RtcGlobal::name) - 1] = 0; if (rtcGlobals[i].name[0]) { kept[rtcGlobals[i].name].ints["val"] = rtcGlobals[i].val; ++n; } }
         blog("boot", "globals kept through the restart: " + std::to_string(n));
     } else if (!warm) { rtcGlobalsMagic = RTC_GLOBALS_MAGIC; rtcGlobalN = 0; }
+    if (why == ESP_RST_PANIC || why == ESP_RST_INT_WDT || why == ESP_RST_TASK_WDT || why == ESP_RST_WDT) {   // (1.11.185) what we were doing when it died
+        std::string b = "before the restart (rst " + std::to_string((int) why) + "): the loop was at " + (rtcBusyWhat < BUSY_N ? BUSY_NAMES[rtcBusyWhat] : "?");
+        if (rtcBleStepMagic == 0x4C444253) { rtcBleStep[sizeof(rtcBleStep) - 1] = 0; b += std::string(", Bluetooth's last step: ") + rtcBleStep + " at " + std::to_string(rtcBleStepAt) + " ms"; }
+        if (rtcMagic == 0x4C445243) b += std::string(", page ") + rtcPage;
+        bootBefore = b; for (size_t i = 0; i < b.size(); i += 60) blog("boot", b.substr(i, 60));
+    }
+    rtcBusyWhat = BUSY_IDLE; rtcBleStepMagic = 0;
     const std::string last = rtcPage;
     if (warm && !pageNames.empty()) { if (!last.empty() && pageIds.count(last)) loadPage(last); else loadPage(pageNames[0]); }   // cold: the Teensy sends its page
     if (why != ESP_RST_POWERON && rtcDimMagic == RTC_DIM_MAGIC) { sysDim = constrain(rtcDim, 0, 100); blDark = false; blWant = sysDim * 255 / 100; blFadeTo(blWant, 500); }   // our own restart: back to the brightness it had, gently

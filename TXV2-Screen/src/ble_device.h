@@ -34,7 +34,11 @@ static volatile bool bleWifiKick = false; static volatile bool bleWifiKickSleep 
 // 1.11.13 (Malcolm: "Sometimes connecting to Bluetooth takes a very long time, and sometimes it's quicker"): the last
 // 24 happenings with their time, from either side, in /ble/status and /status ("log"): each join's timeline.
 static std::string bleLog[24]; static int bleLogN = 0;
+// (1.11.185) Bluetooth's last step, kept through a restart (RTC memory, as busy_what.h's tag): the next boot's log names it
+RTC_NOINIT_ATTR static char rtcBleStep[40]; RTC_NOINIT_ATTR static uint32_t rtcBleStepAt; RTC_NOINIT_ATTR static uint32_t rtcBleStepMagic;
+static void bleStep(const char *what) { strlcpy(rtcBleStep, what, sizeof(rtcBleStep)); rtcBleStepAt = millis(); rtcBleStepMagic = 0x4C444253; }
 static void bleNote(const std::string &what) {
+    bleStep(what.c_str());
     if (!bleMutex) bleMutex = xSemaphoreCreateMutex();
     if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(50)) == pdTRUE) { bleLog[bleLogN % 24] = std::to_string(millis()) + " " + what; ++bleLogN; xSemaphoreGive(bleMutex); }
 }
@@ -269,12 +273,12 @@ static void bleTxServe() {                                     // in the task: t
 static void bleTask(void *) {
     for (;;) {
         if (bleOrder == 2) {                                   // off: down with the stack (a failed join keeps its reason until then)
-            bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); NimBLEDevice::deinit(true); bleClient = nullptr; bleState = BLE_OFF; bleWifiKick = true; bleWifiKickSleep = true; bleNote("off");   // (deinit deletes every client)
+            bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); bleStep("deinit"); NimBLEDevice::deinit(true); bleStep("deinit done"); bleClient = nullptr; bleState = BLE_OFF; bleWifiKick = true; bleWifiKickSleep = true; bleNote("off");   // (deinit deletes every client)
         } else if (bleOrder == 1) {
             bleOrder = 0;
             if (bleState == BLE_OFF || bleState == BLE_FAILED) {
                 bleState = BLE_STARTING; bleNote("starting");
-                if (!NimBLEDevice::isInitialized()) { NimBLEDevice::init("ldrc-screen"); NimBLEDevice::setMTU(247); }
+                if (!NimBLEDevice::isInitialized()) { bleStep("init"); NimBLEDevice::init("ldrc-screen"); NimBLEDevice::setMTU(247); bleStep("init done"); }
                 if (!bleJoin()) { bleLeave(); bleState = BLE_FAILED; }
             }
         } else if (bleReqPending && !bleReqDone && bleState == BLE_READY) bleServe();

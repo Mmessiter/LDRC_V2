@@ -11,4 +11,13 @@ enum : uint8_t { BUSY_IDLE = 0, BUSY_SD = 1, BUSY_WB = 2, BUSY_COPY = 3, BUSY_RE
 static const char *const BUSY_NAMES[BUSY_N] = { "idle", "sd", "wb", "copy", "rest", "draw", "nvs", "bg", "present", "handle", "serial", "link", "wifi", "pics", "flight", "film", "audio", "prefs", "touch", "timers", "flip", "ensure", "cli" };
 static volatile uint8_t busyWhat = BUSY_IDLE;
 static volatile uint32_t busySeen = 0;                 // every tag entered since the EOF interrupt last looked (a short mover that ended before the EOF still shows here)
-struct Busy { uint8_t was; explicit Busy(uint8_t w) : was(busyWhat) { busyWhat = w; busySeen |= 1u << w; } ~Busy() { busyWhat = was; } };
+// (1.11.185, Malcolm 6 Nov 2026: twice on leaving the Rotorflight pages "junk for a moment or two then the front screen" -
+// the interrupt watchdog, rst 5, and no core dump to say where) The tag is kept in RTC memory too: it outlives a restart,
+// so the next boot's log says what the loop was doing when it died.
+#ifdef ARDUINO
+#include <esp_attr.h>
+RTC_NOINIT_ATTR static volatile uint8_t rtcBusyWhat;
+#else
+static volatile uint8_t rtcBusyWhat;
+#endif
+struct Busy { uint8_t was; explicit Busy(uint8_t w) : was(busyWhat) { busyWhat = w; rtcBusyWhat = w; busySeen |= 1u << w; } ~Busy() { busyWhat = was; rtcBusyWhat = was; } };
