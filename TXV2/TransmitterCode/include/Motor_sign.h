@@ -231,9 +231,12 @@ void SafetyOffWarningTick() // the main loop's regular round (beside CheckBatter
         return;
     }
     if (CurrentView == FRONTVIEW && !BatteryWarningShown)
-    {
+    { // B193 (Malcolm: "Safety is off!! (Arming is on!!) for ultimate clarity"): the two in turn, a second each - the
+      // box is one line of 190 px and "SAFETY IS OFF!!" alone is 199 (fontw.py 6): these are 168 and 158
+        static bool second = false;
+        second = !second;
         SendCommand(WarnNow);
-        SendText((char *)"Warning", (char *)"SAFETY IS OFF!!");
+        SendText((char *)"Warning", (char *)(second ? "ARMING ON!!" : "SAFETY OFF!!"));
     }
     if (SafetyWarnSaid < 3 && (int32_t)(millis() - SafetyWarnNextSay) >= 0)
     {
