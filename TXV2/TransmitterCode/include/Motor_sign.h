@@ -198,20 +198,40 @@ void MotorEnabledHasChanged() //
 // in the air that comes back is not one) with a safety switch defined and OFF: "Safety off" is said (up to three times,
 // 8 s apart) and the front page's box reads SAFETY IS OFF!! until the safety goes on, the motor goes on, or the model
 // goes. A warning only: nothing waits, nothing is blocked (Priority One - the sticks are never held up).
+// B194 (Malcolm, 6 Nov 2026, having tried B193: "more obvious, please, with a warning sound and a bright red colour ... in
+// the case of a Rotorflight helicopter we really need the warning BEFORE we have connected ... warn before connection and
+// disallow connection"):
+//  - A ROTORFLIGHT model with a safety switch defined and OFF is NOT CONNECTED: the transmitter sends nothing (SafetyHold,
+//    SendData) until the safety goes on. Never for a model lost less than a minute ago (a drop-out in the air comes back
+//    whatever the switches say - Priority One), never in a receiver update, a buddy session, or outside the normal mode.
+//  - The front page's box turns BRIGHT RED and reads SAFETY OFF!! / ARMING ON!! (and NO LINK while held), a second each;
+//    the "wah-wah" warning and then "Safety off" are played, three times 8 s apart. On every page the sounds; the box on
+//    the front page.
+//  - Any other model with a safety switch still connects, and gets the same red box and sounds (B192's fresh connection).
+// Nothing ever waits: a warning and a silence, never a box to press.
 bool SafetyOffWarning = false;
+bool SafetyHold = false;
 static uint32_t SafetyWarnNextSay = 0;
 static uint8_t SafetyWarnSaid = 0;
+static uint8_t SafetyWarnStep = 0;    // 0: the wah-wah next, 1: the words next
 static uint32_t LastGreenLostMs = 0;  // (RedLedOn: the moment the last connection was lost; 0 = none yet)
 static int LastGreenModel = -1;
 void NoteConnectionLost() { LastGreenLostMs = millis() | 1; }
+static bool LostJustNow() { return LastGreenModel == (int)ModelNumber && LastGreenLostMs && (millis() - LastGreenLostMs) <= 60000UL; }
+static void SafetyWarnStart()
+{
+    SafetyWarnSaid = 0;
+    SafetyWarnStep = 0;
+    SafetyWarnNextSay = millis();
+}
 void SafetyOffAtConnect() // GreenLedOn, once per connection
 {
-    const bool fresh = LastGreenModel != (int)ModelNumber || !LastGreenLostMs || (millis() - LastGreenLostMs) > 60000UL;
+    const bool fresh = !LostJustNow();
     LastGreenModel = (int)ModelNumber;
     if (!fresh || !SafetyIsOff())
         return;
     SafetyOffWarning = true;
-    SafetyWarnSaid = 0;
+    SafetyWarnStart();
     SafetyWarnNextSay = millis() + 2500; // (after "Model matched - connected")
     if (UseLog)
     {
@@ -219,31 +239,74 @@ void SafetyOffAtConnect() // GreenLedOn, once per connection
         LogText(t, strlen(t), true);
     }
 }
-void SafetyOffWarningTick() // the main loop's regular round (beside CheckBatteryStates)
+void SafetyHoldUpdate() // GetBank, every pass, before anything else
 {
-    if (!SafetyOffWarning)
-        return;
-    if (!LedWasGreen || !SafetyIsOff() || MotorEnabled)
+    // A start the transmitter did not choose (the power went - a pulled battery, a brown-out, a crash: no reason was
+    // written on the way out) may be IN THE AIR: until its first connection the model is never held - it gets B192's
+    // warning once connected instead.
+    const bool unexplainedStart = LastOffReason == OFF_NONE && LastGreenModel < 0;
+    const bool hold = RotorFlight_V && SafetyIsOff() && !LedWasGreen && !LostJustNow() && !unexplainedStart && !BuddyPupilOnWireless &&
+                      !ReceiverUpdateBusy() && CurrentMode == NORMAL;
+    if (hold && !SafetyHold)
     {
+        SafetyWarnStart();
+        if (UseLog)
+        {
+            char t[] = "NOT CONNECTING: Rotorflight model, safety OFF";
+            LogText(t, strlen(t), true);
+        }
+    }
+    SafetyHold = hold;
+}
+void SafetyOffWarningTick() // the main loop's once-a-second round (beside CheckBatteryStates)
+{
+    static bool shown = false;
+    static uint8_t k = 0;
+    if (SafetyOffWarning && (!LedWasGreen || !SafetyIsOff() || MotorEnabled))
         SafetyOffWarning = false;
-        if (CurrentView == FRONTVIEW && !(RotorFlight_V && LedWasGreen) && !BatteryWarningShown)
-            SendCommand(WarnOff); // (a Rotorflight model's box goes back to the ESC temperature at its next second)
+    if (!SafetyHold && !SafetyOffWarning)
+    {
+        if (shown)
+        {
+            shown = false;
+            if (CurrentView == FRONTVIEW)
+            {
+                SendCommand((char *)"Warning.bco=4426"); // (the box's own navy: the theme maps it back)
+                if (!(RotorFlight_V && LedWasGreen) && !BatteryWarningShown)
+                    SendCommand(WarnOff); // (a Rotorflight model's box goes back to the ESC temperature at its next second)
+            }
+        }
         return;
     }
-    if (CurrentView == FRONTVIEW && !BatteryWarningShown)
-    { // B193 (Malcolm: "Safety is off!! (Arming is on!!) for ultimate clarity"): the two in turn, a second each - the
-      // box is one line of 190 px and "SAFETY IS OFF!!" alone is 199 (fontw.py 6): these are 168 and 158
-        static bool second = false;
-        second = !second;
-        SendCommand(WarnNow);
-        SendText((char *)"Warning", (char *)(second ? "ARMING ON!!" : "SAFETY OFF!!"));
+    shown = true;
+    if (CurrentView == FRONTVIEW)
+    {
+        if (BatteryWarningShown)
+            SendCommand((char *)"Warning.bco=4426"); // the battery has the box
+        else
+        { // B193: the box is one line of 190 px ("SAFETY IS OFF!!" is 199, fontw.py 6): 168, 158 and 100
+            k = (k + 1) % (SafetyHold ? 3 : 2);
+            SendCommand((char *)"Warning.bco=63488"); // bright red
+            SendCommand(WarnNow);
+            SendText((char *)"Warning", (char *)(k == 0 ? "SAFETY OFF!!" : k == 1 ? "ARMING ON!!" : "NO LINK"));
+        }
     }
     if (SafetyWarnSaid < 3 && (int32_t)(millis() - SafetyWarnNextSay) >= 0)
     {
         Force_Early_Sound = true;
-        PlaySound(SAFEOFF);
-        ++SafetyWarnSaid;
-        SafetyWarnNextSay = millis() + 8000;
+        if (SafetyWarnStep == 0)
+        {
+            PlaySound(WHAHWHAHMSG); // the warning sound first
+            SafetyWarnStep = 1;
+            SafetyWarnNextSay = millis() + 1500;
+        }
+        else
+        {
+            PlaySound(SAFEOFF); // then the words
+            SafetyWarnStep = 0;
+            ++SafetyWarnSaid;
+            SafetyWarnNextSay = millis() + 8000;
+        }
     }
 }
 //************************************************************************************************************/

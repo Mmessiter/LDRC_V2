@@ -449,7 +449,7 @@ FASTRUN void SendData()
 
     if ((millis() - LastPacketSentTime) < FHSS_data::PaceMaker)
         return;
-    if (SendNoData || ReceiverUpdateQuiet)
+    if (SendNoData || ReceiverUpdateQuiet || SafetyHold) // (B194: a Rotorflight model with its safety off is not connected - Motor_sign.h)
     { // Silent on purpose (the motor-switch rule, or V1B's receiver update - RxUpdate.h). The clock of the last packet
       // moves all the same: ManageTransmitter() stands aside whenever a packet is "due", and with this clock frozen it
       // stood aside for ever - no switches read, no power button, no clock, and nothing that could end the silence

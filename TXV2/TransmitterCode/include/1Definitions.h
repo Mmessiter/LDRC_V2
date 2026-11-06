@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B193 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B194 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -674,6 +674,7 @@ enum
     OFF_FIRMWARE_SWAP = 5,    // a restart into new (or previous) firmware
 };
 void NoteWhyOff(uint8_t why);
+extern uint8_t LastOffReason; // FlightGuard.h (B194: a start nobody chose never holds the link)
 // V1B B14: the breadcrumb - where the code is, kept on the clock's coin cell (see FlightGuard.h, part 4).
 enum Crumb : uint8_t
 {
@@ -1250,6 +1251,9 @@ bool SafetyIsOff();
 extern bool SafetyOffWarning;  // B192: Motor_sign.h - the front page box says SAFETY IS OFF!! (a fresh connection with the safety off)
 void SafetyOffAtConnect();
 void SafetyOffWarningTick();
+extern bool SafetyHold; // B194: a Rotorflight model with its safety off is not connected (SendData sends nothing)
+void SafetyHoldUpdate();
+bool ReceiverUpdateBusy(); // RxUpdate.h
 void NoteConnectionLost();
 bool RadiosMustBeOff();                       // FlightGuard.h: safety off (or, with no safety, motor on)
 bool ModelSeemsArmed(char *why, size_t n);    // B45: Parameters.h - the Rotorflight pages' refusal, with its reason

@@ -5116,6 +5116,7 @@ void ResetMotorTimer()
 void GetBank() // ... and the other three switches
 {
     CRUMB(CRUMB_BANK);
+    SafetyHoldUpdate(); // B194: (first: outside the normal mode it lets go)
     if ((CurrentMode != NORMAL) && (CurrentMode != LISTENMODE))
         return; // not needed if calibrating
 

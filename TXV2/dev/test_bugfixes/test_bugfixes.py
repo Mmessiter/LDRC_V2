@@ -192,6 +192,7 @@ static void ReadTheSwitchesAndTrims() {}
 static void LogNewRateInUse() {} static void ShowRatesBank() {} static void ShowRatesAdvancedBank() {} static void ShowRFRate() {} static void EasyBankChanged() {}
 static void ReadBuddySwitch() {} static void ReadBankSwitch() {} static void ReadChannelSwitches9to12() {} static void BankHasChanged() {}
 static void SafetySwitchChanged() { ++safetyChanges; }
+static void SafetyHoldUpdate() {} // B194: Motor_sign.h (its own test: test_safetyhold)
 static void LogTimer(int) {} static void LogRPM(uint32_t) {} static void LogMotor(int) {}
 static void ForceDataRedisplay() {} static void UpdateTrimView() {} static void FixCHNames() {} static void DualRatesRefresh() {} static void UpdateModelsNameEveryWhere() {}
 static void DrawFhssBox() {} static void DoScanInit() {} static void BlueLedOn() {} static void ClearText() {}
