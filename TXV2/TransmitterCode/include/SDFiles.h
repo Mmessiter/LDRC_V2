@@ -123,6 +123,57 @@ void DeleteThisLogFile()
         LoadFileSelector();
     }
 }
+/******************************************************************************************************************************/
+// B190 (Malcolm, 6 Nov 2026: "Please add one more button to this screen, marked delete all. After confirmation, it should
+// delete all the log files."): the Log files page's "Delete all" (code 231) - every .LOG in /log/ after ONE question.
+// Today's log is among them, so the logger's handle is shut first; it opens a fresh file at its next line.
+// BuildDirectory lists at most MAXBACKUPFILES at a time, so the list is read again until it is empty (or nothing went).
+void DeleteAllLogFiles()
+{
+    char pLogFiles[] = "page LogFiles";
+    char t0[] = "t0";
+    char LogfilesTitle[] = "Log files";
+    char pprompt[80];
+    char fn[16];
+    strcpy(MOD, ".LOG");
+    BuildDirectory();
+    if (ExportedFileCounter > 0)
+    {
+        if (ExportedFileCounter == 1)
+            strcpy(pprompt, "Delete the only log file?");
+        else
+            snprintf(pprompt, sizeof(pprompt), "Delete ALL %d log files?", ExportedFileCounter);
+        if (GetConfirmation(pLogFiles, pprompt))
+        {
+            CloseLogWriteFile(); // today's file too: the logger starts a new one at its next line
+            CloseLogFile();      // and the viewer's
+            for (int pass = 0; pass < 20; ++pass)
+            {
+                BuildDirectory();
+                const int before = ExportedFileCounter;
+                if (!before)
+                    break;
+                for (int f = 0; f < before; ++f)
+                {
+                    strncpy(fn, TheFilesList[f], 12);
+                    fn[12] = 0;
+                    AddPath(fn);
+                    TINYCARD.remove(SearchFile);
+                    KickTheDog();
+                }
+                BuildDirectory();
+                if (ExportedFileCounter >= before)
+                    break; // nothing went (a card fault): never loop for ever
+            }
+            strcpy(TextFileName, ""); // a deleted file is not the one OK opens next
+        }
+    }
+    SendText(t0, LogfilesTitle);
+    strcpy(MOD, ".LOG");
+    BuildDirectory();
+    strcpy(Mfiles, "FilesBox");
+    LoadFileSelector();
+}
 // ******************************************************************************************************************************/
 /******************************************************************************************************************************/
 

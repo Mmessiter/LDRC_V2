@@ -1,6 +1,7 @@
 See and delete the transmitter's log files.||
 Touch a file, then press 'View' to read it, or 'Delete' to|
 remove it (you are asked first).|
+'Delete all' removes every log file, after one question.|
 'OK' goes back to the log viewer.||
 Each file is one day's log, named by its date: day, month, year.|
 So 01-10-26.LOG is 1 October 2026. Its size in KB is beside it.|

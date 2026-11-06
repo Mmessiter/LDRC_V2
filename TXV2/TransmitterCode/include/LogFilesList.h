@@ -44,6 +44,7 @@ void StartLogFilesListScreen()
         strcpy(MOD, ".TXT");
         SendCommand(b15off); // no deleting of help files!
         SendCommand(b1off);  // no help if viewing help already
+        SendCommand((char *)"vis b2,0"); // B190: no Delete all for help files either
         SendText(t0, HelpFilesTitle);
     }
     else

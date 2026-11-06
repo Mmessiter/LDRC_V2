@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B189 05/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B190 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1187,6 +1187,7 @@ void StartLogFilesListScreen();
 void EndLogFilesListScreen();
 void LoadNewLogFile();
 void DeleteThisLogFile();
+void DeleteAllLogFiles(); // B190: the Log files page's Delete all
 void SortDirectory();
 void ClearFilesList();
 FASTRUN void LogModelMatched();
