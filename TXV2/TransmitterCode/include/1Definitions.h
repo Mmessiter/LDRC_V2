@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B191 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B192 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -1247,6 +1247,10 @@ void PipeTick();                              // B44: renew the ask to the recei
 bool PipePageShowing();                       // B49: Model setup and the Rotorflight pages
 bool SafetyIsDefined();                       // FlightGuard.h (B191: the Rotorflight menu's gate too)
 bool SafetyIsOff();
+extern bool SafetyOffWarning;  // B192: Motor_sign.h - the front page box says SAFETY IS OFF!! (a fresh connection with the safety off)
+void SafetyOffAtConnect();
+void SafetyOffWarningTick();
+void NoteConnectionLost();
 bool RadiosMustBeOff();                       // FlightGuard.h: safety off (or, with no safety, motor on)
 bool ModelSeemsArmed(char *why, size_t n);    // B45: Parameters.h - the Rotorflight pages' refusal, with its reason
 void ShowPipeState();                         // B42: "By Bluetooth" / "By radio link" on the Rotorflight menu

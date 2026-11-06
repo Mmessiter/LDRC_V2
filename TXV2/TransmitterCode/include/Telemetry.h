@@ -461,7 +461,7 @@ void PopulateFrontView()
         SendText(FrontView_Connected, MsgBuddying);
     }
 
-    if (RotorFlight_V && LedWasGreen && !BatteryWarningShown && !CurrentWarningShownAt) // V1B B24: a battery warning has the box (B02: so has the current warning, for six seconds)
+    if (RotorFlight_V && LedWasGreen && !BatteryWarningShown && !CurrentWarningShownAt && !SafetyOffWarning) // V1B B24: a battery warning has the box (B02: so has the current warning, for six seconds)
     {
         char ESC_Temp_Buf[20];
         SendCommand((char *)"vis Warning,1");

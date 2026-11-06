@@ -192,6 +192,58 @@ void MotorEnabledHasChanged() //
     ShowMotorTimer();
 }
 //************************************************************************************************************/
+// B192 (Malcolm, 6 Nov 2026, Mehul's RAW420 with its safety switch the wrong way: "if we connect to a model ... and safety
+// is off at connection time, we should warn the user clearly 'safety is off!!' ... safety requires that we connect
+// disarmed every time, never armed."): a FRESH connection (this model not connected in the last minute - a drop-out
+// in the air that comes back is not one) with a safety switch defined and OFF: "Safety off" is said (up to three times,
+// 8 s apart) and the front page's box reads SAFETY IS OFF!! until the safety goes on, the motor goes on, or the model
+// goes. A warning only: nothing waits, nothing is blocked (Priority One - the sticks are never held up).
+bool SafetyOffWarning = false;
+static uint32_t SafetyWarnNextSay = 0;
+static uint8_t SafetyWarnSaid = 0;
+static uint32_t LastGreenLostMs = 0;  // (RedLedOn: the moment the last connection was lost; 0 = none yet)
+static int LastGreenModel = -1;
+void NoteConnectionLost() { LastGreenLostMs = millis() | 1; }
+void SafetyOffAtConnect() // GreenLedOn, once per connection
+{
+    const bool fresh = LastGreenModel != (int)ModelNumber || !LastGreenLostMs || (millis() - LastGreenLostMs) > 60000UL;
+    LastGreenModel = (int)ModelNumber;
+    if (!fresh || !SafetyIsOff())
+        return;
+    SafetyOffWarning = true;
+    SafetyWarnSaid = 0;
+    SafetyWarnNextSay = millis() + 2500; // (after "Model matched - connected")
+    if (UseLog)
+    {
+        char t[] = "SAFETY WAS OFF AT CONNECTION";
+        LogText(t, strlen(t), true);
+    }
+}
+void SafetyOffWarningTick() // the main loop's regular round (beside CheckBatteryStates)
+{
+    if (!SafetyOffWarning)
+        return;
+    if (!LedWasGreen || !SafetyIsOff() || MotorEnabled)
+    {
+        SafetyOffWarning = false;
+        if (CurrentView == FRONTVIEW && !(RotorFlight_V && LedWasGreen) && !BatteryWarningShown)
+            SendCommand(WarnOff); // (a Rotorflight model's box goes back to the ESC temperature at its next second)
+        return;
+    }
+    if (CurrentView == FRONTVIEW && !BatteryWarningShown)
+    {
+        SendCommand(WarnNow);
+        SendText((char *)"Warning", (char *)"SAFETY IS OFF!!");
+    }
+    if (SafetyWarnSaid < 3 && (int32_t)(millis() - SafetyWarnNextSay) >= 0)
+    {
+        Force_Early_Sound = true;
+        PlaySound(SAFEOFF);
+        ++SafetyWarnSaid;
+        SafetyWarnNextSay = millis() + 8000;
+    }
+}
+//************************************************************************************************************/
 void SafetySwitchChanged()
 {
     ShowSafety();

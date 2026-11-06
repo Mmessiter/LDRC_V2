@@ -297,6 +297,7 @@ void RedLedOn() // heer
     ThisGap = 0;
     LedWasRed = true;
     EnsureMotorIsOff();
+    if (wasGreen) NoteConnectionLost(); // B192: (a connection back within a minute is not a fresh one)
     if (wasGreen) RfModelGone();   // B90: a Rotorflight page in view goes over to the backup file (PipeHttp.h)
 }
 
@@ -356,6 +357,7 @@ void GreenLedOn()
         {
             LogConnection();
         }
+        SafetyOffAtConnect(); // B192: a fresh connection with the safety off is warned of
 
         analogWrite(BLUELED, 0);
         analogWrite(REDLED, 0);
@@ -5569,6 +5571,7 @@ void FASTRUN ManageTransmitter()
         GetFrameRate();       // Get the frame rate
         CheckScreenTime();    // Check if screen needs to be turned off
         CheckBatteryStates(); // Check battery states
+        SafetyOffWarningTick(); // B192: a fresh connection with the safety off - said and shown until it goes on
         if (CurrentView != BLANKVIEW)
         {
             ReadTime();
