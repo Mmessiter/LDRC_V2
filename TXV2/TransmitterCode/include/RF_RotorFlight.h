@@ -34,11 +34,17 @@ FLASHMEM void RotorFlightStart()
     RfLeaveAfterSave = false;   // B102: no page's "Save now?" is pending once the menu is open
     char Vbuf[15];
 
-    if (MotorEnabled || !SafetyON)
+    // B191 (Malcolm, 6 Nov 2026, Mehul's RAW420: "the rotorflight button on this screen did nothing!"): the gate is the
+    // radios' rule (FlightGuard.h). It was "motor on OR safety not on" - and with NO safety switch defined the safety
+    // never reads on, so a model with only a motor switch could never open the menu while connected (silently, B02).
+    // Now: a defined safety switch must be on; with none, the motor must be off. And a refusal now stops (it opened
+    // the page anyway after the box when no model was connected).
+    if (MotorEnabled || (SafetyIsDefined() && SafetyIsOff()))
     {
         if (LedWasGreen)
             return; // B02: with the model flying the touch is ignored - a box that waits for OK would stop the switches being read
         MsgBox(pRXSetupView, (char *)(MotorEnabled ? "The motor is ON.\r\nSwitch it off first." : "The safety is off.\r\nSafety on first.")); // (B45: which one, so a refusal explains itself)
+        return;
     }
 
     SendCommand((char *)"page RFView");
