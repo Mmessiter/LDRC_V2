@@ -38,7 +38,7 @@
 <!-- TODO Malcolm: a better daylight photo of the V2 transmitter, ideally beside a helicopter, when you have one. -->
 
 - **The main board flies the model.** A Teensy 4.1 reads the sticks, does the mixing and runs the radio link.
-- **The screen talks to the pilot.** An Elecrow CrowPanel 5.0 (ESP32-S3) draws the pages and looks after WiFi, Bluetooth and updates.
+- **The screen talks to the pilot.** An Elecrow 5-inch ESP32-S3 touchscreen (buy the **16 MB** one, SKU DLE06050B: the older 4 MB CrowPanel 5.0 gets fixes only) draws the pages and looks after WiFi, Bluetooth and updates.
 - FrSky M9 Hall-sensor sticks, digital trims, eight three-position switches (four can be knobs), a 3D-printed case.
 - **A Version 1 transmitter becomes a Version 2.** Your models, main board, sticks and switches stay. Print the Version 2 case front from [TXV2/STL files/V2](TXV2/STL%20files/V2): it holds the new screen. Fit the screen, and update the firmware.
   <!-- TODO Malcolm: does a Version 1 owner also need the Version 2 case back (TX_BACK12a_V2), or only the front? Until you say, these READMEs and the website say front only. If yes, say "front and back" in all three READMEs and on the website. -->

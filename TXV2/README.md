@@ -98,7 +98,7 @@
 | Main board | Printed circuit board from the Gerbers in `Circuits/Transmitter - CADCAM` | 1 | 2 layers, about 83 × 91 mm. Any PCB maker |
 | Microcontroller | PJRC **Teensy 4.1** | 1 | |
 | Radio | Ebyte **E01-ML01DP5** (nRF24L01+ with amplifier) | 1 | In a 2 × 4 socket |
-| Screen | For a new transmitter: Elecrow's **5-inch IPS panel, SKU DLE06050B** (ESP32-S3 N16R8: 16 MB flash, 8 MB PSRAM). Also supported: the **CrowPanel 5.0" ESP32 HMI, SKU DIS07050H, N4R8** (4 MB flash) | 1 | The firmware tells the two apart by itself; print the case front for the one you have. Not Elecrow's "Advance" series: its card slot is on other pins |
+| Screen | **Buy the 16 MB screen:** Elecrow's **5-inch IPS panel, SKU DLE06050B** (ESP32-S3 N16R8: 16 MB flash, 8 MB PSRAM). New features need it. The older **CrowPanel 5.0" ESP32 HMI, SKU DIS07050H, N4R8** (4 MB flash) is full: it gets fixes only, no new features. Do not buy it | 1 | The firmware tells the two apart by itself; print the case front for the one you have. Not Elecrow's "Advance" series: its card slot is on other pins |
 | microSD card | For the Teensy. FAT32 or exFAT | 1 | |
 | microSD card | For the screen. **FAT32** (cards over 32 GB come as exFAT: reformat them) | 1 | The screen fills it itself |
 | Power switch | **Pololu 2808** pushbutton power switch | 1 | |

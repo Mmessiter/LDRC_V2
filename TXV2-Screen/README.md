@@ -6,8 +6,8 @@
 
 **The screen is an Elecrow CrowPanel 5.0** with this firmware on it.
 
-- **What the panel is:** an ESP32-S3 (WROOM-1-N4R8: 4 MB flash, 8 MB PSRAM), a 5-inch 800 × 480 display, GT911 touch, WiFi, Bluetooth, an NS4168 speaker amplifier, a microSD slot and a serial port on the back.
-- **Two boards are supported.** For a new transmitter buy Elecrow's **5-inch IPS panel, SKU DLE06050B** (16 MB flash): the firmware's FULL build, with room to spare. The **CrowPanel 5.0, SKU DIS07050H, N4R8** (4 MB flash) is the board the first transmitters have, and stays supported. The firmware tells them apart at start-up. Not Elecrow's "Advance" series: its card slot and speaker are on other pins.
+- **What the panel is:** an ESP32-S3 (N16R8: 16 MB flash, 8 MB PSRAM; the older board N4R8, 4 MB flash), a 5-inch 800 × 480 display, GT911 touch, WiFi, Bluetooth, an NS4168 speaker amplifier, a microSD slot and a serial port on the back.
+- **Buy the 16 MB screen:** Elecrow's **5-inch IPS panel, SKU DLE06050B** (16 MB flash): the firmware's FULL build, with room to spare. New features need it. The older **CrowPanel 5.0, SKU DIS07050H, N4R8** (4 MB flash) is full: since November 2026 it gets fixes only, no new features. Do not buy it for a new transmitter. The firmware tells them apart at start-up. Not Elecrow's "Advance" series: its card slot and speaker are on other pins.
 - **What the firmware does:** it pretends to be the Nextion display that Version 1 used. The Teensy 4.1 sends the same display commands it always has (921,600 baud). The screen draws the transmitter's 76 pages from their definitions on its card, and answers with exactly the bytes a Nextion would.
 - **On top of that it has pages of its own:** updates from the internet, WiFi, themes, flight screens with round dials, the picture chooser, Rotorflight's command line, the help pages' animations, and Pong.
 - **It is also the Bluetooth link to the receiver.** All Rotorflight editing on the transmitter goes over it, not over the flying link.
