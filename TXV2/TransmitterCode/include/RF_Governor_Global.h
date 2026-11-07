@@ -2,7 +2,9 @@
 // RF_Governor_Global.h
 // Handles global/config parameters for the Rotorflight Governor on the Nextion display.
 // Config parameters — MSP cmd 142, payload bytes [18]-[41]
-// Off-screen (not editable): Startup [20-21], RPM/Pwr/D/FF/TTA filters [34-38]
+// B195 (Malcolm, 6 Nov 2026, the Rotorflight gap list): on a 16 MB screen (ScreenIsBig) Start-up [20-21] joins the General
+// column (n16) and the five filters [34-38] are the page's Filters tab (n23 RPM, n24 power, n25 D x0.1 Hz, n26 FF, n27 TTA;
+// the tabs are the page's own script). On a 4 MB screen the page hides them itself (ldrcmb < 16) and they are kept as read.
 // Profile-specific parameters are handled in RF_Governor_Profile.h
 // B165 (1 Nov 2026): A SAVE IS READ BACK, as on every other Rotorflight page (RF_Verify.h, VK_GOV_CFG). The three write
 // packets go as before; the page's own read is queued first (the stack sends it last) with an 8 s window - the receiver
@@ -154,12 +156,21 @@ FLASHMEM void LoadGovConfigWritePayload()
     GovWritePayload[18] = (uint8_t)GetValue((char *)"n14"); // Gov mode
     GovWritePayload[19] = (uint8_t)GetValue((char *)"n15"); // Handover thr %
 
-    // Startup ×.1s — off-screen, preserve from last FC read
-    GovWritePayload[20] = GovAckPayload[20];
-    GovWritePayload[21] = GovAckPayload[21];
+    const bool big = ScreenIsBig(); // B195: start-up and the filters are on the page only on a 16 MB screen
+    uint16_t v;
+    if (big)
+    {
+        v = (uint16_t)GetValue((char *)"n16"); // Start-up (whole seconds: the receiver turns them into tenths)
+        GovWritePayload[20] = (uint8_t)(v & 0xFF);
+        GovWritePayload[21] = (uint8_t)(v >> 8);
+    }
+    else
+    { // Startup — not on the page: preserve from last FC read
+        GovWritePayload[20] = GovAckPayload[20];
+        GovWritePayload[21] = GovAckPayload[21];
+    }
 
     // U16 fields — visible, editable
-    uint16_t v;
     v = (uint16_t)GetValue((char *)"n17"); // Spoolup ×.1%/s
     GovWritePayload[22] = (uint8_t)(v & 0xFF);
     GovWritePayload[23] = (uint8_t)(v >> 8);
@@ -184,12 +195,22 @@ FLASHMEM void LoadGovConfigWritePayload()
     GovWritePayload[32] = (uint8_t)(v & 0xFF);
     GovWritePayload[33] = (uint8_t)(v >> 8);
 
-    // Filter bytes — off-screen, preserve from last FC read
-    GovWritePayload[34] = GovAckPayload[34]; // RPM filter Hz
-    GovWritePayload[35] = GovAckPayload[35]; // Power filter Hz
-    GovWritePayload[36] = GovAckPayload[36]; // D filter ×.1Hz
-    GovWritePayload[37] = GovAckPayload[37]; // FF filter Hz
-    GovWritePayload[38] = GovAckPayload[38]; // TTA filter Hz
+    if (big)
+    { // B195: the Filters tab
+        GovWritePayload[34] = (uint8_t)GetValue((char *)"n23"); // RPM filter Hz
+        GovWritePayload[35] = (uint8_t)GetValue((char *)"n24"); // Power filter Hz
+        GovWritePayload[36] = (uint8_t)GetValue((char *)"n25"); // D filter ×.1Hz
+        GovWritePayload[37] = (uint8_t)GetValue((char *)"n26"); // FF filter Hz
+        GovWritePayload[38] = (uint8_t)GetValue((char *)"n27"); // TTA filter Hz
+    }
+    else
+    { // Filter bytes — not on the page: preserve from last FC read
+        GovWritePayload[34] = GovAckPayload[34]; // RPM filter Hz
+        GovWritePayload[35] = GovAckPayload[35]; // Power filter Hz
+        GovWritePayload[36] = GovAckPayload[36]; // D filter ×.1Hz
+        GovWritePayload[37] = GovAckPayload[37]; // FF filter Hz
+        GovWritePayload[38] = GovAckPayload[38]; // TTA filter Hz
+    }
 
     // Throttle section — visible, editable
     GovWritePayload[39] = (uint8_t)GetValue((char *)"n28"); // Throttle type
@@ -246,7 +267,8 @@ FLASHMEM void DisplayGovConfigValues(uint8_t n, uint8_t m)
         case 20:
             break; // lo byte of Startup
         case 21:
-            break; // hi byte of Startup — off-screen, not displayed
+            SendValue((char *)"n16", (uint16_t)GovAckPayload[20] | ((uint16_t)GovAckPayload[21] << 8));
+            break; // Startup (s) — B195: shown (hidden by the page itself on a 4 MB screen)
 
         case 22:
             break; // lo byte of Spoolup
@@ -284,16 +306,21 @@ FLASHMEM void DisplayGovConfigValues(uint8_t n, uint8_t m)
             SendValue((char *)"n22", (uint16_t)GovAckPayload[32] | ((uint16_t)GovAckPayload[33] << 8));
             break; // Autorot timeout s
 
-        // Filter bytes — off-screen, silent (stored in GovAckPayload[] for write-back)
+        // Filter bytes — B195: the Filters tab (hidden by the page itself on a 4 MB screen)
         case 34:
+            SendValue((char *)"n23", GovAckPayload[i]);
             break; // RPM filter Hz
         case 35:
+            SendValue((char *)"n24", GovAckPayload[i]);
             break; // Power filter Hz
         case 36:
+            SendValue((char *)"n25", GovAckPayload[i]);
             break; // D filter ×.1Hz
         case 37:
+            SendValue((char *)"n26", GovAckPayload[i]);
             break; // FF filter Hz
         case 38:
+            SendValue((char *)"n27", GovAckPayload[i]);
             break; // TTA filter Hz
 
         case 39:
@@ -327,7 +354,7 @@ FLASHMEM void ShowLocalGovConfigBank()
     SendValue((char *)"n14", c[18]); // Gov mode
     SendValue((char *)"n15", c[19]); // Handover thr %
 
-    // Startup off-screen — skip
+    SendValue((char *)"n16", (uint16_t)c[20] | ((uint16_t)c[21] << 8)); // Startup (B195)
 
     SendValue((char *)"n17", (uint16_t)c[22] | ((uint16_t)c[23] << 8)); // Spoolup
     SendValue((char *)"n18", (uint16_t)c[24] | ((uint16_t)c[25] << 8)); // Spooldown
@@ -336,7 +363,11 @@ FLASHMEM void ShowLocalGovConfigBank()
     SendValue((char *)"n21", (uint16_t)c[30] | ((uint16_t)c[31] << 8)); // Hold timeout
     SendValue((char *)"n22", (uint16_t)c[32] | ((uint16_t)c[33] << 8)); // Autorot timeout
 
-    // Filter bytes off-screen — skip
+    SendValue((char *)"n23", c[34]); // RPM filter (B195)
+    SendValue((char *)"n24", c[35]); // Power filter
+    SendValue((char *)"n25", c[36]); // D filter ×.1Hz
+    SendValue((char *)"n26", c[37]); // FF filter
+    SendValue((char *)"n27", c[38]); // TTA filter
 
     SendValue((char *)"n28", c[39]); // Throttle type
     SendValue((char *)"n29", c[40]); // Idle thr ×.1%
@@ -580,7 +611,7 @@ FLASHMEM void Gov_Global_Were_Edited()
 }
 // B183 (Malcolm, 5 Nov 2026: "a button that offers Defaults"): Rotorflight 2.3's own values (src/main/pg/governor.c) into
 // every box on the page - a starting point for a new model, not a tune. Nothing reaches the flight controller until Save,
-// which reads the boxes as it reads typed values. The off-screen bytes (startup time, the filters) stay as they were read.
+// which reads the boxes as it reads typed values. On a 4 MB screen the bytes it does not show (startup time, the filters) stay as read.
 FLASHMEM void GovGlobalDefaults()
 {
     if (CurrentView != RFGOVERNORVIEW_GLOBAL)
@@ -598,6 +629,15 @@ FLASHMEM void GovGlobalDefaults()
     SendValue((char *)"n28", 0);  // Throttle type: NORMAL
     SendValue((char *)"n29", 0);  // Idle throttle (tenths of %)
     SendValue((char *)"n30", 0);  // Auto throttle (tenths of %)
+    if (ScreenIsBig())
+    { // B195: Rotorflight 4.6's own (src/main/pg/governor.c) for the boxes a 16 MB screen shows
+        SendValue((char *)"n16", 20); // Start-up 200 tenths = 20 s
+        SendValue((char *)"n23", 10); // RPM filter Hz
+        SendValue((char *)"n24", 5);  // Power filter Hz
+        SendValue((char *)"n25", 50); // D filter 5.0 Hz
+        SendValue((char *)"n26", 5);  // FF filter Hz
+        SendValue((char *)"n27", 0);  // TTA filter (0 = off)
+    }
     Gov_Global_Were_Edited();
 }
 

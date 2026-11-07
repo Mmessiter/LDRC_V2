@@ -67,6 +67,9 @@ It needs the USB cable between receiver and flight controller.|
 'Copy a bank ...': copies the tuning of one bank into another.|
 'Battery ...' and 'Black box ...': the flight pack and the|
 flight recorder.|
+'Beeper & name ...' (16 MB screens only): which events the|
+buzzer and the motor beep for, and Rotorflight's name for|
+the model.|
 'Settings ...': 'Link rates and banks', the Rotorflight version,|
 the arming channel and 'Gear ratio (V1 receiver)'; and|
 'First-time basics ...': swash type, rotor direction, tail type,|

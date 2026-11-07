@@ -39,7 +39,10 @@ check('if (quiet_ && !host_.linkPageOk()) { note("quiet look: a page is open on 
 begin = u[u.index('void Updater::begin()'):u.index('note("---- check for update')]
 check('if (!quiet_ || link_.running()) return;' in begin and 'quietEnd(3);' in begin, "the pilot's own Check for update is not ignored while a quiet look waits")
 d = src('src/update_device.h')
-check('bool linkPageOk() override { return linkPageAllows(); }' in d, "the device answers from the page the Teensy shows")
+# (1.11.181/182: the QUIET look asks only on the front page, or the screen saver over it - a look on Transmitter setup threw the
+# pilot off it; the pilot's own Check for update still goes by linkPageAllows)
+check('bool linkPageOk() override { return page.name == "FrontView" || (page.name == "BlankView" && saverPage == "FrontView"); }' in d,
+      "the device's quiet look answers only from the front page (or the screen saver over it)")
 # 1.11.178: the loop task on the task watchdog
 check('#include <esp_task_wdt.h>' in m and 'esp_task_wdt_init(20, true);\n    enableLoopWDT();' in m, "main.cpp: the loop task goes on the task watchdog, 20 s, panic (a core dump)")
 setup_hold = m.index('holdWatchBegin();                                      // (1.11.164) the hold watch')

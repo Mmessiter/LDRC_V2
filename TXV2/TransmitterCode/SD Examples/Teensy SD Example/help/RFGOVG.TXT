@@ -24,7 +24,10 @@ electric helicopter.|
 Handover (%): above this throttle the governor takes over,|
 and spools up to the bank's head speed.|
 Autorot. timeout: in seconds. How long an autorotation keeps|
-the quick bail-out ready. 0: no autorotation.||
+the quick bail-out ready. 0: no autorotation.|
+Start-up (s): only the first creep of the motor, from zero|
+to the handover throttle. Rotorflight's default is 20.|
+(16 MB screens only.)||
 THROTTLE:|
 Throttle type: 0 to 2. The box above it names the type:|
 '0 - NORMAL' (the usual): the throttle goes to the governor|
@@ -49,8 +52,19 @@ Quick restart (recovery time): the quick spool-up after a|
 short throttle hold.|
 Hold timeout: how long the quick spool-up stays ready|
 after a throttle hold.|
-Startup time and the governor filters are not on this page.|
-'Save' keeps them (the startup time in whole seconds).||
+FILTERS (Hz) - touch 'Filters' at the top right:|
+(16 MB screens only. On a 4 MB screen they are not shown,|
+and 'Save' keeps them as they were.)|
+They smooth the signals the governor reads. Lower = smoother,|
+but slower to react. Change them only to cure a head speed|
+that hunts or surges, and one at a time.|
+RPM filter: the head-speed signal. Default 10.|
+Power filter: the battery voltage and current. Default 5.|
+Feed-fwd filter: the early throttle for collective and|
+cyclic. Default 5.|
+Tail filter: tail-torque assist. 0 = off (the default).|
+D filter x10: tenths of a Hz: 50 is 5 Hz (the default).|
+Touch 'Timings' to go back.||
 A COPY IN THE MODEL'S FILE:|
 'Keep a copy' stores the page's values in the model's file|
 on the transmitter's card. It asks first.|

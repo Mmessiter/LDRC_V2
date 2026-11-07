@@ -15,7 +15,7 @@
   "right": 255
  },
  "ev": {
-  "preinitialize": "RFView.pic=Screen_Background\nvis Progress,0"
+  "preinitialize": "RFView.pic=Screen_Background\nvis Progress,0\nif(ldrcmb<16)\n{\n  vis bBeep,0\n}"
  },
  "comps": [
   {
@@ -584,6 +584,38 @@
    },
    "ev": {
     "r": "va0.val=161<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "bBeep",
+   "i": 27,
+   "t": "button",
+   "g": "l",
+   "x": 524,
+   "y": 291,
+   "w": 232,
+   "h": 44,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 1024,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Beeper & name ...",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=232<<8\nprint va0.val"
    }
   },
   {

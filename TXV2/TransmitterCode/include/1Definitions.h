@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B194 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B195 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -359,6 +359,7 @@ bool GapStartedUnlinked = false; // B157: no link up (the LED not green) when th
 #define EASYVIEW 81              // B104: Easy tuning, the phone app's sliders (RF_Easy.h)
 #define RATESTYPEVIEW 82         // B106: the Rates page's picker of rates types (RF_Rates.h)
 #define RATESCURVEVIEW 83        // B107: the Rates page's curves (RF_Rates.h)
+#define BEEPERVIEW 84            // B195: Beeper & name (RF_Beeper.h), 16 MB screens only
 #define LEVELVIEW 74             // B88: calibrate the level (B90: it was CALIBRATEVIEW, the stick calibration's number 6 - redefined, so both were 74)
 #define MODELIDVIEW 56
 
@@ -1057,6 +1058,8 @@ void CopyBankGovTapped();
 void CopyBankHsTapped();
 void CopyBankAdjTapped();
 void BatteryPoll();                           // B88: RF_FcSetup.h
+void BeeperPoll();                            // B195: RF_Beeper.h
+void StartBeeperView(); void EndBeeperView(); void SaveBeeper(); void BeeperWasEdited();   // B195: codes 232-235
 void StartBatteryView();
 void EndBatteryView();
 void SaveBattery();
@@ -1107,6 +1110,7 @@ FASTRUN uint32_t GetIntFromAckPayload(); // This one uses a uint32_t int
 uint32_t getvalue(char *nbox);
 uint32_t GetValue(char *nbox);
 uint32_t GetSysValue(const char *name); // B171: a system variable (tch2 ...) by its bare name
+bool ScreenIsBig(); // B195: a 16 MB screen (FULL build): the newer Rotorflight settings are shown only there
 void SendValue(char *nbox, int value);
 void LogTotalLostPackets();
 void LogTotalGoodPackets();

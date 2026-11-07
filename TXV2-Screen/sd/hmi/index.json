@@ -32,12 +32,12 @@
   {
    "id": 5,
    "name": "RFGovViewGlbl",
-   "n": 50
+   "n": 52
   },
   {
    "id": 6,
    "name": "RFGovView",
-   "n": 37
+   "n": 39
   },
   {
    "id": 7,
@@ -47,7 +47,7 @@
   {
    "id": 8,
    "name": "RFView",
-   "n": 27
+   "n": 28
   },
   {
    "id": 9,
@@ -423,6 +423,11 @@
    "id": 83,
    "name": "RatesCurveView",
    "n": 14
+  },
+  {
+   "id": 84,
+   "name": "BeeperView",
+   "n": 35
   }
  ],
  "fonts": {

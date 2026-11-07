@@ -248,7 +248,7 @@ FLASHMEM static bool BakIndexed(uint8_t fn) { return fn == 174 || fn == 154; }
 // A write's function -> the read key it changes (the plain pairs; nothing to patch)
 FLASHMEM static uint8_t BakReadOfWrite(uint8_t w)
 {
-    static const uint8_t pairs[][2] = {{93, 92}, {37, 36}, {147, 146}, {149, 148}, {202, 112}, {95, 94}, {204, 111}, {143, 142}, {43, 42}, {11, 10}, {39, 38}, {62, 61}, {239, 240}, {97, 96}, {220, 126}, {65, 64}, {45, 44}, {67, 66}, {76, 75}, {51, 50}, {74, 73}, {33, 32}, {216, 123}, {155, 154}, {171, 174}};
+    static const uint8_t pairs[][2] = {{93, 92}, {37, 36}, {147, 146}, {149, 148}, {202, 112}, {95, 94}, {204, 111}, {143, 142}, {43, 42}, {11, 10}, {39, 38}, {62, 61}, {239, 240}, {97, 96}, {220, 126}, {65, 64}, {45, 44}, {67, 66}, {76, 75}, {51, 50}, {74, 73}, {33, 32}, {216, 123}, {155, 154}, {171, 174}, {185, 184}};   // (B195: 185 the beeper)
     for (auto &p : pairs)
         if (p[0] == w)
             return p[1];
@@ -728,7 +728,7 @@ static const BakReadItem BAK_READS[] = {
     {131, -1, false}, {80, -1, false}, {10, -1, false}, {36, -1, false}, {38, -1, false}, {61, -1, false}, {240, -1, false}, {96, -1, false},
     {126, -1, false}, {64, -1, false}, {44, -1, false}, {66, -1, false}, {75, -1, false}, {50, -1, false}, {73, -1, false}, {92, -1, false},
     {32, -1, false}, {123, -1, true}, {154, 0, true}, {154, 1, true}, {154, 2, true}, {56, -1, false}, {40, -1, false}, {34, -1, false},
-    {238, -1, false}, {77, -1, false}, {52, -1, true}};   // (52 the in-flight adjustments: only with the USB cable, B78)
+    {238, -1, false}, {77, -1, false}, {52, -1, true}, {184, -1, true}};   // (52 the in-flight adjustments: only with the USB cable, B78; B195: 184 the beeper, optional)
 static const int BAK_READS_N = sizeof(BAK_READS) / sizeof(BAK_READS[0]);
 // The restore map: what to write for a key, how, and how to check it
 enum { BK_WHOLE = 0, BK_INDEXED, BK_SERVOS, BK_RULES, BK_MOTOR, BK_BLACKBOX, BK_METERS, BK_MODES, BK_FAILSAFE, BK_TELEM, BK_ADJ };
@@ -753,7 +753,8 @@ static const BakRestoreItem BAK_RESTORE[] = {
     {"voltage meters", 56, -1, -1, 57, BK_METERS}, {"current meters", 40, -1, -1, 41, BK_METERS},
     {"switches", 34, -1, -1, 35, BK_MODES},
     {"failsafe values", 77, -1, -1, 78, BK_FAILSAFE},
-    {"adjustments", 52, -1, -1, 53, BK_ADJ}};   // (B78: 42 lines of 14 bytes, one write each; needs the USB cable - skipped without it)
+    {"adjustments", 52, -1, -1, 53, BK_ADJ},   // (B78: 42 lines of 14 bytes, one write each; needs the USB cable - skipped without it)
+    {"beeper", 184, -1, -1, 185, BK_WHOLE}};   // (B195: the Beeper & name page's; a backup made before B195 has none - skipped)
 static const int BAK_RESTORE_N = sizeof(BAK_RESTORE) / sizeof(BAK_RESTORE[0]);
 static const int BAK_BANKED_N = 5;   // per bank: 112, 94, 148, 146; per rates bank: 111
 

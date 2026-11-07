@@ -1,0 +1,1035 @@
+{
+ "name": "BeeperView",
+ "id": 84,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "vis busy,0\nBeeperView.pic=Screen_Background"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Beeper & name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 33,
+   "y": 66,
+   "w": 733,
+   "h": 404,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "All banks",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:BEEPER.TXT\"\nLogView.t0.txt=\"Beeper & name help\"\nLogView.return.txt=\"BeeperView\""
+   }
+  },
+  {
+   "n": "ltn0",
+   "i": 7,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 78,
+   "w": 250,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Name in Rotorflight",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn0",
+   "i": 8,
+   "t": "text",
+   "g": "g",
+   "x": 305,
+   "y": 78,
+   "w": 445,
+   "h": 40,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "",
+   "a": {
+    "style": 2,
+    "key": 1,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 16,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "keybdA.t1.txt=\"Rotorflight's name for the model (up to 16)\"",
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "h0",
+   "i": 9,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 126,
+   "w": 366,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Buzzer beeps",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lsw1",
+   "i": 10,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 168,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Power on",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw1,1\nclick sw1,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw1",
+   "x": 315,
+   "y": 168,
+   "w": 80,
+   "h": 30,
+   "i": 11,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw2",
+   "i": 12,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 202,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Arming",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw2,1\nclick sw2,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw2",
+   "x": 315,
+   "y": 202,
+   "w": 80,
+   "h": 30,
+   "i": 13,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw3",
+   "i": 14,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 236,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Disarming",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw3,1\nclick sw3,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw3",
+   "x": 315,
+   "y": 236,
+   "w": 80,
+   "h": 30,
+   "i": 15,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw4",
+   "i": 16,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 270,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Armed, motor stopped",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw4,1\nclick sw4,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw4",
+   "x": 315,
+   "y": 270,
+   "w": 80,
+   "h": 30,
+   "i": 17,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw5",
+   "i": 18,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 304,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Link lost",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw5,1\nclick sw5,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw5",
+   "x": 315,
+   "y": 304,
+   "w": 80,
+   "h": 30,
+   "i": 19,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw6",
+   "i": 20,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 338,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Battery low",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw6,1\nclick sw6,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw6",
+   "x": 315,
+   "y": 338,
+   "w": 80,
+   "h": 30,
+   "i": 21,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw7",
+   "i": 22,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 372,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "Battery very low",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw7,1\nclick sw7,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw7",
+   "x": 315,
+   "y": 372,
+   "w": 80,
+   "h": 30,
+   "i": 23,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw8",
+   "i": 24,
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 406,
+   "w": 250,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65497
+   },
+   "txt": "The Beeper switch",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw8,1\nclick sw8,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw8",
+   "x": 315,
+   "y": 406,
+   "w": 80,
+   "h": 30,
+   "i": 25,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "h1",
+   "i": 26,
+   "t": "text",
+   "g": "g",
+   "x": 435,
+   "y": 126,
+   "w": 315,
+   "h": 36,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Motor beeps (DShot)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "lsw9",
+   "i": 27,
+   "t": "text",
+   "g": "g",
+   "x": 435,
+   "y": 168,
+   "w": 220,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 57215
+   },
+   "txt": "The Beeper switch",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw9,1\nclick sw9,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw9",
+   "x": 670,
+   "y": 168,
+   "w": 80,
+   "h": 30,
+   "i": 28,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "lsw10",
+   "i": 29,
+   "t": "text",
+   "g": "g",
+   "x": 435,
+   "y": 202,
+   "w": 220,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 57215
+   },
+   "txt": "Link lost",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "p": "click sw10,1\nclick sw10,0"
+   }
+  },
+  {
+   "t": "switch",
+   "g": "g",
+   "font": 2,
+   "c": {
+    "pco1": 0,
+    "bco2": 2016,
+    "pco": 65535,
+    "bco": 33808,
+    "pco2": 65535
+   },
+   "txt": "off/on",
+   "val": 0,
+   "a": {
+    "dez": 0,
+    "dis": 100,
+    "txt_maxl": 24
+   },
+   "n": "sw10",
+   "x": 670,
+   "y": 202,
+   "w": 80,
+   "h": 30,
+   "i": 30,
+   "ev": {
+    "r": "va0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "ltn1",
+   "i": 31,
+   "t": "text",
+   "g": "g",
+   "x": 435,
+   "y": 236,
+   "w": 220,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 57215
+   },
+   "txt": "Tone (1 - 5)",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "tn1",
+   "i": 32,
+   "t": "text",
+   "g": "g",
+   "x": 670,
+   "y": 236,
+   "w": 80,
+   "h": 30,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 0,
+    "borderc": 0,
+    "bco": 65535
+   },
+   "txt": "1",
+   "a": {
+    "style": 2,
+    "key": 2,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "keybdB.t1.txt=\"Motor beep tone (1 - 5)\"\nva0.val=235<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b3",
+   "i": 33,
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 396,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Save",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=234<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "b1",
+   "i": 34,
+   "t": "button",
+   "g": "l",
+   "x": 590,
+   "y": 396,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=233<<8\nprint va0.val"
+   }
+  },
+  {
+   "n": "busy",
+   "i": 35,
+   "t": "text",
+   "g": "l",
+   "x": 109,
+   "y": 207,
+   "w": 580,
+   "h": 124,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 5,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 200,
+    "isbr": 1
+   }
+  }
+ ]
+}

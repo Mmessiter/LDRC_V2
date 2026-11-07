@@ -37,6 +37,7 @@ prog = r'''
 #define RF_VERIFY_GOVCFG_WAIT_MS 8000
 enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV, VK_GOV_CFG };
 static uint32_t nowMs = 1000; static uint32_t millis() { return nowMs; }
+static bool bigScreen = false; static bool ScreenIsBig() { return bigScreen; }   // B195
 static int CurrentView = RATESVIEW_RF;
 static uint8_t PipeState = 2; static bool BoundFlag = true, ModelMatched = true, bakOffline = false; static bool BakOffline() { return bakOffline; }
 static bool BlockBankChanges = false, RfValueWasCut = false, GOVS_GLOBAL_Were_Edited = false;
@@ -177,6 +178,11 @@ int main() {
     CHECK(RfVerifySet() == 2 && RfVerifyPending() && Reading_GOV_Config_Now && GOVS_GLOBAL_Were_Edited && boxes == 0 && hides.empty());
     CHECK(EndDiffer(VK_GOV_CFG) && lastBoxPage == "page RFGovViewGlbl" && lastBox.find("other values for 3 boxes") != std::string::npos && reds.size() == 2 && reds[0] == "n17" && reds[1] == "n28");
     CHECK(GovAckPayload[23] == 23 && GovAckPayload[39] == 39 && GovAckPayload[20] == 20 && has(displays, "govcfg 18-42") && has(edited, "govcfg") && has(hides, "govcfg") && GOVS_GLOBAL_Were_Edited && !RfVerifyPending());
+    // B195: on a 16 MB screen the start-up time (20 = n16) and the filters (34-38 = n23..n27) are on the page: they turn red too
+    bigScreen = true;
+    reset(); nowMs = 21000; GOVS_GLOBAL_Were_Edited = true; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); GovAckPayload[20] = 1; GovAckPayload[36] = 7; GovAckPayload[39] = 9;
+    CHECK(RfVerifySet() == 2 && EndDiffer(VK_GOV_CFG) && reds.size() == 3 && reds[0] == "n16" && reds[1] == "n25" && reds[2] == "n28");
+    bigScreen = false;
     // nothing came back: NOT CONFIRMED, Save shown, the edits kept
     reset(); nowMs = 30000; GOVS_GLOBAL_Were_Edited = true; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues);
     CHECK(EndNothing(VK_GOV_CFG) && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0 && has(edited, "govcfg") && has(hides, "govcfg") && GOVS_GLOBAL_Were_Edited && !RfVerifyPending() && displays.empty());

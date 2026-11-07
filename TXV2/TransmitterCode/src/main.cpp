@@ -170,6 +170,7 @@
 #include "RF_Jobs.h" // B140: Switches and knobs - the one page over both
 #include "RF_CopyBank.h" // B78: copy a bank, over the pipe
 #include "RF_FcSetup.h" // B88: battery, black box, calibrate, and why it will not arm, over the pipe
+#include "RF_Beeper.h"  // B195: Beeper & name (16 MB screens)
 #include "RF_Basics.h" // B99: the model basics (swashplate type, rotor direction, tail type, motor protocol, ESC brand, poles, gear ratios), over the pipe; B100: the ports
 #include "RF_EscCal.h" // B100: the ESC throttle calibration, over the pipe
 #include "RF_Rates_Advanced.h"
@@ -3399,7 +3400,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 232 // One more than final one
+#define LASTFUNCTION1 236 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3633,7 +3634,11 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     CopyTuning,           // 228 B182: its "Copy tuning": that model's PIDs, rates, governor and rescue into this flight controller
     GovGlobalDefaults,    // 229 B183: the Governor (global) page's Defaults - Rotorflight's own values into the boxes
     GovProfileDefaults,   // 230 B183: the Governor page's Defaults
-    DeleteAllLogFiles     // 231 B190: the Log files page's Delete all (after one question)
+    DeleteAllLogFiles,    // 231 B190: the Log files page's Delete all (after one question)
+    StartBeeperView,      // 232 B195: the Rotorflight menu's Beeper & name ... (16 MB screens)
+    EndBeeperView,        // 233 B195: its OK
+    SaveBeeper,           // 234 B195: its Save
+    BeeperWasEdited,      // 235 B195: a switch, the name or the tone
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -5545,6 +5550,7 @@ void FASTRUN ManageTransmitter()
     JobsPoll();        // B140: the page itself - the read and save sequence, the live marker
     CopyBankPoll();    // B78: a bank being copied
     BatteryPoll();     // B88: the battery page
+    BeeperPoll();      // B195: Beeper & name
     BlackboxPoll();    // B88: the black box page
     CalibratePoll();   // B88: the calibrate page
     EasyPoll();        // B104: the Easy tuning page

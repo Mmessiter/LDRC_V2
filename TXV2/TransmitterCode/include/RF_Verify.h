@@ -178,7 +178,8 @@ FLASHMEM static const char *VfBox(uint8_t k, uint8_t i) // the box on the page t
     case VK_PID: return PID_Labels[i];
     case VK_PID_ADV: return PID_Advanced_Labels[i];
     case VK_GOV:
-        if (i < 1 || i > 15) return nullptr;   // (16-17: the flags, no box)
+        if (i == 16) return ScreenIsBig() ? "t42" : nullptr;             // B195: the flags' low byte = PID spool-up's label (a 16 MB screen; hidden on a 4 MB one)
+        if (i < 1 || i > 15) return nullptr;   // (17: the flags' high byte, no box)
         snprintf(g, sizeof(g), "n%u", (unsigned)(i <= 2 ? 0 : i - 2));   // bytes 1-2 = n0 (the headspeed), 3 = n1 ... 15 = n13
         return g;
     case VK_GOV_CFG:
@@ -187,10 +188,12 @@ FLASHMEM static const char *VfBox(uint8_t k, uint8_t i) // the box on the page t
         if (b == 18) return "n14";
         if (b == 19) return "n15";
         if (b >= 22 && b <= 33) { snprintf(g, sizeof(g), "n%u", (unsigned)(17 + (b - 22) / 2)); return g; }
+        if ((b == 20 || b == 21) && ScreenIsBig()) return "n16";   // B195: start-up (a 16 MB screen)
+        if (b >= 34 && b <= 38 && ScreenIsBig()) { static const char *const f[5] = {"n23", "n24", "n25", "n26", "n27"}; return f[b - 34]; }   // B195: the Filters tab
         if (b == 39) return "n28";
         if (b == 40) return "n29";
         if (b == 41) return "n30";
-        return nullptr;   // (20-21 the start-up time and 34-38 the filters: off the page, written as they were read)
+        return nullptr;
     }
     }
     return nullptr;

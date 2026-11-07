@@ -761,6 +761,20 @@ uint32_t GetSysValue(const char *name)
     return GetNumberReply(CB);
 }
 
+// B195 (Malcolm, 6 Nov 2026: the new Rotorflight settings are for the 16 MB screens only, "not included in the 4 meg version"):
+// the screen says which build it runs (screen 1.11.186: "get ldrcmb" = 16 on FULL, 4 on STANDARD, 0 from an older screen).
+// Only a yes is remembered: a screen updated to 1.11.186 while the Teensy runs on is asked again next time (the answer is instant).
+FLASHMEM bool ScreenIsBig()
+{
+    static bool big = false;
+    if (!big)
+    {
+        const uint32_t v = GetSysValue("ldrcmb");
+        big = (v >= 16 && v < 1000);
+    }
+    return big;
+}
+
 /*********************************************************************************************************************************/
 
 uint32_t GetValue(char *nbox)

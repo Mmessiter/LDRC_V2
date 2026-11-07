@@ -36,6 +36,7 @@ FLASHMEM void ShowLocalGovBank()
             break;
         }
     }
+    SendValue((char *)"sw0", (kept && (Saved_GOV_Profiles_Values[16][Bank - 1] & 0x10)) ? 1 : 0); // B195: PID spool-up
     GOV_Loaded = true; // (the model file's own copy: editable)
     if (kept)
         HideGOVMsg();
@@ -97,6 +98,13 @@ FLASHMEM void LoadGovWritePayload()
     // Flags — preserve existing values. Use saved values if not connected, GovAckPayload if connected
     GovWritePayload[16] = RfLive() ? GovAckPayload[16] : Saved_GOV_Profiles_Values[16][Bank - 1];
     GovWritePayload[17] = RfLive() ? GovAckPayload[17] : Saved_GOV_Profiles_Values[17][Bank - 1];
+    if (ScreenIsBig())
+    { // B195: PID spool-up for this bank (flags bit 4, Rotorflight's GOV_FLAG_PID_SPOOLUP), the switch a 16 MB screen shows;
+      // every other flag stays as read. (An unanswered switch is 65535: GetValue marks it missed and nothing is sent.)
+        const uint32_t sw = GetValue((char *)"sw0");
+        if (sw <= 1)
+            GovWritePayload[16] = sw ? (uint8_t)(GovWritePayload[16] | 0x10) : (uint8_t)(GovWritePayload[16] & ~0x10);
+    }
 }
 
 // ====================================================
@@ -163,6 +171,9 @@ FLASHMEM void DisplayGovValues(uint8_t n, uint8_t m)
         case 15:
             SendValue((char *)"n13", GovAckPayload[i]);
             break; // Collective weight
+        case 16:
+            SendValue((char *)"sw0", (GovAckPayload[i] & 0x10) ? 1 : 0);
+            break; // B195: PID spool-up (flags bit 4; the page hides the switch on a 4 MB screen)
         default:
             break;
         }
@@ -246,6 +257,7 @@ FLASHMEM void ShowGOVBank()
         // Clear all 14 profile fields to 0 before loading fresh values
         for (int i = 0; i < GOVERNOR_LABELS_COUNT; ++i)
             SendValue(GOV_Labels[i], 0);
+        SendValue((char *)"sw0", 0); // B195
 
         if (GOVS_PROFILE_Were_Edited)
         {
@@ -373,6 +385,7 @@ FLASHMEM void GovProfileDefaults()
     static const uint16_t d[GOVERNOR_LABELS_COUNT] = {1000, 40, 40, 50, 0, 10, 0, 20, 100, 10, 10, 10, 10, 50};   // headspeed, gain, P, I, D, F, TTA gain, TTA limit, max thr, min thr, fallback drop, yaw, cyclic, collective weights
     for (int i = 0; i < GOVERNOR_LABELS_COUNT; ++i)
         SendValue(GOV_Labels[i], d[i]);
+    SendValue((char *)"sw0", 0); // B195: Rotorflight's governor.flags = 0 (PID spool-up off)
     GOVS_P_Were_Edited();
 }
 FLASHMEM void GOVS_P_Were_Edited()

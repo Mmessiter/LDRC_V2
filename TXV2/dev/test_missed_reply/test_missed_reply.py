@@ -81,6 +81,7 @@ static void SendCommand(char *c) { cmds.push_back(c); }
 static void SendValue(char *n, int v) { values[n] = v; }
 static void SaveOneModel(uint32_t) { ++saves; }
 static bool RfLive() { return live; }
+static bool bigScreen = false; static bool ScreenIsBig() { return bigScreen; }   // B195
 static bool ModelSeemsArmed(char *why, size_t n) { if (armed) snprintf(why, n, "armed"); return armed; }
 static bool RfPipeBlocked(char *why, size_t n) { if (pipeBlocked) snprintf(why, n, "no pipe"); return pipeBlocked; }
 static bool RfBlockNotLoaded(bool loaded, const char *, const char *) { return !loaded; }
@@ -171,6 +172,13 @@ int main() {
     CHECK(govWrites == 0); CHECK(boxes == 1); CHECK(said("NOTHING was sent")); CHECK(GOVS_PROFILE_Were_Edited); CHECK(noMissFlag());
     screen(); govScreen(); silent.insert("n8"); SendEditedGovValues();   // Max throttle
     CHECK(govWrites == 0); CHECK(boxes == 1); CHECK(govNo255() || GovWritePayload[10] == 255);   // (the payload may hold it: it is never queued)
+    // B195: a 16 MB screen - the PID spool-up switch (flags bit 4) goes as the switch shows it, the other flags as read;
+    // an unanswered switch sends nothing (the flag would have gone as 65535's guess)
+    bigScreen = true;
+    screen(); govScreen(); GovAckPayload[16] = 0x05; values["sw0"] = 1; SendEditedGovValues(); CHECK(govWrites == 1); CHECK(GovWritePayload[16] == 0x15);
+    screen(); govScreen(); GovAckPayload[16] = 0x15; values["sw0"] = 0; SendEditedGovValues(); CHECK(govWrites == 1); CHECK(GovWritePayload[16] == 0x05);
+    screen(); govScreen(); silent.insert("sw0"); SendEditedGovValues(); CHECK(govWrites == 0); CHECK(boxes == 1); CHECK(said("NOTHING was sent"));
+    bigScreen = false; screen(); govScreen(); GovAckPayload[16] = 0x15; values["sw0"] = 0; SendEditedGovValues(); CHECK(govWrites == 1); CHECK(GovWritePayload[16] == 0x15);   // (4 MB: as read)
     // not connected: the card's bank is not written either
     live = false; screen(); govScreen(); silent.insert("n9"); SendEditedGovValues();
     CHECK(saves == 0); CHECK(boxes == 1); CHECK(Saved_GOV_Profiles_Values[11][Bank - 1] == 0); CHECK(GOVS_PROFILE_Were_Edited);

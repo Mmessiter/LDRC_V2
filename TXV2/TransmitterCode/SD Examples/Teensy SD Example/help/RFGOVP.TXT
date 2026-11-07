@@ -42,6 +42,15 @@ speed signal is lost (0 to 50).|
 Anticipate yaw, Anticipate cyclic and Anticipate collective|
 (yaw, cyclic and collective weight): how much each stick adds|
 throttle before the load arrives.||
+PID spool-up (16 MB screens only):|
+ON: the governor ramps the head speed itself, with its own|
+gains, so the spool-up ends exactly at this bank's head speed.|
+OFF (Rotorflight's default): your throttle ramps it, and the|
+governor takes over at handover.|
+It needs Governor mode 3 or 4 (on the 'Global ...' page):|
+with any other mode Rotorflight turns it off again, and the|
+check after 'Save' says so.|
+Easy tuning can turn it on in every bank at once.||
 'OK' goes back to the 'Rotorflight' page.|
 With unsaved changes it asks 'Save now?': 'Save' saves them,|
 and the page closes once saved; 'Discard' leaves without saving.|

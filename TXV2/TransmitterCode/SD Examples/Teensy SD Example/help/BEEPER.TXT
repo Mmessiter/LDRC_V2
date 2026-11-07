@@ -1,0 +1,27 @@
+Rotorflight's beeper and its name for the model.|
+For every bank. 16 MB screens only.||
+NAME IN ROTORFLIGHT:|
+Touch it to type a new one (up to 16 letters). It is what the|
+Rotorflight app and the backups call this model. It does not|
+change the transmitter's own model name.||
+BUZZER BEEPS:|
+Only if a buzzer is fitted to the flight controller.|
+Each switch on = it beeps for that event:|
+Power on, Arming, Disarming, Armed with the motor stopped,|
+Link lost, Battery low, Battery very low, and the Beeper|
+switch (a switch set to 'Beeper on (BEEPER)' on the|
+'Switches & knobs' page).||
+MOTOR BEEPS (DSHOT):|
+The motor itself beeps: a model lost in long grass can be|
+heard. It works only with a DShot ESC signal (see|
+'First-time basics'), and never while armed.|
+The Beeper switch: flick that switch to make the motor beep.|
+Link lost: the motor beeps when the flight controller loses|
+the receiver's signal.|
+Tone (1 - 5): the pitch of the beep. 1 is the default.||
+'Save' writes the page to the flight controller, stores it|
+and reads it back to check.|
+'Save' is refused while the model could be armed.|
+'OK' goes back to the 'Rotorflight' page. With unsaved|
+changes it asks 'Save now?'.|
+With no model connected the page shows the model's backup.|

@@ -41,6 +41,7 @@ static int checks = 0, fails = 0;
 static std::map<std::string, long> values; static std::vector<std::string> cmds; static std::vector<int> sounds, queued;
 static int boxes = 0, questions = 0, saves = 0; static std::string lastBox; static bool live = true, armed = false;
 static uint32_t GetValue(char *n) { return values.count(n) ? (uint32_t) values[n] : 0; }
+static bool bigScreen = false; static bool ScreenIsBig() { return bigScreen; }   // B195: start-up + the filters on a 16 MB screen only
 static bool NextionTextMissed = false;   // (B156: a box the screen never answered - here every box answers; dev/test_missed_reply has the misses)
 char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static bool AllGlobalConfigBytesReceived() { return true; }   // (B156: the whole set is in, here)
@@ -140,6 +141,18 @@ int main() {
     CHECK(values["n14"] == 0 && values["n15"] == 25 && values["n22"] == 15 && values["n17"] == 10 && values["n18"] == 3 && values["n19"] == 5 && values["n20"] == 3 && values["n21"] == 5 && values["n28"] == 0 && values["n29"] == 0 && values["n30"] == 0);
     CHECK(GOVS_GLOBAL_Were_Edited && values.size() == 11);
     { uint8_t p[GOV_ACK_PAYLOAD_SIZE] = {0}; p[18] = (uint8_t) values["n14"]; p[39] = (uint8_t) values["n28"]; boxes = 0; CHECK(!GovChoiceBad(p, "x") && boxes == 0); }   // (the defaults pass the page's own gate)
+
+    // B195: a 16 MB screen - Defaults fill start-up and the five filters too (Rotorflight 4.6's own), and Save reads them from the
+    // page; a 4 MB screen keeps the bytes as read whatever the hidden boxes hold
+    values.clear(); bigScreen = true; confirmAnswer = true; GovGlobalDefaults();
+    CHECK(values.size() == 17 && values["n16"] == 20 && values["n23"] == 10 && values["n24"] == 5 && values["n25"] == 50 && values["n26"] == 5 && values["n27"] == 0);
+    for (int i = 0; i < GOV_ACK_PAYLOAD_SIZE; ++i) GovAckPayload[i] = (uint8_t)(100 + i);
+    values["n14"] = 3; values["n28"] = 0; values["n16"] = 300; values["n23"] = 11; values["n24"] = 12; values["n25"] = 13; values["n26"] = 14; values["n27"] = 15;
+    LoadGovConfigWritePayload();
+    CHECK(GovWritePayload[20] == (300 & 0xFF) && GovWritePayload[21] == (300 >> 8) && GovWritePayload[34] == 11 && GovWritePayload[35] == 12 && GovWritePayload[36] == 13 && GovWritePayload[37] == 14 && GovWritePayload[38] == 15);
+    bigScreen = false; LoadGovConfigWritePayload();
+    CHECK(GovWritePayload[20] == 120 && GovWritePayload[21] == 121 && GovWritePayload[34] == 134 && GovWritePayload[38] == 138);
+    values.clear(); GovGlobalDefaults(); CHECK(values.size() == 11 && !values.count("n16") && !values.count("n23"));
 
     // Armed: the old refusal still comes first
     armed = true; page(3, 3); SendEditedGovConfigValues(); CHECK(queued.empty()); CHECK(said("armed")); armed = false;
