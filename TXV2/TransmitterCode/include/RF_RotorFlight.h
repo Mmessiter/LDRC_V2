@@ -47,6 +47,8 @@ FLASHMEM void RotorFlightStart()
         return;
     }
 
+    UndoNewVisit();            // B196: a page's visit ends here - what Undo kept of its reads is let go (RF_Undo.h)
+    if (RfHomeBack()) return;  // B196: a page opened from the guide or from Check my setup goes back there (RF_Tools.h)
     SendCommand((char *)"page RFView");
     CurrentView = ROTORFLIGHTVIEW;
     if (RxHasPipe()) // B47: only a receiver that can carry it (0.9.874+) is asked; a Version 1 receiver gets "By radio link" at once

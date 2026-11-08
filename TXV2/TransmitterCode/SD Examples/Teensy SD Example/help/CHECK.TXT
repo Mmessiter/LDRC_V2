@@ -1,0 +1,17 @@
+Reads the flight controller and lists what is unfinished|
+or odd. Nothing is changed.||
+RED: it stops the model arming. The flight controller's own|
+reasons: no RPM signal for the governor, the level never|
+calibrated, a restart owed, no ESC signal chosen ... and|
+the arm switch: there must be one, on this model's arming|
+channel, its zone above 988 us (safety on: not armed) and|
+reaching 2012 us (safety off: armed).||
+AMBER: worth a look. No battery capacity (no % left in|
+flight); no battery voltage; the black box 80% full or more;|
+a gear ratio missing or backwards; rescue on with no switch|
+to start it; the model tilted more than 45 degrees.||
+GREEN: nothing found.||
+The button on a row opens the page that puts it right. Its|
+OK brings you back here, and the check runs again.|
+'Restart' restarts the flight controller (after a question).|
+'Check again' reads it all again.|

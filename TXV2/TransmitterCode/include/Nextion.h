@@ -766,13 +766,15 @@ uint32_t GetSysValue(const char *name)
 // Only a yes is remembered: a screen updated to 1.11.186 while the Teensy runs on is asked again next time (the answer is instant).
 FLASHMEM bool ScreenIsBig()
 {
-    static bool big = false;
-    if (!big)
-    {
+    static int8_t known = -1;   // -1 not known yet, 0 a 4 MB screen (it said 1-15), 1 a 16 MB one
+    if (known < 0)
+    {   // (B196, review: a 4 MB screen's answer is kept too - each save on a word page asks this now, and the screen's answer
+        //  waits up to 2 s if it is busy; an older screen (0) or no answer (65535) is asked again: it may be updated meanwhile)
         const uint32_t v = GetSysValue("ldrcmb");
-        big = (v >= 16 && v < 1000);
+        if (v >= 16 && v < 1000) known = 1;
+        else if (v >= 1 && v < 16) known = 0;
     }
-    return big;
+    return known == 1;
 }
 
 /*********************************************************************************************************************************/

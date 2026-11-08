@@ -7,6 +7,13 @@
 #include "1Definitions.h"
 #ifndef PIPE_HTTP_H
 #define PIPE_HTTP_H
+// B196: Undo the last save (RF_Undo.h) sees each request and each answer - it keeps what was read, and a write's "before";
+// it asks nothing and changes nothing here. The word pages' bank check reads their block once more for it (16 MB screens).
+void UndoSeeAsk(uint8_t fn, const uint8_t *data, int len, int id);
+void UndoSeeReply(int id, int code, const char *body);
+uint8_t UndoFnOfView(int view);
+void UndoPreGo(uint8_t fn, int bank, void (*then)(), const char *page, int view);
+bool UndoPreBusy();
 
 static int PipeReqId = 0;            // the last request's id
 static int PipeRepId = -1;           // the reply in hand is to this request (-1: none)
@@ -46,6 +53,7 @@ void PipeReplyFromScreen(const char *text) // "<id> <code> <body>" (up to the li
     PipeRepCode = (int)code;
     PipeRepId = (int)id;
     PipeRepMs = millis();
+    UndoSeeReply((int)id, (int)code, PipeRepBody);   // B196: a read's answer kept for Undo (RF_Undo.h)
 }
 // A Rotorflight request: fn, and the bytes to send with it (none for a read).
 bool BakOffline();                                                  // RF_Backup.h (B70): no model, but this model's backup file
@@ -81,7 +89,9 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len)
         for (int i = 0; i < len && n < (int)sizeof(path) - 3; ++i)
             n += snprintf(path + n, sizeof(path) - n, "%02x", data[i]);
     }
-    return PipeRequest(path);
+    const int id = PipeRequest(path);
+    UndoSeeAsk(fn, data, len, id);   // B196: RF_Undo.h - a read kept as it arrives, a write's "before" taken (to the receiver only: never the backup's stand-in)
+    return id;
 }
 // The reply's hex into bytes; how many.
 int PipeReplyBytes(uint8_t *out, int max)
@@ -135,20 +145,75 @@ static void FcBankShow()
 // transmitter's bank: that would hide the set-up's fault until the bank switch is flipped in flight.) With no model (the
 // backup file) or no Bluetooth pipe the write goes as before.
 static void (*BcThen)() = nullptr;
-static int BcReq = 0, BcStep = 0, BcWant = 0;
+// B196 (review, 8 Nov 2026): a question that waits for OK stops the switches being read (Utilities.h GetYesOrNo pumps the
+// radio, not the switches) - so never one while the model may fly: the safety off (or, with none, the motor on), the arming
+// channel high, or the flight controller saying it is armed. Nor on a page the pilot has left (its page would come back over
+// the one he is on). Then a refusal is a sound and a line in the log, and the page keeps its edits (Save is still there).
+static bool RfMayFly() { char w[128]; return RadiosMustBeOff() || ModelSeemsArmed(w, sizeof(w)); }
+static void RfSayQuietly(const char *why)
+{
+    char l[220];
+    snprintf(l, sizeof(l), "Rotorflight (no box: it may fly): %s", why);
+    for (char *p = l; *p; ++p) if (*p == '\r' || *p == '\n') *p = ' ';
+    LogText(l, (uint16_t)strlen(l), true);
+}
+// The word page whose save was refused, if it is still the one showing: its "Sending ..." taken away (the labels, Advanced and
+// Save back), and the reason on its own line for six seconds (Hide_msg_if_needed takes it away, as the "Saved" line) - seen,
+// and nothing waits (review, 8 Nov: a quiet refusal left "Sending ..." up with Save hidden; and the flight controller's own
+// ARMED was said by nothing at all on the bench). The page keeps its edits: Save again.
+void HidePIDMsg(); void HideRATESMsg(); void Hide_Advanced_Rates_Msg(); void HidePID_Advanced_Msg(); void HideGOVMsg();
+static void RfWordPageSays(int view, const char *why)
+{
+    RfLeaveAfterSave = false;   // (as a box does: OK's "Save now?" does not close the page after a save that was not made)
+    if (CurrentView != view) return;   // (left meanwhile: the log has it)
+    switch (view)
+    {
+    case PIDVIEW: HidePIDMsg(); break;
+    case RATESVIEW_RF: HideRATESMsg(); break;
+    case RATESADVANCEDVIEW: Hide_Advanced_Rates_Msg(); break;
+    case PIDADVANCEDVIEW: HidePID_Advanced_Msg(); break;
+    case RFGOVERNORVIEW_PROFILE: HideGOVMsg(); break;
+    default: break;
+    }
+    SendCommand((char *)"vis b3,1");
+    char one[160];
+    snprintf(one, sizeof(one), "%s", why);
+    for (char *p = one; *p; ++p) if (*p == '\r' || *p == '\n') *p = ' ';
+    const bool glbl = view == RFGOVERNORVIEW_GLOBAL;
+    SendText((char *)(glbl ? "t4" : "busy"), one);
+    SendCommand((char *)(glbl ? "vis t4,1" : "vis busy,1"));
+    SilenceMsgUntil = millis() + 6000; SilenceMsgView = view;
+}
+// A message from the loop or a state machine (not the pilot's own tap): a box on the bench, a log line while it may fly
+static void RfBoxOrQuiet(const char *page, const char *msg)
+{
+    if (RfMayFly()) { RfSayQuietly(msg); return; }
+    MsgBox((char *)page, (char *)msg);
+}
+static int BcReq = 0, BcStep = 0, BcWant = 0, BcView = -1;
+static uint32_t BcAt = 0;   // (when the check began: one left unanswered while the pilot was elsewhere never resumes a save later)
+static uint8_t BcUndoFn = 0;   // B196: the block read once more for Undo before the words go (0: none - a 4 MB screen, or not a word page)
 static bool BcRates = false;
 static const char *BcPage = "page RFView";
-FLASHMEM static void BankCheckRefuse(const char *why)
+FLASHMEM static void BankCheckRefuse(const char *why, bool armed = false)
 {
     BcStep = 0;
     BlockBankChanges = false;
     PlaySound(WHAHWHAHMSG);
+    if (armed || RfMayFly() || CurrentView != BcView) { RfSayQuietly(why); RfWordPageSays(BcView, why); return; }   // (B196, review: no box that waits while it may fly, or on a page left - the page says it)
     MsgBox((char *)BcPage, (char *)why);
 }
 FLASHMEM void BankCheck(bool rates, int want, void (*then)(), const char *page)
 {
+    if (BcStep || UndoPreBusy())
+    { // (B196, review: a save under way - its check or Undo's read is out. A second press on its page is the same save; a save
+      //  on another page is not made, and that page says so - never two at once)
+        if (CurrentView != BcView) { PlaySound(WHAHWHAHMSG); RfWordPageSays(CurrentView, "Not saved: the last save is still being checked. Save again in a moment."); }
+        return;
+    }
     if (PipeState != 2 || !(BoundFlag && ModelMatched) || BakOffline() || want < 1 || want > 6) { BcStep = 0; then(); return; }
-    BcThen = then; BcRates = rates; BcWant = want; BcPage = page;
+    BcThen = then; BcRates = rates; BcWant = want; BcPage = page; BcView = CurrentView; BcAt = millis();
+    BcUndoFn = UndoFnOfView(CurrentView);   // B196 (asked here, from the save: the screen's size is asked only on a save)
     FcBankPending = false;   // (one question at a time on the pipe: this one goes first)
     BcStep = 1;
     BcReq = MspAsk(101, nullptr, 0);
@@ -156,6 +221,7 @@ FLASHMEM void BankCheck(bool rates, int want, void (*then)(), const char *page)
 FLASHMEM static void BankCheckTick()
 {
     if (!BcStep) return;
+    if ((uint32_t)(millis() - BcAt) > 12000) { BankCheckRefuse("Not saved: the check of the bank did\r\nnot finish. Nothing was written."); return; }   // (B196, review: never a stale save resumed long after - this runs only on the word pages)
     if (!PipeReplyReady(BcReq))
     {
         if (PipeReplyLate()) BankCheckRefuse("Not saved: the flight controller did\r\nnot say which bank it is on.\r\nNothing was written. Try again.");
@@ -166,9 +232,15 @@ FLASHMEM static void BankCheckTick()
     if (n < 26) { BankCheckRefuse("Not saved: the flight controller did\r\nnot say which bank it is on.\r\nNothing was written. Try again."); return; }
     FcPidBank = (b[23] & 0x0F) + 1; FcRateBank = (b[25] & 0x0F) + 1;
     FcBankShow();
-    if (b[6] & 1) { BankCheckRefuse("Not saved: the flight controller says\r\nit is ARMED. Nothing was written."); return; }   // B156: its own word, a moment before the write
+    if (b[6] & 1) { BankCheckRefuse("Not saved: the flight controller says\r\nit is ARMED. Nothing was written.", true); return; }   // B156: its own word, a moment before the write
     const int fc = BcRates ? FcRateBank : FcPidBank;
-    if (fc == BcWant) { BcStep = 0; BcThen(); return; }
+    if (fc == BcWant)
+    {
+        BcStep = 0;
+        if (BcUndoFn) { const uint8_t f = BcUndoFn; BcUndoFn = 0; UndoPreGo(f, BcWant - 1, BcThen, BcPage, BcView); return; }   // B196: the block as it is, for Undo, then the words (RF_Undo.h)
+        BcThen();
+        return;
+    }
     char m[170];
     snprintf(m, sizeof(m), "Not saved: the flight controller is on\r\n%s %d, the transmitter on %s %d.\r\nCheck the %s switch's set-up.\r\nNothing was written.",
              BcRates ? "rates" : "bank", fc, BcRates ? "rates" : "bank", BcWant, BcRates ? "rates" : "bank");
@@ -177,7 +249,7 @@ FLASHMEM static void BankCheckTick()
 void FcBankTick() // every 50 ms (ManageTransmitter)
 {
     BankCheckTick();   // (B102)
-    if (BcStep) return;
+    if (BcStep || UndoPreBusy()) return;   // (B196: nor while Undo's read before the words is out)
     if (!FcBankPage() || PipeState != 2 || !(BoundFlag && ModelMatched)) { FcBankPending = false; FcBankAskAt = FcBankAskAt2 = 0; return; }
     if (FcBankPending)
     {

@@ -42,6 +42,7 @@ static std::map<std::string, long> values; static std::vector<std::string> cmds;
 static int boxes = 0, questions = 0, saves = 0; static std::string lastBox; static bool live = true, armed = false;
 static uint32_t GetValue(char *n) { return values.count(n) ? (uint32_t) values[n] : 0; }
 static bool bigScreen = false; static bool ScreenIsBig() { return bigScreen; }   // B195: start-up + the filters on a 16 MB screen only
+static bool UndoPreBusy() { return false; } static void UndoPreSave(uint8_t, int, void (*then)(), const char *) { then(); }   // (B196: a 4 MB screen's path: the words at once)
 static bool NextionTextMissed = false;   // (B156: a box the screen never answered - here every box answers; dev/test_missed_reply has the misses)
 char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static bool AllGlobalConfigBytesReceived() { return true; }   // (B156: the whole set is in, here)
@@ -172,6 +173,7 @@ def main():
     body += lift('FLASHMEM void LoadGovConfigWritePayload()')
     body += lift('FLASHMEM void SaveToLocalGovGLOBAL()')
     body += lift('FLASHMEM void RestoreFromSDGlobalGOV()')
+    body += lift('FLASHMEM static void GovCfgQueueWrite()')   # (B196: the save's words, after Undo's read)
     body += lift('FLASHMEM void SendEditedGovConfigValues()')
     body += lift('FLASHMEM void Gov_Global_Were_Edited()') + lift('FLASHMEM void GovGlobalDefaults()')   # (B183)
     body += MAIN

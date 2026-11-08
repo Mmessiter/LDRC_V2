@@ -198,6 +198,7 @@ prog3 = r'''
 #define RESTORE_RF_SETTINGS 8
 static uint32_t now = 10000; static uint32_t millis() { return now; }
 static int CurrentView = 67, CurrentMode = NORMAL;
+void UndoSeeAsk(uint8_t, const uint8_t *, int, int) {} void UndoSeeReply(int, int, const char *) {}   // (B196: RF_Undo.h sees, here nothing)
 static bool offline = false, haveFile = true, PipeReadRefused = false;
 static bool Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;
 static std::vector<std::string> sent; static void SendCommand(char *c) { sent.push_back(c); }
@@ -279,6 +280,17 @@ static bool PipeReplyReady(int id) { return ready && id == reqId; }
 static bool PipeReplyLate() { return late; }
 static int PipeReplyBytes(uint8_t *out, int max) { const int n = nBytes < max ? nBytes : max; memcpy(out, reply, n); return n; }
 static void Then() { ++thens; }
+static int CurrentView = 45; static uint8_t UndoFnOfView(int) { return 0; } static void UndoPreGo(uint8_t, int, void (*t)(), const char *, int) { t(); } static bool UndoPreBusy() { return false; }
+static bool RadiosMustBeOff() { return false; } static bool ModelSeemsArmed(char *, size_t) { return false; } static int logs = 0; static void LogText(char *, uint16_t, bool) { ++logs; }
+#define PIDVIEW 45
+#define RATESVIEW_RF 46
+#define RATESADVANCEDVIEW 48
+#define PIDADVANCEDVIEW 49
+#define RFGOVERNORVIEW_PROFILE 54
+#define RFGOVERNORVIEW_GLOBAL 55
+static bool RfLeaveAfterSave = false; static uint32_t SilenceMsgUntil = 0; static int SilenceMsgView = -1; static uint32_t millis() { return 0; }
+static void SendText(char *, char *) {} static void SendCommand(char *) {}
+void HidePIDMsg() {} void HideRATESMsg() {} void Hide_Advanced_Rates_Msg() {} void HidePID_Advanced_Msg() {} void HideGOVMsg() {}   // (B196: the word pages' own)   // (B196: the quiet refusal's names - here the bench: a box)   // (B196: a 4 MB screen's path)
 """ + mbc.group(0) + r"""
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)

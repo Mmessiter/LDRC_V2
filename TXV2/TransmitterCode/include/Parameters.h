@@ -69,6 +69,11 @@ bool PipePageShowing()
     case SWITCHVIEW:
     case SWITCHPICKVIEW:
     case COPYBANKVIEW:
+    case TOOLSVIEW:     // B196: Guide & checks and its pages - all of them ask the flight controller
+    case CHECKVIEW:
+    case DIRVIEW:
+    case CHANGESVIEW:
+    case GUIDEVIEW:
         return true;
     default:
         return false;

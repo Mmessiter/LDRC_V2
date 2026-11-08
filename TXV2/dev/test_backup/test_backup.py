@@ -63,6 +63,7 @@ static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; }
 static bool GetConfirmation(char *page, char *prompt) { lastBox = prompt; return confirmAnswer; }
 static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { MsgBox((char *)page, msg); }   // (B196: PipeHttp.h's - here the bench)
 static bool ModelSeemsArmed(char *, int) { return false; }
 // ---- the Version 1 word route (B71): the pages' parameter words, and the telemetry items the file answers with
 #define PIDVIEW 45

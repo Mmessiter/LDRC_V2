@@ -705,7 +705,20 @@ FLASHMEM bool BakOfflineWords(uint8_t id) // a Version 1 parameter word packet, 
 }
 
 // ---------------------------------------------------------------- the jobs: back up, restore, write the edits
-enum { BAK_JOB_NONE = 0, BAK_JOB_BACKUP, BAK_JOB_RESTORE, BAK_JOB_EDITS };
+enum { BAK_JOB_NONE = 0, BAK_JOB_BACKUP, BAK_JOB_RESTORE, BAK_JOB_EDITS, BAK_JOB_COMPARE, BAK_JOB_PUTBACK, BAK_JOB_UNDO };
+// B196 (Malcolm, 8 Nov 2026: "Please do all five" - the Guide & checks tools, 16 MB screens): three more jobs for this engine.
+// COMPARE is the backup's sweep with nothing saved: each key read is handed to What changed? (RF_Changes.h) to be compared
+// with the file. PUTBACK writes one key, its image made at the read before the write - the flight controller's own, with only
+// the chosen setting as the backup has it. UNDO writes the keys the last save changed, as they were before it (RF_Undo.h).
+// Their images never come from Bak and never go into it (the model's backup is never written with them), and a model lost
+// mid-job stops them before anything more is sent (the stand-in would otherwise take their writes into the file as edits).
+static bool (*BakToolTake)(const char *key, const char *fcHex, bool optional) = nullptr;   // COMPARE: a key read (nullptr: not read)
+static int (*BakToolImage)(const char *key, char *out, size_t n) = nullptr;              // PUTBACK / UNDO: the image for a key
+static void (*BakToolPatch)(const char *key, const char *fcHex) = nullptr;               // PUTBACK: made from the fresh read
+static void (*BakToolDone)(int job, const char *verdict) = nullptr;                      // where the job ends (its own page)
+static const char *BakToolPage = "page RFToolsView";                                     // the page its refusals return to
+static char BakToolKeys[10][16];                                                         // PUTBACK / UNDO: the keys to write
+static int BakToolKeysN = 0;
 // B182 (Malcolm, 5 Nov 2026, Black Thunder 1 and 2 "very similar": "Copy settings from another model"): a restore that takes
 // another model's backup, and only its TUNING - PIDs, advanced PIDs, governor profile and rescue of every bank this flight
 // controller has, rates of every rates bank, the governor global - never its hardware (servos, mixer, motor, ports, failsafe,
@@ -719,6 +732,14 @@ static int BakJob = BAK_JOB_NONE, BakStep = 0, BakReq = 0, BakTries = 0, BakIdx 
 static int BakDone = 0, BakTotal = 0, BakFails = 0, BakWritten = 0, BakUnchanged = 0;
 static char BakFailed[160] = "";
 static bool BakWroteAny = false, BakWroteGov = false, BakWroteMotor = false, BakItemWrote = false;
+static bool BakWroteBoot = false;   // B196: a tool job wrote a setting the flight controller reads only as it starts
+FLASHMEM static bool BakToolJob(int job) { return job >= BAK_JOB_COMPARE; }
+FLASHMEM static bool BakBootKey(uint8_t fn) // B196: what Rotorflight 4.6 takes in only at its start (the configurator restarts after these)
+{
+    static const uint8_t keys[] = {142, 131, 42, 36, 38, 123, 96, 126, 44, 64, 80, 32};   // (80: the black box's device and rate; 32: the battery's sources - read at the start; release/4.6.0 msp.c sets neither again)
+    for (uint8_t k : keys) if (k == fn) return true;
+    return false;
+}
 static uint8_t BakPidBanks = 6, BakRateBanks = 6, BakOrigPid = 0, BakOrigRate = 0;
 static uint32_t BakWaitUntil = 0;
 // The bankless reads, in the app's order (optional: an older Rotorflight may refuse it; that is not a failure)
@@ -768,29 +789,43 @@ static void BakShowPage();
 FLASHMEM static void BakProgress(const char *what)
 {
     char m[90];
-    snprintf(m, sizeof(m), "%s %d of %d: %s", BakJob == BAK_JOB_BACKUP ? "Reading" : "Writing", BakDone + 1, BakTotal, what);
+    snprintf(m, sizeof(m), "%s %d of %d: %s", (BakJob == BAK_JOB_BACKUP || BakJob == BAK_JOB_COMPARE) ? "Reading" : "Writing", BakDone + 1, BakTotal, what);
     BakBusy(m);
 }
 FLASHMEM static void BakFinish(const char *verdict)
 {
+    const int job = BakJob;
     BakJob = BAK_JOB_NONE;
     CurrentMode = NORMAL;
     BlockBankChanges = false;
     BakBusy("");
+    if (BakToolJob(job))
+    { // B196: on its own page, which says what happened
+        PlaySound((BakFails || BakCardFailed) ? WHAHWHAHMSG : BEEPCOMPLETE);
+        if (BakToolDone) BakToolDone(job, verdict);
+        return;
+    }
     BakShowPage();
     PlaySound((BakFails || BakCardFailed) ? WHAHWHAHMSG : BEEPCOMPLETE);
-    MsgBox((char *)"page RFBackUpView", (char *)verdict);
+    RfBoxOrQuiet("page RFBackUpView", verdict);   // B196 (review): the verdict comes from the loop - no box that waits while it may fly
     if (BakTuningOnly) { BakTuningOnly = false; BakLoad(ModelName); }   // B182: this model's own file is back (the other model's served the copy)
     BakShowPage();
 }
 FLASHMEM static void BakStart(int job)
 {
     char why[120];
+    const bool tool = BakToolJob(job);   // (B196)
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)) || RfNeedsModel(why, sizeof(why)))
     {
         PlaySound(WHAHWHAHMSG);
-        MsgBox((char *)"page RFBackUpView", why);
-        BakShowPage();
+        MsgBox((char *)(tool ? BakToolPage : "page RFBackUpView"), why);
+        if (!tool) BakShowPage();
+        return;
+    }
+    if (tool && !(BoundFlag && ModelMatched))
+    { // B196: a tool job is between this transmitter and the flight controller itself: never the backup's stand-in
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)BakToolPage, (char *)"This needs the model connected.");
         return;
     }
     if (job == BAK_JOB_BACKUP && !(BoundFlag && ModelMatched))
@@ -803,9 +838,11 @@ FLASHMEM static void BakStart(int job)
     BakJob = job; BakStep = 0; BakIdx = 0; BakSub = 0; BakTries = 0; BakDone = 0; BakFails = 0; BakWritten = 0; BakUnchanged = 0; BakFailed[0] = 0; BakCardFailed = false;
     for (int i = 0; i < 80; ++i) BakItemOk[i] = false;
     BakWroteAny = BakWroteGov = BakWroteMotor = false;
+    BakWroteBoot = false;   // (B196)
     BlockBankChanges = true;
-    CurrentMode = job == BAK_JOB_BACKUP ? SAVE_RF_SETTINGS : RESTORE_RF_SETTINGS;
-    BakBusy(job == BAK_JOB_BACKUP ? "Reading the flight controller ..." : "Checking the flight controller ...");
+    CurrentMode = (job == BAK_JOB_BACKUP || job == BAK_JOB_COMPARE) ? SAVE_RF_SETTINGS : RESTORE_RF_SETTINGS;
+    BakBusy((job == BAK_JOB_BACKUP || job == BAK_JOB_COMPARE) ? "Reading the flight controller ..." : "Checking the flight controller ...");
+    if (tool && !(PipeReqId == 0 || PipeRepId == PipeReqId || PipeReplyLate())) { BakStep = 0; return; }   // (B196, review: a tool job's first question waits until nothing else waits on the pipe - BackupRun asks it)
     BakReq = MspAsk(101, nullptr, 0);   // the banks it has, and the ones it is on
     BakStep = 1;
 }
@@ -844,7 +881,19 @@ FLASHMEM static void BakSweepTake(bool ok)
     char key[16];
     if (BakIdx < perBank + BakRateBanks && BakSub == 0)
     { // the select: on to the read
-        if (!ok) { if (++BakTries < 3) { BakSweepAsk(); return; } BakFinish("The bank could not be selected.\r\nNothing was written to the card."); return; }
+        if (!ok)
+        {
+            if (++BakTries < 3) { BakSweepAsk(); return; }
+            if (BakJob == BAK_JOB_COMPARE)
+            { // (B196, review: the comparison stops short - said so, never "nothing changed" - and the transmitter's banks go back)
+                ++BakFails; strncat(BakFailed, "a bank could not be chosen; the list stops there ", sizeof(BakFailed) - strlen(BakFailed) - 1);
+                { uint8_t d = (uint8_t)(Bank - 1); BakReq = MspAsk(210, &d, 1); }
+                BakStep = 90;
+                return;
+            }
+            BakFinish("The bank could not be selected.\r\nNothing was written to the card.");
+            return;
+        }
         BakSub = 1; BakTries = 0; BakSweepAsk();
         return;
     }
@@ -852,12 +901,17 @@ FLASHMEM static void BakSweepTake(bool ok)
     if (BakIdx < perBank) BakKey(key, sizeof(key), BAK_PER_BANK[BakIdx % 4], BakIdx / 4, -1);
     else if (BakIdx < perBank + BakRateBanks) BakKey(key, sizeof(key), 111, BakIdx - perBank, -1);
     else { const BakReadItem &it = BAK_READS[BakIdx - perBank - BakRateBanks]; BakKey(key, sizeof(key), it.fn, -1, it.idx); optional = it.optional; }
-    if (ok) BakSet(key, PipeRepBody);
+    if (ok)
+    {
+        if (BakJob == BAK_JOB_COMPARE) { if (BakToolTake) BakToolTake(key, PipeRepBody, optional); }   // B196: compared, not kept
+        else BakSet(key, PipeRepBody);
+    }
     else
     {
         const bool transient = PipeRepCode == 0 || PipeRepCode >= 500;   // no answer, or the receiver busy: asked again; a refusal (4xx) is final
         if (transient && ++BakTries < 3) { BakSweepAsk(); return; }
         if (!optional) { ++BakFails; if (strlen(BakFailed) < 120) { strncat(BakFailed, key, sizeof(BakFailed) - strlen(BakFailed) - 1); strncat(BakFailed, " ", sizeof(BakFailed) - strlen(BakFailed) - 1); } }
+        if (BakJob == BAK_JOB_COMPARE && BakToolTake) BakToolTake(key, nullptr, optional);   // (B196: not read)
     }
     ++BakIdx; ++BakDone; BakSub = 0; BakTries = 0;
     if (BakIdx < BakSweepTotal()) { BakSweepAsk(); return; }
@@ -870,9 +924,37 @@ struct BakTodo { uint8_t readFn, writeFn, kind; int8_t bank, idx; const char *la
 static BakTodo BakList[80];
 static int BakListN = 0;
 FLASHMEM static bool BakOnlyEdits() { return BakJob == BAK_JOB_EDITS; }
+FLASHMEM static int BakImageFor(const char *key, char *out, size_t n) // B196: the image to write for a key - a tool's own, or the file's
+{
+    if ((BakJob == BAK_JOB_PUTBACK || BakJob == BAK_JOB_UNDO) && BakToolImage) return BakToolImage(key, out, n);
+    return BakGet(key, out, n);
+}
+FLASHMEM static bool BakTodoOf(const char *key, BakTodo &t) // B196: a key ("148.1", "174.02", "120") as a restore item
+{
+    static const char *bankedNames[4] = {"PIDs", "advanced PIDs", "governor profile", "rescue"};
+    static const uint8_t bankedWrite[4] = {202, 95, 149, 147};
+    const int fn = atoi(key);
+    const char *dot = strchr(key, '.');
+    for (int k = 0; k < 4; ++k)
+        if (fn == BAK_PER_BANK[k]) { if (!dot) return false; t = {(uint8_t)fn, bankedWrite[k], BK_WHOLE, (int8_t)(atoi(dot + 1) & 0x07), -1, bankedNames[k]}; return true; }
+    if (fn == 111) { if (!dot) return false; t = {111, 204, BK_WHOLE, (int8_t)(0x40 | (atoi(dot + 1) & 0x07)), -1, "rates"}; return true; }
+    const int idx = dot ? (int)strtol(dot + 1, nullptr, 16) : -1;
+    for (int i = 0; i < BAK_RESTORE_N; ++i)
+    {
+        const BakRestoreItem &it = BAK_RESTORE[i];
+        if (it.readFn == fn && it.idx == idx) { t = {it.readFn, it.writeFn, it.kind, -1, it.idx, it.label}; return true; }
+    }
+    return false;   // (not a setting the restore knows how to write: 238, 54 ...)
+}
 FLASHMEM static void BakBuildList()
 {
     BakListN = 0;
+    if (BakJob == BAK_JOB_PUTBACK || BakJob == BAK_JOB_UNDO)
+    { // B196: the tool's own keys, in its order
+        for (int i = 0; i < BakToolKeysN && BakListN < 80; ++i)
+            if (BakTodoOf(BakToolKeys[i], BakList[BakListN])) ++BakListN;
+        return;
+    }
     char key[16], v[8];
     auto want = [&](uint8_t rfn, int bank, int idx) {
         BakKey(key, sizeof(key), rfn, bank, idx);
@@ -902,7 +984,7 @@ FLASHMEM static bool BakWritePayload(const BakTodo &t, int part, char *out, size
     char key[16], img[1250];
     const int bankNo = t.bank < 0 ? -1 : (t.bank & 0x3F);
     BakKey(key, sizeof(key), t.readFn, bankNo, t.idx);
-    if (BakGet(key, img, sizeof(img)) < 2) return false;
+    if (BakImageFor(key, img, sizeof(img)) < 2) return false;   // (B196: was BakGet - the same for every job but the tools')
     const int L = strlen(img);
     verifyOff = -1; verifyLen = -1; more = false;
     switch (t.kind)
@@ -937,7 +1019,16 @@ FLASHMEM static bool BakWritePayload(const BakTodo &t, int part, char *out, size
         verifyOff = f + 6; verifyLen = (frame - 3) * 2; more = part + 1 < count; return true;
     }
     case BK_MODES:
-    { // 34: 4 bytes a slot; 238: count, then 3 bytes a slot (the last two go with the write)
+    {
+        if (BakToolJob(BakJob))
+        { // (B196, review: a put back or an undo of a slot sends its index and 4 bytes alone - Rotorflight 4.6 keeps the slot's
+          //  AND/OR logic and link then (msp.c MSP_SET_MODE_RANGE): the backup's 238 must not change them unasked)
+            const int count = L / 8 < 32 ? L / 8 : 32;
+            if (part >= count) return false;
+            snprintf(out, n, "%02X%.8s", (unsigned)part, img + part * 8);
+            verifyOff = part * 8; verifyLen = 8; more = part + 1 < count; return true;
+        }
+        // 34: 4 bytes a slot; 238: count, then 3 bytes a slot (the last two go with the write)
         char extra[300];
         if (BakGet("238", extra, sizeof(extra)) < 2) return false;
         const int count = Hex2(extra);
@@ -968,7 +1059,7 @@ FLASHMEM static bool BakSame(const BakTodo &t, int part, const char *fcHex)
     char key[16], img[1250];
     const int bankNo = t.bank < 0 ? -1 : (t.bank & 0x3F);
     BakKey(key, sizeof(key), t.readFn, bankNo, t.idx);
-    if (BakGet(key, img, sizeof(img)) < 2) return true;
+    if (BakImageFor(key, img, sizeof(img)) < 2) return true;   // (B196)
     char payload[1250]; int off, len; bool more;
     if (!BakWritePayload(t, part, payload, sizeof(payload), off, len, more)) return true;
     if (off >= 0) return strlen(fcHex) >= (size_t)(off + len) && strncmp(fcHex + off, img + off, len) == 0;
@@ -1020,6 +1111,12 @@ FLASHMEM static void BakRestoreTake(bool ok)
             if (++BakTries < 3) { BakReq = BakRestoreReadAsk(t); return; }
             BakNoteFail(t); ++BakIdx; ++BakDone; BakSub = 0; BakTries = 0; BakRestoreNext(); return;
         }
+        if (BakJob == BAK_JOB_PUTBACK && BakToolPatch)
+        { // B196: the flight controller's image as it is NOW, with only the chosen setting as the backup has it
+            char key[16];
+            BakKey(key, sizeof(key), t.readFn, t.bank < 0 ? -1 : (t.bank & 0x3F), t.idx);
+            BakToolPatch(key, PipeRepBody);
+        }
         if (!BakWritePayload(t, BakSub, payload, sizeof(payload), off, len, more)) { ++BakIdx; ++BakDone; BakSub = 0; BakRestoreNext(); return; }
         if (BakSame(t, BakSub, PipeRepBody))
         { // this part is as the file has it
@@ -1036,6 +1133,7 @@ FLASHMEM static void BakRestoreTake(bool ok)
         BakWroteAny = true; BakItemWrote = true;
         if (t.writeFn == 143) BakWroteGov = true;
         if (t.writeFn == 222) BakWroteMotor = true;
+        if (BakToolJob(BakJob) && BakBootKey(t.readFn)) BakWroteBoot = true;   // (B196)
         BakReq = BakRestoreReadAsk(t); BakStep = 13;
         return;
     case 13: // the read-back
@@ -1055,6 +1153,19 @@ FLASHMEM static void BakRestoreTake(bool ok)
 FLASHMEM void BackupRun()
 {
     if (BakJob == BAK_JOB_NONE) { CurrentMode = NORMAL; return; }
+    if (BakToolJob(BakJob) && (!(BoundFlag && ModelMatched) || PipeState != 2) && BakStep < 95)
+    { // B196: the model went - not one more request (the backup's stand-in would take the writes into the file); or Bluetooth
+      // went (review: each request would wait nine seconds for nothing, three times over, item after item)
+        ++BakFails;
+        BakFinish(!(BoundFlag && ModelMatched) ? "Stopped: the model is no longer connected.\r\nNothing more was sent." : "Stopped: Bluetooth to the receiver went.\r\nNothing more was sent.");
+        return;
+    }
+    if (BakStep == 0)
+    { // (B196) a tool job's first question, when the pipe is free
+        if (!(PipeReqId == 0 || PipeRepId == PipeReqId || PipeReplyLate())) return;
+        BakReq = MspAsk(101, nullptr, 0); BakStep = 1;
+        return;
+    }
     if (BakStep == 95)
     { // after the restart asked of the FC: a breath, then done
         if ((int32_t)(millis() - BakWaitUntil) < 0) return;
@@ -1063,7 +1174,8 @@ FLASHMEM void BackupRun()
     if (BakStep == 99)
     {
         char v[220];
-        if (BakJob == BAK_JOB_BACKUP && BakCardFailed) snprintf(v, sizeof(v), "Not backed up: the card would not take\r\nthe file.");
+        if (BakToolJob(BakJob)) snprintf(v, sizeof(v), "%d written, %d the same%s%.90s", BakWritten, BakUnchanged, BakFails ? ".\r\nNot done: " : ".", BakFails ? BakFailed : "");   // (B196: the tool's page words it)
+        else if (BakJob == BAK_JOB_BACKUP && BakCardFailed) snprintf(v, sizeof(v), "Not backed up: the card would not take\r\nthe file.");
         else if (BakJob == BAK_JOB_BACKUP) snprintf(v, sizeof(v), BakFails ? "Not backed up: %d could not be read:\r\n%.90s\r\nThe copy on the card is as it was." : "Backed up: %d settings on the card.", BakFails ? BakFails : BakDone, BakFailed);
         else if (BakTuningOnly) snprintf(v, sizeof(v), "From %s: %d written, %d the same%s%.70s\r\nBack up now: the copy on the card is\r\nolder than the flight controller.", BakFromModel, BakWritten, BakUnchanged, BakFails ? ".\r\nNot written: " : ".", BakFails ? BakFailed : "");   // B182
         else snprintf(v, sizeof(v), "%d written, %d were the same already%s%s%.90s", BakWritten, BakUnchanged, BakFails ? ".\r\nNot restored: " : ".", BakFails ? "" : "", BakFails ? BakFailed : "");
@@ -1080,7 +1192,12 @@ FLASHMEM void BackupRun()
         const int n = ok ? PipeReplyBytes(b, sizeof(b)) : 0;
         if (n >= 27) { BakPidBanks = b[24] >= 1 && b[24] <= 6 ? b[24] : 6; BakRateBanks = b[26] >= 1 && b[26] <= 6 ? b[26] : 6; BakOrigPid = b[23]; BakOrigRate = b[25]; }
         else { BakPidBanks = BakRateBanks = 6; BakOrigPid = Bank - 1; BakOrigRate = 0; }
-        if (BakJob == BAK_JOB_BACKUP)
+        if (BakJob == BAK_JOB_COMPARE)
+        { // B196: the sweep, read and compared; the file in memory is not touched
+            BakTotal = BakSweepTotal(); BakIdx = 0; BakSub = 0; BakTries = 0;
+            BakSweepAsk(); BakStep = 2;
+        }
+        else if (BakJob == BAK_JOB_BACKUP)
         {
             Bak[0] = 0; strncpy(BakModel, ModelName, sizeof(BakModel) - 1); BakLoaded = true;
             char line[80];
@@ -1094,8 +1211,9 @@ FLASHMEM void BackupRun()
         }
         else
         {
+            if (BakToolJob(BakJob) && n >= 7 && (b[6] & 1)) { ++BakFails; BakFinish("Not written: the flight controller\r\nsays it is ARMED."); return; }   // (B196: its own word)
             BakBuildList();
-            if (!BakListN) { BakFinish(BakOnlyEdits() ? "No edits are waiting." : "The backup file holds nothing to restore."); return; }
+            if (!BakListN) { BakFinish(BakOnlyEdits() ? "No edits are waiting." : BakToolJob(BakJob) ? "Nothing to write." : "The backup file holds nothing to restore."); return; }
             BakTotal = BakListN; BakIdx = 0; BakSub = 0; BakTries = 0;
             BakRestoreNext();
         }
@@ -1107,6 +1225,7 @@ FLASHMEM void BackupRun()
         BakStep = 91;
         return;
     case 91:
+        if (BakJob == BAK_JOB_COMPARE) { BakStep = 99; return; }   // (B196: nothing was kept, nothing is saved)
         if (BakFails) BakLoad(ModelName);   // B20: a sweep with holes never replaces the backup on the card: the card's own copy back in memory
         else if (!BakSave()) BakCardFailed = true;
         BakStep = 99;
@@ -1135,7 +1254,7 @@ FLASHMEM void BackupRun()
             }
             BakSave();
         }
-        if (BakWroteGov || BakWroteMotor)
+        if (BakWroteGov || BakWroteMotor || BakWroteBoot)
         {
             BakBusy("Restarting the flight controller ...");
             BakReq = MspAsk(68, nullptr, 0); BakStep = 83;

@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B195 06/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B196 08/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -360,6 +360,11 @@ bool GapStartedUnlinked = false; // B157: no link up (the LED not green) when th
 #define RATESTYPEVIEW 82         // B106: the Rates page's picker of rates types (RF_Rates.h)
 #define RATESCURVEVIEW 83        // B107: the Rates page's curves (RF_Rates.h)
 #define BEEPERVIEW 84            // B195: Beeper & name (RF_Beeper.h), 16 MB screens only
+#define TOOLSVIEW 85             // B196: Guide & checks (RF_Tools.h), 16 MB screens only - the five tools' page
+#define CHECKVIEW 86             // B196: Check my setup (RF_Check.h)
+#define DIRVIEW 87               // B196: Direction check (RF_Direction.h)
+#define CHANGESVIEW 88           // B196: What changed? (RF_Changes.h)
+#define GUIDEVIEW 89             // B196: New helicopter guide (RF_Guide.h)
 #define LEVELVIEW 74             // B88: calibrate the level (B90: it was CALIBRATEVIEW, the stick calibration's number 6 - redefined, so both were 74)
 #define MODELIDVIEW 56
 
@@ -1060,6 +1065,20 @@ void CopyBankAdjTapped();
 void BatteryPoll();                           // B88: RF_FcSetup.h
 void BeeperPoll();                            // B195: RF_Beeper.h
 void StartBeeperView(); void EndBeeperView(); void SaveBeeper(); void BeeperWasEdited();   // B195: codes 232-235
+// B196: Guide & checks, 16 MB screens (RF_Tools.h, RF_Check.h, RF_Direction.h, RF_Changes.h, RF_Guide.h, RF_Undo.h): codes 236-260
+void StartToolsView(); void EndToolsView(); void ToolsGuide(); void ToolsCheck(); void ToolsDirection(); void ToolsChanges(); void ToolsUndo();
+void CheckFixTapped(); void CheckAgain(); void EndCheckView(); void CheckPrev(); void CheckNext();
+void DirStartTapped(); void DirTurnTapped(); void EndDirView();
+void ChangesPutBack(); void ChangesAgain(); void EndChangesView(); void ChangesPrev(); void ChangesNext();
+void GuideStepTapped(); void GuideNextTapped(); void GuidePageTapped(); void GuideRestart(); void EndGuideView();
+void ToolsPoll();                              // B196: the tools' pages, every pass
+bool RfHomeBack();                             // B196: RotorFlightStart's first look: back to the guide or the check a page was opened from
+void UndoPreSave(uint8_t fn, int bank, void (*then)(), const char *page);   // B196: RF_Undo.h - a word save's block read first, for Undo (16 MB screens)
+void RfToolsRedraw(); void RfBackHome(); void RfOpenFrom(uint8_t from, uint8_t id);   // B196: RF_Tools.h - the tools' pages and the way back
+void CheckShowAgain(bool again); void GuideShowAgain(bool tick); void GuideStart(); void CheckStart(); void DirStart();
+void Start_RF_Governor(); void Start_Gov_Global(); void StartBeeperView();
+bool UndoPreBusy();
+void UndoNewVisit();
 void StartBatteryView();
 void EndBatteryView();
 void SaveBattery();

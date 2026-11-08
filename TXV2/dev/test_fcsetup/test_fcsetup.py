@@ -48,6 +48,7 @@ static bool ModelSeemsArmed(char *why, size_t n) { if (armedFake) snprintf(why, 
 static bool RfPipeBlocked(char *, size_t) { return false; }
 static bool RfNeedsModel(char *, size_t) { return false; }
 static bool BakOffline() { return offline; }
+static bool RfMayFly() { return false; } static void RfBoxOrQuiet(const char *page, const char *msg) { MsgBox((char *)page, msg); }   // (B196: PipeHttp.h's - here the bench)
 static void GetText(char *n, char *out, int len) { snprintf(out, len, "%s", fields[n].c_str()); }
 bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; return true; }   // (B152)
 char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)

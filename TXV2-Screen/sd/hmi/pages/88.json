@@ -1,0 +1,722 @@
+{
+ "name": "RFChangesView",
+ "id": 88,
+ "w": 800,
+ "h": 480,
+ "bg": {
+  "sta": 2,
+  "mode": "image",
+  "picture": 3
+ },
+ "nav": {
+  "up": 255,
+  "down": 255,
+  "left": 255,
+  "right": 255
+ },
+ "ev": {
+  "preinitialize": "vis busy,0\nRFChangesView.pic=Screen_Background\nvis bP,0\nvis bN,0\nvis p0,0\nvis p1,0\nvis p2,0\nvis p3,0\nvis p4,0\nvis p5,0"
+ },
+ "comps": [
+  {
+   "n": "t0",
+   "i": 1,
+   "t": "text",
+   "g": "l",
+   "x": 0,
+   "y": 0,
+   "w": 800,
+   "h": 58,
+   "font": 0,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "What changed?",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "card",
+   "i": 2,
+   "t": "text",
+   "g": "l",
+   "x": 33,
+   "y": 66,
+   "w": 733,
+   "h": 404,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 1,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t9",
+   "i": 3,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 4,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "All banks",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 10,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "t11",
+   "i": 4,
+   "t": "text",
+   "g": "g",
+   "x": 10,
+   "y": 30,
+   "w": 200,
+   "h": 25,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65504,
+    "borderc": 0,
+    "bco": 2214
+   },
+   "txt": "Model name",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 30,
+    "isbr": 0
+   }
+  },
+  {
+   "n": "va0",
+   "i": 5,
+   "t": "variable",
+   "g": "l",
+   "sta": 0,
+   "txt": "newtxt",
+   "val": 0,
+   "a": {
+    "txt_maxl": 10
+   }
+  },
+  {
+   "n": "b0",
+   "i": 6,
+   "t": "button",
+   "g": "l",
+   "x": 620,
+   "y": 4,
+   "w": 170,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Help",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 10,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "print \"HelpView:CHANGES.TXT\"\nLogView.t0.txt=\"What changed? help\"\nLogView.return.txt=\"RFChangesView\""
+   }
+  },
+  {
+   "n": "hd",
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 72,
+   "w": 702,
+   "h": 34,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "Comparing with the backup ...",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 120,
+    "isbr": 0
+   },
+   "i": 7
+  },
+  {
+   "n": "c0",
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 112,
+   "w": 548,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 120,
+    "isbr": 0
+   },
+   "i": 8
+  },
+  {
+   "n": "p0",
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 112,
+   "w": 146,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Put back",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=1<<24+(251<<8)\nprint va0.val"
+   },
+   "i": 9
+  },
+  {
+   "n": "c1",
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 158,
+   "w": 548,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 120,
+    "isbr": 0
+   },
+   "i": 10
+  },
+  {
+   "n": "p1",
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 158,
+   "w": 146,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Put back",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=2<<24+(251<<8)\nprint va0.val"
+   },
+   "i": 11
+  },
+  {
+   "n": "c2",
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 204,
+   "w": 548,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 120,
+    "isbr": 0
+   },
+   "i": 12
+  },
+  {
+   "n": "p2",
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 204,
+   "w": 146,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Put back",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=3<<24+(251<<8)\nprint va0.val"
+   },
+   "i": 13
+  },
+  {
+   "n": "c3",
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 250,
+   "w": 548,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 120,
+    "isbr": 0
+   },
+   "i": 14
+  },
+  {
+   "n": "p3",
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 250,
+   "w": 146,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Put back",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=4<<24+(251<<8)\nprint va0.val"
+   },
+   "i": 15
+  },
+  {
+   "n": "c4",
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 296,
+   "w": 548,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 120,
+    "isbr": 0
+   },
+   "i": 16
+  },
+  {
+   "n": "p4",
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 296,
+   "w": 146,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Put back",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=5<<24+(251<<8)\nprint va0.val"
+   },
+   "i": 17
+  },
+  {
+   "n": "c5",
+   "t": "text",
+   "g": "g",
+   "x": 49,
+   "y": 342,
+   "w": 548,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 4426,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 120,
+    "isbr": 0
+   },
+   "i": 18
+  },
+  {
+   "n": "p5",
+   "t": "button",
+   "g": "l",
+   "x": 605,
+   "y": 342,
+   "w": 146,
+   "h": 40,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Put back",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=6<<24+(251<<8)\nprint va0.val"
+   },
+   "i": 19
+  },
+  {
+   "n": "bP",
+   "t": "button",
+   "g": "l",
+   "x": 49,
+   "y": 396,
+   "w": 80,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "<",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=254<<8\nprint va0.val"
+   },
+   "i": 20
+  },
+  {
+   "n": "bN",
+   "t": "button",
+   "g": "l",
+   "x": 139,
+   "y": 396,
+   "w": 80,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": ">",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=255<<8\nprint va0.val"
+   },
+   "i": 21
+  },
+  {
+   "n": "bA",
+   "t": "button",
+   "g": "l",
+   "x": 418,
+   "y": 396,
+   "w": 160,
+   "h": 50,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "Read again",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=252<<8\nprint va0.val"
+   },
+   "i": 22
+  },
+  {
+   "n": "b1",
+   "t": "button",
+   "g": "l",
+   "x": 590,
+   "y": 396,
+   "w": 160,
+   "h": 50,
+   "font": 6,
+   "sta": 1,
+   "c": {
+    "bco2": 54938,
+    "pco": 0,
+    "borderc": 0,
+    "bco": 54938,
+    "pco2": 65535
+   },
+   "txt": "OK",
+   "val": 0,
+   "a": {
+    "style": 4,
+    "borderw": 2,
+    "xcen": 1,
+    "ycen": 1,
+    "txt_maxl": 30,
+    "isbr": 0
+   },
+   "ev": {
+    "r": "va0.val=253<<8\nprint va0.val"
+   },
+   "i": 23
+  },
+  {
+   "n": "busy",
+   "i": 24,
+   "t": "text",
+   "g": "l",
+   "x": 109,
+   "y": 207,
+   "w": 580,
+   "h": 124,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 65535,
+    "bco": 4426
+   },
+   "txt": "",
+   "a": {
+    "style": 5,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 1,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 200,
+    "isbr": 1
+   }
+  }
+ ]
+}

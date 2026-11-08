@@ -1,0 +1,23 @@
+Five helpers that make a Rotorflight setup simpler.|
+16 MB screens only.||
+NEW HELICOPTER GUIDE:|
+Every setup step in order, over the pages you already know.|
+A step opens its page; OK on that page brings you back and|
+ticks the step. The ticks are kept for each model.||
+CHECK MY SETUP:|
+Reads the flight controller and lists anything unfinished|
+or odd, each with a button to the page that puts it right.||
+DIRECTION CHECK:|
+Tilt and turn the model: it says whether the flight|
+controller sees each move the right way round.||
+WHAT CHANGED?:|
+Compares the flight controller with this model's backup on|
+the card, setting by setting. 'Put back' returns one setting|
+to the backup's value.||
+UNDO THE LAST SAVE:|
+Puts back what the last Rotorflight save replaced - the line|
+under the button says which save. Switches & knobs, Copy a|
+bank, the ports and a level calibration cannot be undone.||
+COMMAND LINE:|
+The same as it was on the 'Rotorflight' page.||
+All of them need the model connected and the safety on.|

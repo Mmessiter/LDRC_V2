@@ -47,7 +47,7 @@
   {
    "id": 8,
    "name": "RFView",
-   "n": 28
+   "n": 29
   },
   {
    "id": 9,
@@ -428,6 +428,31 @@
    "id": 84,
    "name": "BeeperView",
    "n": 35
+  },
+  {
+   "id": 85,
+   "name": "RFToolsView",
+   "n": 15
+  },
+  {
+   "id": 86,
+   "name": "RFCheckView",
+   "n": 30
+  },
+  {
+   "id": 87,
+   "name": "RFDirView",
+   "n": 19
+  },
+  {
+   "id": 88,
+   "name": "RFChangesView",
+   "n": 24
+  },
+  {
+   "id": 89,
+   "name": "RFGuideView",
+   "n": 29
   }
  ],
  "fonts": {

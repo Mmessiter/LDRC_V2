@@ -56,7 +56,7 @@ FLASHMEM static void FsFail(const char *page, const char *what)
     snprintf(msg, sizeof(msg), "%s:\r\n%.130s", what, PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
     FsBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)page, msg);
+    RfBoxOrQuiet(page, msg);   // B196 (review): a page's state machine fails from the loop - never a box that waits while it may fly (PipeHttp.h)
 }
 FLASHMEM static bool FsRefused(const char *page, bool needsModel) // the guards every save and action passes
 {

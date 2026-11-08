@@ -185,6 +185,12 @@
 #include "RF_Governor_Global.h"
 #include "RF_Verify.h" // B153: a save read back from the flight controller (after the pages: their arrays and box names)
 #include "RF_Easy.h" // B104: Easy tuning, the phone app's sliders, over the pipe (after RF_Backup.h: the backup is the sliders' centre)
+#include "RF_Undo.h"      // B196: Undo the last save - what a save replaced, kept (sees MspAsk; after RF_Backup.h: its engine writes it back)
+#include "RF_Check.h"     // B196: Check my setup (16 MB screens)
+#include "RF_Direction.h" // B196: the Direction check, and the two mountings
+#include "RF_Changes.h"   // B196: What changed? since the backup, and Put back
+#include "RF_Guide.h"     // B196: the New helicopter guide
+#include "RF_Tools.h"     // B196: Guide & checks - the page of the five, and the way back from the pages they open
 #include "Model_IDs.h"
 #include "Motor_sign.h"
 #include "FlightGuard.h" // V1B: the screen is told what the transmitter is doing; a fingerprint of how the settings are read
@@ -3400,7 +3406,7 @@ void RestoreCurrentModel()
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
-#define LASTFUNCTION1 236 // One more than final one
+#define LASTFUNCTION1 261 // One more than final one
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3639,6 +3645,31 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     EndBeeperView,        // 233 B195: its OK
     SaveBeeper,           // 234 B195: its Save
     BeeperWasEdited,      // 235 B195: a switch, the name or the tone
+    StartToolsView,              // 236 B196: the Rotorflight menu's "Guide & checks ..." (16 MB screens)
+    EndToolsView,                // 237 B196: its OK
+    ToolsGuide,                  // 238 B196: New helicopter guide ...
+    ToolsCheck,                  // 239 B196: Check my setup ...
+    ToolsDirection,              // 240 B196: Direction check ...
+    ToolsChanges,                // 241 B196: What changed? ...
+    ToolsUndo,                   // 242 B196: Undo the last save
+    CheckFixTapped,              // 243 B196: Check my setup - a row's button (the row in the top byte)
+    CheckAgain,                  // 244 B196: Check again
+    EndCheckView,                // 245 B196: its OK
+    CheckPrev,                   // 246 B196: < (the rows before)
+    CheckNext,                   // 247 B196: > (the rows after)
+    DirStartTapped,              // 248 B196: the Direction check's Start / Again
+    DirTurnTapped,               // 249 B196: Turn it round (the other mounting)
+    EndDirView,                  // 250 B196: its OK
+    ChangesPutBack,              // 251 B196: What changed? - a row's Put back (the row in the top byte)
+    ChangesAgain,                // 252 B196: Read again
+    EndChangesView,              // 253 B196: its OK
+    ChangesPrev,                 // 254 B196: <
+    ChangesNext,                 // 255 B196: >
+    GuideStepTapped,             // 256 B196: the guide - a step (the row in the top byte)
+    GuideNextTapped,             // 257 B196: Go to step N ...
+    GuidePageTapped,             // 258 B196: Steps 9 - 16 > / < Steps 1 - 8
+    GuideRestart,                // 259 B196: Start again
+    EndGuideView,                // 260 B196: its OK
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -4263,6 +4294,8 @@ FASTRUN void ButtonWasPressed()
                 else if (CurrentView == RFGOVERNORVIEW_GLOBAL)
                     ShowGOV_Global_Bank();
             }
+            if (CurrentView >= TOOLSVIEW && CurrentView <= GUIDEVIEW)
+                RfToolsRedraw(); // B196: Guide & checks' pages drawn again - the page came back with its marks and buttons hidden
             // B43 (Malcolm, 6 Oct 2026: "on returning from help, it goes all the way back to the front screen, which it
             // should not do"): every other page stays where help was opened. The page has been sent back already, and the
             // screen gives it every value it had (the Rotorflight pages' included). Only an unknown view goes to the front.
@@ -5551,6 +5584,7 @@ void FASTRUN ManageTransmitter()
     CopyBankPoll();    // B78: a bank being copied
     BatteryPoll();     // B88: the battery page
     BeeperPoll();      // B195: Beeper & name
+    ToolsPoll();       // B196: Guide & checks - the check, the direction check, and Undo's read before a word save
     BlackboxPoll();    // B88: the black box page
     CalibratePoll();   // B88: the calibrate page
     EasyPoll();        // B104: the Easy tuning page

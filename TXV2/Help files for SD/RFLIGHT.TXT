@@ -7,6 +7,8 @@ Set it up with the phone app: 'Rotorflight', 'Wizards',|
 'New helicopter' takes you through every step.|
 Or do the basics here: 'Settings ...', then|
 'First-time basics ...'.|
+On a 16 MB screen: 'Guide & checks ...', 'New helicopter|
+guide' takes you through every step on this transmitter.|
 Once it flies, level the swash by a test lift-off: see SWASH|
 TRIMS in the help of 'Travel extents ...'.|
 Only putting Rotorflight onto the flight controller needs a|
@@ -70,6 +72,10 @@ flight recorder.|
 'Beeper & name ...' (16 MB screens only): which events the|
 buzzer and the motor beep for, and Rotorflight's name for|
 the model.|
+'Guide & checks ...' (16 MB screens only, in the place of|
+'Command line ...'): the New helicopter guide, Check my setup,|
+the Direction check, What changed? and Undo the last save -|
+and the command line.|
 'Settings ...': 'Link rates and banks', the Rotorflight version,|
 the arming channel and 'Gear ratio (V1 receiver)'; and|
 'First-time basics ...': swash type, rotor direction, tail type,|
@@ -97,6 +103,7 @@ If it keeps connecting, close the phone app if it is open:|
 the receiver takes one Bluetooth connection at a time.||
 COMMAND LINE:|
 'Command line ...' opens Rotorflight's own command line (CLI).|
+(On a 16 MB screen it is on the 'Guide & checks ...' page.)|
 It needs Bluetooth joined, and the USB cable|
 between the receiver and the flight controller.|
 Touch the line at the bottom to type a command.|

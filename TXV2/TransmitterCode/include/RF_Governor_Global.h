@@ -475,8 +475,25 @@ FLASHMEM void RestoreFromSDGlobalGOV()
 // SendEditedGovConfigValues()
 // Writes config values to FC via MSP, then reboots FC
 // ====================================================
+// B196: the words of a save, once Undo's read of the block (RF_Undo.h UndoPreSave) is in - at once on a 4 MB screen
+FLASHMEM static void GovCfgQueueWrite()
+{
+    const bool readBack = RfVerifyArm(VK_GOV_CFG, GovCfgAskValues);   // B165: read back after the write and compared with what was sent (the read queued first: the stack sends it last)
+    // Queue in reverse order — LIFO executes CONFIG1 first, CONFIG2 second, CONFIG3 third
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG3); // executes 3rd
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG2); // executes 2nd
+    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG1); // executes 1st
+
+    if (CurrentView == RFGOVERNORVIEW_GLOBAL) SendCommand((char *)"vis b3,0");   // (B196: up to 3 s after the press now - only on its own page: the menu has a b3 too)
+    if (readBack) return;        // "reading back ..." stays up; the edited flag stays up too, so OK's "Save now?" waits for the verdict (RF_Verify.h clears it when the read-back matches)
+    GOVS_GLOBAL_Were_Edited = false;
+    PlaySound(BEEPCOMPLETE);
+
+    // Reboot FC is done at receiver.
+}
 FLASHMEM void SendEditedGovConfigValues()
 {
+    if (UndoPreBusy()) return;   // B196: this save's read for Undo is out: its words follow (a second press is not a second save)
     if (!RfLive())
     {
         SaveToLocalGovGLOBAL();
@@ -510,19 +527,7 @@ FLASHMEM void SendEditedGovConfigValues()
         return;
     PlaySound(BEEPMIDDLE);
     DelayWithDog(100);
-
-    const bool readBack = RfVerifyArm(VK_GOV_CFG, GovCfgAskValues);   // B165: read back after the write and compared with what was sent (the read queued first: the stack sends it last)
-    // Queue in reverse order — LIFO executes CONFIG1 first, CONFIG2 second, CONFIG3 third
-    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG3); // executes 3rd
-    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG2); // executes 2nd
-    AddParameterstoQueue(SEND_GOV_WRITE_CONFIG1); // executes 1st
-
-    SendCommand((char *)"vis b3,0");
-    if (readBack) return;        // "reading back ..." stays up; the edited flag stays up too, so OK's "Save now?" waits for the verdict (RF_Verify.h clears it when the read-back matches)
-    GOVS_GLOBAL_Were_Edited = false;
-    PlaySound(BEEPCOMPLETE);
-
-    // Reboot FC is done at receiver.
+    UndoPreSave(142, -1, GovCfgQueueWrite, "page RFGovViewGlbl");   // B196: Undo's read of the block first (16 MB screens; at once on a 4 MB one), then the words
 }
 // ====================================================
 FLASHMEM void ShowGOV_Global_Bank()
@@ -584,6 +589,7 @@ FLASHMEM void Start_Gov_Global()
 FLASHMEM void Save_Gov_Global();
 FLASHMEM void End_Gov_Global()
 {
+    if (UndoPreBusy()) return;   // B196: a save's read for Undo is out (up to 3 s): its words follow on this page, then OK
     if (GOVS_GLOBAL_Were_Edited)
     {
         if (!RfSaveFirst("page RFGovViewGlbl", "The edited governor settings are", Save_Gov_Global, End_Gov_Global, &GOVS_GLOBAL_Were_Edited)) return;   // B102: "Save now?"

@@ -82,6 +82,11 @@ static void SendValue(char *n, int v) { values[n] = v; }
 static void SaveOneModel(uint32_t) { ++saves; }
 static bool RfLive() { return live; }
 static bool bigScreen = false; static bool ScreenIsBig() { return bigScreen; }   // B195
+static bool UndoPreBusy() { return false; } static void UndoPreSave(uint8_t, int, void (*then)(), const char *) { then(); }
+#ifndef RFGOVERNORVIEW_GLOBAL
+#define RFGOVERNORVIEW_GLOBAL 55
+#endif
+static int CurrentView = RFGOVERNORVIEW_GLOBAL;   // (B196: the save's words hide Save on their own page only)   // (B196: a 4 MB screen's path: the words at once)
 static bool ModelSeemsArmed(char *why, size_t n) { if (armed) snprintf(why, n, "armed"); return armed; }
 static bool RfPipeBlocked(char *why, size_t n) { if (pipeBlocked) snprintf(why, n, "no pipe"); return pipeBlocked; }
 static bool RfBlockNotLoaded(bool loaded, const char *, const char *) { return !loaded; }
@@ -219,7 +224,7 @@ def main():
     body = (lift(PIDS, 'FLASHMEM void ReadEditedPIDs()') + lift(PIDS, 'FLASHMEM void SaveToLocalBank()') + lift(PIDS, 'FLASHMEM void SendEditedPIDs()')
             + lift(GOVP, 'FLASHMEM void LoadGovWritePayload()') + lift(GOVP, 'FLASHMEM void SaveToLocalGovBank()') + lift(GOVP, 'FLASHMEM void SendEditedGovValues()')
             + lift(GOVG, 'FLASHMEM bool GovChoiceBad(const uint8_t *p, const char *what)') + lift(GOVG, 'FLASHMEM void LoadGovConfigWritePayload()')
-            + lift(GOVG, 'FLASHMEM void SaveToLocalGovGLOBAL()') + lift(GOVG, 'FLASHMEM void SendEditedGovConfigValues()'))
+            + lift(GOVG, 'FLASHMEM void SaveToLocalGovGLOBAL()') + lift(GOVG, 'FLASHMEM static void GovCfgQueueWrite()') + lift(GOVG, 'FLASHMEM void SendEditedGovConfigValues()'))
     # the guards must be in the gather-and-save functions themselves, not only in this test's expectations
     for fn, text in (('SaveToLocalBank', PIDS), ('SendEditedPIDs', PIDS), ('SaveToLocalGovBank', GOVP), ('SendEditedGovValues', GOVP),
                      ('SaveToLocalGovGLOBAL', GOVG), ('SendEditedGovConfigValues', GOVG)):

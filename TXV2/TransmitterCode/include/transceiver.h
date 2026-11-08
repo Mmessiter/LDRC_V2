@@ -1193,6 +1193,7 @@ static void BlockMaskTick();   // (below, with the block reads)
 // the pipe's state and how many of the block's items came - instead of hiding the "Loading ..." message over the old
 // numbers as if they were fresh (Malcolm, 9 Oct: "no change, and no messages").
 static uint32_t SilenceMsgUntil = 0;
+static int SilenceMsgView = -1;   // B196 (review): the page that line is on - taken away there only, never the next page's "Loading ..."
 static void BlockSilence(const char *what)
 {
     char b[120];
@@ -1203,7 +1204,7 @@ static void BlockSilence(const char *what)
     else snprintf(b, sizeof(b), "%s: nothing came back in %u s (Bluetooth %u). Bank switch again, or leave and return.", what, (unsigned)(MSP_WAIT_TIME / 1000), (unsigned)PipeState);
     SendText((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "t4" : "busy"), b);
     SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,1" : "vis busy,1"));
-    SilenceMsgUntil = millis() + 6000;
+    SilenceMsgUntil = millis() + 6000; SilenceMsgView = CurrentView;
 }
 void Hide_msg_if_needed()
 {
@@ -1211,7 +1212,7 @@ void Hide_msg_if_needed()
     uint32_t now = millis();
     BlockMaskTick();
     RfVerifyTick();   // B153: the "Saved" line after a read-back goes after its time
-    if (SilenceMsgUntil && (int32_t)(now - SilenceMsgUntil) >= 0) { SilenceMsgUntil = 0; SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,0" : "vis busy,0")); }
+    if (SilenceMsgUntil && (int32_t)(now - SilenceMsgUntil) >= 0) { SilenceMsgUntil = 0; if (SilenceMsgView == CurrentView) SendCommand((char *)(CurrentView == RFGOVERNORVIEW_GLOBAL ? "vis t4,0" : "vis busy,0")); }
 
     if (Reading_PIDS_Now)
     {
