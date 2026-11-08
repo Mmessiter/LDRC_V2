@@ -56,6 +56,11 @@ RTC_NOINIT_ATTR static volatile uint32_t lmRadioMs;        // the radios' last s
 RTC_NOINIT_ATTR static volatile uint8_t lmRadioOn, lmRadioN;   // ... on or off, and how many switches this run
 RTC_NOINIT_ATTR static volatile uint32_t lmStallN, lmStallMaxMs;   // a core seen silent for 200 ms and more: how often, the longest
 RTC_NOINIT_ATTR static char lmStuck[200];                  // the last such verdict, from the core that could still speak
+// (1.11.192) THE INTERRUPTS-OFF METER: a 1 ms timer interrupt on each core; the longest gap between two of its runs is the longest
+// stretch that core spent with its interrupts off (or in a longer interrupt) - the quantity the interrupt watchdog resets the chip
+// on when it reaches 300 ms. The run's longest, when, and (core 1, the loop's) where the loop was; and the longest lately (/status).
+RTC_NOINIT_ATTR static volatile uint32_t lmIntOffMax[2], lmIntOffAt[2];   // us, ms since start; [0] core 0, [1] core 1
+RTC_NOINIT_ATTR static char lmIntOffPart[16]; RTC_NOINIT_ATTR static volatile uint8_t lmIntOffWhat;
 
 // ---- the flash operations
 static const esp_flash_os_functions_t *lmOrig = nullptr;
@@ -88,6 +93,28 @@ static inline void lmRadioNote(bool on) { lmRadioMs = (uint32_t) (esp_timer_get_
 static volatile bool lmQuiet = false;                      // a restart we asked for is coming: the watch says nothing of the silence that follows
 static uint32_t lmHeapCheckAt = 0;                         // main.cpp: a heap check due (400 ms after a page load)
 static volatile uint32_t lmWatchMs = 0;                    // the watch's (core 0) last pass, ms since start: the loop reads it to see that core 0 lives
+// (1.11.192) the interrupts-off meter
+static hw_timer_t *lmTimer[2] = { nullptr, nullptr };
+static volatile int64_t lmTickLast[2] = { 0, 0 };
+static volatile uint32_t lmIntOffLately[2] = { 0, 0 }; static volatile uint32_t lmIntOffWindow = 0;
+static void IRAM_ATTR lmTickCore(int c) {
+    const int64_t now = esp_timer_get_time(); const int64_t last = lmTickLast[c]; lmTickLast[c] = now;
+    if (!last) return;
+    const uint32_t gap = (uint32_t) (now - last);
+    if (gap > lmIntOffLately[c]) lmIntOffLately[c] = gap;
+    if (gap > lmIntOffMax[c]) { lmIntOffMax[c] = gap; lmIntOffAt[c] = (uint32_t) (now / 1000); if (c == 1) { lmCopyName(lmIntOffPart, lmPart, sizeof(lmIntOffPart)); lmIntOffWhat = busyWhat; } }
+}
+static void IRAM_ATTR lmTick0() { lmTickCore(0); }
+static void IRAM_ATTR lmTick1() { lmTickCore(1); }
+static void lmMeterStart(int c) {                           // called ON the core to be measured (the interrupt is allocated on the calling core); timers 0 and 1 (hold_watch.h has 3)
+    if (c < 0 || c > 1 || lmTimer[c]) return;
+    lmTimer[c] = timerBegin(c, 80, true);                   // 80 MHz / 80 = 1 us a count
+    if (!lmTimer[c]) return;
+    lmTickLast[c] = 0; lmIntOffMax[c] = 0; lmIntOffAt[c] = 0;
+    timerAttachInterrupt(lmTimer[c], c ? &lmTick1 : &lmTick0, true);
+    timerAlarmWrite(lmTimer[c], 1000, true);                // every millisecond
+    timerAlarmEnable(lmTimer[c]);
+}
 static void lmShout(const char *s) {                       // from core 0, straight into UART0's FIFO: the loop, which owns Serial, may be the one that stopped
     char line[240]; const int n = snprintf(line, sizeof line, "LDRCLOG %s", s);
     for (int at = 0, tries = 0; at < n && tries < 80; ++tries) { const int w = uart_tx_chars(UART_NUM_0, line + at, n - at); if (w > 0) at += w; else esp_rom_delay_us(300); }
@@ -95,6 +122,7 @@ static void lmShout(const char *s) {                       // from core 0, strai
 static void lmWatch() {                                    // on core 0, every 50 ms: has the loop (core 1) fallen silent? (the interrupt watchdog resets the chip at 300 ms)
     const uint32_t now = (uint32_t) (esp_timer_get_time() / 1000);
     lmWatchMs = now;
+    if (now - lmIntOffWindow > 30000) { lmIntOffWindow = now; lmIntOffLately[0] = lmIntOffLately[1] = 0; }   // (1.11.192) the meter's "lately" window: half a minute
     if (lmQuiet || !lmLoopN) return;
     const uint32_t gone = now - lmLoopMs;
     static uint32_t saidFor = 0;
@@ -128,6 +156,8 @@ static std::string lmBeforeText() {
     lmPart[sizeof(lmPart) - 1] = 0; snprintf(t, sizeof t, "; part '%s'", lmPart); b += t;
     if (lmRadioN) { snprintf(t, sizeof t, "; the radios went %s at %lu ms (%ld ms before the loop's last pass; %u switches)", lmRadioOn ? "ON" : "OFF", (unsigned long) lmRadioMs, (long) (int32_t) (lmLoopMs - lmRadioMs), (unsigned) lmRadioN); b += t; }
     if (lmStallN) { lmStuck[sizeof(lmStuck) - 1] = 0; snprintf(t, sizeof t, "; A CORE HAD FALLEN SILENT (%lu times, the longest %lu ms), last: %s", (unsigned long) lmStallN, (unsigned long) lmStallMaxMs, lmStuck); b += t; }
+    lmIntOffPart[sizeof(lmIntOffPart) - 1] = 0;   // (1.11.192)
+    snprintf(t, sizeof t, "; interrupts off for up to %lu ms on core 1 at %lu ms (part '%s', loop at '%s') and %lu ms on core 0 at %lu ms", (unsigned long) (lmIntOffMax[1] / 1000), (unsigned long) lmIntOffAt[1], lmIntOffPart, lmWhatName(lmIntOffWhat), (unsigned long) (lmIntOffMax[0] / 1000), (unsigned long) lmIntOffAt[0]); b += t;
     b += "; the last commands (ms before the loop's last pass):";
     for (int k = 0; k < 12; ++k) { const int i = (lmCmdAt + k) % 12; if (!lmCmdMs[i] && !lmCmd[i][0]) continue; lmCmd[i][31] = 0; snprintf(t, sizeof t, " [%ld] %s", (long) (int32_t) (lmLoopMs - lmCmdMs[i]), lmCmd[i]); b += t; }
     return b;
@@ -137,6 +167,7 @@ static void lmBegin() {
     lmMagic = LM_MAGIC; lmFlashN = 0; lmFlashBusy = 0; lmFlashStartUs = 0; lmFlashLastUs = lmFlashMaxUs = lmFlashEndMs = 0;
     lmFlashTask[0] = lmFlashMaxTask[0] = 0; lmFlashWhat = lmFlashMaxWhat = 0; lmLoopMs = 0; lmLoopN = 0; lmHeapBad[0] = 0; lmHeapBadN = 0;
     lmCmdAt = 0; for (int i = 0; i < 12; ++i) { lmCmd[i][0] = 0; lmCmdMs[i] = 0; } lmPart[0] = '-'; lmPart[1] = 0; lmRadioMs = 0; lmRadioOn = 0; lmRadioN = 0; lmStallN = 0; lmStallMaxMs = 0; lmStuck[0] = 0;   // (1.11.191)
+    lmIntOffMax[0] = lmIntOffMax[1] = 0; lmIntOffAt[0] = lmIntOffAt[1] = 0; lmIntOffPart[0] = '-'; lmIntOffPart[1] = 0; lmIntOffWhat = 0;   // (1.11.192)
     if (esp_flash_default_chip && esp_flash_default_chip->os_func && !lmOrig) {
         lmOrig = esp_flash_default_chip->os_func;
         lmOps = *lmOrig; lmOps.start = lmFlashStart; lmOps.end = lmFlashEnd;
@@ -156,6 +187,7 @@ static void lmHeapPutc(char c) {
     else if (c >= 32 && c < 127) lmHeapCap[lmHeapCapN++] = c;
 }
 static void lmHeapTaskFn(void *) {
+    lmMeterStart(0);                                        // (1.11.192) this task runs on core 0: the meter for core 0 is set up from here
     for (;;) {
         if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(50)) == 0) { lmWatch(); continue; }   // (1.11.191) nothing to check: the watch on the loop's core, every 50 ms
         lmHeapCapN = 0;
@@ -210,6 +242,10 @@ static std::string lmJson() {
     snprintf(t, sizeof t, ",\"stall\":{\"n\":%lu,\"max_ms\":%lu,\"last\":\"", (unsigned long) lmStallN, (unsigned long) lmStallMaxMs); out += t;
     for (const char *p = lmStuck; *p; ++p) if (*p != '"' && *p != '\\') out += *p;
     snprintf(t, sizeof t, "\"},\"part\":\"%.15s\",\"radio\":{\"n\":%u,\"on\":%u,\"ms\":%lu},\"cmds\":[", lmPart, (unsigned) lmRadioN, (unsigned) lmRadioOn, (unsigned long) lmRadioMs); out += t;
+    lmIntOffPart[sizeof(lmIntOffPart) - 1] = 0;
+    char io[260]; snprintf(io, sizeof io, "\"intoff\":{\"c1_max_ms\":%lu,\"c1_at\":%lu,\"c1_part\":\"%.15s\",\"c1_what\":\"%s\",\"c1_lately_ms\":%lu,\"c0_max_ms\":%lu,\"c0_at\":%lu,\"c0_lately_ms\":%lu},",
+                 (unsigned long) (lmIntOffMax[1] / 1000), (unsigned long) lmIntOffAt[1], lmIntOffPart, lmWhatName(lmIntOffWhat), (unsigned long) (lmIntOffLately[1] / 1000), (unsigned long) (lmIntOffMax[0] / 1000), (unsigned long) lmIntOffAt[0], (unsigned long) (lmIntOffLately[0] / 1000));
+    { const std::string head = "\"cmds\":["; const size_t at = out.rfind(head); if (at != std::string::npos) out.insert(at, io); }   // (1.11.192) the meter, before the commands
     bool firstCmd = true;
     for (int k = 0; k < 12; ++k) { const int i = (lmCmdAt + k) % 12; if (!lmCmdMs[i] && !lmCmd[i][0]) continue; lmCmd[i][31] = 0; snprintf(t, sizeof t, "%s{\"ms\":%lu,\"c\":\"", firstCmd ? "" : ",", (unsigned long) lmCmdMs[i]); out += t; firstCmd = false; for (const char *p = lmCmd[i]; *p; ++p) if (*p != '"' && *p != '\\') out += *p; out += "\"}"; }
     out += "]}";

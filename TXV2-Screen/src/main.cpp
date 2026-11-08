@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.191"
+#define SCREEN_VERSION "1.11.192"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -978,6 +978,7 @@ static void blPoll() {
 static void setRadios(bool on);
 static void applyRadios(const char *why);
 static uint32_t radiosNotBefore = 0; static bool radiosHeld = false;   // (1.11.191) after a scan the radios wait 3 s: the page change and the WiFi start apart in time (the scan crash)
+static uint32_t pageLoadedMs = 0; static std::string radiosHeldWhy;   // (1.11.192) when the page last changed: no radio switches (WiFi, Bluetooth) within 2 s of it - 1.11.191's 3 s after a scan ended the scan crash, and the curve-page crashes were the Bluetooth pipe going down as the front page loaded
 static void doorToggle();                              // the workshop door (see "over the air")
 // "Check for update" (src/update_device.h, lib/LdrcUpdate)
 static bool updRequested = false;                      // the button has been pressed: the panel opens at the next pass of loop()
@@ -2386,7 +2387,8 @@ static void lmTell(const std::string &line) { flushOut(); Serial.print(line.c_st
 static bool loadPage(const std::string &name) {
     auto it = pageIds.find(name); if (it == pageIds.end() || !assetsOk()) return false;
     if (lmHeapOn && !lmHeapCheck((page.name + ">" + name).c_str())) { blog("heap", lmHeapLast.substr(0, 60)); lmTell("LDRCLOG heap check failed " + lmHeapLast.substr(0, 200)); }
-    lmHeapCheckAt = millis() + 400;                        // (1.11.191) and again 400 ms on (lmLoopPageCheck): damage done by the load itself, or by the page's first moments   // (1.11.188) the heap's structure and every block's canaries, on the other core, before the old page is destroyed (last_moments.h)
+    lmHeapCheckAt = millis() + 400;                        // (1.11.191) and again 400 ms on (lmLoopPageCheck): damage done by the load itself, or by the page's first moments
+    pageLoadedMs = millis();                               // (1.11.192) the radios keep still for 2 s from here   // (1.11.188) the heap's structure and every block's canaries, on the other core, before the old page is destroyed (last_moments.h)
     winOff(false);                                          // (1.11.156) the window goes with its page (the feeder stops reading the ring at the next frame, long before the new page is shown)
     pageT0 = millis() ? millis() : 1; pageDrawMs = pageComposeMs = pageShownMs = 0;   // (1.11.116) timed: /status "flip" "last"
     // (the screen saver's memory: taken as the screen blanks, used only by the restore that follows it)
@@ -4016,7 +4018,7 @@ static void banner(const char *msg, uint32_t ms) {   // (1.11.141: for how long 
 static void applyRadios(const char *why) {
     const bool want = (radiosOn || updWifi || picWifi) && tx.radiosAllowed();
     if (want == radiosLive) { radiosHeld = false; return; }
-    if (want && (int32_t) (millis() - radiosNotBefore) < 0) { radiosHeld = true; return; }   // (1.11.191) not yet: netPoll applies it when the hold is over
+    if ((want && (int32_t) (millis() - radiosNotBefore) < 0) || (millis() > 15000 && millis() - pageLoadedMs < 2000)) { radiosHeld = true; radiosHeldWhy = why; return; }   // (1.11.191/192) not yet: netPoll applies it when the hold is over (the page settled, the scan's 3 s)
     radiosHeld = false;
     radiosLive = want;
     lmRadioNote(want);                                     // (1.11.191) the "before" record says when the radios last switched
@@ -4073,7 +4075,7 @@ static void netPoll() {
     static uint32_t downSince = 0;
     { Part p("quiet"); quietPoll(); }
     { Part p("tick"); const char *why = tx.tick(millis() - bootMs); if (why) applyRadios(why); }
-    if (radiosHeld && (int32_t) (millis() - radiosNotBefore) >= 0) applyRadios("WiFi back on after the scan");   // (1.11.191) the 3 s hold is over
+    if (radiosHeld && (int32_t) (millis() - radiosNotBefore) >= 0 && (millis() <= 15000 || millis() - pageLoadedMs >= 2000)) { const std::string w = radiosHeldWhy.empty() ? std::string("WiFi back on after the scan") : radiosHeldWhy; applyRadios(w.c_str()); }   // (1.11.191/192) the hold is over
     if (bannerUntil && (int32_t) (millis() - bannerUntil) >= 0) { bannerUntil = 0; restoreRect(0, 0, W, BANNER_H); for (auto &c : page.comps) if (c.y < BANNER_H) drawComp(c); memoTouched(0, 0, W, BANNER_H); dirty(0, 0, W, BANNER_H); netDot(true); }
     if (!radiosLive) { Part p("dot"); netDot(); return; }
     if (quietActive && quietWifiOff) return;
@@ -4158,6 +4160,7 @@ void setup() {
     boardDetect(); panelMake();                            // (1.11.111) which board, by its flash chip: the pixel clock pin differs, and the wrong one is a black screen
     prefs.begin("screen", false);                          // FIRST: the remembered page, background and volume are read below
     lmHeapOn = (flashChipBytes >> 20) >= 16 && prefs.getInt("heapchk", 1) != 0;
+    lmMeterStart(1);                                       // (1.11.192) the interrupts-off meter for this core (the loop's), from the end of setup
     if (lmHeapOn) lmHeapCheck("start");                    // (1.11.191) the check's task is also the watch on the loop's core: up from the start   // (1.11.188) the heap checked at each page change on a 16 MB board (the ones that die on the way to the front page), unless /stall?kind=heapon&kb=0
     themeLoad();                                           // the pilot's colours, before anything is drawn
     {   // (1.11.131) THE CODE IN THE PSRAM (src/code_in_psram.h), before the panel runs. A start that switched and then died by a

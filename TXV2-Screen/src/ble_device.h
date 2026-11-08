@@ -272,6 +272,7 @@ static void bleTxServe() {                                     // in the task: t
 }
 static void bleTask(void *) {
     for (;;) {
+        if (bleOrder && millis() > 15000 && millis() - pageLoadedMs < 2000) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }   // (1.11.192) the stack goes up or down only 2 s after a page change: its radio's work was the front-page crash with the pipe closing
         if (bleOrder == 2) {                                   // off: down with the stack (a failed join keeps its reason until then)
             bleOrder = 0; bleState = BLE_STOPPING; bleNote("stopping"); bleLeave(); bleStep("deinit"); NimBLEDevice::deinit(true); bleStep("deinit done"); bleClient = nullptr; bleState = BLE_OFF; bleWifiKick = true; bleWifiKickSleep = true; bleNote("off");   // (deinit deletes every client)
         } else if (bleOrder == 1) {
