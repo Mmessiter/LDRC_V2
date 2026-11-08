@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.190"
+#define SCREEN_VERSION "1.11.191"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -252,7 +252,7 @@ static void partNote(const char *name, uint32_t us) {
     for (int i = 0; i < partN; ++i) if (partMax[i].name == name) { if (us > partMax[i].us) partMax[i].us = us; if (us > 5000) partMax[i].over5++; return; }
     if (partN < 24) { partMax[partN].name = name; partMax[partN].us = us; partMax[partN].over5 = us > 5000 ? 1 : 0; partN++; }
 }
-struct Part { const char *n; uint32_t t0; explicit Part(const char *name) : n(name), t0(micros()) {} ~Part() { partNote(n, micros() - t0); } };
+struct Part { const char *n; uint32_t t0; explicit Part(const char *name) : n(name), t0(micros()) { lmPartNote(name); } ~Part() { partNote(n, micros() - t0); lmPartNote("-"); } };   // (1.11.191) the name in RTC memory too: the "before" record's finer position
 static std::string partsJson() {                       // the /perf block; the window starts again
     std::string out = ",\"parts\":{";
     bool first = true;
@@ -977,6 +977,7 @@ static void blPoll() {
 }
 static void setRadios(bool on);
 static void applyRadios(const char *why);
+static uint32_t radiosNotBefore = 0; static bool radiosHeld = false;   // (1.11.191) after a scan the radios wait 3 s: the page change and the WiFi start apart in time (the scan crash)
 static void doorToggle();                              // the workshop door (see "over the air")
 // "Check for update" (src/update_device.h, lib/LdrcUpdate)
 static bool updRequested = false;                      // the button has been pressed: the panel opens at the next pass of loop()
@@ -2384,7 +2385,8 @@ static void saverApply(Page &np) {
 static void lmTell(const std::string &line) { flushOut(); Serial.print(line.c_str()); Serial.flush(); }
 static bool loadPage(const std::string &name) {
     auto it = pageIds.find(name); if (it == pageIds.end() || !assetsOk()) return false;
-    if (lmHeapOn && !lmHeapCheck((page.name + ">" + name).c_str())) { blog("heap", lmHeapLast.substr(0, 60)); lmTell("LDRCLOG heap check failed " + lmHeapLast.substr(0, 200)); }   // (1.11.188) the heap's structure and every block's canaries, on the other core, before the old page is destroyed (last_moments.h)
+    if (lmHeapOn && !lmHeapCheck((page.name + ">" + name).c_str())) { blog("heap", lmHeapLast.substr(0, 60)); lmTell("LDRCLOG heap check failed " + lmHeapLast.substr(0, 200)); }
+    lmHeapCheckAt = millis() + 400;                        // (1.11.191) and again 400 ms on (lmLoopPageCheck): damage done by the load itself, or by the page's first moments   // (1.11.188) the heap's structure and every block's canaries, on the other core, before the old page is destroyed (last_moments.h)
     winOff(false);                                          // (1.11.156) the window goes with its page (the feeder stops reading the ring at the next frame, long before the new page is shown)
     pageT0 = millis() ? millis() : 1; pageDrawMs = pageComposeMs = pageShownMs = 0;   // (1.11.116) timed: /status "flip" "last"
     // (the screen saver's memory: taken as the screen blanks, used only by the restore that follows it)
@@ -2659,6 +2661,7 @@ static std::string heapByJson() {
 }
 static void handle(const std::string &cmd) {
     Busy busy_(BUSY_HANDLE);
+    lmCmdNote(cmd.data(), cmd.size());                     // (1.11.191) the last twelve commands, in RTC memory
     char head[14]; { size_t i = 0; for (; i < sizeof head - 1 && i < cmd.size() && cmd[i] != '=' && cmd[i] != ' '; ++i) head[i] = cmd[i]; head[i] = 0; }
     // (1.11.152/153) by the property, not the component ("txt", "val", "page", "vis" ...: twenty names, not hundreds), and a
     // long text apart ("txt>1k": the log viewer's window of words)
@@ -2965,7 +2968,7 @@ static void pumpSerial() {
         if (b == 0xFF) {
             if (++ffs == 3) {
                 int bits = 0;
-                if (ldrc::txStatusCommand(buf.data(), (unsigned) buf.size(), bits)) { const bool modelWas = txStatus >= 0 && (txStatus & TX_MODEL); const bool bindWas = tx.binding; const char *why = tx.said(bits); if (why) applyRadios(why); if (modelWas != ((bits & TX_MODEL) != 0) || bindWas != tx.binding) needRedraw(); teensyCommands++; teensyLink.sawDisplayTraffic(); }   // (from the wire only: nothing the Mac sends can say what the transmitter is doing)
+                if (ldrc::txStatusCommand(buf.data(), (unsigned) buf.size(), bits)) { const bool modelWas = txStatus >= 0 && (txStatus & TX_MODEL); const bool bindWas = tx.binding, scanWas = tx.scanning; const char *why = tx.said(bits); if (scanWas && !tx.scanning) radiosNotBefore = millis() + 3000; if (why) applyRadios(why); if (modelWas != ((bits & TX_MODEL) != 0) || bindWas != tx.binding) needRedraw(); teensyCommands++; teensyLink.sawDisplayTraffic(); }   // (from the wire only: nothing the Mac sends can say what the transmitter is doing)
                 else if (ldrc::rxStatusCommand(buf.data(), (unsigned) buf.size(), rxNews)) { rxNews.atMs = millis(); rxNewsAny = true; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 else if (!buf.empty()) { const uint32_t t0 = micros(); handle(buf); perfHandleUs += micros() - t0; perfCmds++; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 buf.clear(); ffs = 0;
@@ -4012,8 +4015,11 @@ static void banner(const char *msg, uint32_t ms) {   // (1.11.141: for how long 
 }
 static void applyRadios(const char *why) {
     const bool want = (radiosOn || updWifi || picWifi) && tx.radiosAllowed();
-    if (want == radiosLive) return;
+    if (want == radiosLive) { radiosHeld = false; return; }
+    if (want && (int32_t) (millis() - radiosNotBefore) < 0) { radiosHeld = true; return; }   // (1.11.191) not yet: netPoll applies it when the hold is over
+    radiosHeld = false;
     radiosLive = want;
+    lmRadioNote(want);                                     // (1.11.191) the "before" record says when the radios last switched
     { char b[100]; snprintf(b, sizeof b, "%lu %s (tx=%d, page %s)\n", (unsigned long) millis(), why, txStatus, page.name.c_str()); radioLog += b; while (radioLog.size() > 1600) radioLog.erase(0, radioLog.find('\n') + 1); }
     if (want) { wifiStart(); banner(why); }
     else { web.stop(); wifiStop(); otaReady = false; banner(why); }
@@ -4067,6 +4073,7 @@ static void netPoll() {
     static uint32_t downSince = 0;
     { Part p("quiet"); quietPoll(); }
     { Part p("tick"); const char *why = tx.tick(millis() - bootMs); if (why) applyRadios(why); }
+    if (radiosHeld && (int32_t) (millis() - radiosNotBefore) >= 0) applyRadios("WiFi back on after the scan");   // (1.11.191) the 3 s hold is over
     if (bannerUntil && (int32_t) (millis() - bannerUntil) >= 0) { bannerUntil = 0; restoreRect(0, 0, W, BANNER_H); for (auto &c : page.comps) if (c.y < BANNER_H) drawComp(c); memoTouched(0, 0, W, BANNER_H); dirty(0, 0, W, BANNER_H); netDot(true); }
     if (!radiosLive) { Part p("dot"); netDot(); return; }
     if (quietActive && quietWifiOff) return;
@@ -4101,6 +4108,7 @@ static void netPoll() {
 static void restartDark() {
     blSet(0); gpio_hold_en((gpio_num_t) LCD_BL);
     rtcRestartAsked = RTC_RESTART_ASKED;                 // (1.11.190) asked for: should the RTC watchdog finish it (rst 7), the recorder keeps no record of a death
+    lmQuiet = true;                                       // (1.11.191) the watch says nothing of the silence that follows
     flushOut(); delay(200); ESP.restart();
 }
 #include "update_device.h"
@@ -4149,7 +4157,8 @@ void setup() {
     Serial.setRxFIFOFull(24);
     boardDetect(); panelMake();                            // (1.11.111) which board, by its flash chip: the pixel clock pin differs, and the wrong one is a black screen
     prefs.begin("screen", false);                          // FIRST: the remembered page, background and volume are read below
-    lmHeapOn = (flashChipBytes >> 20) >= 16 && prefs.getInt("heapchk", 1) != 0;   // (1.11.188) the heap checked at each page change on a 16 MB board (the ones that die on the way to the front page), unless /stall?kind=heapon&kb=0
+    lmHeapOn = (flashChipBytes >> 20) >= 16 && prefs.getInt("heapchk", 1) != 0;
+    if (lmHeapOn) lmHeapCheck("start");                    // (1.11.191) the check's task is also the watch on the loop's core: up from the start   // (1.11.188) the heap checked at each page change on a 16 MB board (the ones that die on the way to the front page), unless /stall?kind=heapon&kb=0
     themeLoad();                                           // the pilot's colours, before anything is drawn
     {   // (1.11.131) THE CODE IN THE PSRAM (src/code_in_psram.h), before the panel runs. A start that switched and then died by a
         // panic or a watchdog before loop() reached 20 s counts a strike; two strikes turn it off until the pref is set again
@@ -4308,7 +4317,7 @@ void setup() {
             const String b1 = prefs.getString("before1", ""), b2 = prefs.getString("before2", "");
             if (b2.length()) prefs.putString("before3", b2.c_str());
             if (b1.length()) prefs.putString("before2", b1.c_str());
-            prefs.putString("before1", b.substr(0, 480).c_str());
+            prefs.putString("before1", b.substr(0, 1200).c_str());   // (1.11.191: room for the last commands)
         }
     }
     for (int i = 0; i < 3; ++i) { const String s = prefs.getString(i == 0 ? "before1" : i == 1 ? "before2" : "before3", ""); beforeKept[i] = s.c_str(); }   // (1.11.188) read once: /status serves them from here
@@ -4323,7 +4332,7 @@ void setup() {
     // (1.11.180) ... after ANY restart that is not a power-on (a watchdog's, a panic's, a brown-out's too: the Teensy ran on through
     // them all), and with the reason, which the Teensy writes in its log (B185): 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
     if (why != ESP_RST_POWERON && !pageNames.empty()) { delay(300); Serial.printf("FrontView rst=%d", (int) why); }
-    if (!bootBefore.empty()) { Serial.flush(); delay(30); Serial.printf("LDRCLOG %.300s", bootBefore.c_str()); Serial.flush(); }   // (1.11.188) the Teensy's day log keeps the record (B198): a power-off loses ours
+    if (!bootBefore.empty()) { Serial.flush(); for (size_t i = 0; i < bootBefore.size(); i += 280) { delay(i ? 300 : 30); Serial.printf("LDRCLOG %s%.280s", i ? "(cont) " : "", bootBefore.c_str() + i); Serial.flush(); } }   // (1.11.191: in parts of 280, 300 ms apart - the Teensy keeps 8 lines a second)   // (1.11.188) the Teensy's day log keeps the record (B198): a power-off loses ours
     holdWatchBegin();                                      // (1.11.164) the hold watch, on this core, from here on
     // (1.11.178) The loop task goes on the task watchdog: 20 s without a pass of loop() is a hang (Malcolm, 4 Nov 2026, the
     // curves page's Reset: "it locked up the transmitter completely, and I had to switch everything off" - nothing watched
@@ -4342,7 +4351,23 @@ void setup() {
     if (sdOk && pageNames.empty() && !updater.showing()) updRequested = true;
 }
 
+static void lmLoopPageCheck() {                        // (1.11.191) the heap checked again 400 ms after a page load; and core 0 watched from here, as core 1 is watched from there
+    if (lmHeapCheckAt && (int32_t) (millis() - lmHeapCheckAt) >= 0) {
+        lmHeapCheckAt = 0;
+        if (lmHeapOn && !lmHeapCheck((page.name + " +400ms").c_str())) { blog("heap", lmHeapLast.substr(0, 60)); lmTell("LDRCLOG heap check failed " + lmHeapLast.substr(0, 200)); }
+    }
+    if (lmWatchMs && lmLoopN > 20 && !lmQuiet) {
+        const uint32_t now = millis(); static uint32_t said0 = 0;
+        if (now - lmWatchMs > 250 && said0 != lmWatchMs) {
+            said0 = lmWatchMs; lmStallN = lmStallN + 1; if (now - lmWatchMs > lmStallMaxMs) lmStallMaxMs = now - lmWatchMs;
+            TaskHandle_t h = xTaskGetCurrentTaskHandleForCPU(0);
+            snprintf(lmStuck, sizeof lmStuck, "core 0 silent for %lu ms at %lu ms: task '%.15s' on it (the loop goes on)", (unsigned long) (now - lmWatchMs), (unsigned long) now, h ? pcTaskGetName(h) : "?");
+            lmTell(std::string("LDRCLOG ") + lmStuck);
+        }
+    }
+}
 void loop() {
+    lmLoopPageCheck();
     lmLoopTick();                                          // (1.11.188) the loop's last pass, in RTC memory: the next start's "before" record says when the loop was last seen
     static uint32_t lastLoop = 0; const uint32_t now = millis();
     if (lastLoop && now - lastLoop > perfLoopMaxMs) perfLoopMaxMs = now - lastLoop;

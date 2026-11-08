@@ -482,7 +482,7 @@ struct ScreenHost : public ldrc::UpdateHost {
     bool linkPageOk() override { return page.name == "FrontView" || (page.name == "BlankView" && saverPage == "FrontView"); }
     bool installWhenFound() override { return true; }   // (1.11.183, Malcolm 5 Nov 2026) Check for update = he wants it: no second press
     void accept() override { esp_ota_mark_app_valid_cancel_rollback(); }
-    bool reject() override { blSet(0); gpio_hold_en((gpio_num_t) LCD_BL); rtcRestartAsked = RTC_RESTART_ASKED; flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // (1.11.180: dark, as restartDark)   // comes back only if there is nothing to go back to
+    bool reject() override { blSet(0); gpio_hold_en((gpio_num_t) LCD_BL); rtcRestartAsked = RTC_RESTART_ASKED; lmQuiet = true; flushOut(); delay(200); esp_ota_mark_app_invalid_rollback_and_reboot(); return false; }   // (1.11.180: dark, as restartDark)   // comes back only if there is nothing to go back to
     void restart() override { restartDark(); }   // (1.11.180) dark through the reboot
     void beforeFreshStart(const std::string &kind) override { (void) kind; prefs.putInt("stripskip", 1); }   // (1.11.134) the install's fresh start runs without the strips (src/strip_feed.h): the install path exactly as proven before them; the restart after the install brings them back
     uint32_t roomForTls() override { return (uint32_t) ESP.getMaxAllocHeap(); }
