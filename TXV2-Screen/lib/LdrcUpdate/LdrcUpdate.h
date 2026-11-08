@@ -186,6 +186,7 @@ public:
 
     bool showing() const { return view_.kind != UpdView::NONE; }
     bool idle() const { return phase_ == P_IDLE; }
+    bool rxAsking() const { return phase_ == P_RX_ASK; }   // (1.11.187) "Check for a receiver update?" waits for Check or Cancel
     bool ownsLink() const { return linkOurs_; }   // the link job running is ours: the panel is ours too
     bool working() const { return changing_; }    // something is being changed: do not switch off
     int32_t secondsLeft() const { return leftSecs_; }   // the fetching's time left, as last worked out (-1: not known)
@@ -196,7 +197,7 @@ private:
     enum Phase { P_IDLE, P_WIFI, P_LATEST, P_ASK, P_NOTE, P_OFFER, P_RECENT, P_PICK, P_DESCR,
                  P_LISTS, P_COMPARE, P_FETCH, P_TEENSY, P_PLACE, P_FLASH, P_RESTART,
                  P_TRIAL, P_RESULT, P_FRESH, P_PAGE_WAIT,      // (1.11.178) the quiet look waits for the main board's front page before it asks
-                 P_RX_WIFI, P_RX_LATEST, P_RX_OFFER, P_RX_RUN };     // the receiver's update, through the main board
+                 P_RX_ASK, P_RX_WIFI, P_RX_LATEST, P_RX_OFFER, P_RX_RUN };     // the receiver's update, through the main board
     // (1.11.32: one string each. Three hundred items with four strings apiece - the website's name of each file, where it
     //  is staged, its name on the main board - held some 60 kB of the chip's internal memory in a thousand small pieces,
     //  and a secure connection made in the middle of the fetching found none big enough. The other names are made
@@ -239,6 +240,8 @@ private:
     void restoreHave();                           // the card's memory of its files, put back when the fetching failed (nothing was changed)
     static const uint32_t TLS_ROOM = 56u * 1024u;
     // the receiver's update
+    bool rxReady();
+    void rxCheck();
     void rxGotLatest();
     void rxInstall();
     void rxPoll();

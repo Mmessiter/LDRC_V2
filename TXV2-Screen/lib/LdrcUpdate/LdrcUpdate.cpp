@@ -448,7 +448,7 @@ void Updater::freshStart(const std::string &kind) {
     st += "count=" + num((uint32_t) (freshCount_ + 1)) + "\n";   // (1.11.121: how many for this press, this one included)
     host_.writeText(STATE_FILE, st);
     host_.beforeFreshStart(kind);
-    show(UpdView::WORKING, "Restarting the screen first"); line("Nothing is wrong: the memory is in pieces after Bluetooth."); line("The screen goes dark for two seconds, then carries on by itself.");
+    show(UpdView::WORKING, "Restarting the screen first"); line("Please wait ..."); line("The screen goes dark for two seconds, then carries on by itself.");   // (1.11.187, Malcolm 8 Nov 2026: "Nothing is wrong" -> "Please wait")
     changing_ = false; freshKind_ = kind; phase_ = P_FRESH; restartAt_ = host_.ms() + 1500;
 }
 // A job failed for want of memory (the screen says so: a secure connection could not be made, -0x7F00). Before anything
@@ -1140,6 +1140,10 @@ void Updater::press(int button) {
     case P_RESULT:
         if (button == 1) { host_.remove(STATE_FILE); mustSee_ = false; close(); }
         return;
+    case P_RX_ASK:
+        if (button == 1) rxCheck();
+        else if (button == 2) { note("not now"); close(); }
+        return;
     case P_RX_WIFI: case P_RX_LATEST:
         if (button == 1 && !view_.button1.empty()) cancel();
         return;
@@ -1164,7 +1168,7 @@ void Updater::poll() {
 
     // A panel that waits for a finger steps aside when flying begins: the pilot needs his front page. One that came
     // up to SAY why nothing can be done ("The motor is on") stays four seconds first, or nobody would ever read it.
-    if (showing() && !mustSee_ && (phase_ == P_NOTE || phase_ == P_OFFER || phase_ == P_RESULT || phase_ == P_PICK || phase_ == P_RX_OFFER) && flyingNow() != UpdateHost::FLY_NO && (!shownFlying_ || now - shownAt_ > 4000)) {
+    if (showing() && !mustSee_ && (phase_ == P_NOTE || phase_ == P_OFFER || phase_ == P_RESULT || phase_ == P_PICK || phase_ == P_RX_ASK || phase_ == P_RX_OFFER) && flyingNow() != UpdateHost::FLY_NO && (!shownFlying_ || now - shownAt_ > 4000)) {
         note(std::string(flyingWords(flyingNow())) + ": the panel steps aside");       // (a verdict stays on the card and is shown again at the next start, or at the next check)
         close();
         return;
@@ -1333,15 +1337,31 @@ void Updater::beginReceiver() {
     log_.clear(); choosing_ = false;
     freshDone_ = false; freshCount_ = 0;   // (1.11.116) as begin(): one fresh start for each press
     note("---- receiver update (screen " + host_.screenVersion() + ")");
-    if (rxManifestUrl_.empty()) { message("No receivers' list", "This screen knows no list of receiver releases."); return; }
+    if (!rxReady()) return;
+    // (1.11.187, Malcolm 8 Nov 2026: "needs a confirmation in case it was hit by mistake. Because checking can waste
+    // time if not intended") - the WiFi is not even asked for until Check is pressed.
+    show(UpdView::OFFER, "Check for a receiver update?");
+    line("It takes up to a minute.");
+    buttons("Check", "Cancel");
+    phase_ = P_RX_ASK;
+}
+// What would stop a receiver check at once says so, without a question first; asked again when Check is pressed
+// (the model may have gone, or another job begun, while the question waited).
+bool Updater::rxReady() {
+    if (rxManifestUrl_.empty()) { message("No receivers' list", "This screen knows no list of receiver releases."); return false; }
     if (host_.flying() != UpdateHost::FLY_MODEL) {
-        if (notNow()) return;                      // the motor is on, or the safety is off
+        if (notNow()) return false;                // the motor is on, or the safety is off
         message("No model is connected", "Switch the model on,", "then try again.");
-        return;
+        return false;
     }
     rxFlow_ = true; rxHave_ = 0; rxLatest_ = 0; rxLatestName_.clear(); rxNotes_.clear();
-    if (link_.running() || host_.busy()) { message("Busy", "Another job is still running.", "Try again in a minute."); return; }
-    if (!host_.wifiAny()) { noWifi("No WiFi yet", "The transmitter fetches its updates over WiFi.", "Choose a network and give its password, once."); return; }
+    if (link_.running() || host_.busy()) { message("Busy", "Another job is still running.", "Try again in a minute."); return false; }
+    if (!host_.wifiAny()) { noWifi("No WiFi yet", "The transmitter fetches its updates over WiFi.", "Choose a network and give its password, once."); return false; }
+    return true;
+}
+void Updater::rxCheck() {
+    note("the pilot pressed Check");
+    if (!rxReady()) return;
     host_.wifiWanted(true);
     host_.keepAwake(); lastPoke_ = host_.ms();
     show(UpdView::BUSY, "Checking the receiver"); line("Joining the WiFi"); buttons("Cancel", "");

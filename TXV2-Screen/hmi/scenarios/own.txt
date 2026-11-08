@@ -113,6 +113,8 @@ ModelName.txt="RAW 420 MCM (3)"
 @model 1
 page RXSetupView
 ModelName.txt="RAW 420 MCM (3)"
+@rxupdate ask
+@shot own_rx_ask
 @rxupdate checking
 @shot own_rx_checking
 @rxupdate offer

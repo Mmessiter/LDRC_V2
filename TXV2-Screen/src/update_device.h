@@ -41,6 +41,13 @@ static volatile int32_t updRssiSum = 0, updRssiMin = 0;
 
 static void updHangUp() { if (updHttp) updHttp->end(); if (updTls) updTls->stop(); }
 static volatile bool updNoMemory = false;                   // (1.11.32) the last ask failed for want of memory: mbedTLS could not get its buffers (-0x7F00), or there is plainly no room
+// (1.11.187) THE INTERNAL RAM IN PIECES. The 4 MB board, 8 Nov 2026: screen.bin stopped three times ("messiter.com stopped
+// answering"), then "no connection ... [heap 59104, largest 14836, tls room 2686964]", then the card took nothing - five tries
+// that could not differ, the TLS room (PSRAM) plentiful, the chip's own RAM in 15 kB pieces (69 kB in one piece after a
+// restart, when the same update went through first time). A failure with the largest piece under this is a want of memory:
+// the updater's fresh start follows (freshForMemory: once for a check, up to six for an install, each going on by itself).
+static const uint32_t UPD_LOW_INTERNAL = 20000;
+static void updNoteLowInternal() { if (ESP.getMaxAllocHeap() < UPD_LOW_INTERNAL) updNoMemory = true; }
 // Ask for `url`; on success the answer's body is waiting and `len` is its length.
 static bool updAsk(const std::string &url, int &len, std::string &err) {
     updNoMemory = false;
@@ -65,7 +72,7 @@ static bool updAsk(const std::string &url, int &len, std::string &err) {
         }
         else {
             err = "no connection to messiter.com"; if (tls) { char b[64]; snprintf(b, sizeof b, " (%d, -0x%04X)", code, (unsigned) -tls); err += b; } else { char b[24]; snprintf(b, sizeof b, " (%d)", code); err += b; }
-            updNoMemory = tls == -0x7F00 || tlsRoom() < 40000;   // MBEDTLS_ERR_SSL_ALLOC_FAILED: the updater restarts the screen once for this (1.11.32); (1.11.146) the room is the PSRAM's, not the internal RAM's
+            updNoMemory = tls == -0x7F00 || tlsRoom() < 40000 || ESP.getMaxAllocHeap() < UPD_LOW_INTERNAL;   // (1.11.187: or the internal RAM in pieces) MBEDTLS_ERR_SSL_ALLOC_FAILED: the updater restarts the screen once for this (1.11.32); (1.11.146) the room is the PSRAM's, not the internal RAM's
             // 1.11.11 (Malcolm, 7 Oct: "could not join the Wi-Fi usefully until I had switched the transmitter off and on",
             // twice): a TLS connection wants some 45 kB of memory in one piece; after a Bluetooth session there may not be.
             // The numbers go into the message, so the next time says which it was.
@@ -92,8 +99,8 @@ template <class Sink> static bool updRead(int len, std::string &err, Sink sink) 
             updPhase = 4;                                  // (1.11.164) writing the card (the sink)
             if (n > 0) { if (!sink(updBuf, (size_t) n)) { if (err.empty()) err = "the screen's card would not take it"; break; } got += n; idle = millis(); updProgress = got; psramPace((uint32_t) n); continue; }   // (1.11.161: the pace's rest after each slice, as every other mover)
         }
-        if (!s->connected() && s->available() <= 0) { err = "the connection was lost"; break; }
-        if (millis() - idle > 15000) { err = "messiter.com stopped answering"; break; }
+        if (!s->connected() && s->available() <= 0) { err = "the connection was lost"; updNoteLowInternal(); break; }
+        if (millis() - idle > 15000) { err = "messiter.com stopped answering"; updNoteLowInternal(); break; }
         vTaskDelay(pdMS_TO_TICKS(2));
     }
     if (got == (uint32_t) len && err.empty()) { updHttp->end(); return true; }       // (kept alive for the next one)
@@ -167,7 +174,7 @@ static void updFetchFile(ldrc::Work &w) {
     const uint32_t reading = millis();
     const bool got = updRead(len, w.error, [&](const uint8_t *b, size_t n) {
         crc = ldrc::crc32(b, n, crc); const uint32_t t = micros(); const size_t k = f.write(b, n); updCardUs += micros() - t;
-        if (k != n) { char d[72]; snprintf(d, sizeof d, "the screen's card would not take it (took %u of %u bytes at %lu, errno %d)", (unsigned) k, (unsigned) n, (unsigned long) updProgress, (int) errno); w.error = d; }   // (1.11.127) which write, and why: every big file's first write failed once on 26 Oct, the retry took it
+        if (k != n) { const int e = errno; const uint32_t big = ESP.getMaxAllocHeap(); char d[176]; snprintf(d, sizeof d, "the screen's card would not take it (took %u of %u bytes at %lu, errno %d%s, %lu kB free, largest %u)", (unsigned) k, (unsigned) n, (unsigned long) updProgress, e, e == 28 ? " card full" : e == 5 ? " card error" : e == 12 ? " no memory" : "", (unsigned long) ((SD.totalBytes() - SD.usedBytes()) / 1024), (unsigned) big); w.error = d; if (e == 12 || big < UPD_LOW_INTERNAL) updNoMemory = true; }   // (1.11.187: the 4 MB board, 8 Nov - "took 0 of 4096 bytes at 1179648, e." five times: 72 bytes cut off the why)   // (1.11.127) which write, and why: every big file's first write failed once on 26 Oct, the retry took it
         return k == n;
     });
     f.close();
@@ -513,11 +520,13 @@ static std::string updCut(const std::string &s, int font, int maxW) {           
     while (!t.empty() && textWidth(font, t + "...") > maxW) t.erase(t.size() - 1);
     return t + "...";
 }
+// The go-ahead button: rightmost, in yellow. (1.11.187: "Check" - the receiver check's question - is one too)
+static bool updGoLabel(const std::string &l) { return l == "Install now" || l == "OK" || l == "Check"; }
 static void updDrawButton(int i, const std::string &label) {
     UpdButton &b = updBtn[i];
     if (!b.there) return;
     const bool down = updPressed == i + 1;
-    const bool go = label == "Install now" || label == "OK";   // (the go-ahead in yellow, as the WiFi page's and the command line's: the same test that puts it rightmost)
+    const bool go = updGoLabel(label);   // (the go-ahead in yellow, as the WiFi page's and the command line's: the same test that puts it rightmost)
     const uint16_t face = down ? 0x9CD3 : go ? 0xFFF3 : 0xD69A, hi = shade(face, 60), lo = shade(face, -45);
     gfx->fillRect(b.x, b.y, b.w, b.h, face);
     for (int k = 0; k < 3; ++k) {
@@ -629,7 +638,7 @@ static void updDrawPanel(const ldrc::UpdView &v) {
         // that goes ahead - OK, Install now - is the rightmost; the others keep their order to its left
         for (int k = 0; k + 1 < n; ++k) {
             const std::string &l = *labels[idx[k]];
-            if (l == "OK" || l == "Install now") { const int go = idx[k]; for (int j = k; j + 1 < n; ++j) idx[j] = idx[j + 1]; idx[n - 1] = go; break; }
+            if (updGoLabel(l)) { const int go = idx[k]; for (int j = k; j + 1 < n; ++j) idx[j] = idx[j + 1]; idx[n - 1] = go; break; }
         }
         const int gap = 20, side = 16;
         const int bw = n == 1 ? 180 : n ? min(280, (w - 2 * side - (n - 1) * gap) / n) : 0;

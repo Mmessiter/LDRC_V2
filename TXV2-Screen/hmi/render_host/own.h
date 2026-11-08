@@ -9,7 +9,7 @@
 //   @update STATE    checking uptodate offer fetching copying teensy screenfiles screenflash finishing done failed cardfull
 //                    donotfly fellback noserver nowifi nowifiyet motor safety model modeljustnow room versions installed
 //                    older picking again
-//   @rxupdate STATE  checking offer working waiting done uptodate nomodel noversion armed nowifi failed noanswer safety
+//   @rxupdate STATE  ask checking offer working waiting done uptodate nomodel noversion armed nowifi failed noanswer safety
 //   @pics STATE      choose first mine page2 pressed ask_delete deleted receive receive_nowifi receive_flying receiving (pick NAME: that picture touched)
 //                    received upload_failed saving opening
 //   @cli STATE       opening console scrolled longreply keys keys_empty keys_symbols leave nopipe armed refused refused_linked

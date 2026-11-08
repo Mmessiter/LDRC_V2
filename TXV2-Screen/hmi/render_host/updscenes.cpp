@@ -114,21 +114,22 @@ bool updScene(const std::string &name, UpdView &out, std::string &why) {
         if (!ok) why = "no 'again' button on the Up to date panel";
     }
     // the receiver, through the main board
-    else if (name == "rx_checking") { Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); c.run(200); out = c.upd->view(); return true; }
-    else if (name == "rx_offer") { Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); ok = c.untilKind(UpdView::OFFER, 30000); out = c.upd->view(); if (!ok) why = "no offer"; return ok; }
+    else if (name == "rx_ask") { Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); c.run(200); out = c.upd->view(); return c.upd->rxAsking(); }
+    else if (name == "rx_checking") { Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); c.run(200); out = c.upd->view(); return true; }
+    else if (name == "rx_offer") { Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); ok = c.untilKind(UpdView::OFFER, 30000); out = c.upd->view(); if (!ok) why = "no offer"; return ok; }
     else if (name == "rx_working" || name == "rx_waiting") {
-        Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1);
+        Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1);
         c.run(name == "rx_working" ? 30000 : 95000); out = c.upd->view(); return true;
     }
-    else if (name == "rx_done") { Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(200000); out = c.upd->view(); return ok; }
-    else if (name == "rx_uptodate") { Bench c; rxBench(c, 0x00090375u); c.run(3000); c.upd->beginReceiver(); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
-    else if (name == "rx_nomodel") { Bench c; rxBench(c); c.host.model = false; c.run(3000); c.upd->beginReceiver(); out = c.upd->view(); return true; }
-    else if (name == "rx_noversion") { Bench c; rxBench(c, 0); c.run(3000); c.upd->beginReceiver(); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
-    else if (name == "rx_armed") { Bench c; rxBench(c); c.host.rxAnswer = 2; c.run(3000); c.upd->beginReceiver(); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
-    else if (name == "rx_nowifi") { Bench c; rxBench(c); c.host.rxAnswer = 3; c.run(3000); c.upd->beginReceiver(); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
-    else if (name == "rx_failed") { Bench c; rxBench(c); c.host.rxOutcome = 2; c.run(3000); c.upd->beginReceiver(); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(200000); out = c.upd->view(); return ok; }
-    else if (name == "rx_noanswer") { Bench c; rxBench(c); c.host.rxAnswer = -1; c.run(3000); c.upd->beginReceiver(); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
-    else if (name == "rx_safety") { Bench c; rxBench(c); c.host.safetyDefined = true; c.host.safetyOff = true; c.run(3000); c.upd->beginReceiver(); out = c.upd->view(); return true; }
+    else if (name == "rx_done") { Bench c; rxBench(c); c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(200000); out = c.upd->view(); return ok; }
+    else if (name == "rx_uptodate") { Bench c; rxBench(c, 0x00090375u); c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
+    else if (name == "rx_nomodel") { Bench c; rxBench(c); c.host.model = false; c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); out = c.upd->view(); return true; }
+    else if (name == "rx_noversion") { Bench c; rxBench(c, 0); c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
+    else if (name == "rx_armed") { Bench c; rxBench(c); c.host.rxAnswer = 2; c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
+    else if (name == "rx_nowifi") { Bench c; rxBench(c); c.host.rxAnswer = 3; c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
+    else if (name == "rx_failed") { Bench c; rxBench(c); c.host.rxOutcome = 2; c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(200000); out = c.upd->view(); return ok; }
+    else if (name == "rx_noanswer") { Bench c; rxBench(c); c.host.rxAnswer = -1; c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); c.untilKind(UpdView::OFFER, 30000); c.upd->press(1); ok = c.untilVerdict(30000); out = c.upd->view(); return ok; }
+    else if (name == "rx_safety") { Bench c; rxBench(c); c.host.safetyDefined = true; c.host.safetyOff = true; c.run(3000); c.upd->beginReceiver(); if (c.upd->rxAsking()) c.upd->press(1); out = c.upd->view(); return true; }
     else { why = "no such state"; return false; }
     out = b.upd->view();
     if (!ok && why.empty()) why = "not reached (the panel says: " + b.said() + ")";
