@@ -222,7 +222,7 @@ Updater::Updater(UpdateHost &host, LinkMaster &link, const std::string &latestUr
       since_(0), lastPoke_(0), shownAt_(0), linkAfter_(0), restartAt_(0), stageSince_(0),
       linkOurs_(false), linkWanted_(false), linkStarted_(false), changing_(false), silent_(false), waiting_(false), noteWifi_(false),
       shownFlying_(false), mustSee_(false), textTries_(0), textMax_(8192), textRound2_(false), textWaitMs_(2000),
-      teensyThere_(false), teensyFellBack_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), freshCount_(0), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
+      teensyThere_(false), teensyFellBack_(false), whoAskAt_(0), whoAskedAt_(0), whoAsked_(false), choosing_(false), noteVersions_(false), freshDone_(false), freshChoosing_(false), freshCount_(0), needTeensyFw_(false), needTeensyFiles_(false), needScreenFw_(false), needScreenFiles_(false),
       listStep_(0), at_(0), sub_(0), tries_(0), fetchTotal_(0), fetchDone_(0), fetchCount_(0), fetchIndex_(0), fetchBegan_(0), leftAt_(0), leftSecs_(-1), leftShown_(-1),
       placed_(0), trialSeen_(0), keptFiles_(0), stTeensyThere_(false), stTeensyChanged_(false), stScreenFw_(false), stFiles_(0), stKept_(0), trialStep_(0), resultGood_(false),
       rxFlow_(false), quiet_(false), quietOutcome_(0), newsPending_(false), rxHave_(0), rxLatest_(0), rxPhaseSeen_(0), rxNewsAt_(0), rxQuietTotal_(0), again_(false) {}
@@ -474,8 +474,40 @@ void Updater::restoreHave() {
     haveText_.clear();
 }
 
+// (1.11.189 / B199, Malcolm 8 Nov 2026: "just after returning to the front screen, the LED went blue for a second or so and then red - rather
+// as it does when booting up", twice; the Teensy's log: the quiet look's knock, 52 s after each power-up.) The link's opening makes the main
+// board a file server for the while (the LED blue, nothing transmitted), saves everything to its card, and its closing draws the front page
+// afresh - all that to read a version and an eight-character mark. The quiet look now asks with a word, LDRCWHO, which a B199 main board
+// answers with "fw=...;state=...;mark=..." in a moment; one that says nothing within two seconds is older, and is asked over the link as
+// before. The pilot's own Check for update keeps the link: it goes on to install.
+static std::string wordValue(const std::string &w, const char *key) {
+    const std::string k = std::string(key) + "=";
+    size_t at = 0;
+    while (at < w.size()) {
+        size_t end = w.find(';', at); if (end == std::string::npos) end = w.size();
+        if (w.compare(at, k.size(), k) == 0) return w.substr(at + k.size(), end - at - k.size());
+        at = end + 1;
+    }
+    return "";
+}
 void Updater::askTeensy() {
     if (link_.running()) { message("Busy", "Another job holds the link to the main board.", "Try again in a minute."); return; }   // (it began since we looked: from the Mac)
+    if (quiet_) {
+        const uint32_t now = host_.ms();
+        whoAskAt_ = (int32_t) (lastPoke_ + 400 - now) > 0 ? lastPoke_ + 400 : now;   // (a word to the main board is a touch event, as a keep-awake is: not within 0.4 s of one, or the two are read as one)
+        whoAsked_ = false; whoAskedAt_ = 0; phase_ = P_WHO;
+        return;
+    }
+    askTeensyLink();
+}
+void Updater::whoHeard(const std::string &who) {
+    teensyFw_ = trim(wordValue(who, "fw")); teensyThere_ = !teensyFw_.empty();
+    teensyFellBack_ = wordValue(who, "state") == "rolledback";       // its last new firmware did not stay up, and it put the previous one back
+    teensyMarker_ = trim(wordValue(who, "mark"));
+    note("transmitter, by its word (no link): " + who);
+    decide();
+}
+void Updater::askTeensyLink() {
     setLine(0, "Asking the transmitter");
     host_.remove(TEENSY_MARK_NOW);
     link_.clear();
@@ -1118,7 +1150,7 @@ void Updater::cancel() {
 }
 void Updater::press(int button) {
     switch (phase_) {
-    case P_WIFI: case P_LATEST: case P_ASK: case P_LISTS: case P_COMPARE: case P_FETCH: case P_RECENT: case P_DESCR:
+    case P_WIFI: case P_LATEST: case P_ASK: case P_WHO: case P_LISTS: case P_COMPARE: case P_FETCH: case P_RECENT: case P_DESCR:
         if (button == 1 && !view_.button1.empty()) cancel();
         return;
     case P_NOTE:
@@ -1211,6 +1243,16 @@ void Updater::poll() {
     case P_ASK:
         if (!linkBusy()) asked();
         return;
+    case P_WHO: {                                 // (1.11.189) the quiet look's word to the main board, and its answer
+        uint32_t at = 0; const std::string who = host_.teensyWho(at);
+        if (!whoAsked_) { if ((int32_t) (now - whoAskAt_) < 0) return; host_.askTeensyWho(); whoAsked_ = true; whoAskedAt_ = now; return; }
+        if (!who.empty() && (int32_t) (at - whoAskedAt_) >= 0) { whoHeard(who); return; }       // answered
+        if (now - whoAskedAt_ < 2000) return;
+        if (!who.empty()) { note("the main board did not answer LDRCWHO within 2 s: its word from its start is taken"); whoHeard(who); return; }   // (said at its start, so it is a B199 or later, and that is what runs)
+        note("the main board does not answer LDRCWHO (its firmware may be older than B199): the link, as before");
+        askTeensyLink();
+        return;
+    }
     case P_RECENT: case P_DESCR:
         if (!textArrived()) return;
         if (phase_ == P_RECENT) gotRecent(); else gotDescription();

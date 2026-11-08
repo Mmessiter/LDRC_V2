@@ -376,6 +376,8 @@ struct ScreenHost : public ldrc::UpdateHost {
     bool armed() override { return armedNow; }
     int flying() override { return flyingNow(); }
     bool teensySeen() override { return teensyCommands > 0; }
+    std::string teensyWho(uint32_t &atMs) override { atMs = teensyWhoAt; return teensyWhoWord; }   // (1.11.189 / B199) its own word about itself (main.cpp handle "ldrcwho=")
+    void askTeensyWho() override { if (teensyLink.running()) return; flushOut(); Serial.write((const uint8_t *) "LDRCWHO", 7); }   // a word to it, as UKRULES is: B199 answers at once; an older main board says nothing
     void wifiWanted(bool on) override {
         if (updWifi == on) return;
         updWifi = on;

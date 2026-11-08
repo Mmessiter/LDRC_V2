@@ -84,6 +84,14 @@ public:
     virtual bool softRestart() { return false; }  // (1.11.176) this start was a restart of the screen's own asking (an update's), not a power-up: the main board was running all along
     virtual bool installWhenFound() { return false; }   // (1.11.183) the pilot's own Check for update installs what it finds, no "Install now" (the screen: true)
     virtual bool linkPageOk() { return true; }    // (1.11.178) the main board is on a page on which it lets the file link open (B179: its front page, its screen saver, Transmitter setup): the quiet look asks it only then
+    // (1.11.189 / B199, Malcolm 8 Nov 2026: "just after returning to the front screen, the LED went blue for a second or so and then red -
+    // rather as it does when booting up", twice: the quiet look's link job, 52 s after power-up.) The main board's own word about itself,
+    // "fw=2.5.6 B199 08/11/26;state=confirmed;mark=1A2B3C4D" (what the link's hello and its /FW/FILES.TXT would have said), said at its
+    // start and whenever asked with the word LDRCWHO (askTeensyWho). The quiet look takes it instead of opening the file link - whose
+    // opening made the main board a file server for the while (the LED blue), saved to its card and drew its front page afresh.
+    // atMs: when it was heard (ms()); "" and 0: never. An older main board (B198 and before) says nothing: the link, as before.
+    virtual std::string teensyWho(uint32_t &atMs) { atMs = 0; return ""; }
+    virtual void askTeensyWho() {}
     virtual void accept() = 0;
     virtual bool reject() = 0;                    // the previous firmware comes back (a restart); false: there is none to go back to
     virtual void restart() = 0;
@@ -197,6 +205,7 @@ private:
     enum Phase { P_IDLE, P_WIFI, P_LATEST, P_ASK, P_NOTE, P_OFFER, P_RECENT, P_PICK, P_DESCR,
                  P_LISTS, P_COMPARE, P_FETCH, P_TEENSY, P_PLACE, P_FLASH, P_RESTART,
                  P_TRIAL, P_RESULT, P_FRESH, P_PAGE_WAIT,      // (1.11.178) the quiet look waits for the main board's front page before it asks
+                 P_WHO,                                        // (1.11.189) the quiet look has asked the main board who it is, by a word, and waits for the answer
                  P_RX_ASK, P_RX_WIFI, P_RX_LATEST, P_RX_OFFER, P_RX_RUN };     // the receiver's update, through the main board
     // (1.11.32: one string each. Three hundred items with four strings apiece - the website's name of each file, where it
     //  is staged, its name on the main board - held some 60 kB of the chip's internal memory in a thousand small pieces,
@@ -261,6 +270,8 @@ private:
     std::string stateText(const std::string &stage) const;
     void linkGo();
     void askTeensy();
+    void askTeensyLink();                         // (1.11.189) over the file link: the pilot's own check, and a quiet look at a main board that has no word (B198 and before)
+    void whoHeard(const std::string &who);        // (1.11.189) the main board's word taken: on to decide()
     void asked();
     void decide();
     void install();
@@ -290,6 +301,7 @@ private:
     std::string stage_;
     UpdRelease rel_;
     bool teensyThere_, teensyFellBack_; std::string teensyFw_, teensyMarker_;
+    uint32_t whoAskAt_, whoAskedAt_; bool whoAsked_;   // (1.11.189) the quiet look's word to the main board: when it may go (not within 0.4 s of a keep-awake), when it went
     std::string recentUrl_; std::vector<UpdRecent> recent_; bool choosing_, noteVersions_;
     std::string descrUrl_;                        // where rel_ came from (latest.txt, or a chosen version's description): a fresh start fetches it again
     std::string haveText_;                        // the card's memory of its files (SCREEN_HAVE), taken off the card at install, put back if nothing is changed

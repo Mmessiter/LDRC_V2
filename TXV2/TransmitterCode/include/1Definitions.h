@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B198 08/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B199 08/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -899,6 +899,7 @@ FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp);
 FLASHMEM void LogScreenLine(const char *t);                           // B198: LogFiles.h - a line from the screen for this log ("LDRCLOG ...")
 FLASHMEM bool ScreenDyingWords(const char *t);                        // B198: LogFiles.h - the screen's panic handler's words, kept
 void Close_TX_Down();
+FLASHMEM void SendWhoWord();                                          // B199: LinkMode.h - who this board is, in a word, for the screen's quiet look at power-up (no file link)
 void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n); // B177: LogFiles.h - a frame of the screen's that was not obeyed
 void LogSoundsLine(const char *what);                               // B177: LogFiles.h - what the Sounds page's OK did
 void LogLinkRefused(const char *why);                               // B179: LogFiles.h - a knock for the file link answered with the link kept shut

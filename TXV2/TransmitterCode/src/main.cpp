@@ -1397,6 +1397,7 @@ FLASHMEM void setup()
     ClearMostParameters();
     DelayWithDog(500);
     SendCommand((char *)"ldrcframe=1"); // B177: the screen frames its bursts (Nextion.h; asked again should it answer a code unframed)
+    SendWhoWord();                      // B199: who this board is, for the screen's quiet look at power-up - a word, not the file link (LinkMode.h)
     GotoFrontView();
     RedLedOn();
     ClockMessageTick(); // V2 B30/B62/B63: a clock that did not answer, said once - but not while new firmware is on trial (below)
@@ -3901,6 +3902,14 @@ FASTRUN void ButtonWasPressed()
             char m[] = "Powered off by the workshop door B198";
             LogText(m, strlen(m), true);
             Close_TX_Down();
+            return;
+        }
+        if (InStrng((char *)"LDRCWHO", TextIn) > 0)
+        { // B199 (Malcolm, 8 Nov 2026: "the LED went blue for a second or so and then red" twice, just after the front page): the screen's
+          // quiet look at power-up asks who this board is - answered with a word (LinkMode.h SendWhoWord), where screen 1.11.188 and before
+          // opened the file link for it (blue LED, a save to the card, the front page drawn afresh - the 5 Nov "jump" too)
+            ClearText();
+            SendWhoWord();
             return;
         }
         if (InStrng((char *)"LDRCAWAKE", TextIn) > 0)

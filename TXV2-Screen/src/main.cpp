@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.188"
+#define SCREEN_VERSION "1.11.189"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1055,6 +1055,7 @@ static void themeLoad();
 static uint32_t flightCountdownAt = 0;                 // when the main board last wrote its power-off countdown ("TURN OFF?! 3"): the flight screen stands aside for it
 static std::string lastDateTime;                       // the Teensy has the clock: what it last showed, for our records
 static uint32_t teensyCommands = 0;                    // display commands that came over the wire (not from the Mac)
+static std::string teensyWhoWord; static uint32_t teensyWhoAt = 0;   // (1.11.189 / B199) the main board's own word about itself ("fw=2.5.6 B199 08/11/26;state=confirmed;mark=1A2B3C4D"), and when it was heard: the quiet look at power-up reads it instead of opening the file link (update_device.h)
 static std::string sentTrace;                          // last bytes sent to the Teensy, hex, for GET /sent
 static std::string outBuf; static int scriptDepth = 0;   // a script's prints, sent as ONE burst when it ends
 // (1.11.173) FRAMED BURSTS. One write per event (above) keeps a script's bytes together in this chip, but the port is fed
@@ -2679,6 +2680,11 @@ static void handle(const std::string &cmd) {
     if (cmd == "ldrcframe=1") {                              // (1.11.174) the main board reads framed bursts (flushOut) - HERE, before the "name=value" path below took it for a system variable (1.11.173 never framed)
         frameBursts = true;
         outBuf.append("\0\0\0\0", 4); flushOut();            // (1.11.175) answered at once with an empty framed burst (code 0, nothing): the main board is strict from this moment, not from the first press - until then an unframed stray (a late reply split from its q) was still obeyed
+        return;
+    }
+    if (cmd.compare(0, 8, "ldrcwho=") == 0) {                 // (1.11.189 / B199) the main board says who it is, at its start and when asked with the word LDRCWHO: "fw=...;state=...;mark=..." - HERE, before the "name=value" path
+        teensyWhoWord = cmd.substr(8); teensyWhoAt = millis();
+        blog("who", teensyWhoWord.substr(0, 60));
         return;
     }
     if (cmd.rfind("page ", 0) == 0) {

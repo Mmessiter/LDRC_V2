@@ -709,4 +709,35 @@ FASTRUN void FwTrialTick()
     }
 }
 
+/*********************************************************************************************************************************/
+// B199 (Malcolm, 8 Nov 2026: "just after returning to the front screen, the LED went blue for a second or so and then red - rather
+// as it does when booting up", twice). That was the screen's quiet look at power-up (screen 1.11.141), 52 s after every switch-on,
+// opening the file link to read this board's version and /FW/FILES.TXT: a link makes this board a file server for the while (blue),
+// saves everything to the card, and draws the front page afresh when it closes (LinkMode above). The same knock was the 5 Nov
+// "jump". Now the screen (1.11.189) asks with the word LDRCWHO and is answered with what the link's hello and that file would have
+// said - no link, no blue, no redraw, and this board stays a transmitter:
+//   ldrcwho=fw=2.5.6 B199 08/11/26;state=confirmed;mark=1A2B3C4D
+// mark = the first word of /FW/FILES.TXT, the screen's own note of which set of help files it put on this card (empty: none).
+// Said once at start too, for a screen already up.
+
+FLASHMEM void SendWhoWord()
+{
+    char mark[20] = "";
+    if (SD_Card_Exists)
+    {
+        File f = SD.open("/FW/FILES.TXT", FILE_READ);
+        if (f)
+        {
+            int n = 0, c;
+            while (n < (int)sizeof(mark) - 1 && (c = f.read()) >= 0 && isalnum(c))
+                mark[n++] = (char)c;
+            mark[n] = 0;
+            f.close();
+        }
+    }
+    char line[120];
+    snprintf(line, sizeof(line), "ldrcwho=fw=%s;state=%s;mark=%s", LinkFirmwareVersion(), FwStateName, mark);
+    SendCommand(line);
+}
+
 #endif // LINKMODE_H
