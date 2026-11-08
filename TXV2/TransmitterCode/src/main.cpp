@@ -1766,20 +1766,26 @@ void ShowSwitchPositions()
 // moved (a stick, a knob or a switch) turns yellow, and the rows lit before go back to white: a newcomer moves a stick and sees
 // which channel it feeds. Nothing is lit at the page's first showing, wherever the sticks rest. InputsBuffer holds each channel's
 // raw reading from the pass just made (a stick's travel is some 3000 counts; its noise a few; a switch's steps hundreds).
+// B203 (Malcolm: "moving a trim does not yet highlight it"): a trim lever pressed lights its Trim out box (n0 .. n3) the same way,
+// and one thing is lit at a time - a trim press puts the rows back to white, a stick's move puts the trim box back.
+static uint8_t TrimOfButton(uint8_t i) // the trim (0-3, the page's Tr1-Tr4) a trim lever's button moves: as MoveaTrim (Trims.h)
+{
+    const uint8_t Elevator = SticksMode == 2 ? 2 : 1, Throttle = SticksMode == 2 ? 1 : 2;
+    return i < 2 ? 0 : i < 4 ? Elevator : i < 6 ? Throttle : 3;
+}
 void ShowInputMovement()
 {
     static int base[CHANNELSUSED];
     static bool lit[CHANNELSUSED];
+    static int8_t trimLit = -1;
     static bool fresh = true;
     static uint32_t last = 0;
+    char c[24];
     if (CurrentView != INPUTS_VIEW)
     {
         fresh = true;
         return;
     }
-    if (millis() - last < 150)
-        return;
-    last = millis();
     if (fresh)
     {
         fresh = false;
@@ -1788,8 +1794,43 @@ void ShowInputMovement()
             base[ch] = InputsBuffer[ch];
             lit[ch] = false;
         }
+        trimLit = -1;
+        last = millis();
         return;
     }
+    int8_t trimNow = -1; // (every pass: a short press must not slip between two looks)
+    for (uint8_t i = 0; i < 8; ++i)
+        if (TrimSwitch[i])
+        {
+            trimNow = (int8_t)TrimOfButton(i);
+            break;
+        }
+    if (trimNow >= 0 && trimNow != trimLit)
+    {
+        if (trimLit >= 0)
+        {
+            snprintf(c, sizeof(c), "n%u.bco=65535", (unsigned)trimLit);
+            SendCommand(c);
+        }
+        trimLit = trimNow;
+        snprintf(c, sizeof(c), "n%u.bco=65504", (unsigned)trimLit);
+        SendCommand(c);
+        for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
+        {
+            if (!lit[ch])
+                continue;
+            lit[ch] = false;
+            snprintf(c, sizeof(c), "c%u.bco=65535", (unsigned)(ch + 1));
+            SendCommand(c);
+            snprintf(c, sizeof(c), "ch%u.bco=65535", (unsigned)(ch + 1));
+            SendCommand(c);
+            snprintf(c, sizeof(c), "n%u.bco=65535", (unsigned)(ch + 4));
+            SendCommand(c);
+        }
+    }
+    if (millis() - last < 150)
+        return;
+    last = millis();
     bool moved[CHANNELSUSED];
     bool any = false;
     for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
@@ -1804,13 +1845,18 @@ void ShowInputMovement()
     }
     if (!any)
         return; // (the rows lit stay lit until another input moves)
+    if (trimLit >= 0)
+    { // a stick moved: the trim box goes back to white
+        snprintf(c, sizeof(c), "n%u.bco=65535", (unsigned)trimLit);
+        SendCommand(c);
+        trimLit = -1;
+    }
     for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
     {
         if (moved[ch] == lit[ch])
             continue;
         lit[ch] = moved[ch];
         const unsigned colour = moved[ch] ? 65504u : 65535u; // yellow, or the boxes' white
-        char c[24];
         snprintf(c, sizeof(c), "c%u.bco=%u", (unsigned)(ch + 1), colour);  // In
         SendCommand(c);
         snprintf(c, sizeof(c), "ch%u.bco=%u", (unsigned)(ch + 1), colour); // Name
