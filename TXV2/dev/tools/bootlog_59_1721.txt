@@ -1,0 +1,196 @@
+587 boot xip code
+800 boot layer ready
+805 boot dmacopy off (pref)
+805 boot ring armed
+897 boot screen up LDRCSCREEN=1.11.187; LDRCBUILD=full; on ips16, fla
+1069 boot sd ok at 40 MHz
+1156 boot fonts
+1167 boot pack ok
+1743 boot background 28
+1750 boot loop (cold), loop watchdog 20 s
+1815 < ¨dim=1
+1817 < page SplashView
+2422 ble off
+2433 < FrontView.BackGround.val=0
+2465 < FrontView.ForeGround.val=65535
+2466 < FrontView.Special.val=63488
+2468 < FrontView.Highlight.val=65504
+2469 < volume=36
+2470 < Screen_Background=28
+2471 < FrontView.pic=28
+2472 < dim=1
+2472 < dim=2
+2473 < dim=3
+2473 < dim=4
+2474 < dim=5
+2475 < dim=6
+2475 < dim=7
+2475 < dim=8
+2475 < dim=9
+2476 < dim=10
+2477 < dim=11
+2478 < dim=12
+2478 < dim=13
+2478 < dim=14
+2479 < dim=15
+2479 < dim=16
+2480 < dim=17
+2481 < dim=18
+2481 < dim=19
+2481 < dim=20
+2482 < dim=21
+2482 < dim=22
+2485 < dim=23
+2486 < dim=24
+2487 < dim=25
+2487 < dim=26
+2487 < dim=27
+2488 < dim=28
+2488 < dim=29
+2489 < dim=30
+2490 < dim=31
+2490 < dim=32
+2490 < dim=33
+2491 < dim=34
+2491 < dim=35
+2492 < dim=36
+2493 < dim=37
+2493 < dim=38
+2493 < dim=39
+2494 < dim=40
+2494 < dim=41
+2495 < dim=42
+2496 < dim=43
+2496 < dim=44
+2496 < dim=45
+2497 < dim=46
+2497 < dim=47
+2498 < dim=48
+2499 < dim=49
+2499 < dim=50
+2500 < dim=51
+2500 < dim=52
+2500 < dim=53
+2502 < dim=54
+2502 < dim=55
+2502 < dim=56
+2503 < dim=57
+2503 < dim=58
+2503 < dim=59
+2505 < dim=60
+2505 < dim=61
+2505 < dim=62
+2516 < dim=63
+2531 < dim=64
+2546 < dim=65
+2561 < dim=66
+2576 < dim=67
+2593 < dim=68
+2608 < dim=69
+2623 < dim=70
+2638 < dim=71
+2651 < dim=72
+2668 < dim=73
+2681 < dim=74
+2697 < dim=75
+2712 < dim=76
+2726 < dim=77
+2742 < dim=78
+2757 < dim=79
+2772 < dim=80
+2786 < dim=81
+2802 < dim=82
+2817 < dim=83
+2831 < dim=84
+2847 < dim=85
+2862 < dim=86
+2877 < dim=87
+2891 < dim=88
+2907 < dim=89
+2922 < dim=90
+2936 < dim=91
+2952 < dim=92
+2967 < dim=93
+2981 < dim=94
+2997 < dim=95
+3012 < dim=96
+3026 < dim=97
+3042 < dim=98
+3057 < dim=99
+3072 < Hours.val=0
+3074 < Mins.val=0
+3074 < Secs.val=0
+3075 < Connected.txt=""
+3076 < ModelName.txt="B Thundr1 (2)"
+3573 < ldrcframe=1
+3573 < get tch2
+3573 > tch2=0
+3626 < get tch3
+3626 > tch3=0
+3691 < page FrontView
+3879 < Owner.txt="Malcolm"
+3886 < ModelName.txt="B Thundr1 (2)"
+3893 < click fm1,1
+3895 < t4.txt="Bank 1"
+3899 < Connected.txt=""
+3900 < t4.txt="Bank 1"
+3900 < vis ams,1
+3901 < ams.txt="AMS is on"
+3903 < ch1.val=80
+3908 < n1.val=0
+3908 < ch4.val=80
+3948 < n4.val=0
+3950 < ch2.val=80
+3953 < n2.val=0
+3954 < ch3.val=80
+3956 < n3.val=0
+3956 < dim=100
+3957 < vis ch1,0
+3958 < vis ch2,0
+3961 < vis ch3,0
+3962 < vis ch4,0
+3965 < vis trall,0
+3966 < exp0.path="sd0/images/Bthundr1.jpg"
+3967 < vis exp0,1
+4110 < vis rpm,0
+4111 < vis StillConnected,0
+4111 < vis wb,0
+4112 < Owner.txt="Malcolm"
+4113 < vis ams,1
+4118 < DateTime.txt="8 November 2026 17:18:43"
+4121 < rate.txt="Rate 1"
+4123 < vis rate,1
+4134 < bt0.bco=63488
+4134 < bt0.bco2=63488
+4137 < bt0.pco=65535
+4137 < bt0.pco2=65535
+4138 < ch1.val=80
+4138 < n1.val=0
+4139 < ch4.val=80
+4139 < n4.val=0
+4140 < ch2.val=80
+4140 < n2.val=0
+4141 < ch3.val=80
+4142 < n3.val=0
+4142 < click fm4,1
+4144 < t4.txt="Bank 4"
+4150 < DateTime.txt="8 November 2026 17:18:43"
+4151 < rate.txt="Rate 4"
+4169 wifi asking House by the node last joined: f32109 ch5
+4748 < DateTime.txt="8 November 2026 17:18:44"
+5749 < DateTime.txt="8 November 2026 17:18:45"
+6595 wifi auto: the node last joined is not there: a look
+6751 < DateTime.txt="8 November 2026 17:18:46"
+7754 < DateTime.txt="8 November 2026 17:18:47"
+7940 wifi auto: trying House
+7941 wifi asking House by node: 4ba181 -41 ch10
+8763 < DateTime.txt="8 November 2026 17:18:48"
+8864 wifi joined House -42
+9770 < DateTime.txt="8 November 2026 17:18:49"
+10771 < DateTime.txt="8 November 2026 17:18:50"
+10997 time from the internet: 2026-11-08 17:18:49 GMT, to the main boar
+11775 < DateTime.txt="8 November 2026 17:18:51"
+12783 < DateTime.txt="8 November 2026 17:18:52"
+13786 < DateTime.txt="8 November 2026 17:18:53"
+14788 < DateTime.txt="8 November 2026 17:18:54"
+15791 < DateTime.txt="8 November 2026 17:18:55"

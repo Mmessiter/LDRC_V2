@@ -3875,6 +3875,34 @@ FASTRUN void ButtonWasPressed()
         }
         // By here, TextIn[0] must be start of a character based command
 
+        if (InStrng((char *)"LDRCLOG ", TextIn) > 0)
+        { // B198 (Malcolm, 8 Nov 2026: the screen's interrupt watchdog twice on the way back to the front page, no core dump, and its
+          // own record of the moment lost at power-off): a line from the screen for this log (LogFiles.h LogScreenLine) - FIRST, before
+          // any word in it ("page FrontView") is read as a command
+            LogScreenLine(TextIn);
+            ClearText();
+            return;
+        }
+        if (ScreenDyingWords(TextIn))
+        { // B198: the screen's panic handler's words come down this wire ("Guru Meditation ...", "Backtrace: ..."): kept (LogFiles.h), not obeyed
+            ClearText();
+            return;
+        }
+        if (InStrng((char *)"LDRCOFF", TextIn) > 0)
+        { // B198 (Malcolm, 8 Nov 2026, leaving a transmitter on for the bench: "Perhaps you can turn it off when you have finished the
+          // work!?"): the screen's workshop door asks for the power off (screen 1.11.188, POST /poweroff) - never while a model is connected
+            ClearText();
+            if (BoundFlag && ModelMatched)
+            {
+                char r[] = "Power off asked by the workshop door: refused, a model is connected B198";
+                LogText(r, strlen(r), true);
+                return;
+            }
+            char m[] = "Powered off by the workshop door B198";
+            LogText(m, strlen(m), true);
+            Close_TX_Down();
+            return;
+        }
         if (InStrng((char *)"LDRCAWAKE", TextIn) > 0)
         { // B123 (Malcolm, 17 Oct 2026: "the screen timeout should be disabled while we play these videos because it went black
           // in the middle of one!"): the screen's films (screen 1.11.88) say this every 15 s while one plays or the films menu

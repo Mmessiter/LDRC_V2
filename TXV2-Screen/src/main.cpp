@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.187"
+#define SCREEN_VERSION "1.11.188"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -62,6 +62,7 @@ class PacedCanvas;                                            // (src/psram_pace
 PacedCanvas *canvas = nullptr;                                // every draw lands here (PSRAM); present() copies finished rectangles to the panel
 Arduino_GFX *gfx = nullptr;                                   // the screen at first, switched to the canvas at boot
 #include "psram_pace.h"                                // (1.11.116: the twin's big moves through the PSRAM, paced; the canvases' big fills)
+#include "last_moments.h"                              // (1.11.188) what the screen was doing when it died: every flash operation, the loop's last pass, the heap check - in RTC memory
 #include "hold_watch.h"                                // (1.11.164) who holds this core's interrupts, and for how long: /status "holds"
 // (1.11.120) A big read off the card into the PSRAM goes in slabs of 4 kB with the pace's rests between. The whole file in
 // one read - a 768 kB background, a page's 30 kB of JSON, a 40 kB clip - was one unpaced burst of PSRAM writes (the card
@@ -1090,6 +1091,8 @@ static int audioId = -1;                               // the clip playing, for 
 static uint32_t bootMs = 0;                            // when loop() first ran (ms after power), for /status
 static std::string bootLog;                            // the first ~4 kB of traffic after power, timestamped: GET /bootlog
 static std::string bootBefore;                         // (1.11.185) what the screen was doing before a panic or watchdog restart (/status "before")
+static std::string lmBeforeSaved;                      // (1.11.188) the flash operations' and the loop's record of the run that ended (last_moments.h), read before this run's begins
+static std::string beforeKept[3];                      // (1.11.188) the last three "before" records, kept in NVS through power-offs (/status "before_kept")
 static void blog(const char *tag, const std::string &what) { if (bootLog.size() > 4000) return; char b[24]; snprintf(b, sizeof(b), "%lu %s ", (unsigned long) millis(), tag); bootLog += b; bootLog += what.substr(0, 60); bootLog += "\n"; }
 static std::string oddTrace;                           // commands the parser did not understand, for GET /status
 static std::string radioLog;                           // when the radio went on and off, and why: GET /radiolog (the last twenty lines)
@@ -1124,7 +1127,7 @@ static std::string crashJson() {
     if (!sm) return "null";
     std::string out = "null";
     if (esp_core_dump_image_check() == ESP_OK && esp_core_dump_get_summary(sm) == ESP_OK) {
-        char b[160]; snprintf(b, sizeof b, "{\"task\":\"%.15s\",\"pc\":\"0x%08lx\",\"cause\":%lu,\"vaddr\":\"0x%08lx\",\"depth\":%lu,\"corrupt\":%s,\"bt\":[", sm->exc_task, (unsigned long) sm->exc_pc, (unsigned long) sm->ex_info.exc_cause, (unsigned long) sm->ex_info.exc_vaddr, (unsigned long) sm->exc_bt_info.depth, sm->exc_bt_info.corrupted ? "true" : "false");
+        char b[200]; snprintf(b, sizeof b, "{\"task\":\"%.15s\",\"sha\":\"%.16s\",\"pc\":\"0x%08lx\",\"cause\":%lu,\"vaddr\":\"0x%08lx\",\"depth\":%lu,\"corrupt\":%s,\"bt\":[", sm->exc_task, (const char *) sm->app_elf_sha256, (unsigned long) sm->exc_pc, (unsigned long) sm->ex_info.exc_cause, (unsigned long) sm->ex_info.exc_vaddr, (unsigned long) sm->exc_bt_info.depth, sm->exc_bt_info.corrupted ? "true" : "false");   // (1.11.188) "sha": the firmware that wrote the dump (the first 16 of its ELF's sha256, dev/out/elf) - the dump may be an older firmware's (8 Nov 2026: a 1.11.180 dump read as 1.11.187's)
         out = b;
         for (uint32_t i = 0; i < sm->exc_bt_info.depth && i < 16; ++i) { snprintf(b, sizeof b, "%s\"0x%08lx\"", i ? "," : "", (unsigned long) sm->exc_bt_info.bt[i]); out += b; }
         out += "]}";
@@ -1230,7 +1233,8 @@ static bool loadBackground(int picId) {                  // (1.11.138: its open 
     if (!f) return false;
     uint16_t wh[2]; f.read((uint8_t *) wh, 4);
     uint16_t *buf;
-    buf = bgCache.size() < bgCacheMax ? (uint16_t *) ps_malloc(W * H * 2) : nullptr;   // 4 backgrounds resident (3 MB): the clip cache needs its share of PSRAM (1.11.131: fewer with the code in the PSRAM - setup)
+    buf = bgCache.size() < bgCacheMax ? (uint16_t *) ps_malloc(W * H * 2) : nullptr;
+    if (buf) lmBufNote(lmBgNames[bgCache.size() < 5 ? bgCache.size() : 5], buf, (size_t) W * H * 2);   // (1.11.188)   // 4 backgrounds resident (3 MB): the clip cache needs its share of PSRAM (1.11.131: fewer with the code in the PSRAM - setup)
     if (!buf && bgCache.empty()) { f.close(); return false; }
     if (!buf) { size_t old = 0; for (size_t i = 1; i < bgCache.size(); ++i) if (bgCache[i].used < bgCache[old].used) old = i; buf = bgCache[old].buf; bgCache.erase(bgCache.begin() + old); }
     if (wh[0] == W && wh[1] == H) sdReadPaced(f, (uint8_t *) buf, W * H * 2);   // (1.11.120: in slabs, paced - 768 kB in one read slipped the twin's picture)
@@ -1522,7 +1526,7 @@ static bool slideFill(Comp &c) {
 // ---- the window (1.11.156; the ring and SlideWin are declared with the instruments, above the includes, for the feeder)
 static bool winCapable(const Comp &c, const SlideBox &b) {
     if (!stripOn || !pageFb || fbNow != pageFb || topOn || loadingPage || noDraw || b.y1 - b.y0 > WIN_ROWS - 32) return false;
-    if (!winRing) { winRing = (uint16_t *) heap_caps_aligned_alloc(64, (size_t) WIN_ROWS * W * 2, MALLOC_CAP_SPIRAM); if (!winRing) return false; }
+    if (!winRing) { winRing = (uint16_t *) heap_caps_aligned_alloc(64, (size_t) WIN_ROWS * W * 2, MALLOC_CAP_SPIRAM); if (!winRing) return false; lmBufNote("winring", winRing, (size_t) WIN_ROWS * W * 2); }
     const int idx = indexOf(c);
     for (int j = idx + 1; j < (int) page.comps.size(); ++j) {   // a component drawn AFTER the box that shares its rows (a button beside it): the ring's one row of margins could not serve every row. What lies behind the box (the page's card) is the same in every row.
         const Comp &o = page.comps[j];
@@ -2372,8 +2376,12 @@ static void saverApply(Page &np) {
         c.x = k.x; c.y = k.y; c.scroll = k.scroll; c.pic = k.pic; c.en = k.en; c.vis = k.vis;
     }
 }
+// (1.11.188) A line for the Teensy's day log ("LDRCLOG ...", B198): the heap check's verdict, the record of a restart - the one
+// log a power-off does not lose. An unframed word on the wire, as "UKRULES" is.
+static void lmTell(const std::string &line) { flushOut(); Serial.print(line.c_str()); Serial.flush(); }
 static bool loadPage(const std::string &name) {
     auto it = pageIds.find(name); if (it == pageIds.end() || !assetsOk()) return false;
+    if (lmHeapOn && !lmHeapCheck((page.name + ">" + name).c_str())) { blog("heap", lmHeapLast.substr(0, 60)); lmTell("LDRCLOG heap check failed " + lmHeapLast.substr(0, 200)); }   // (1.11.188) the heap's structure and every block's canaries, on the other core, before the old page is destroyed (last_moments.h)
     winOff(false);                                          // (1.11.156) the window goes with its page (the feeder stops reading the ring at the next frame, long before the new page is shown)
     pageT0 = millis() ? millis() : 1; pageDrawMs = pageComposeMs = pageShownMs = 0;   // (1.11.116) timed: /status "flip" "last"
     // (the screen saver's memory: taken as the screen blanks, used only by the restore that follows it)
@@ -2397,7 +2405,7 @@ static bool loadPage(const std::string &name) {
         got = sdReadPaced(f, (uint8_t *) raw, n); raw[got] = 0; f.close();   // read into memory (a File stream parses a byte at a time), in paced slabs (1.11.120), then parsed
         for (auto &e : rawCache) if (!e.buf) { slot = &e; break; }
         if (!slot) { slot = &rawCache[0]; for (auto &e : rawCache) if (e.used < slot->used) slot = &e; free(slot->buf); rawBytes -= slot->len; }
-        *slot = { it->second, raw, got, millis() }; rawBytes += got;
+        *slot = { it->second, raw, got, millis() }; rawBytes += got; lmBufNote(lmRawNames[slot - rawCache], raw, got + 1);
         while (rawBytes > 600000) {                        // (never more than ~600 kB of PSRAM: the oldest goes)
             PageRaw *old = nullptr; for (auto &e : rawCache) if (e.buf && &e != slot && (!old || e.used < old->used)) old = &e;
             if (!old) break;
@@ -3291,6 +3299,7 @@ static void webBegin() {
         std::string out = b;                                 // (1.11.3) the Bluetooth pipe's state, readable with the door shut
         out.pop_back(); out += ",\"ble\":" + bleStatusJson();
         if (!bootBefore.empty()) { out += ",\"before\":\""; for (char c : bootBefore) if (c != '"' && c != '\\') out += c; out += "\""; }   // (1.11.185)
+        { std::string k; for (int i = 0; i < 3; ++i) { if (beforeKept[i].empty()) break; k += i ? ",\"" : "\""; for (char c : beforeKept[i]) if (c != '"' && c != '\\') k += c; k += "\""; } if (!k.empty()) out += ",\"before_kept\":[" + k + "]"; }   // (1.11.188) the last three, newest first, through power-offs
         out += ",\"rst\":" + std::to_string((int) esp_reset_reason());   // (1.11.7) why we last started: 1 power, 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
         out += ",\"stack\":{\"loop\":" + std::to_string((unsigned) uxTaskGetStackHighWaterMark(NULL)) + ",\"ble\":" + std::to_string(bleStackSpare()) + "}";   // (1.11.8) the least each task's stack has ever had to spare, in bytes
         out += ",\"largest\":" + std::to_string((unsigned) ESP.getMaxAllocHeap()) + ",\"rssi\":" + std::to_string((int) WiFi.RSSI());   // (1.11.11) the largest piece of free memory (a TLS connection wants ~45 kB), and the WiFi signal
@@ -3302,6 +3311,7 @@ static void webBegin() {
         out += ",\"drawbad\":" + std::to_string((unsigned long) drawDropped);   // (1.11.140) drawing commands dropped as two run into one (bytes lost on the wire); their text at /odd
         out += ",\"touchgap\":{\"max\":" + std::to_string((unsigned long) touchGapMax) + ",\"over30\":" + std::to_string((unsigned long) touchGapOver30) + ",\"presses\":" + std::to_string((unsigned long) touchPresses) + "}";   // (1.11.158) the longest no-touch gap bridged inside a press (the chip's dropped samples): what the 80 ms lift filter must exceed
         out += "," + holdJson();                               // (1.11.164) the hold watch: interrupts held on this core, by whom, during what
+        out += "," + lmJson();                                 // (1.11.188) the flash operations, the heap check, the big buffers by name (last_moments.h)
         out += ",\"sd_mhz\":" + std::to_string((unsigned long) sdMhz);   // (1.11.165) the SPI clock the card answered at (0: no card)
         if (!sdWhy.empty()) { std::string w = sdWhy; for (auto &c : w) if (c == '"' || c == '\\') c = '\''; out += ",\"sd_why\":\"" + w + "\""; }   // (1.11.168) what the card's own start found
         { char q[340]; snprintf(q, sizeof(q), ",\"quiet\":{\"frames\":%lu,\"frame_us\":%lu,\"n\":%lu,\"late\":%lu,\"over\":%lu,\"wait_ms\":%lu,\"copy_us\":%lu,\"copy_max\":%lu,\"draw_us\":%lu,\"draw_max\":%lu,\"kept\":%lu,\"full\":%lu,\"warmed\":%lu,\"step_max\":%lu,\"stores\":%lu,\"store_max\":%lu}",
@@ -3427,6 +3437,8 @@ static void webBegin() {
             if (!m || !f) ok = false; else { memset(m, 0x5A, 4096); const uint32_t t0 = micros(); for (int i = 0; i < kb / 4 && ok; ++i) ok = f.write(m, 4096) == 4096; us = micros() - t0; }
             if (f) f.close(); if (m) free(m); if (sdOk) SD.remove("/stall.tmp");
         }
+        else if (kind == "heapchk") { const uint32_t t0 = micros(); ok = lmHeapCheck("probe"); us = micros() - t0; snprintf(extra, sizeof extra, ",\"check_us\":%lu,\"heap\":\"%.200s\"", (unsigned long) lmHeapChkLastUs, lmHeapLast.c_str()); }   // (1.11.188) the heap's structure and canaries checked now, on the other core (last_moments.h)
+        else if (kind == "heapon") { prefs.putInt("heapchk", kb != 0); lmHeapOn = kb != 0 && (flashChipBytes >> 20) >= 16; us = lmHeapOn; }   // (1.11.188) the check at page changes on (1) or off (0), now and at the next start (16 MB boards)
         else if (kind == "tls") { us = updTlsProbe(ok); }   // (1.11.163) one secure HEAD of latest.txt from messiter.com on this task: the secure connection's part (update_device.h)
         else ok = dmaCopyProbe(kind, kb, us, extra, sizeof extra);   // (26 Oct) m2m, m2mp, m2mrows, wbnop, lcdpri, dcstat - or an unknown kind (src/dma_copy.h)
         char b[460]; snprintf(b, sizeof b, "{\"kind\":\"%s\",\"kb\":%d,\"us\":%lu,\"ok\":%d,\"slips\":%lu,\"huge\":%lu,\"pos\":%lu,\"fr\":%lu,\"dmax\":%ld%s}", kind.c_str(), kb, (unsigned long) us, ok ? 1 : 0,
@@ -3658,6 +3670,7 @@ static void webBegin() {
         quietBacklightOff = web.arg("bl") == "0"; quietWifiOff = web.arg("wifi") == "0";
         web.send(200, "text/plain", "quiet");
     });
+    doorOn("/poweroff", HTTP_POST, []() { if (teensyLink.running()) { web.send(409, "text/plain", "a job is on the link"); return; } flushOut(); Serial.print("LDRCOFF"); Serial.flush(); web.send(200, "text/plain", "asked: the main board switches off unless a model is connected (B198)"); });   // (1.11.188, Malcolm 8 Nov 2026: "turn it off when you have finished the work")
     doorOn("/awake", HTTP_POST, []() { if (teensyLink.running()) { web.send(409, "text/plain", "a job is on the link"); return; } flushOut(); Serial.print("UKRULES"); web.send(200, "text/plain", "poked"); });   // resets the Teensy's screen timeout
     doorOn("/radios", HTTP_POST, []() { const bool on = web.arg("on") != "0"; web.send(200, "text/plain", on ? "on" : "off"); delay(50); setRadios(on); });
     doorOn("/nodraw", HTTP_POST, []() { noDraw = web.arg("on") == "1"; web.send(200, "text/plain", noDraw ? "drawing off" : "drawing on"); });
@@ -3834,7 +3847,7 @@ static void audioBegin() {
     i2s_pin_config_t pins = {}; pins.mck_io_num = I2S_PIN_NO_CHANGE; pins.bck_io_num = board->i2sBclk; pins.ws_io_num = 18; pins.data_out_num = 17; pins.data_in_num = I2S_PIN_NO_CHANGE;   // (1.11.111) the bit clock is the board's: IO42 on the CrowPanel, IO0 on the twin
     i2s_set_pin(I2S_PORT, &pins);
     i2s_zero_dma_buffer(I2S_PORT);
-    audioRing = (uint8_t *) ps_malloc(RING);
+    audioRing = (uint8_t *) ps_malloc(RING); lmBufNote("audio", audioRing, RING);
     if (audioRing) xTaskCreatePinnedToCore(audioTask, "audio", 4096, nullptr, 3, nullptr, 0);
 }
 static void audioStop() {
@@ -4119,6 +4132,7 @@ void setup() {
     tlsMemoryBegin();                                      // (1.11.146) FIRST: mbedTLS draws on the PSRAM from here on (src/tls_memory.h)
     Serial.setRxBufferSize(32768);                        // BEFORE begin(): set afterwards it stayed at 256 bytes and telemetry bursts overran it
     Serial.begin(NEXTION_BAUD);
+    lmBeforeSaved = lmBeforeText(); lmBegin();            // (1.11.188) the run that ended, read before this run's record begins; the flash driver's hooks wrapped (last_moments.h)
     esp_log_set_vprintf(sysLogHook);                      // 1.11.5: the system's own error lines come to us, not to the main board
     // Above 57600 baud the core raises the receive interrupt at 120 bytes of the 128-byte hardware FIFO: at
     // 921600 that leaves 87 microseconds before bytes are lost, and any brief interrupt delay mangled a command
@@ -4126,6 +4140,7 @@ void setup() {
     Serial.setRxFIFOFull(24);
     boardDetect(); panelMake();                            // (1.11.111) which board, by its flash chip: the pixel clock pin differs, and the wrong one is a black screen
     prefs.begin("screen", false);                          // FIRST: the remembered page, background and volume are read below
+    lmHeapOn = (flashChipBytes >> 20) >= 16 && prefs.getInt("heapchk", 1) != 0;   // (1.11.188) the heap checked at each page change on a 16 MB board (the ones that die on the way to the front page), unless /stall?kind=heapon&kb=0
     themeLoad();                                           // the pilot's colours, before anything is drawn
     {   // (1.11.131) THE CODE IN THE PSRAM (src/code_in_psram.h), before the panel runs. A start that switched and then died by a
         // panic or a watchdog before loop() reached 20 s counts a strike; two strikes turn it off until the pref is set again
@@ -4149,7 +4164,8 @@ void setup() {
     pinMode(LCD_BL, OUTPUT); ledcSetup(1, 20000, 8); ledcAttachPin(LCD_BL, 1); blSet(0);   // dark: see "The backlight" above
     screen->begin(); screen->fillScreen(0); screenFb = screen->getFramebuffer();
     hookFrameEnd();   // (1.11.67: the front screen's switch drawn and copied in the panel's quiet time)
-    { uint16_t *cb = (uint16_t *) heap_caps_aligned_calloc(64, 1, (size_t) W * H * 2, MALLOC_CAP_SPIRAM); if (cb) canvas->aim(cb); }   // (1.11.116) aligned as a panel buffer must be: the canvas is one of the three in turn
+    lmBufNote("panel", screenFb, (size_t) W * H * 2);
+    { uint16_t *cb = (uint16_t *) heap_caps_aligned_calloc(64, 1, (size_t) W * H * 2, MALLOC_CAP_SPIRAM); if (cb) { canvas->aim(cb); lmBufNote("canvas", cb, (size_t) W * H * 2); } }   // (1.11.116) aligned as a panel buffer must be: the canvas is one of the three in turn
     if (canvas->begin(GFX_SKIP_OUTPUT_BEGIN)) { gfx = canvas; fbNow = canvas->getFramebuffer(); canvas->fillScreen(0); } else fbNow = screenFb;
     pageFb = fbNow;
     if (flipOk && pageFb && pageFb != screenFb && ((uintptr_t) pageFb & 63) == 0) { flipFb[2] = pageFb; canvas->lazy = true; }   // (the rotation is on)
@@ -4275,8 +4291,16 @@ void setup() {
         std::string b = "before the restart (rst " + std::to_string((int) why) + "): the loop was at " + (rtcBusyWhat < BUSY_N ? BUSY_NAMES[rtcBusyWhat] : "?");
         if (rtcBleStepMagic == 0x4C444253) { rtcBleStep[sizeof(rtcBleStep) - 1] = 0; b += std::string(", Bluetooth's last step: ") + rtcBleStep + " at " + std::to_string(rtcBleStepAt) + " ms"; }
         if (rtcMagic == 0x4C445243) b += std::string(", page ") + rtcPage;
+        b += lmBeforeSaved;                                // (1.11.188) the flash operations and the loop's last pass (last_moments.h)
         bootBefore = b; for (size_t i = 0; i < b.size(); i += 60) blog("boot", b.substr(i, 60));
+        { // (1.11.188) kept in NVS through power-offs: the last three, newest first (/status "before_kept"); the Teensy's log gets it below
+            const String b1 = prefs.getString("before1", ""), b2 = prefs.getString("before2", "");
+            if (b2.length()) prefs.putString("before3", b2.c_str());
+            if (b1.length()) prefs.putString("before2", b1.c_str());
+            prefs.putString("before1", b.substr(0, 480).c_str());
+        }
     }
+    for (int i = 0; i < 3; ++i) { const String s = prefs.getString(i == 0 ? "before1" : i == 1 ? "before2" : "before3", ""); beforeKept[i] = s.c_str(); }   // (1.11.188) read once: /status serves them from here
     rtcBusyWhat = BUSY_IDLE; rtcBleStepMagic = 0;
     const std::string last = rtcPage;
     if (warm && !pageNames.empty()) { if (!last.empty() && pageIds.count(last)) loadPage(last); else loadPage(pageNames[0]); }   // cold: the Teensy sends its page
@@ -4288,6 +4312,7 @@ void setup() {
     // (1.11.180) ... after ANY restart that is not a power-on (a watchdog's, a panic's, a brown-out's too: the Teensy ran on through
     // them all), and with the reason, which the Teensy writes in its log (B185): 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
     if (why != ESP_RST_POWERON && !pageNames.empty()) { delay(300); Serial.printf("FrontView rst=%d", (int) why); }
+    if (!bootBefore.empty()) { Serial.flush(); delay(30); Serial.printf("LDRCLOG %.300s", bootBefore.c_str()); Serial.flush(); }   // (1.11.188) the Teensy's day log keeps the record (B198): a power-off loses ours
     holdWatchBegin();                                      // (1.11.164) the hold watch, on this core, from here on
     // (1.11.178) The loop task goes on the task watchdog: 20 s without a pass of loop() is a hang (Malcolm, 4 Nov 2026, the
     // curves page's Reset: "it locked up the transmitter completely, and I had to switch everything off" - nothing watched
@@ -4307,6 +4332,7 @@ void setup() {
 }
 
 void loop() {
+    lmLoopTick();                                          // (1.11.188) the loop's last pass, in RTC memory: the next start's "before" record says when the loop was last seen
     static uint32_t lastLoop = 0; const uint32_t now = millis();
     if (lastLoop && now - lastLoop > perfLoopMaxMs) perfLoopMaxMs = now - lastLoop;
     lastLoop = now;

@@ -372,6 +372,80 @@ FLASHMEM void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n)
     snprintf(line + p, sizeof(line) - p, " (page %u) B177", (unsigned)CurrentView);
     LogText(line, strlen(line), true);
 }
+// B198 (Malcolm, 8 Nov 2026, the screen's interrupt watchdog twice on the way back to the front page, no core dump): a line
+// from the screen for this log - "LDRCLOG <text>" (screen 1.11.188): what it was doing before a watchdog restart (its own
+// copy goes at power-off; this log stays), its heap check's verdict. Eight a second at most; a long one in two lines.
+FLASHMEM void LogScreenLine(const char *t)
+{
+    static uint32_t lastMs = 0;
+    static uint8_t burst = 0;
+    const int p = InStrng((char *)"LDRCLOG ", (char *)t);
+    if (p <= 0)
+        return;
+    if (millis() - lastMs > 1000)
+        burst = 0;
+    lastMs = millis();
+    if (++burst > 8)
+        return;
+    const char *s = t + p - 1 + 8;
+    for (int part = 0; part < 2 && *s; ++part)
+    {
+        char line[200];
+        int n = snprintf(line, sizeof(line), part ? "Screen (cont): " : "Screen: ");
+        while (*s && n < 180)
+        {
+            const char c = *s++;
+            line[n++] = (c >= 32 && c < 127) ? c : ' ';
+        }
+        line[n] = 0;
+        LogText(line, n, true);
+    }
+}
+// B198: the screen's panic handler writes on this wire - "Guru Meditation Error: Core  1 panic'ed (Interrupt wdt timeout on
+// CPU1)", the registers ("PC      : 0x..."), "Backtrace: ..." - and the heap's "CORRUPT HEAP: Bad head at ..." comes the same
+// way. They arrived as an unframed word and were dropped. The lines that matter are kept now (six at most). True = it was that.
+FLASHMEM bool ScreenDyingWords(const char *t)
+{
+    static const char *const marks[] = {"Guru Meditation", "CORRUPT HEAP", "Backtrace:", "register dump", "Core dump", "core dump"};
+    bool any = false;
+    for (const char *k : marks)
+        if (InStrng((char *)k, (char *)t) > 0)
+        {
+            any = true;
+            break;
+        }
+    if (!any)
+        return false;
+    static const char *const keep[] = {"Guru Meditation", "CORRUPT HEAP", "Backtrace:", "PC      :", "Core dump", "core dump", "wdt timeout", "EXCVADDR"};
+    int lines = 0;
+    const char *s = t;
+    while (*s && lines < 6)
+    {
+        char line[200];
+        int n = snprintf(line, sizeof(line), "Screen said: ");
+        while (*s && *s != '\r' && *s != '\n')
+        {
+            if (n < 190)
+                line[n++] = (*s >= 32 && *s < 127) ? *s : ' ';
+            ++s;
+        }
+        while (*s == '\r' || *s == '\n')
+            ++s;
+        line[n] = 0;
+        bool want = false;
+        for (const char *k : keep)
+            if (strstr(line, k))
+            {
+                want = true;
+                break;
+            }
+        if (!want)
+            continue;
+        LogText(line, n, true);
+        ++lines;
+    }
+    return true;
+}
 // B177: what the Sounds page's OK did (MenuOptions.h EndAudioVisualView), with the page it was on
 FLASHMEM void LogSoundsLine(const char *what)
 {
