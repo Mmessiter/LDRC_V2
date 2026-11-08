@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.189"
+#define SCREEN_VERSION "1.11.190"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1170,6 +1170,8 @@ static uint32_t pendingSince = 0;                          // the pilot's own sw
 // silent, which on a page with live telemetry is never.)
 RTC_NOINIT_ATTR static char rtcPage[24];
 RTC_NOINIT_ATTR static uint32_t rtcMagic;
+RTC_NOINIT_ATTR static uint32_t rtcRestartAsked;        // (1.11.190) 0x4C445253 when the restart coming is one WE asked for (restartDark, the updater's reject): a software reset that does not take is finished by the RTC watchdog, and reads as rst 7 - no "before the restart" record for that
+#define RTC_RESTART_ASKED 0x4C445253u
 // The model's picture as the main board last named it on the front page (exp0.path), kept the same way: after our own
 // restart (an update) the flight screen's picture box has it at once, before the main board shows its front page again.
 RTC_NOINIT_ATTR static char rtcPicture[40];
@@ -4098,6 +4100,7 @@ static void netPoll() {
 // screen"). The boot's own dark-until-"dim=" rule then lights it when the Teensy has drawn.
 static void restartDark() {
     blSet(0); gpio_hold_en((gpio_num_t) LCD_BL);
+    rtcRestartAsked = RTC_RESTART_ASKED;                 // (1.11.190) asked for: should the RTC watchdog finish it (rst 7), the recorder keeps no record of a death
     flushOut(); delay(200); ESP.restart();
 }
 #include "update_device.h"
@@ -4293,7 +4296,9 @@ void setup() {
         for (int i = 0; i < rtcGlobalN; ++i) { rtcGlobals[i].name[sizeof(RtcGlobal::name) - 1] = 0; if (rtcGlobals[i].name[0]) { kept[rtcGlobals[i].name].ints["val"] = rtcGlobals[i].val; ++n; } }
         blog("boot", "globals kept through the restart: " + std::to_string(n));
     } else if (!warm) { rtcGlobalsMagic = RTC_GLOBALS_MAGIC; rtcGlobalN = 0; }
-    if (why == ESP_RST_PANIC || why == ESP_RST_INT_WDT || why == ESP_RST_TASK_WDT || why == ESP_RST_WDT) {   // (1.11.185) what we were doing when it died
+    const bool restartAsked = rtcRestartAsked == RTC_RESTART_ASKED; rtcRestartAsked = 0;   // (1.11.190) read once, at every start
+    if (restartAsked && why == ESP_RST_WDT) blog("boot", "the restart we asked for was finished by the RTC watchdog (rst 7: the software reset did not take) - no record of a death");   // (seen after the 1.11.189 install on the green, 8 Nov 2026: before_kept held an update's own restart)
+    else if (why == ESP_RST_PANIC || why == ESP_RST_INT_WDT || why == ESP_RST_TASK_WDT || why == ESP_RST_WDT) {   // (1.11.185) what we were doing when it died
         std::string b = "before the restart (rst " + std::to_string((int) why) + "): the loop was at " + (rtcBusyWhat < BUSY_N ? BUSY_NAMES[rtcBusyWhat] : "?");
         if (rtcBleStepMagic == 0x4C444253) { rtcBleStep[sizeof(rtcBleStep) - 1] = 0; b += std::string(", Bluetooth's last step: ") + rtcBleStep + " at " + std::to_string(rtcBleStepAt) + " ms"; }
         if (rtcMagic == 0x4C445243) b += std::string(", page ") + rtcPage;
