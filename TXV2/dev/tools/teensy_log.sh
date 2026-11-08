@@ -11,8 +11,10 @@ st=$(curl -s -m 4 "$base/status" | LC_ALL=C tr -cd '\11\12\15\40-\176')
 [ -z "$st" ] && { say "no answer from .$ip"; exit 1; }
 door=$(echo "$st" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('door'), d.get('page'), d.get('fw'))" 2>/dev/null)
 say "status: door/page/fw = $door"
+case "$door" in *" FrontView "*|*" BlankView "*) ;; *) say "NOT STARTED: the pilot is on a page (${door}) - never a link job while he is hands-on"; exit 2;; esac
 r=$(curl -s -m 6 -X POST -H "X-LDRC: 1" "$base/teensy/get?remote=$remote&local=$local")
 say "asked: $r"
+case "$r" in queued*|asked*) ;; *) say "NOT FETCHED: the screen refused the job ($r) - nothing was read; the file on the Mac is the OLD copy"; exit 2;; esac
 echo "$r" | grep -qi "door\|closed\|403" && { say "the door is shut: press the TX button, then run again"; exit 2; }
 for i in $(seq 1 60); do
     s=$(curl -s -m 4 "$base/teensy/status" | LC_ALL=C tr -cd '\11\12\15\40-\176')

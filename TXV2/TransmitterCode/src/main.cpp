@@ -1709,17 +1709,29 @@ void ShowSwitchPositions()
 {
     static uint8_t shown[8] = {9, 9, 9, 9, 9, 9, 9, 9};
     static uint32_t last = 0;
+    static bool movedReset = false; // B201
     static const char *words[4] = {"", "away", "mid", "near"}; // (B37: position 3 is near, towards you; 1 is away)
     char p[8][3] = {"p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"};
     if (CurrentView != SWITCHES_VIEW)
     {
         for (uint8_t i = 0; i < 8; ++i)
             shown[i] = 9; // (shown afresh when the page comes back)
+        movedReset = true; // B201: no highlight carried over to the page's next showing (its boxes come back pale)
         return;
     }
     if (millis() - last < 150)
         return;
     last = millis();
+    // B201 (Malcolm, 8 Nov 2026: "It might be still clearer if that switch changed background colour as well ... both the number
+    // and the currently allocated function change background colour to yellow to immediately highlight the moved switch. Any
+    // earlier moved switch returns to white background."): the switch that moved last has its number box and its job box in
+    // yellow; the one highlighted before goes back to the boxes' pale grey. The page's first showing highlights nothing.
+    static uint8_t moved = 0;
+    if (movedReset)
+    {
+        movedReset = false;
+        moved = 0;
+    }
     for (uint8_t i = 1; i <= 8; ++i)
     {
         uint8_t pos = GetSwitchPosition(i);
@@ -1727,8 +1739,24 @@ void ShowSwitchPositions()
             pos = 0;
         if (pos == shown[i - 1])
             continue;
+        const bool movement = shown[i - 1] != 9; // (not the page's first showing)
         shown[i - 1] = pos;
         SendText(p[i - 1], (char *)words[pos]);
+        if (!movement || moved == i)
+            continue;
+        char c[20];
+        if (moved)
+        { // the one highlighted before: pale again
+            snprintf(c, sizeof(c), "t%u.bco=54938", (unsigned)moved);
+            SendCommand(c);
+            snprintf(c, sizeof(c), "sw%u.bco=54938", (unsigned)moved);
+            SendCommand(c);
+        }
+        moved = i;
+        snprintf(c, sizeof(c), "t%u.bco=65504", (unsigned)i);
+        SendCommand(c);
+        snprintf(c, sizeof(c), "sw%u.bco=65504", (unsigned)i);
+        SendCommand(c);
     }
 }
 
