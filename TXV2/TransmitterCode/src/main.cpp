@@ -1626,12 +1626,15 @@ static bool ChannelRenamed(uint8_t ch) // ch 1-16
         return false;
     return true;
 }
-static void ChannelLabel(uint8_t ch, char *out, size_t size) // "Flaps", or "Channel 6"
-{
-    if (ChannelRenamed(ch))
-        snprintf(out, size, "%s", ChannelNames[ch - 1]);
-    else
+static void ChannelLabel(uint8_t ch, char *out, size_t size) // "Flaps (Ch 6)", or "Channel 6"
+{ // B200 (Malcolm, 8 Nov 2026, the Switch page: "we need to see the channel number as well as the name. Eg. Spare (Ch 10)"):
+  // a renamed channel says its number too. A long name (Collective) keeps the label within its box by dropping "Ch".
+    if (!ChannelRenamed(ch))
         snprintf(out, size, "Channel %u", (unsigned)ch);
+    else if (strlen(ChannelNames[ch - 1]) <= 8)
+        snprintf(out, size, "%s (Ch %u)", ChannelNames[ch - 1], (unsigned)ch);
+    else
+        snprintf(out, size, "%s (%u)", ChannelNames[ch - 1], (unsigned)ch);
 }
 
 void DoOneSwitch(char *Sw, uint8_t n)
@@ -1659,8 +1662,8 @@ void DoOneSwitch(char *Sw, uint8_t n)
     {
         if (TopChannelSwitch[d] != n)
             continue;
-        char c[32], label[16];
-        ChannelLabel((uint8_t)(d + 5), label, sizeof(label)); // (B34: by number; B39: or its name, if the pilot has renamed it)
+        char c[40], label[28];
+        ChannelLabel((uint8_t)(d + 5), label, sizeof(label)); // (B34: by number; B39: or its name, if the pilot has renamed it; B200: with its number)
         snprintf(c, sizeof(c), "%s  R", label);
         ShowSwitchNameWithReversed(Sw, n, c);
         return;
@@ -1682,7 +1685,7 @@ void DoOneSwitch(char *Sw, uint8_t n)
     }
     if (FrontSwitchIsDefault(n)) // B38: a front switch with no job is its channel's input, and says so
     {
-        char c[32], label[16];
+        char c[40], label[28];
         ChannelLabel(n, label, sizeof(label));
         snprintf(c, sizeof(c), "%s  R", label);
         ShowSwitchNameWithReversed(Sw, n, c);
@@ -2731,8 +2734,8 @@ void DoOneSwitchView(uint8_t n) // n is 1-4  = number for switch to edit
 
     for (int d = 0; d < SWITCH_INPUTS; ++d)
     { // the channels by number (B34), or by name where the pilot has renamed one (B39)
-        char v[24];
-        ChannelLabel((uint8_t)(d + 5), v, sizeof(v));
+        char v[32];
+        ChannelLabel((uint8_t)(d + 5), v, sizeof(v));   // B200: "Spare (Ch 10)"
         SendText((char *)chLabel[d], v);
     }
 }
