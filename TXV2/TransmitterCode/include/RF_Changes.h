@@ -12,7 +12,11 @@
 #ifndef RF_CHANGES_H
 #define RF_CHANGES_H
 
-enum { K_SKIP = 0, K_U8, K_S8, K_U16, K_S16, K_U32, K_T10, K_BITS, K_TEXT, K_HEX, K_STEP };   // (K_STEP: a switch end, 5 us steps about 1500)
+enum { K_SKIP = 0, K_U8, K_S8, K_U16, K_S16, K_U32, K_T10, K_BITS, K_TEXT, K_HEX, K_STEP,   // (K_STEP: a switch end, 5 us steps about 1500; K_T10: tenths of a second)
+       // B197 (Malcolm, 8 Nov 2026, of a swash trim: "I changed the trim from 1 to 0.5 not 10 to 5"): a value in the phone's units,
+       // as its page shows it - tenths of a per cent or a degree, hundredths of a volt or a metre, a mixer limit in degrees
+       K_U8_T10S, K_U8_T10P, K_U16_T10P, K_S16_T10P, K_S16_T10D, K_S16_DEG, K_U16_DEG12, K_S16_INDEG, K_S16_TAIL, K_S8_GEO,
+       K_U16_H100V, K_U16_H100M, K_U16_US, K_S16_US, K_U16_HZ, K_U16_MS };
 struct ChgF { uint8_t off, kind; char name[26]; };   // (the names IN the table, in flash: a pointer would leave each name in RAM1)
 struct ChgT { uint8_t fn, first, stride; const char *item; const ChgF *f; uint8_t nf; };
 
@@ -45,20 +49,20 @@ static const ChgF CF_142[] PROGMEM = {{0, K_U8, "Mode"}, {1, K_T10, "Start-up ti
     {26, K_T10, "Spool-down time"}, {28, K_U8, "Throttle type"}, {29, K_SKIP, ""}, {30, K_SKIP, ""}, {31, K_U8, "Idle throttle"}, {32, K_U8, "Auto throttle"},
     {33, K_U8, "Bypass curve 1"}, {34, K_U8, "Bypass curve 2"}, {35, K_U8, "Bypass curve 3"}, {36, K_U8, "Bypass curve 4"}, {37, K_U8, "Bypass curve 5"},
     {38, K_U8, "Bypass curve 6"}, {39, K_U8, "Bypass curve 7"}, {40, K_U8, "Bypass curve 8"}, {41, K_U8, "Bypass curve 9"}};
-static const ChgF CF_146[] PROGMEM = {{0, K_U8, "Mode"}, {1, K_U8, "Roll upright first"}, {2, K_U8, "Flip gain"}, {3, K_U8, "Level gain"}, {4, K_U8, "Pull-up time"},
-    {5, K_U8, "Climb time"}, {6, K_U8, "Flip time"}, {7, K_U8, "Exit time"}, {8, K_U16, "Pull-up collective"}, {10, K_U16, "Climb collective"},
-    {12, K_U16, "Hover collective"}, {14, K_U16, "Hover height"}, {16, K_U16, "Height P"}, {18, K_U16, "Height I"}, {20, K_U16, "Height D"},
-    {22, K_U16, "Max collective"}, {24, K_U16, "Max rate"}, {26, K_U16, "Max acceleration"}};
+static const ChgF CF_146[] PROGMEM = {{0, K_U8, "Mode"}, {1, K_U8, "Roll upright first"}, {2, K_U8, "Flip gain"}, {3, K_U8, "Level gain"}, {4, K_U8_T10S, "Pull-up time"},
+    {5, K_U8_T10S, "Climb time"}, {6, K_U8_T10S, "Flip time"}, {7, K_U8_T10S, "Exit time"}, {8, K_U16_T10P, "Pull-up collective"}, {10, K_U16_T10P, "Climb collective"},
+    {12, K_U16_T10P, "Hover collective"}, {14, K_U16_H100M, "Hover height"}, {16, K_U16, "Height P"}, {18, K_U16, "Height I"}, {20, K_U16, "Height D"},
+    {22, K_U16_T10P, "Max collective"}, {24, K_U16, "Max rate"}, {26, K_U16, "Max acceleration"}};
 static const ChgF CF_92[] PROGMEM = {{0, K_U8, "Gyro hardware lowpass"}, {1, K_U8, "Lowpass 1 type"}, {2, K_U16, "Lowpass 1 Hz"}, {4, K_U8, "Lowpass 2 type"},
     {5, K_U16, "Lowpass 2 Hz"}, {7, K_U16, "Notch 1 Hz"}, {9, K_U16, "Notch 1 cutoff"}, {11, K_U16, "Notch 2 Hz"}, {13, K_U16, "Notch 2 cutoff"},
     {15, K_U16, "Dynamic lowpass min"}, {17, K_U16, "Dynamic lowpass max"}, {19, K_U8, "Dynamic notches"}, {20, K_U8, "Dynamic notch Q"},
     {21, K_U16, "Dynamic notch min Hz"}, {23, K_U16, "Dynamic notch max Hz"}, {25, K_U8, "RPM filter strength"}, {26, K_U8, "RPM filter min Hz"}};
-static const ChgF CF_42[] PROGMEM = {{0, K_U8, "Rotor direction"}, {1, K_U8, "Tail type"}, {2, K_U8, "Tail motor idle"}, {3, K_S16, "Tail centre trim"}, {5, K_U8, "Swash type"},
-    {6, K_U8, "Swash ring"}, {7, K_S16, "Swash phase"}, {9, K_U16, "Collective limit"}, {11, K_S16, "Swash trim roll"}, {13, K_S16, "Swash trim pitch"},
-    {15, K_S16, "Swash trim collective"}, {17, K_U8, "TTA precomp"}, {18, K_S8, "Geometry correction"}, {19, K_S8, "Collective tilt +"}, {20, K_S8, "Collective tilt -"}};
-static const ChgF CF_174[] PROGMEM = {{0, K_S16, "rate"}, {2, K_S16, "min"}, {4, K_S16, "max"}};
-static const ChgF CF_120[] PROGMEM = {{0, K_U16, "centre"}, {2, K_S16, "min"}, {4, K_S16, "max"}, {6, K_U16, "scale -"}, {8, K_U16, "scale +"}, {10, K_U16, "rate"},
-    {12, K_U16, "speed"}, {14, K_U16, "flags"}};
+static const ChgF CF_42[] PROGMEM = {{0, K_U8, "Rotor direction"}, {1, K_U8, "Tail type"}, {2, K_U8_T10P, "Tail motor idle"}, {3, K_S16_TAIL, "Tail centre trim"}, {5, K_U8, "Swash type"},
+    {6, K_U8, "Swash ring"}, {7, K_S16_T10D, "Swash phase"}, {9, K_U16_DEG12, "Total pitch limit"}, {11, K_S16_T10P, "Swash trim roll"}, {13, K_S16_T10P, "Swash trim pitch"},
+    {15, K_S16_T10P, "Swash trim collective"}, {17, K_U8, "TTA precomp"}, {18, K_S8_GEO, "Geometry correction"}, {19, K_S8, "Collective tilt +"}, {20, K_S8, "Collective tilt -"}};
+static const ChgF CF_174[] PROGMEM = {{0, K_S16_T10P, "rate"}, {2, K_S16_INDEG, "min"}, {4, K_S16_INDEG, "max"}};   // (as the Travel extents pages: the rate in %, the ends in degrees)
+static const ChgF CF_120[] PROGMEM = {{0, K_U16_US, "centre"}, {2, K_S16_US, "min"}, {4, K_S16_US, "max"}, {6, K_U16_US, "scale -"}, {8, K_U16_US, "scale +"}, {10, K_U16_HZ, "rate"},
+    {12, K_U16_MS, "speed"}, {14, K_U16, "flags"}};
 static const ChgF CF_172[] PROGMEM = {{0, K_U8, "operation"}, {1, K_U8, "input"}, {2, K_U8, "output"}, {3, K_S16, "offset"}, {5, K_S16, "weight"}};
 static const ChgF CF_131[] PROGMEM = {{0, K_U16, "Min throttle"}, {2, K_U16, "Max throttle"}, {4, K_U16, "Min command"}, {6, K_SKIP, ""}, {7, K_SKIP, ""},
     {8, K_U8, "DShot telemetry"}, {9, K_U8, "ESC signal"}, {10, K_U16, "PWM rate"}, {12, K_U8, "Unsynced PWM"}, {13, K_U8, "Motor poles"}, {14, K_U8, "Motor 2 poles"},
@@ -66,9 +70,9 @@ static const ChgF CF_131[] PROGMEM = {{0, K_U16, "Min throttle"}, {2, K_U16, "Ma
     {21, K_U16, "Main gear (rotor)"}, {23, K_U16, "Main gear (motor)"}, {25, K_U16, "Tail gear (rotor)"}, {27, K_U16, "Tail gear (tail)"}};
 static const ChgF CF_80[] PROGMEM = {{0, K_SKIP, ""}, {1, K_U8, "Where"}, {2, K_U8, "When"}, {3, K_U16, "How often"}, {5, K_HEX, "Fields"}, {9, K_U16, "Erase free KiB"},
     {11, K_U8, "Overwrite the oldest"}, {12, K_U8, "After disarm"}};
-static const ChgF CF_38[] PROGMEM = {{0, K_S16, "Roll"}, {2, K_S16, "Pitch"}, {4, K_S16, "Yaw"}};
+static const ChgF CF_38[] PROGMEM = {{0, K_S16_DEG, "Roll"}, {2, K_S16_DEG, "Pitch"}, {4, K_S16_DEG, "Yaw"}};
 static const ChgF CF_61[] PROGMEM = {{0, K_U8, "Auto-disarm delay"}};
-static const ChgF CF_240[] PROGMEM = {{0, K_S16, "Pitch trim"}, {2, K_S16, "Roll trim"}};
+static const ChgF CF_240[] PROGMEM = {{0, K_S16_T10D, "Pitch trim"}, {2, K_S16_T10D, "Roll trim"}};
 static const ChgF CF_96[] PROGMEM = {{0, K_U8, "Accelerometer"}, {1, K_U8, "Barometer"}, {2, K_U8, "Compass"}, {3, K_U8, "Gyro used"}, {4, K_U8, "Gyro high range"},
     {5, K_U8, "Gyro still threshold"}, {6, K_U16, "Gyro calibration time"}, {8, K_SKIP, ""}, {10, K_U8, "Check overflow"}};
 static const ChgF CF_126[] PROGMEM = {{0, K_U8, "Gyro 1 alignment"}, {1, K_U8, "Gyro 2 alignment"}, {2, K_U8, "Compass alignment"}};
@@ -76,11 +80,11 @@ static const ChgF CF_64[] PROGMEM = {{0, K_U8, "Roll"}, {1, K_U8, "Pitch"}, {2, 
     {6, K_U8, "Aux 2"}, {7, K_U8, "Aux 3"}};
 static const ChgF CF_66[] PROGMEM = {{0, K_U16, "Stick centre"}, {2, K_U16, "Stick travel"}, {4, K_SKIP, ""}, {6, K_U16, "Min throttle"}, {8, K_U16, "Max throttle"},
     {10, K_U8, "Deadband"}, {11, K_U8, "Yaw deadband"}};
-static const ChgF CF_75[] PROGMEM = {{0, K_U8, "Delay"}, {1, K_U8, "Off delay"}, {2, K_U16, "Throttle"}, {4, K_U8, "Switch mode"}, {5, K_U16, "Throttle low delay"},
+static const ChgF CF_75[] PROGMEM = {{0, K_U8_T10S, "Delay"}, {1, K_U8_T10S, "Off delay"}, {2, K_U16, "Throttle"}, {4, K_U8, "Switch mode"}, {5, K_T10, "Throttle low delay"},
     {7, K_U8, "Procedure"}};
 static const ChgF CF_50[] PROGMEM = {{0, K_U8, "RSSI channel"}, {1, K_U8, "RSSI scale"}, {2, K_U8, "RSSI invert"}, {3, K_U8, "RSSI offset"}};
-static const ChgF CF_32[] PROGMEM = {{0, K_U16, "Capacity"}, {2, K_U8, "Cells"}, {3, K_U8, "Voltage from"}, {4, K_U8, "Current from"}, {5, K_U16, "Cell minimum"},
-    {7, K_U16, "Cell maximum"}, {9, K_U16, "Cell full"}, {11, K_U16, "Cell warning"}, {13, K_U8, "Low voltage %"}, {14, K_U8, "Used warning %"},
+static const ChgF CF_32[] PROGMEM = {{0, K_U16, "Capacity"}, {2, K_U8, "Cells"}, {3, K_U8, "Voltage from"}, {4, K_U8, "Current from"}, {5, K_U16_H100V, "Cell minimum"},
+    {7, K_U16_H100V, "Cell maximum"}, {9, K_U16_H100V, "Cell full"}, {11, K_U16_H100V, "Cell warning"}, {13, K_U8, "Low voltage %"}, {14, K_U8, "Used warning %"},
     {15, K_U16, "Capacity 1"}, {17, K_U16, "Capacity 2"}, {19, K_U16, "Capacity 3"}, {21, K_U16, "Capacity 4"}, {23, K_U16, "Capacity 5"}, {25, K_U16, "Capacity 6"}};
 static const ChgF CF_123[] PROGMEM = {{0, K_U8, "ESC brand"}, {1, K_U8, "Half duplex"}, {2, K_U16, "Update rate"}, {4, K_U16, "Current offset"}, {6, K_SKIP, ""},
     {10, K_U8, "Pin swap"}, {11, K_S8, "Voltage correction"}, {12, K_S8, "Current correction"}, {13, K_S8, "Used correction"}};
@@ -114,27 +118,71 @@ DMAMEM static char ChgFileHex[1250];                 // (scratch: the backup's i
 DMAMEM static uint8_t ChgA[600], ChgB[600];          // (the backup's bytes, the flight controller's)
 DMAMEM static bool ChgCovered[600];
 
+FLASHMEM static int ChgKindW(uint8_t kind) // a field's bytes
+{
+    switch (kind)
+    {
+    case K_SKIP: case K_U8: case K_S8: case K_STEP: case K_U8_T10S: case K_U8_T10P: case K_S8_GEO: return 1;
+    case K_U32: case K_HEX: case K_BITS: return 4;
+    default: return 2;
+    }
+}
+FLASHMEM static bool ChgKindSigned(uint8_t kind)
+{
+    return kind == K_S8 || kind == K_S8_GEO || kind == K_S16 || kind == K_S16_T10P || kind == K_S16_T10D || kind == K_S16_DEG || kind == K_S16_INDEG || kind == K_S16_TAIL || kind == K_S16_US;
+}
 FLASHMEM static int ChgVal(const uint8_t *b, int n, int off, uint8_t kind, long &v) // a field's value; false (0): not all there
 {
-    const int w = kind == K_U8 || kind == K_S8 || kind == K_STEP || kind == K_SKIP ? 1 : kind == K_U32 || kind == K_HEX || kind == K_BITS ? 4 : 2;
+    const int w = ChgKindW(kind);
     if (off + w > n) return 0;
     switch (kind)
     {
-    case K_U8: v = b[off]; break;
-    case K_S8: v = (int8_t)b[off]; break;
     case K_STEP: v = 1500 + 5 * (int8_t)b[off]; break;
-    case K_S16: v = (int16_t)(b[off] | (b[off + 1] << 8)); break;
     case K_U32: case K_HEX: case K_BITS: v = (long)RdU32(b, off); break;
-    default: v = (uint16_t)(b[off] | (b[off + 1] << 8)); break;
+    default:
+        if (w == 1) v = ChgKindSigned(kind) ? (long)(int8_t)b[off] : (long)b[off];
+        else v = ChgKindSigned(kind) ? (long)(int16_t)(b[off] | (b[off + 1] << 8)) : (long)(uint16_t)(b[off] | (b[off + 1] << 8));
+        break;
     }
     return w;
 }
-FLASHMEM static void ChgFmt(char *out, size_t n, uint8_t kind, long v)
+struct ChgCtx { int fn, bank; const uint8_t *b; int nb; };   // the key a value is of, and the flight controller's bytes of it (a value whose unit depends on another)
+FLASHMEM static void ChgTenths(char *out, size_t n, long tenths, const char *unit) // -12.5
 {
-    if (kind == K_T10) snprintf(out, n, "%ld.%ld s", v / 10, v % 10);
-    else if (kind == K_HEX) snprintf(out, n, "%08lX", (unsigned long)v);
-    else if (kind == K_STEP) snprintf(out, n, "%ld us", v);
-    else snprintf(out, n, "%ld", v);
+    const long a = tenths < 0 ? -tenths : tenths;
+    snprintf(out, n, "%s%ld.%ld%s", tenths < 0 ? "-" : "", a / 10, a % 10, unit);
+}
+FLASHMEM static long ChgRawDeg(long raw, int perThousand) { return (raw * perThousand * 10 + (raw < 0 ? -500 : 500)) / 1000; }   // 1000 raw = 12 (or 24) deg -> tenths (the Travel page's RawToDegTenths)
+FLASHMEM static bool ChgTailMotorised(const ChgCtx *c) // the tail's kind (the mixer's byte 1): the key in hand when it is the mixer, else the backup's
+{
+    if (c->fn == 42) return c->nb > 1 && c->b[1] != 0;
+    char h[64];
+    return BakGet("42", h, sizeof(h)) >= 4 && !(h[2] == '0' && h[3] == '0');
+}
+FLASHMEM static void ChgFmt(char *out, size_t n, uint8_t kind, long v, const ChgCtx *c) // a value in the words of the page that shows it
+{
+    switch (kind)
+    {
+    case K_T10: case K_U8_T10S: ChgTenths(out, n, v, " s"); return;
+    case K_U8_T10P: case K_U16_T10P: case K_S16_T10P: ChgTenths(out, n, v, " %"); return;
+    case K_S16_T10D: ChgTenths(out, n, v, " deg"); return;
+    case K_S16_DEG: snprintf(out, n, "%ld deg", v); return;
+    case K_U16_DEG12: ChgTenths(out, n, ChgRawDeg(v, 12), " deg"); return;
+    case K_S16_INDEG:   // a mixer input's end: cyclic and collective 1000 = 12 deg; the tail's 1000 = 24 deg, or 0.1 % when it is a motor (the Travel pages)
+        if (c->bank != 3) ChgTenths(out, n, ChgRawDeg(v, 12), " deg");
+        else if (ChgTailMotorised(c)) ChgTenths(out, n, v, " %");
+        else ChgTenths(out, n, ChgRawDeg(v, 24), " deg");
+        return;
+    case K_S16_TAIL: if (ChgTailMotorised(c)) ChgTenths(out, n, v, " %"); else ChgTenths(out, n, ChgRawDeg(v, 24), " deg"); return;
+    case K_S8_GEO: ChgTenths(out, n, v * 2, ""); return;   // (raw / 5, to one decimal: raw 15 = 3.0)
+    case K_U16_H100V: snprintf(out, n, "%ld.%02ld V", v / 100, v % 100); return;
+    case K_U16_H100M: snprintf(out, n, "%ld.%02ld m", v / 100, v % 100); return;
+    case K_U16_US: case K_S16_US: case K_STEP: snprintf(out, n, "%ld us", v); return;
+    case K_U16_HZ: snprintf(out, n, "%ld Hz", v); return;
+    case K_U16_MS: snprintf(out, n, "%ld ms", v); return;
+    case K_HEX: snprintf(out, n, "%08lX", (unsigned long)v); return;
+    default: snprintf(out, n, "%ld", v); return;
+    }
 }
 FLASHMEM static void ChgSection(const char *key, char *out, size_t n)
 {
@@ -216,6 +264,8 @@ FLASHMEM bool ChgTake(const char *key, const char *fcHex, bool optional) // BakT
     }
     bool *covered = ChgCovered;
     memset(covered, 0, 600);
+    const char *dot = strchr(key, '.');
+    const ChgCtx ctx = {fn, dot ? (int)strtol(dot + 1, nullptr, (fn == 174 || fn == 154) ? 16 : 10) : -1, b, nb};
     const int items = tab->stride ? (na - tab->first) / tab->stride : 1;
     for (int it = 0; it < items; ++it)
     {
@@ -241,7 +291,7 @@ FLASHMEM bool ChgTake(const char *key, const char *fcHex, bool optional) // BakT
                 }
                 continue;
             }
-            ChgFmt(w, sizeof(w), F.kind, va); ChgFmt(v, sizeof(v), F.kind, vb);
+            ChgFmt(w, sizeof(w), F.kind, va, &ctx); ChgFmt(v, sizeof(v), F.kind, vb, &ctx);
             if (tab->item) { char itn[16]; snprintf(itn, sizeof(itn), tab->item, it + 1); snprintf(t, sizeof(t), "%s: %s %s %s -> %s", sec, itn, F.name, w, v); }
             else snprintf(t, sizeof(t), "%s: %s %s -> %s", sec, F.name, w, v);
             ChgAdd(key, base + F.off, wa, 0, t);

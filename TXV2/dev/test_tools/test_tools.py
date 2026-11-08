@@ -526,6 +526,27 @@ int main() {
     fcFromBackup(); fail210 = 5; boxes = 0; fcLog.clear(); ChangesAgain(); runJob();
     CHECK(ChgDone && ChgStopped && boxes == 1 && lastBox.find("Not everything could be read") == 0 && fields["hd"].find("Not all read") == 0 && fcPid == Bank - 1);
     fail210 = 0; ChangesAgain(); runJob(); CHECK(!ChgStopped && ChgN == 0 && fields["hd"].find("Nothing changed") == 0);
+    // B197 (Malcolm, 8 Nov: "I changed the trim from 1 to 0.5 not 10 to 5"): a value in its page's units
+    { char o[24]; const uint8_t vp[2] = {0, 0}, mo[2] = {0, 1}; const ChgCtx cv = {42, -1, vp, 2}, cm = {42, -1, mo, 2}, in1 = {174, 1, nullptr, 0}, in3 = {174, 3, nullptr, 0};
+      ChgFmt(o, sizeof o, K_S16_T10P, 10, &cv); CHECK(strcmp(o, "1.0 %") == 0); ChgFmt(o, sizeof o, K_S16_T10P, 5, &cv); CHECK(strcmp(o, "0.5 %") == 0);
+      ChgFmt(o, sizeof o, K_S16_T10P, -5, &cv); CHECK(strcmp(o, "-0.5 %") == 0); ChgFmt(o, sizeof o, K_S16_T10D, -123, &cv); CHECK(strcmp(o, "-12.3 deg") == 0);
+      ChgFmt(o, sizeof o, K_U16_DEG12, 1000, &cv); CHECK(strcmp(o, "12.0 deg") == 0); ChgFmt(o, sizeof o, K_U16_DEG12, 1750, &cv); CHECK(strcmp(o, "21.0 deg") == 0);
+      ChgFmt(o, sizeof o, K_S16_TAIL, 50, &cv); CHECK(strcmp(o, "1.2 deg") == 0); ChgFmt(o, sizeof o, K_S16_TAIL, 50, &cm); CHECK(strcmp(o, "5.0 %") == 0);
+      ChgFmt(o, sizeof o, K_S16_INDEG, -1000, &in1); CHECK(strcmp(o, "-12.0 deg") == 0); ChgFmt(o, sizeof o, K_S16_INDEG, 1000, &in3); CHECK(strcmp(o, byteOf(fc["42"], 1) ? "100.0 %" : "24.0 deg") == 0);
+      ChgFmt(o, sizeof o, K_S8_GEO, 15, &cv); CHECK(strcmp(o, "3.0") == 0); ChgFmt(o, sizeof o, K_S8_GEO, -1, &cv); CHECK(strcmp(o, "-0.2") == 0);
+      ChgFmt(o, sizeof o, K_U16_H100V, 330, &cv); CHECK(strcmp(o, "3.30 V") == 0); ChgFmt(o, sizeof o, K_U16_H100M, 50, &cv); CHECK(strcmp(o, "0.50 m") == 0);
+      ChgFmt(o, sizeof o, K_U8_T10S, 25, &cv); CHECK(strcmp(o, "2.5 s") == 0); ChgFmt(o, sizeof o, K_U16_T10P, 1000, &cv); CHECK(strcmp(o, "100.0 %") == 0);
+      ChgFmt(o, sizeof o, K_S16_DEG, 180, &cv); CHECK(strcmp(o, "180 deg") == 0); ChgFmt(o, sizeof o, K_U16_HZ, 333, &cv); CHECK(strcmp(o, "333 Hz") == 0); ChgFmt(o, sizeof o, K_S16_US, -500, &cv); CHECK(strcmp(o, "-500 us") == 0);
+      // the rows, against the real backup: the swash trim pitch set to 0.5 %, a rescue time, a cell voltage, the level trim
+      auto s16 = [](const std::string &h, int off) { return (int) (int16_t) (byteOf(h, off) | (byteOf(h, off + 1) << 8)); };
+      char was[24], expect[96]; ChgTenths(was, sizeof was, s16(fc["42"], 13), " %"); snprintf(expect, sizeof expect, "Mixer: Swash trim pitch %s -> 0.5 %%", was);
+      setByte("42", 13, 5); setByte("42", 14, 0); setByte("146.0", 5, 25); setByte("32", 11, 0x68); setByte("32", 12, 0x01); setByte("240", 0, 0xF6); setByte("240", 1, 0xFF);
+      ChangesAgain(); runJob();
+      CHECK(ChgN == 4 && chgRowOf(expect) >= 0 && chgRowOf("Rescue bank 1: Climb time ") >= 0 && chgRowOf("-> 2.5 s") >= 0 && chgRowOf("Battery: Cell warning ") >= 0 && chgRowOf("-> 3.60 V") >= 0 && chgRowOf("Level: Pitch trim ") >= 0 && chgRowOf("-> -1.0 deg") >= 0);
+      // put back by the row: the bytes, whatever the words
+      const int rT = chgRowOf("Swash trim pitch"); ChgFirst = (rT / 6) * 6; ChgShow(); ScreenEventArg = (uint8_t)(rT - ChgFirst + 1); fcLog.clear(); ChangesPutBack(); runJob();
+      CHECK(s16(fc["42"], 13) == s16(std::string(BT2).substr(std::string(BT2).find("\n42=") + 4, 42), 13) && count(43) == 1 && ChgRows[rT].done);
+      fcFromBackup(); }
     // (review, low) a request already out when the comparison is asked for: its first question waits for it
     now += 10000; holdFc = true; MspAsk(101, nullptr, 0); holdFc = false; fcLog.clear(); ChangesAgain(); tick(3);
     CHECK(BakJob == BAK_JOB_COMPARE && BakStep == 0 && fcLog.empty()); now += 10000; runJob(); CHECK(ChgDone && !ChgStopped && ChgN == 0);
@@ -571,9 +592,14 @@ int main() {
             if (T.fn == 112 || T.fn == 94 || T.fn == 148 || T.fn == 146 || T.fn == 111) snprintf(key, sizeof key, "%u.5", T.fn); else if (T.fn == 174) snprintf(key, sizeof key, "174.04"); else snprintf(key, sizeof key, "%u", T.fn);
             ChgSection(key, sec, sizeof sec);
             for (int f = 0; f < T.nf; ++f) { const ChgF &F = T.f[f]; if (F.kind == K_SKIP || F.kind == K_BITS || F.kind == K_TEXT) continue;
-                ChgFmt(val, sizeof val, F.kind, F.kind == K_S16 ? -32768 : F.kind == K_S8 ? -128 : F.kind == K_U8 ? 255 : F.kind == K_STEP ? 2135 : F.kind == K_HEX ? 0xFFFFFFFFL : F.kind == K_T10 ? 65535 : 65535);
+              for (int tail = 0; tail < 2; ++tail) {   // (a tail of either kind: the mixer's and the inputs' tail values read in % or degrees)
+                const uint8_t img[2] = {0, (uint8_t)tail}; const ChgCtx c = {(int)T.fn, T.fn == 174 ? 3 : -1, img, 2};
+                const int wd = ChgKindW(F.kind);
+                const long big = F.kind == K_STEP ? 2135 : ChgKindSigned(F.kind) ? (wd == 1 ? -128 : -32768) : wd == 1 ? 255 : wd == 2 ? 65535 : 0xFFFFFFFFL;
+                ChgFmt(val, sizeof val, F.kind, big, &c);
                 if (T.item) { char itn[16]; snprintf(itn, sizeof itn, T.item, 20); snprintf(t, sizeof t, "%s: %s %s %s -> %s", sec, itn, F.name, val, val); } else snprintf(t, sizeof t, "%s: %s %s -> %s", sec, F.name, val, val);
-                fprintf(w, "548\t2\t%s\n", t); } }
+                fprintf(w, "548\t2\t%s\n", t);
+                if (F.kind != K_S16_TAIL) break; } } }
         for (int b = 0; b < 32; ++b) if (ChgFeatureNames[b][0]) fprintf(w, "548\t2\tFeatures: %s off -> on\n", ChgFeatureNames[b]);
         fprintf(w, "548\t2\tName: ABCDEFGHIJKLMN -> ABCDEFGHIJKLMN\n");
         fprintf(w, "548\t2\tSensor alignment: changed\n");
@@ -655,7 +681,16 @@ if os.path.isdir(pages_dir):
         if ix.get(pid) != name: problems.append('index.json: page %d is not %s' % (pid, name))
 else: print('(the screen project is not beside TXV1B: its pages not checked)')
 # What changed?'s names: each table tiles its setting's bytes - none twice, none left out - to the length Rotorflight sends
-chg = src('RF_Changes.h'); widths = {'K_SKIP': 1, 'K_U8': 1, 'K_S8': 1, 'K_STEP': 1, 'K_U16': 2, 'K_S16': 2, 'K_T10': 2, 'K_U32': 4, 'K_HEX': 4, 'K_BITS': 4, 'K_TEXT': 0}
+chg = src('RF_Changes.h'); widths = {'K_SKIP': 1, 'K_U8': 1, 'K_S8': 1, 'K_STEP': 1, 'K_U16': 2, 'K_S16': 2, 'K_T10': 2, 'K_U32': 4, 'K_HEX': 4, 'K_BITS': 4, 'K_TEXT': 0,
+                                      'K_U8_T10S': 1, 'K_U8_T10P': 1, 'K_S8_GEO': 1, 'K_U16_T10P': 2, 'K_S16_T10P': 2, 'K_S16_T10D': 2, 'K_S16_DEG': 2, 'K_U16_DEG12': 2,
+                                      'K_S16_INDEG': 2, 'K_S16_TAIL': 2, 'K_U16_H100V': 2, 'K_U16_H100M': 2, 'K_U16_US': 2, 'K_S16_US': 2, 'K_U16_HZ': 2, 'K_U16_MS': 2}
+for k in sorted(set(re.findall(r'\{\d+, (K_\w+), "', chg))):
+    if k not in widths: problems.append('RF_Changes.h: a kind this test does not know the width of: ' + k)
+    elif widths[k] != (1 if k in ('K_SKIP', 'K_U8', 'K_S8', 'K_STEP', 'K_U8_T10S', 'K_U8_T10P', 'K_S8_GEO') else 4 if k in ('K_U32', 'K_HEX', 'K_BITS') else 0 if k == 'K_TEXT' else 2): problems.append('width of ' + k)
+assert all(('case ' + k + ':') in chg for k in widths if widths[k] == 1 and k != 'K_SKIP' or widths[k] == 4), 'ChgKindW must name every 1- and 4-byte kind'
+for k in widths:
+    if widths[k] == 1 and k != 'K_SKIP' or widths[k] == 4:
+        if ('case ' + k + ':') not in chg[chg.index('ChgKindW'):chg.index('ChgKindSigned')]: problems.append('ChgKindW: ' + k + ' is not a 2-byte kind')
 ftabs = {m.group(1): [(int(o), k, n) for o, k, n in re.findall(r'\{(\d+), (K_\w+), "([^"]*)"\}', m.group(2))] for m in re.finditer(r'static const ChgF (CF_\d+)\[\] PROGMEM = \{(.*?)\};', chg, re.S)}
 lens = {l.split('=', 1)[0].split('.')[0]: len(l.split('=', 1)[1]) // 2 for l in bt2.split('\n') if '=' in l and l[:1].isdigit()}
 for fn, first, stride, item, tab in re.findall(r'CT\((\d+), (\d+), (\d+), ("[^"]*"|nullptr), (CF_\d+)\)', chg):

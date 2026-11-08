@@ -1,8 +1,9 @@
 What changed since this model's backup on the card?||
 The flight controller is read, as a backup reads it (it|
 takes a minute), and compared setting by setting. Each row|
-shows the backup's value, then the flight controller's:|
-'PIDs bank 2: Roll P 50 -> 65'.||
+shows the backup's value, then the flight controller's, in|
+the units its own page uses: 'PIDs bank 2: Roll P 50 -> 65',|
+'Mixer: Swash trim pitch 1.0 % -> 0.5 %'.||
 'Put back' writes that one setting as the backup has it -|
 nothing else moves - then stores it, reads it back, and|
 restarts the flight controller if it needs to.||
