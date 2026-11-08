@@ -1761,6 +1761,66 @@ void ShowSwitchPositions()
 }
 
 /*********************************************************************************************************************************/
+// B202 (Malcolm, 8 Nov 2026, the Inputs page: "a movement of the stick for ch1 usually aileron highlights that part with yellow
+// background etc as switches"): on the Inputs and outputs page the row - In, Name, Out - of every channel whose input has just
+// moved (a stick, a knob or a switch) turns yellow, and the rows lit before go back to white: a newcomer moves a stick and sees
+// which channel it feeds. Nothing is lit at the page's first showing, wherever the sticks rest. InputsBuffer holds each channel's
+// raw reading from the pass just made (a stick's travel is some 3000 counts; its noise a few; a switch's steps hundreds).
+void ShowInputMovement()
+{
+    static int base[CHANNELSUSED];
+    static bool lit[CHANNELSUSED];
+    static bool fresh = true;
+    static uint32_t last = 0;
+    if (CurrentView != INPUTS_VIEW)
+    {
+        fresh = true;
+        return;
+    }
+    if (millis() - last < 150)
+        return;
+    last = millis();
+    if (fresh)
+    {
+        fresh = false;
+        for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
+        {
+            base[ch] = InputsBuffer[ch];
+            lit[ch] = false;
+        }
+        return;
+    }
+    bool moved[CHANNELSUSED];
+    bool any = false;
+    for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
+    {
+        const int v = InputsBuffer[ch];
+        moved[ch] = abs(v - base[ch]) > 150;
+        if (moved[ch])
+        {
+            base[ch] = v;
+            any = true;
+        }
+    }
+    if (!any)
+        return; // (the rows lit stay lit until another input moves)
+    for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
+    {
+        if (moved[ch] == lit[ch])
+            continue;
+        lit[ch] = moved[ch];
+        const unsigned colour = moved[ch] ? 65504u : 65535u; // yellow, or the boxes' white
+        char c[24];
+        snprintf(c, sizeof(c), "c%u.bco=%u", (unsigned)(ch + 1), colour);  // In
+        SendCommand(c);
+        snprintf(c, sizeof(c), "ch%u.bco=%u", (unsigned)(ch + 1), colour); // Name
+        SendCommand(c);
+        snprintf(c, sizeof(c), "n%u.bco=%u", (unsigned)(ch + 4), colour);  // Out (n4 .. n19)
+        SendCommand(c);
+    }
+}
+
+/*********************************************************************************************************************************/
 int CheckRange(int v, int min, int max)
 {
     if (v > max)
@@ -5781,6 +5841,7 @@ FASTRUN void loop()
         FixArmingChannel(); // Be sure to show correct arming channel value if using RotorFlight options
         ShowServoPos();     // Show servo positions to user
         ShowSwitchPositions(); // B32: the Switches page's up / mid / down (nothing unless that page shows)
+        ShowInputMovement();   // B202: the Inputs and outputs page's moved input, in yellow (nothing unless that page shows)
         if (BindingEnabled && !BoundFlag)
             SendBindingPipe(); // Only if binding and not bound yet - override low throttle setting
     }
