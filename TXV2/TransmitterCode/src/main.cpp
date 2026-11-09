@@ -1705,28 +1705,41 @@ void UpdateSwitchesView()
 /*********************************************************************************************************************************/
 // B32: beside each switch on the Switches page, where it is now: up, mid or down (the front four are told apart by moving them).
 // Sent only when a position changes, a few times a second at most.
+// B201 (Malcolm, 8 Nov 2026: "both the number and the currently allocated function change background colour to yellow to
+// immediately highlight the moved switch. Any earlier moved switch returns to white background."): the switch that moved last has
+// its number box and its job box in yellow; the one highlighted before goes back to the boxes' pale grey. The page's first showing
+// highlights nothing.
+// B205 (Malcolm, 9 Nov 2026: "these should also clear after a timeout of say 5 seconds"): the yellow goes MOVED_HIGHLIGHT_MS after
+// the last movement. The screen keeps a box's colour through a page change, so the boxes are marked fresh in the page file
+// (53.json): each comes back in the page's own colour, and nothing lit when the page was left comes back with it.
+static const uint32_t MOVED_HIGHLIGHT_MS = 5000; // B205: how long a moved switch, stick or trim stays yellow (the Switches and Inputs pages)
+static void PaintSwitchBoxes(uint8_t i, unsigned colour) // the Switches page: switch i's number box and job box
+{
+    char c[20];
+    snprintf(c, sizeof(c), "t%u.bco=%u", (unsigned)i, colour);
+    SendCommand(c);
+    snprintf(c, sizeof(c), "sw%u.bco=%u", (unsigned)i, colour);
+    SendCommand(c);
+}
 void ShowSwitchPositions()
 {
     static uint8_t shown[8] = {9, 9, 9, 9, 9, 9, 9, 9};
     static uint32_t last = 0;
     static bool movedReset = false; // B201
+    static uint8_t moved = 0;       // B201: the switch lit, or 0
+    static uint32_t movedAt = 0;    // B205: when it was lit
     static const char *words[4] = {"", "away", "mid", "near"}; // (B37: position 3 is near, towards you; 1 is away)
     char p[8][3] = {"p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"};
     if (CurrentView != SWITCHES_VIEW)
     {
         for (uint8_t i = 0; i < 8; ++i)
             shown[i] = 9; // (shown afresh when the page comes back)
-        movedReset = true; // B201: no highlight carried over to the page's next showing (its boxes come back pale)
+        movedReset = true; // B201: no highlight carried over to the page's next showing (its boxes come back pale: marked fresh)
         return;
     }
     if (millis() - last < 150)
         return;
     last = millis();
-    // B201 (Malcolm, 8 Nov 2026: "It might be still clearer if that switch changed background colour as well ... both the number
-    // and the currently allocated function change background colour to yellow to immediately highlight the moved switch. Any
-    // earlier moved switch returns to white background."): the switch that moved last has its number box and its job box in
-    // yellow; the one highlighted before goes back to the boxes' pale grey. The page's first showing highlights nothing.
-    static uint8_t moved = 0;
     if (movedReset)
     {
         movedReset = false;
@@ -1742,21 +1755,19 @@ void ShowSwitchPositions()
         const bool movement = shown[i - 1] != 9; // (not the page's first showing)
         shown[i - 1] = pos;
         SendText(p[i - 1], (char *)words[pos]);
-        if (!movement || moved == i)
+        if (!movement)
             continue;
-        char c[20];
-        if (moved)
-        { // the one highlighted before: pale again
-            snprintf(c, sizeof(c), "t%u.bco=54938", (unsigned)moved);
-            SendCommand(c);
-            snprintf(c, sizeof(c), "sw%u.bco=54938", (unsigned)moved);
-            SendCommand(c);
-        }
+        if (moved && moved != i)
+            PaintSwitchBoxes(moved, 54938); // the one highlighted before: pale again
+        if (moved != i)
+            PaintSwitchBoxes(i, 65504);
         moved = i;
-        snprintf(c, sizeof(c), "t%u.bco=65504", (unsigned)i);
-        SendCommand(c);
-        snprintf(c, sizeof(c), "sw%u.bco=65504", (unsigned)i);
-        SendCommand(c);
+        movedAt = millis();
+    }
+    if (moved && millis() - movedAt > MOVED_HIGHLIGHT_MS)
+    { // B205: nothing has moved for a while: pale again
+        PaintSwitchBoxes(moved, 54938);
+        moved = 0;
     }
 }
 
@@ -1768,10 +1779,30 @@ void ShowSwitchPositions()
 // raw reading from the pass just made (a stick's travel is some 3000 counts; its noise a few; a switch's steps hundreds).
 // B203 (Malcolm: "moving a trim does not yet highlight it"): a trim lever pressed lights its Trim out box (n0 .. n3) the same way,
 // and one thing is lit at a time - a trim press puts the rows back to white, a stick's move puts the trim box back.
+// B205 (Malcolm, 9 Nov 2026, a photo of five rows yellow when the page came back: "When reloading this page, the highlighted
+// channel(s) ought to be cleared. I suggest these should also clear after a timeout of say 5 seconds"): the screen keeps a box's
+// colour through a page change, so the boxes are marked fresh in the page file (39.json) and come back white at every load; and
+// whatever is lit goes back to white MOVED_HIGHLIGHT_MS after the last movement.
 static uint8_t TrimOfButton(uint8_t i) // the trim (0-3, the page's Tr1-Tr4) a trim lever's button moves: as MoveaTrim (Trims.h)
 {
     const uint8_t Elevator = SticksMode == 2 ? 2 : 1, Throttle = SticksMode == 2 ? 1 : 2;
     return i < 2 ? 0 : i < 4 ? Elevator : i < 6 ? Throttle : 3;
+}
+static void PaintInputRow(uint8_t ch, unsigned colour) // ch 0-15: the row's In, Name and Out boxes
+{
+    char c[24];
+    snprintf(c, sizeof(c), "c%u.bco=%u", (unsigned)(ch + 1), colour);  // In
+    SendCommand(c);
+    snprintf(c, sizeof(c), "ch%u.bco=%u", (unsigned)(ch + 1), colour); // Name
+    SendCommand(c);
+    snprintf(c, sizeof(c), "n%u.bco=%u", (unsigned)(ch + 4), colour);  // Out (n4 .. n19)
+    SendCommand(c);
+}
+static void PaintTrimBox(uint8_t t, unsigned colour) // t 0-3: the Trim out box (n0 .. n3)
+{
+    char c[20];
+    snprintf(c, sizeof(c), "n%u.bco=%u", (unsigned)t, colour);
+    SendCommand(c);
 }
 void ShowInputMovement()
 {
@@ -1779,15 +1810,14 @@ void ShowInputMovement()
     static bool lit[CHANNELSUSED];
     static int8_t trimLit = -1;
     static bool fresh = true;
-    static uint32_t last = 0;
-    char c[24];
+    static uint32_t last = 0, litAt = 0; // litAt: when the last thing was lit (B205); 0 = nothing lit
     if (CurrentView != INPUTS_VIEW)
     {
         fresh = true;
         return;
     }
     if (fresh)
-    {
+    { // the page's first showing: nothing lit, wherever the sticks rest (the boxes have just come back white: marked fresh)
         fresh = false;
         for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
         {
@@ -1795,6 +1825,7 @@ void ShowInputMovement()
             lit[ch] = false;
         }
         trimLit = -1;
+        litAt = 0;
         last = millis();
         return;
     }
@@ -1806,28 +1837,21 @@ void ShowInputMovement()
             break;
         }
     if (trimNow >= 0 && trimNow != trimLit)
-    {
+    { // a trim pressed: its box yellow, the rows back to white
         if (trimLit >= 0)
-        {
-            snprintf(c, sizeof(c), "n%u.bco=65535", (unsigned)trimLit);
-            SendCommand(c);
-        }
+            PaintTrimBox(trimLit, 65535);
         trimLit = trimNow;
-        snprintf(c, sizeof(c), "n%u.bco=65504", (unsigned)trimLit);
-        SendCommand(c);
+        PaintTrimBox(trimLit, 65504);
+        litAt = millis();
         for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
-        {
-            if (!lit[ch])
-                continue;
-            lit[ch] = false;
-            snprintf(c, sizeof(c), "c%u.bco=65535", (unsigned)(ch + 1));
-            SendCommand(c);
-            snprintf(c, sizeof(c), "ch%u.bco=65535", (unsigned)(ch + 1));
-            SendCommand(c);
-            snprintf(c, sizeof(c), "n%u.bco=65535", (unsigned)(ch + 4));
-            SendCommand(c);
-        }
+            if (lit[ch])
+            {
+                lit[ch] = false;
+                PaintInputRow(ch, 65535);
+            }
     }
+    else if (trimNow >= 0)
+        litAt = millis(); // (held: it stays lit)
     if (millis() - last < 150)
         return;
     last = millis();
@@ -1844,11 +1868,28 @@ void ShowInputMovement()
         }
     }
     if (!any)
-        return; // (the rows lit stay lit until another input moves)
+    {
+        if (litAt && millis() - litAt > MOVED_HIGHLIGHT_MS)
+        { // B205: nothing has moved for a while: everything lit goes back to white
+            for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
+                if (lit[ch])
+                {
+                    lit[ch] = false;
+                    PaintInputRow(ch, 65535);
+                }
+            if (trimLit >= 0)
+            {
+                PaintTrimBox(trimLit, 65535);
+                trimLit = -1;
+            }
+            litAt = 0;
+        }
+        return; // (the rows lit stay lit until another input moves, or the time is up)
+    }
+    litAt = millis();
     if (trimLit >= 0)
     { // a stick moved: the trim box goes back to white
-        snprintf(c, sizeof(c), "n%u.bco=65535", (unsigned)trimLit);
-        SendCommand(c);
+        PaintTrimBox(trimLit, 65535);
         trimLit = -1;
     }
     for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
@@ -1856,13 +1897,7 @@ void ShowInputMovement()
         if (moved[ch] == lit[ch])
             continue;
         lit[ch] = moved[ch];
-        const unsigned colour = moved[ch] ? 65504u : 65535u; // yellow, or the boxes' white
-        snprintf(c, sizeof(c), "c%u.bco=%u", (unsigned)(ch + 1), colour);  // In
-        SendCommand(c);
-        snprintf(c, sizeof(c), "ch%u.bco=%u", (unsigned)(ch + 1), colour); // Name
-        SendCommand(c);
-        snprintf(c, sizeof(c), "n%u.bco=%u", (unsigned)(ch + 4), colour);  // Out (n4 .. n19)
-        SendCommand(c);
+        PaintInputRow(ch, moved[ch] ? 65504u : 65535u); // yellow, or the boxes' white
     }
 }
 
