@@ -382,12 +382,12 @@ int flightLayoutByKey(const std::string &key) {
 // The box themes (b:) are the Themes page's: 1 Navy, 2 Royal, 3 Teal, 4 Forest, 5 Wine, 6 Plum, 7 Grey, 8 Black, 9 Red,
 // 10 White, 11 Yellow, 12 Sky (lib/LdrcTheme THEME_PAIRS). Red is kept for the warning colours. Box 1 is the biggest box.
 const char *const FLIGHT_READY[FlightScreen::FLIGHT_SLOTS] = {
-    "f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah b:1,3,8,2,4,6",              // 1 OVERVIEW: six equal boxes, the old default's things, each box a dark colour of its own
-    "f2 w1 big4 s1 rpm,timer,batts,link,bank b:8,1,4,2,6 d:1",                // 2 HEAD SPEED: a big dial on black; the timer, the batteries, the link and the bank small
-    "f2 w1 big4 s1 timer,batts,motor,link,bank b:2,3,8,1,6",                  // 3 TIMER: big digits on royal blue; batteries, motor (the safety's colours), link, bank
-    "f2 w1 two4 s1 link,fps,timer,batts,rpm,bank b:3,4,1,8,2,6 d:1,1",       // 4 LINK: the link and the frame rate as two dials, teal and forest; four small below
-    "f2 w1 big6 s1 batts,timer,rpm,amps,mah,esc,link b:5,8,1,6,3,4,2 d:1",   // 5 POWER: both batteries as dials on wine; timer, head speed, current, capacity, ESC, link
-    "f2 w1 two4 s1 image,bars16,model,timer,batts,bank b:12,10,11,12,11,10"   // 6 MODEL: its picture and the sixteen channel bars; name, timer, batteries, bank - light faces
+    "f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah b:1,1,1,1,1,1",                 // 1 OVERVIEW: six equal boxes, the old default's things, all digits, one theme (navy)
+    "f2 w1 big4 s1 rpm,timer,link,esc,fps b:8,8,8,8,8 d:1,1,1,1,1",              // 2 HEAD SPEED: a big dial and four small ones - ALL DIALS, all on black (a cockpit)
+    "f2 w1 big4 s1 timer,batts,motor,link,bank b:2,3,8,1,6",                     // 3 TIMER: big digits on royal blue; batteries, motor (the safety's colours), link, bank - all digits, a colour each
+    "f2 w1 two4 s1 link,fps,timer,batts,rpm,bank b:3,3,3,3,3,3 d:1,1",          // 4 LINK: the link and the frame rate as two dials over four digit boxes, one theme (teal)
+    "f2 w1 big6 s1 batts,timer,rpm,amps,mah,esc,link b:5,8,1,6,3,4,2 d:1,1,1,1,1,1,1",   // 5 POWER: both batteries as dials on wine, six small dials - ALL DIALS, a colour each
+    "f2 w1 two4 s1 image,bars16,model,timer,batts,bank b:12,12,12,12,12,12"     // 6 MODEL: its picture and the sixteen channel bars; name, timer, batteries, bank - all digits, one light theme (sky)
 };
 std::vector<FlightRect> flightLayout(int layout, const FlightRect &a, int gap) {
     const FlightLayoutDef &d = FLIGHT_LAYOUTS[layout >= 0 && layout < FLIGHT_LAYOUT_COUNT ? layout : FLIGHT_DEFAULT_LAYOUT];
@@ -508,7 +508,7 @@ bool FlightScreen::takeFrontPress(std::string &comp) { if (frontPress.empty()) r
 static uint32_t hashOf(const std::string &s, uint32_t h) { for (unsigned char c : s) h = (h ^ c) * 16777619u; return h; }
 static const int ID_BOXES = 101, ID_STAY = 102, ID_OK = 103, ID_BACK = 104, ID_ITEM = 200, ID_LAYOUT = 300;
 static const int ID_TXSETUP = 110, ID_ORIGINAL = 111, ID_MODELSETUP = 112, ID_HELP = 113;
-static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_DIAL = 123, ID_FACE = 500, ID_SLOT = 600;
+static const int ID_COLOUR = 120, ID_COLOUR_DONE = 121, ID_SAME = 122, ID_DIAL = 123, ID_ALL = 124, ID_FACE = 500, ID_SLOT = 600;   // (ID_ALL 1.11.195: the theme to every box)
 static const int ID_ZONE = 124, ID_ZONE_DOWN2 = 125, ID_ZONE_DOWN = 126, ID_ZONE_UP = 127, ID_ZONE_UP2 = 128, ID_ZONE_NONE = 129, ID_ZONE_DONE = 130, ID_ZONE_VALUE = 131;   // (1.11.105) the red zone page
 static const int ID_SETUP_HELP = 132;                   // (1.11.108) the setup page's own Help
 static const int SLOT_Y = 414, SLOT_H = 56, SLOT_W = 180;
@@ -569,6 +569,9 @@ void FlightScreen::build(FlightSource &src, FlightFonts *fonts) {
         }
         // (OK at the bottom right, as on every page - Malcolm, 10-04; "Same as screens" on the left)
         FlightButton bt; bt.id = ID_SAME; bt.r = FlightRect(14, 414, 246, 56); bt.text = "Same as screens"; sc.buttons.push_back(bt);   // (its right edge under the second column of themes)
+        // (1.11.195, Malcolm 9 Nov 2026: "we need one more button 'apply to all boxes' as I think defined screens look good when
+        // they share one theme") this box's theme to every box of the screen, kept at once as the swatches are
+        bt.id = ID_ALL; bt.r = FlightRect(278, SLOT_Y, slot(2).x + SLOT_W - 278, SLOT_H); bt.text = "Apply to all boxes"; sc.buttons.push_back(bt);
         bt.id = ID_COLOUR_DONE; bt.r = slot(3); bt.text = "OK"; sc.buttons.push_back(bt);
     } else if (chooser == -1) {
         sc.layout = 2000 + cfg.layout + 32 * slotNo; sc.title = "Defined front screen"; sc.hint = "Touch a box to choose what it shows."; sc.tabs = true;
@@ -742,6 +745,7 @@ void FlightScreen::releaseOn(int id) {
     if (colourFor >= 0) {                              // a box's theme: kept at once (the screens' own theme: the box follows them)
         if (id >= ID_FACE && id < ID_FACE + THEME_COUNT) { const int k = id - ID_FACE; cfg.boxTheme[colourFor] = (uint8_t) (palPanels[k] == themeFace && palInks[k] == themeInk ? 0 : k + 1); }
         else if (id == ID_SAME) cfg.boxTheme[colourFor] = 0;
+        else if (id == ID_ALL) { const uint8_t f = cfg.boxTheme[colourFor]; for (int j = 0; j < cfg.boxes(); ++j) cfg.boxTheme[j] = f; }   // (1.11.195) every box of the screen in this box's theme
         else if (id == ID_COLOUR_DONE) colourFor = -1;  // (back to the setup page: the box in its theme)
         return;
     }

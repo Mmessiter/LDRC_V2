@@ -7,11 +7,13 @@ Each keeps its own boxes, box sizes, box themes, dials and|
 'Stays lit'. The six are kept through switching off and updates.||
 SIX READY-MADE:|
 The six come ready-made, each with its own emphasis:|
-1 an overview; 2 the head speed, as a big dial; 3 the timer,|
-big; 4 the link and the frame rate, two dials; 5 power - both|
-batteries as dials, with current, capacity and ESC; 6 the|
-model's picture and the channel bars. Each in colours of its|
-own. Change any box, or any screen, as you like.||
+1 an overview, digits, one theme; 2 the head speed, a big|
+dial, all dials, on black; 3 the timer, big digits, a colour|
+a box; 4 the link and the frame rate as two dials over four|
+digit boxes, one theme; 5 power - both batteries as dials,|
+with current, capacity, ESC, all dials, a colour a box; 6 the|
+model's picture and the channel bars, one light theme.|
+Change any box, or any screen, as you like.||
 THE TABS:|
 The tabs 1 to 6 at the top right choose the screen. The yellow|
 tab is the one in use: touch another and it is in use at once,|
@@ -31,6 +33,8 @@ BOX THEMES:|
 In a box's chooser, press 'Theme'. A box takes any of the twelve|
 themes; a theme other boxes already wear carries their numbers.|
 'Same as screens' gives it the screens' theme again.|
+'Apply to all boxes' gives every box of the screen this box's|
+theme: one theme for the whole screen, in one touch.|
 A Motor box takes the safety's colours, as the original front|
 screen's Motor box does, whatever its theme.||
 ROUND DIALS:|
