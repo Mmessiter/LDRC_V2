@@ -18,11 +18,25 @@ static bool flightUp() { return topOn && (topWho == FLIGHT_WHO || topWho == FLIG
 // The six definitions (1.10.0): "flight" is slot 1 (as the one definition of 1.6.0-1.9.15 was kept, so an update keeps
 // it), "flight2".."flight6" the others, "flightSlot" the one in use.
 static std::string flightKey(int k) { return k == 0 ? std::string("flight") : "flight" + std::to_string(k + 1); }
+// (1.11.194, Malcolm 9 Nov 2026: "make the default definable screens all different ... Then the lazy user might never have to
+// redefine anything, but just select what he wants. Feel free to overwrite existing user-defined screens when updating.")
+// The six ready-made screens (lib/LdrcFlight FLIGHT_READY) fill every slot that has nothing stored; and a chip whose stored
+// designs are from before the ready-made set ("flightGen" below FLIGHT_READY_GENERATION) takes the six over them, once -
+// they are then stored in their place, with the generation, at the first quiet moment (flightStore), so the pilot's own
+// designs are kept again from then on.
+static bool flightGenPending = false;                           // the generation (and the six) still to be written
 static void flightLoad() {
+    const bool ready = prefs.getInt("flightGen", 0) < ldrc::FLIGHT_READY_GENERATION;
+    int stored = 0;
     for (int k = 0; k < ldrc::FlightScreen::FLIGHT_SLOTS; ++k) {
-        const std::string s = prefs.getString(flightKey(k).c_str(), "").c_str();
-        if (!s.empty() && !flight.loadSlot(k, s)) blog("flight", "setting not understood: " + s);
+        std::string s = ready ? std::string() : std::string(prefs.getString(flightKey(k).c_str(), "").c_str());
+        if (!s.empty()) stored++; else s = ldrc::FLIGHT_READY[k];
+        if (!flight.loadSlot(k, s)) blog("flight", "setting not understood: " + s);
     }
+    if (ready) {
+        flightGenPending = true; flightSaveWanted = true; flightSaveAt = millis();
+        blog("flight", "the six ready-made front screens are in (set " + std::to_string(ldrc::FLIGHT_READY_GENERATION) + "); stored designs, if any, are replaced");
+    } else if (stored < ldrc::FlightScreen::FLIGHT_SLOTS) blog("flight", std::to_string(ldrc::FlightScreen::FLIGHT_SLOTS - stored) + " slot(s) with nothing stored show the ready-made screens");
     flight.startWithSlot(prefs.getInt("flightSlot", 0));      // (1.11.33: with its own stored Original / Defined choice)
     // (1.11.69) the choice of the moment has a key of its own: the definitions' copies of it (" m:") are what an older screen
     // reads, and are no longer written again at every switch
@@ -44,12 +58,13 @@ static void flightStore() {
         todo.push_back({ flightKey(k), s });
     }
     const bool slotNew = prefs.getInt("flightSlot", 0) != flight.slotInUse(), manNew = prefs.getUChar("flightMan", 0) != flight.manualChoice();
-    if (todo.empty() && !slotNew && !manNew) return;
+    if (todo.empty() && !slotNew && !manNew && !flightGenPending) return;
     quietAtFrameEnd();
     const uint32_t t0 = micros();
     if (manNew) prefs.putUChar("flightMan", flight.manualChoice());   // (first: the switch's one byte, in the blank)
     if (slotNew) prefs.putInt("flightSlot", flight.slotInUse());
     for (auto &kv : todo) prefs.putString(kv.first.c_str(), kv.second.c_str());
+    if (flightGenPending) { prefs.putInt("flightGen", ldrc::FLIGHT_READY_GENERATION); flightGenPending = false; }   // (1.11.194: the six are stored above, the generation last - a switch-off before this point repeats the replacement, harmlessly)
     const uint32_t us = micros() - t0; quietStoreN++; if (us > quietStoreMax) quietStoreMax = us;
 }
 static void flightTouchCancel() { flight.cancelTouch(); }   // (B59) a corner held: not a press

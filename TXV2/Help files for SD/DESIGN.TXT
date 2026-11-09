@@ -4,7 +4,14 @@ would look in flight.|
 You can design six: one for the simulator, one for a helicopter,|
 one for a glider, all ready at a touch.|
 Each keeps its own boxes, box sizes, box themes, dials and|
-'Stays lit'. The six are kept through updates and switching off.||
+'Stays lit'. The six are kept through switching off and updates.||
+SIX READY-MADE:|
+The six come ready-made, each with its own emphasis:|
+1 an overview; 2 the head speed, as a big dial; 3 the timer,|
+big; 4 the link and the frame rate, two dials; 5 power - both|
+batteries as dials, with current, capacity and ESC; 6 the|
+model's picture and the channel bars. Each in colours of its|
+own. Change any box, or any screen, as you like.||
 THE TABS:|
 The tabs 1 to 6 at the top right choose the screen. The yellow|
 tab is the one in use: touch another and it is in use at once,|

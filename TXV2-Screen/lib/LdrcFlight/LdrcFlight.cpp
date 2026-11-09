@@ -378,6 +378,17 @@ int flightLayoutByKey(const std::string &key) {
     for (int i = 0; i < FLIGHT_LAYOUT_COUNT; ++i) if (key == FLIGHT_LAYOUTS[i].key) return i;
     return -1;
 }
+// ------------------------------------------------------------------ the six ready-made screens (1.11.194, see LdrcFlight.h)
+// The box themes (b:) are the Themes page's: 1 Navy, 2 Royal, 3 Teal, 4 Forest, 5 Wine, 6 Plum, 7 Grey, 8 Black, 9 Red,
+// 10 White, 11 Yellow, 12 Sky (lib/LdrcTheme THEME_PAIRS). Red is kept for the warning colours. Box 1 is the biggest box.
+const char *const FLIGHT_READY[FlightScreen::FLIGHT_SLOTS] = {
+    "f2 w1 grid6 s1 timer,batts,rpm,link,esc,mah b:1,3,8,2,4,6",              // 1 OVERVIEW: six equal boxes, the old default's things, each box a dark colour of its own
+    "f2 w1 big4 s1 rpm,timer,batts,link,bank b:8,1,4,2,6 d:1",                // 2 HEAD SPEED: a big dial on black; the timer, the batteries, the link and the bank small
+    "f2 w1 big4 s1 timer,batts,motor,link,bank b:2,3,8,1,6",                  // 3 TIMER: big digits on royal blue; batteries, motor (the safety's colours), link, bank
+    "f2 w1 two4 s1 link,fps,timer,batts,rpm,bank b:3,4,1,8,2,6 d:1,1",       // 4 LINK: the link and the frame rate as two dials, teal and forest; four small below
+    "f2 w1 big6 s1 batts,timer,rpm,amps,mah,esc,link b:5,8,1,6,3,4,2 d:1",   // 5 POWER: both batteries as dials on wine; timer, head speed, current, capacity, ESC, link
+    "f2 w1 two4 s1 image,bars16,model,timer,batts,bank b:12,10,11,12,11,10"   // 6 MODEL: its picture and the sixteen channel bars; name, timer, batteries, bank - light faces
+};
 std::vector<FlightRect> flightLayout(int layout, const FlightRect &a, int gap) {
     const FlightLayoutDef &d = FLIGHT_LAYOUTS[layout >= 0 && layout < FLIGHT_LAYOUT_COUNT ? layout : FLIGHT_DEFAULT_LAYOUT];
     // the grid's lines spread evenly over the area, a gap on the far side of each cell but the last

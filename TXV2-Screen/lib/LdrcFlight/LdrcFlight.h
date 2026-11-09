@@ -284,4 +284,16 @@ private:
     void releaseOn(int id);
 };
 
+// (1.11.194, Malcolm 9 Nov 2026: "make the default definable screens all different. Each perhaps emphasising a particular
+// aspect such as head speed, frame rate, timer etc. in a variety of colours. Then the lazy user might never have to redefine
+// anything, but just select what he wants.") Six ready-made screens, one for each slot, written as FlightConfig::save()
+// writes them: 1 an overview (the things the one old default showed), 2 the head speed as a big dial, 3 the timer big,
+// 4 the link and the frame rate as two dials, 5 power (both batteries as dials, the current, the capacity used, the ESC),
+// 6 the model's picture and the channel bars. Each in colours of its own, from the Themes page's twelve. A chip with nothing
+// stored shows them; a chip whose stored designs are from before set FLIGHT_READY_GENERATION takes them once, over its
+// designs (by Malcolm's leave: "Feel free to overwrite existing user-defined screens when updating") - the device does that
+// (src/flight_device.h flightLoad). Raise the generation only when the six change and the stored designs are to go again.
+static const int FLIGHT_READY_GENERATION = 1;
+extern const char *const FLIGHT_READY[FlightScreen::FLIGHT_SLOTS];
+
 }  // namespace ldrc

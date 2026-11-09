@@ -8,7 +8,9 @@ Its 'Defined screens' button brings this one back.|
 Your choice stays through take-offs, landings and switching off,|
 until you press the other button.|
 The tabs 1 to 6 (top right) switch between your six screens at|
-a touch, even in flight. The yellow tab is the one in use.||
+a touch, even in flight. The yellow tab is the one in use.|
+They come ready-made: 1 an overview, 2 head speed, 3 timer,|
+4 link and frame rate, 5 power, 6 the model and its channels.||
 TO CHANGE A BOX FROM HERE:|
 On the ground, tap the box twice quickly, or press and hold it|
 for two full seconds.|
