@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.192"
+#define SCREEN_VERSION "1.11.193"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1589,8 +1589,9 @@ static int listRowH(const Comp &c) { return max(1, c.hig); }
 static bool optMarked(const std::string &o) { return !o.empty() && (uint8_t) o[0] == 0x7F; }   // (1.11.157) the row is to be drawn in orange
 static std::string optShown(const std::string &o) { return optMarked(o) ? o.substr(1) : o; }   // the row's words without the mark
 #define LIST_MARK_INK 0xE320                                   // orange, reads on the Models page's pale list faces
-static int listBandY(const Comp &c) { return c.y + c.borderw + (listInnerH(c) - listRowH(c)) / 2; }
-static bool listCyclic(const Comp &c) { return (int) c.options.size() * listRowH(c) > listInnerH(c); }   // a short list does not wrap
+static bool listReport(const Comp &c) { auto it = c.extra.find("report"); return it != c.extra.end() && it->second; }   // (1.11.193) a report, not a wheel
+static int listBandY(const Comp &c) { return c.y + c.borderw + (listReport(c) ? 0 : (listInnerH(c) - listRowH(c)) / 2); }
+static bool listCyclic(const Comp &c) { return !listReport(c) && (int) c.options.size() * listRowH(c) > listInnerH(c); }   // a short list does not wrap; a report never does
 static int floorDiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
 static int listWrap(const Comp &c, int scroll) {           // keep the offset within one turn of the wheel
     const int n = (int) c.options.size(); if (n <= 0) return 0;
@@ -1664,7 +1665,8 @@ static void drawList(Comp &c) {
             const bool marked = optMarked(c.options[i]);   // (1.11.157) begun with DEL: in orange, the mark itself unseen
             std::string s = optShown(c.options[i]);
             if (textWidth(c.font, s) > room) { while (!s.empty() && textWidth(c.font, s + "...") > room) s.pop_back(); s += "..."; }
-            gfx->startWrite(); drawGlyphs(ix + (iw - textWidth(c.font, s)) / 2, ry + (rowH - fh) / 2, c.font, marked ? LIST_MARK_INK : inBand ? c.pco2 : c.pco, s); gfx->endWrite();
+            const bool report = listReport(c);                 // (1.11.193) a report list: from the left margin, every row in the same ink
+            gfx->startWrite(); drawGlyphs(report ? ix + pad : ix + (iw - textWidth(c.font, s)) / 2, ry + (rowH - fh) / 2, c.font, marked ? LIST_MARK_INK : (!report && inBand) ? c.pco2 : c.pco, s); gfx->endWrite();
         }
     }
     if (c.dis) { gfx->drawFastHLine(ix, by, iw, c.pco1); gfx->drawFastHLine(ix, by + rowH - 1, iw, c.pco1); }
@@ -2446,6 +2448,7 @@ static bool loadPage(const std::string &name) {
         c.dir = a["dir"] | 1; c.bco1 = col["bco1"] | 65535; c.pco3 = col["pco3"] | 0x8410; c.style = a["style"] | 0;
         c.roles = ldrc::themeRoles(c.bco, c.bco2, c.pco, c.pco2, c.borderc);   // (from the page's own colours)
         c.centre = j["centre"] | false;
+        if (c.type == "textselect") c.extra["report"] = a["report"] | 0;   // (1.11.193) a report list: rows from the top, left-aligned, no band, no wrap (the Model IDs check)
         if (c.type == "rangebar") { c.extra["lo"] = a["lo"] | 875; c.extra["hi"] = a["hi"] | 2125; c.extra["n"] = a["n"] | 2; c.extra["kind"] = a["kind"] | 0; c.extra["mk"] = a["mk"] | -1; c.extra["d0"] = a["d0"] | 1500; c.extra["d1"] = a["d1"] | 1700; c.extra["d2"] = a["d2"] | 1900; c.extra["d3"] = a["d3"] | 2000; c.extra["d4"] = a["d4"] | 2100; }
         for (JsonVariant o : j["opt"].as<JsonArray>()) c.options.push_back(o.as<std::string>());
         if (!c.options.empty() && c.options.back().empty()) c.options.pop_back();      // the editor keeps the final line break as an empty option

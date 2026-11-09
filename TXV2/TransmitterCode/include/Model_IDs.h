@@ -9,20 +9,16 @@
 #define MODEL_IDS_H
 
 FLASHMEM void CheckAllModelIds()
-{
-    char Vbuf[15];
+{ // B204 (Malcolm, 8 Nov 2026: "the presentation looks poor"): a report, not a wheel - one row per model in use, in a fixed-width
+  // font so the columns line up (slot, name, ID, and "same as N" where two models share an ID; "no ID stored" where none is), the
+  // empty slots left out, and a plain summary below instead of a count box. Screen 1.11.193 draws a list marked "report" from the
+  // top, left-aligned, without the wheel's band or wrap.
     char MMemsp[] = "MMems.path=\"";
     char GoIDview[] = "page IDsView";
-    char crlf[] = {13, 10, 0};
-    char lb[] = "(";
-    char rb[] = ")  ";
-    char KO[] = " (same as ";
-    char Okay[] = " (ID OK)";
-    char n0[] = "n0";
-    char nb[4];
     char buf[MAXBUFFERSIZE];
+    char row[72];
     uint64_t ModelIDs[92];
-    uint8_t DuplicatesCount = 0;
+    uint8_t DuplicatesCount = 0, InUse = 0, Stored = 0;
     uint32_t SavedModelNumber = ModelNumber;
 
     SendCommand(GoIDview);
@@ -30,54 +26,49 @@ FLASHMEM void CheckAllModelIds()
     for (ModelNumber = 1; ModelNumber < MAXMODELNUMBER - 1; ++ModelNumber)
     {
         ReadOneModel(ModelNumber);
-        ModelIDs[ModelNumber] = ModelsMacUnionSaved.Val64;
+        ModelIDs[ModelNumber] = ModelsMacUnionSaved.Val64 & 0x0000FFFFFFFFFFFF;
     }
+    buf[0] = 0;
     for (ModelNumber = 1; ModelNumber < MAXMODELNUMBER - 1; ++ModelNumber)
     {
         ReadOneModel(ModelNumber);
-        if (ModelNumber == 1)
-        {
-            strcpy(buf, lb);
-        }
-        else
-        {
-            strcat(buf, lb);
-        }
-        Str(nb, ModelNumber, 0);
-        strcat(buf, nb);
-        strcat(buf, rb);
-        strcat(buf, ModelName);
-
-        uint64_t mac = ModelsMacUnionSaved.Val64 & 0x0000FFFFFFFFFFFF;
-        ModelIDs[ModelNumber] = ModelsMacUnionSaved.Val64;
-
+        if (strcmp(ModelName, "Not in use") == 0 || strcmp(ModelName, "File error?") == 0)
+            continue;
+        ++InUse;
+        const uint64_t mac = ModelIDs[ModelNumber];
+        int same = 0;
         if (mac)
         {
-            snprintf(Vbuf, sizeof(Vbuf), " %012llX", mac);
-            strcat(buf, Vbuf);
-
-            int p = 0;
+            ++Stored;
             for (unsigned int i = 1; i < MAXMODELNUMBER - 1; ++i)
-            {
-                if ((ModelIDs[i] == ModelIDs[ModelNumber]) && (i != ModelNumber))
-                    p = i;
-            }
-            if (p > 0)
-            {
-                strcat(buf, KO);
-                strcat(buf, Str(nb, p, 0));
-                strcat(buf, ")");
+                if (ModelIDs[i] == mac && i != ModelNumber && !same)
+                    same = i;
+            if (same)
                 ++DuplicatesCount;
-            }
-            else
-            {
-                strcat(buf, Okay);
-            }
         }
-        strcat(buf, crlf);
+        if (!mac)
+            snprintf(row, sizeof(row), "%2u  %-16.16s  no ID stored\r\n", (unsigned)ModelNumber, ModelName);
+        else if (same)
+            snprintf(row, sizeof(row), "%2u  %-16.16s  %012llX  same as %d\r\n", (unsigned)ModelNumber, ModelName, (unsigned long long)mac, same);
+        else
+            snprintf(row, sizeof(row), "%2u  %-16.16s  %012llX\r\n", (unsigned)ModelNumber, ModelName, (unsigned long long)mac);
+        if (strlen(buf) + strlen(row) + 1 < sizeof(buf))
+            strcat(buf, row);
     }
+    if (!buf[0])
+        strcpy(buf, "No models in use\r\n");
     SendOtherText(MMemsp, buf);
-    SendValue(n0, DuplicatesCount);
+    SendValue((char *)"MMems", 0); // the first row at the top
+    char summary[64];
+    if (DuplicatesCount)
+        snprintf(summary, sizeof(summary), "%u of %u IDs are shared: see 'same as'", (unsigned)DuplicatesCount, (unsigned)Stored);
+    else if (Stored >= 2)
+        snprintf(summary, sizeof(summary), "All %u stored IDs are different.", (unsigned)Stored);
+    else if (Stored == 1)
+        snprintf(summary, sizeof(summary), "One stored ID: nothing to compare.");
+    else
+        snprintf(summary, sizeof(summary), "No model has a stored ID yet.");
+    SendText((char *)"t1", summary);
     ModelNumber = SavedModelNumber;
     ReadOneModel(ModelNumber);
 }

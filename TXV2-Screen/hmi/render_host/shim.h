@@ -56,8 +56,17 @@ struct SDClass {
     bool exists(const char *p) { FILE *f = fopen(where(p).c_str(), "rb"); if (f) fclose(f); return f != nullptr; }
 };
 extern SDClass SD;
-struct SerialStub { size_t write(const uint8_t *, size_t n) { return n; } size_t print(const char *) { return 0; } int available() { return 0; } };
+struct SerialStub { void flush() {} size_t write(const uint8_t *, size_t n) { return n; } size_t print(const char *) { return 0; } int available() { return 0; } };
 extern SerialStub Serial;
+// (1.11.188 .. 1.11.193) the recorder (last_moments.h), the main board's word and the page clock: the Mac draws, it does not record
+static const char *const lmBgNames[6] = { "bg0", "bg1", "bg2", "bg3", "bg4", "bg5" };
+static const char *const lmRawNames[8] = { "raw0", "raw1", "raw2", "raw3", "raw4", "raw5", "raw6", "raw7" };
+static inline void lmBufNote(const char *, const void *, size_t) {}
+static bool lmHeapOn = false; static uint32_t lmHeapCheckAt = 0; static std::string lmHeapLast;
+static inline bool lmHeapCheck(const char *) { return true; }
+static inline void lmCmdNote(const char *, size_t) {}
+static std::string teensyWhoWord; static uint32_t teensyWhoAt = 0;
+static uint32_t pageLoadedMs = 0;
 #define _swap_int16_t(a, b) { int16_t t = a; a = b; b = t; }
 struct Gfx {
     uint16_t *fb = nullptr; const int16_t _max_x = 799, _max_y = 479;
