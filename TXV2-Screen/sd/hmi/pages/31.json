@@ -1082,6 +1082,34 @@
     "txt_maxl": 28,
     "isbr": 0
    }
+  },
+  {
+   "n": "hint",
+   "i": 39,
+   "t": "text",
+   "g": "l",
+   "x": 45,
+   "y": 398,
+   "w": 365,
+   "h": 50,
+   "font": 2,
+   "sta": 1,
+   "c": {
+    "pco": 65535,
+    "borderc": 0,
+    "bco": 4426
+   },
+   "txt": "The transmitter's own rates,\r\nnot Rotorflight's. See Help.",
+   "a": {
+    "style": 0,
+    "key": 255,
+    "borderw": 0,
+    "xcen": 0,
+    "ycen": 1,
+    "pw": 0,
+    "txt_maxl": 70,
+    "isbr": 0
+   }
   }
  ]
 }

@@ -1,6 +1,9 @@
 Rates make chosen channels move less (or more) for the|
 same stick movement.|
-There are three rates, each 0 to 200%. One is normally 100%.||
+There are three rates, each 0 to 200%. One is normally 100%.|
+These are the transmitter's own rates, for any model. They are|
+not Rotorflight's rates: those are under Model setup /|
+Rotorflight / Rates, and shape the helicopter's response.||
 TO SET UP RATES:|
 1. Touch the box beside 'Rate 1 (%)', 'Rate 2 (%)' and 'Rate 3 (%)'|
 in turn, and type each percentage.|
