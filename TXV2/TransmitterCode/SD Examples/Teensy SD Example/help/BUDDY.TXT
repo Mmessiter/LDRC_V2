@@ -51,8 +51,8 @@ The Instructor's front screen shows|
 'Buddy found!' or 'Buddy missing'.|
 The Pupil's shows 'Master found!' or 'Master missing'.|
 If the Pupil's signal is lost, the Instructor gets control back|
-by itself after about 5 seconds.|
-To take it back at once, use the buddy switch.|
+by itself, almost at once.|
+To take it back at any time, use the buddy switch.|
 'Extra buddies!' (Pupil's screen): a second buddy is on the air.|
 Use one Pupil at a time.||
 WIRED BUDDY:|

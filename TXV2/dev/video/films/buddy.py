@@ -2,7 +2,7 @@
 """Film BUDDY: the wireless buddy box - a tour, then how to start a beginner. The words are BUDDY.TXT's (Buddy channels: the
 others stay with the Instructor, whoever has control; 'Top switches too' OFF for a beginner keeps motor, safety, bank and
 rates with the Instructor; Nudge: the Pupil flies, the Instructor's sticks gently nudge; the Pupil's signal lost: control
-back to the Instructor after about 5 seconds). Combo options (the page's own): 0 Master, 1 Nudge, 2 Buddy. Made with
+back to the Instructor almost at once - BuddyWireless.h LOSTCONTACTTHRESHOLD, 100 failed packets in a row, well under a second; Malcolm 9 Nov 2026: 'in reality it reverts to master within about 10 milliseconds', the film said five seconds). Combo options (the page's own): 0 Master, 1 Nudge, 2 Buddy. Made with
 dev/video/filmkit.py.
 18 Oct 2026 (Malcolm: start at the model or transmitter screen; real uses): it starts on Transmitter setup. In practice:
 the Buddy channels page (BuddyView "Buddy channels ..." > BuddyChView, OK back) with only aileron and elevator for the pupil
@@ -31,7 +31,7 @@ f.line('start', "Teaching a beginner? Here's a gentle way to start. Press Buddy 
 f.line('chpage', 'This is the Buddy channels page. Many instructors give a beginner just aileron and elevator at first, and keep the rest themselves.')
 f.line('top', 'And leave Top switches too off. Then the motor, safety, bank and rates switches stay with you.')
 f.line('nudge', 'Nudge is a lovely in-between. The pupil flies, but your sticks can gently help, rather than take over.')
-f.line('lost', "And if the pupil's signal is ever lost, control comes back to you by itself, in about five seconds. Or take it back at once, with your buddy switch.")
+f.line('lost', "And if the pupil's signal is ever lost, control comes back to you by itself, almost at once. Or take it back whenever you like, with your buddy switch.")
 f.prepare()
 
 f.begin(); f.say('title', after=1.2)
