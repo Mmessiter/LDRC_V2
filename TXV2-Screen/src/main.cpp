@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.195"
+#define SCREEN_VERSION "1.11.196"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -2459,6 +2459,11 @@ static bool loadPage(const std::string &name) {
         // boxes do: the Teensy fills it while the page shows and never puts the page's text back (screen 1.5.6: the
         // trim-direction page came back saying "Aileron trim is defined!" before any trim was pushed).
         if (j["fresh"] | false) kept.erase(name + "." + c.name);
+        // (1.11.196) "fresh_colour": only the box's kept COLOURS are forgotten at a load - its text and value stay, as every
+        // global's do. For a box the main board paints live and fills with words it does not send again when the page merely
+        // reloads (the keyboard's return): the B205 release's plain "fresh" on the Inputs and outputs page's boxes emptied
+        // every channel name as soon as a channel number had been edited (Malcolm's photo, 9 Nov 2026).
+        else if (j["fresh_colour"] | false) { auto kf = kept.find(name + "." + c.name); if (kf != kept.end()) for (const char *a : { "bco", "pco", "bco2", "pco2" }) kf->second.ints.erase(a); }
         auto k = kept.find(name + "." + c.name);
         if (k != kept.end() && (c.global || true)) {
             auto &ki = k->second.ints;
