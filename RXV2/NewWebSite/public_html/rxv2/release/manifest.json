@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.920-review",
+      "url": "https://messiter.com/rxv2/release/v0.9.920/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.920/littlefs.bin",
+      "fs_md5": "5d70bf2f3bc4567d2d54f5104b891c09",
+      "notes": "Safety: the transmitter's Save failsafe is refused while the model is armed, as the app's own Save already was. On a dongle the pages say dongle again, and the factory-reset page names the address the board comes back on (Untitled.local). From the code review of 10 Nov 2026."
+    },
+    {
       "name": "RXV2-0.9.919-fc-line-auto-on",
       "url": "https://messiter.com/rxv2/release/v0.9.919/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.919/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.909/littlefs.bin",
       "fs_md5": "0b7dd5e5832f0319e89e9b55efb81265",
       "notes": "The receiver now refuses a rates block that would leave roll, pitch or yaw with no response, from the phone or the transmitter, and logs every rates and PID write in the events. A blank box on the PIDs, PID+, Rates and Governor pages stops the save with its name instead of writing 0. After Mehul's RAW 420 took off with no aileron on 28 October."
-    },
-    {
-      "name": "RXV2-0.9.908-open-on-the-switch",
-      "url": "https://messiter.com/rxv2/release/v0.9.908/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.908/littlefs.bin",
-      "fs_md5": "0a78a584c16f0bf3e8f67b6156fc3f9a",
-      "notes": "With the transmitter on, the tuning pages now open on the bank its switch has the flight controller on, read fresh, and keep following the switch over WiFi too. Before, a page opened on the bank it remembered and sent the flight controller there, so the switch seemed ignored until it was moved."
     }
   ],
   "rotorflight": {

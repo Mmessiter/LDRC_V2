@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.919-fc-line-auto-on";
+constexpr const char* FW_VERSION = "RXV2-0.9.920-review";
 
 //*********************************************************************
 //  Auto-update manifest URLs

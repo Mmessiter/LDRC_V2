@@ -146,6 +146,10 @@
                 if (!r.ok) return null;
                 this.state = await r.json();
                 this.stateAt = Date.now();          // so other pollers can share it
+                // (10 Nov 2026, the code review) the dongle's words, from the first state that says so: the
+                // DOMContentLoaded line below looked at LDRC.state before any fetch had come back (null), so
+                // on a dongle the pages never said "dongle" (since 0.9.738).
+                if (this.state && this.state.dongle && !this._dongleWatching && document.body) { this._dongleWatching = true; this.dongleWatch(); }
                 return this.state;
             } catch (e) { return null; }
         },
@@ -1316,8 +1320,8 @@
         LDRC.teachTime();
         LDRC.mountFooter();
         LDRC.dongleGuard();
-        // Same state the guard just fetched: no extra traffic.
-        Promise.resolve(LDRC.state).then(s => { if (s && s.dongle) LDRC.dongleWatch(); });
+        // The dongle's words start in fetchState, when the first state comes back (the guard's fetch, or the
+        // page's own): no extra traffic (10 Nov 2026; the line here looked at LDRC.state before it had come).
         LDRC.findOnArrival();
         // Review mode? Buttons tell the truth: edits go to / come from the
         // PHONE (Malcolm 2026-08-04). Only the Rotorflight tuning pages
