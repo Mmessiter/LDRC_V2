@@ -98,6 +98,8 @@ There are two ways: on the circuit board, or hand-wired.
 | 3 | Power in | + |
 | 4 | Ground | − |
 
+**Power (pin 3):** the board takes up to at least 8.5 V, so a 2S BEC is fine. Its Pololu regulator sets the limit.
+
 With this order, a straight one-to-one lead to a Nexus port (RX, TX, +, −) crosses TX and RX correctly. **Check the lead with a meter before the first power-up.**
 
 **Soldering the XIAO: the one thing that goes wrong.**
@@ -146,8 +148,9 @@ With this order, a straight one-to-one lead to a Nexus port (RX, TX, +, −) cro
 - Fit one, two or three radios. The receiver finds them at start-up, and its home page says which slots came up.
 - The radios use D7 for MISO, not the XIAO's usual SPI pin.
 - Put a 100 µF capacitor across each radio's VCC and GND, close to the radio, as the board does.
+- The radios take their 3.3 V from the XIAO's 3V3 pad. That is enough, even for three radios: only one is used at a time.
 
-<!-- TODO Malcolm: the board feeds the radios from its own AMS1117. Is the XIAO's 3V3 pad enough for two or three ML01SP4s in a hand-wired receiver, or should builders fit an AMS1117 too? Also confirm the 100 µF per radio advice for hand-wired builds. -->
+<!-- (10 Nov 2026, Malcolm: "Yes - enough power because only one transceiver is used at a time.") -->
 
 ### Battery sensing (optional)
 
