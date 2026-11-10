@@ -127,8 +127,8 @@
 | 5 V regulator, Teensy | Pololu 5 V 1 A step-up/step-down **S13V10F5** (the 2 A **S13V20F5** fits too: 1 A is plenty) | 1 | Step-up/step-down: it holds 5 V even when the pack runs low, so the radio link keeps flying the model if the screen drops out first |
 | 5 V regulator, screen | **7805** | 1 | No heatsink needed |
 | 3.3 V regulator | **AMS1117-3.3** | 1 | |
-| Battery sensor | **INA219** current/voltage sensor module (I²C), such as the common purple **GY-219** (its A0 and A1 pads left open: address 0x40) | 1 | Needed: without it the transmitter cannot read its own battery |
-| Clock | "Tiny RTC" **DS1307** module with a coin cell | 1 | Use its **left** 5-pin header, and leave its 7-pin row unconnected. It needs **5 V** to answer. The screen sets it from the internet |
+| Battery sensor | **INA219** current/voltage sensor module (I²C), such as the purple **GY-219** or the blue "INA219 DC Current Sensor" board (its A0 and A1 pads left open: address 0x40) | 1 | Needed: without it the transmitter cannot read its own battery |
+| Clock | "Tiny RTC" **DS1307** module with a coin cell (Malcolm's is marked HW-111) | 1 | Use its **left** 5-pin header, and leave its 7-pin row unconnected. It needs **5 V** to answer. The screen sets it from the internet |
 | Sticks | **FrSky M9** Hall-sensor gimbals | 2 | |
 | Trims | **FrSky trim switches**, X9D Plus spare part | 4 | |
 | Top switches | Three-position switches made for RC transmitters, with a long lever (single pole, three tags; the middle position connects nothing: ON-OFF-ON) | 4 | Several brands make them |
@@ -212,7 +212,11 @@ Work in this order. Each step ends with a check.
 9. **Make the Teensy's card** ([Flash it, once](#flash-it-once), step 2).
 10. **Switch on.** First check the resistance across the battery plug again (not near zero). Then do the first start (below).
 
-<!-- TODO Malcolm: (0) ANSWERED 10 Nov 2026: "the main board is only ever powered from its battery. By using the combination of the button and the 2808". (1) ANSWERED 10 Nov 2026: "All four front switches need two resistors" (his photo: 7.5 kOhm, violet-green-red; the standard divider at the middle tag). (2) Top switches: ANSWERED 10 Nov 2026 (three-position switches made for RC transmitters, several brands; the centre tag to ground is the firmware's own requirement). (3) + (4) ANSWERED 10 Nov 2026: "No parts are obsolete and that gerber is the correct one." (5) Photos of the inside for this section. -->
+<!-- TODO Malcolm: (0) ANSWERED 10 Nov 2026: "the main board is only ever powered from its battery. By using the combination of the button and the 2808". (1) ANSWERED 10 Nov 2026: "All four front switches need two resistors" (his photo: 7.5 kOhm, violet-green-red; the standard divider at the middle tag). (2) Top switches: ANSWERED 10 Nov 2026 (three-position switches made for RC transmitters, several brands; the centre tag to ground is the firmware's own requirement). (3) + (4) ANSWERED 10 Nov 2026: "No parts are obsolete and that gerber is the correct one." (5) ANSWERED 10 Nov 2026: Malcolm's photo of the inside, below. -->
+
+<img src="../docs/images/transmitter-inside.jpg" width="600" alt="Inside one of Malcolm's transmitters, the screen lifted out: the main board with its modules, a blue INA219 battery sensor and a blue HW-111 clock module, the Ebyte radio with its aerial lead to the aerial on the top edge, the two stick gimbals, a large black battery, and the switches wired with twisted leads">
+
+<sub>Inside one of Malcolm's transmitters, the screen lifted out.</sub>
 
 ### Teensy pins
 
