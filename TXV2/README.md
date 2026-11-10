@@ -127,7 +127,7 @@
 | 5 V regulator, Teensy | Pololu 5 V 1 A step-up/step-down **S13V10F5** (the 2 A **S13V20F5** fits too: 1 A is plenty) | 1 | Step-up/step-down: it holds 5 V even when the pack runs low, so the radio link keeps flying the model if the screen drops out first |
 | 5 V regulator, screen | **7805** | 1 | No heatsink needed |
 | 3.3 V regulator | **AMS1117-3.3** | 1 | |
-| Battery sensor | **INA219** current/voltage sensor module (I²C) | 1 | Reads the transmitter's battery. Without it there is no battery reading |
+| Battery sensor | **INA219** current/voltage sensor module (I²C), such as the common purple **GY-219** (its A0 and A1 pads left open: address 0x40) | 1 | Needed: without it the transmitter cannot read its own battery |
 | Clock | "Tiny RTC" **DS1307** module with a coin cell | 1 | Use its **left** 5-pin header, and leave its 7-pin row unconnected. It needs **5 V** to answer. The screen sets it from the internet |
 | Sticks | **FrSky M9** Hall-sensor gimbals | 2 | |
 | Trims | **FrSky trim switches**, X9D Plus spare part | 4 | |
@@ -155,7 +155,7 @@
 
 **Cost:** over £120 in parts (approximate, October 2026; the full total is coming). See [Build one](https://messiter.com/ldrc/build.html) for current figures.
 
-<!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Charger ANSWERED 10 Nov 2026 with photos (an IP2326 board, LX-LISC-V3; it comes 2S; B+/BM/B- to the balance plug; a red LED in the bay); the charge light's wiring (a resistor?) still wanted. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Battery ANSWERED 10 Nov 2026 (RadioMaster 2S Li-ion 21700 5000 mAh, HP157-BATT-5A2S; their larger one fits too); the speaker part still wanted. (7) ANSWERED 10 Nov 2026: all three-position, made for RC transmitters, several brands. (8) Re-cost the V2 parts. -->
+<!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: ANSWERED 10 Nov 2026 - needed on every build (Malcolm); his is a GY-219 (his photo). (4) Charger ANSWERED 10 Nov 2026 with photos (an IP2326 board, LX-LISC-V3; it comes 2S; B+/BM/B- to the balance plug; a red LED in the bay); the charge light's wiring (a resistor?) still wanted. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Battery ANSWERED 10 Nov 2026 (RadioMaster 2S Li-ion 21700 5000 mAh, HP157-BATT-5A2S; their larger one fits too); the speaker part still wanted. (7) ANSWERED 10 Nov 2026: all three-position, made for RC transmitters, several brands. (8) Re-cost the V2 parts. -->
 
 ### The case
 
