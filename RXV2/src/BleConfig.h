@@ -95,6 +95,8 @@ inline uint32_t      bleIdleDrops       = 0;       // watchdog: silent app dropp
 inline uint32_t      bleAdvRefreshes    = 0;       // watchdog: idle advertising re-keyed
 inline uint32_t      bleConnectedAtMs   = 0;       // when the current app connected
 inline uint32_t      bleConnEvents      = 0;       // every connect/disconnect (forensics trigger)
+inline bool          bleConnectedWhileAsked = false; // (0.9.921) the current client came while a transmitter's screen was asking (TX parameter 36): taken to be that screen
+inline uint32_t      bleTxAskFrees      = 0;       // (0.9.921) silent apps let go because a transmitter's screen asked
 
 // Continuous channel streaming ("View channels" live bars): when armed, the
 // receiver pushes compact "S|us0,..,us15|age\n" frames on the notify
@@ -380,6 +382,7 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
         bleClientConnected = true;
         bleLastActivityMs  = millis();
         bleConnectedAtMs   = millis();
+        bleConnectedWhileAsked = txBleWanted();             // (0.9.921) a client that comes while a transmitter asks is its screen: never let go for it
         bleConnEvents++;
         bleStatsClientUp   = true;                          // link stats: quarantine BLE desense
         bleStatsQuietUntilMs = millis() + 4000;
@@ -393,6 +396,7 @@ class BleServerCallbacks : public NimBLEServerCallbacks {
     }
     void onDisconnect(NimBLEServer* s, NimBLEConnInfo& info, int reason) override {
         bleClientConnected = false;
+        bleConnectedWhileAsked = false;
         bleStatsClientUp   = false;
         bleStatsQuietUntilMs = millis() + 4000;             // the disconnect burst desenses too
         bleConnMtu = 23;
@@ -741,21 +745,69 @@ inline void bleWatchdogTick(bool allowed, uint32_t idleDropMs) {
     }
 }
 
+// TXASK-FREE-BEGIN (the rule, host-tested by dev/txask_free_test.sh)
+// 0.9.921 (Malcolm, 10 Nov 2026: the transmitter "is now very reluctant to connect by Bluetooth. It either takes ages or
+// fails to connect. Even with the app closed. The app still connects just fine."). We take ONE Bluetooth client and do
+// not advertise while we have one. Both phone apps keep their link through a trip to the home screen (a quick app-switch
+// keeps the connection; they let go only on Back, swiped away, or on coming back after a minute), and a silent app was
+// dropped only by the idle watchdog above, after 10 minutes. So a transmitter's screen, asking for Bluetooth for its
+// Rotorflight pages (TX parameter 36), scanned for 15 s, heard nothing and gave up - again and again, until the watchdog
+// let the phone go. Now, while a transmitter asks, a client that
+//   - did not come while it was asking (the screen joins after its own ask: bleConnectedWhileAsked),
+//   - was connected 10 s and more before the ask began (not a screen that beat its ask, nor a phone just opened), and
+//   - has said nothing since the ask began, for 5 s (an app in the background: its pages stop polling)
+// is let go, as the watchdog would, sooner. An app in use (its pages ask every second or two) keeps the link, and the
+// transmitter says "close the phone app". Both apps take a drop in the background quietly: the model list on return.
+constexpr uint32_t TXASK_FREE_SILENT_MS = 5000;     // silent this long, and since the ask began
+constexpr uint32_t TXASK_FREE_BEFORE_MS = 10000;    // connected this long before the ask began
+inline bool txAskFreesSilentApp(bool asking, bool clientUp, bool connectedWhileAsked, uint32_t askStartMs,
+                                uint32_t connectedAtMs, uint32_t lastActivityMs, uint32_t nowMs) {
+    if (!asking || !clientUp || connectedWhileAsked || !askStartMs) return false;
+    if ((int32_t)(askStartMs - connectedAtMs) < (int32_t)TXASK_FREE_BEFORE_MS) return false;   // came near the ask, or after it
+    if ((int32_t)(lastActivityMs - askStartMs) >= 0) return false;                              // has spoken since the ask began: in use
+    return (uint32_t)(nowMs - lastActivityMs) >= TXASK_FREE_SILENT_MS;
+}
+// TXASK-FREE-END
+
+// netStep, every pass (0.9.921): the rule above, applied. Never while armed or during an update. Also in the fly-quiet
+// state (bleStarted false, advertising off, "link kept until app closes"), where the idle watchdog does not run at all: a
+// phone left in the background there held the link for good. Once it has gone, netStep's ask branch brings Bluetooth up
+// for the screen (the pardon, then bleStart), as for any ask with no client.
+inline void bleTxAskTick(bool armedNow, bool busyUpdating) {
+    static uint32_t askStartMs = 0;                     // when the transmitter's present ask began (0: not asking)
+    const bool asking = txBleWanted();
+    if (!asking) { askStartMs = 0; return; }
+    if (!askStartMs) askStartMs = millis() | 1;
+    if (armedNow || busyUpdating || bleOtaActive || !bleInited) return;
+    if (bleReqReady || blePumping) return;              // a request in hand, or a reply going out (a big download is silent from the phone's side)
+    if (!txAskFreesSilentApp(asking, bleClientConnected, bleConnectedWhileAsked, askStartMs, bleConnectedAtMs, bleLastActivityMs, millis())) return;
+    NimBLEServer* srv = NimBLEDevice::getServer();
+    if (!srv || srv->getConnectedCount() == 0) return;
+    char m[120];
+    snprintf(m, sizeof m, "Bluetooth: app %s silent %lu s - let go, the transmitter's screen asked",
+             srv->getPeerInfo(0).getAddress().toString().c_str(), (unsigned long)((uint32_t)(millis() - bleLastActivityMs) / 1000));
+    events.add(m);
+    bleTxAskFrees++;
+    srv->disconnect(srv->getPeerInfo(0));               // onDisconnect re-advertises
+    bleLastActivityMs = millis();                       // (asked once: the goodbye takes a moment)
+}
+
 // state.json "ble" block - what the watchdog sees
 inline void bleStateJson(String& j) {
     NimBLEServer* srv = bleInited ? NimBLEDevice::getServer() : nullptr;
     const bool adv = bleInited && NimBLEDevice::getAdvertising()->isAdvertising();
     const uint8_t conns = srv ? srv->getConnectedCount() : 0;
     std::string peer = conns ? srv->getPeerInfo(0).getAddress().toString() : "";
-    char b[300];
-    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"peer\":\"%s\",\"since_s\":%lu,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu,\"adv_refresh\":%lu,\"stream_on\":%s,\"stream_sent\":%lu,\"tx_ask\":%s}",
+    char b[340];
+    snprintf(b, sizeof(b), ",\"ble\":{\"on\":%s,\"adv\":%s,\"client\":%s,\"conns\":%u,\"peer\":\"%s\",\"since_s\":%lu,\"idle_s\":%lu,\"adv_restarts\":%lu,\"phantom\":%lu,\"idle_drops\":%lu,\"adv_refresh\":%lu,\"stream_on\":%s,\"stream_sent\":%lu,\"tx_ask\":%s,\"tx_ask_frees\":%lu}",
              bleStarted ? "true" : "false", adv ? "true" : "false", bleClientConnected ? "true" : "false",
              (unsigned)conns, peer.c_str(),
              (unsigned long)((conns && bleConnectedAtMs) ? (millis() - bleConnectedAtMs) / 1000 : 0),
              (unsigned long)((bleLastActivityMs ? (millis() - bleLastActivityMs) : 0) / 1000),
              (unsigned long)bleAdvRestarts, (unsigned long)blePhantomClears, (unsigned long)bleIdleDrops,
              (unsigned long)bleAdvRefreshes, bleStreamOn ? "true" : "false", (unsigned long)bleStreamSent,
-             txBleWanted() ? "true" : "false");   // (0.9.876) a Version 2 transmitter's Rotorflight menu is asking for Bluetooth
+             txBleWanted() ? "true" : "false",    // (0.9.876) a Version 2 transmitter's Rotorflight menu is asking for Bluetooth
+             (unsigned long)bleTxAskFrees);       // (0.9.921) silent apps let go for it
     j += b;
 }
 

@@ -22,6 +22,7 @@ inline bool bleAdvertising();   // defined in BleConfig.h (true while advertisin
 inline void bleFlyQuiet();
 inline bool bleHasClient();
 inline void bleStop();
+inline void bleTxAskTick(bool armedNow, bool busyUpdating);   // (0.9.921) a silent app let go when a transmitter's screen asks
 // Deferred STA re-begin fuse. File-scope (not a static inside netStep) so
 // disableWifi() can CLEAR it: a retry scheduled 200 ms before the arming
 // teardown used to fire one pass after it and switch the WiFi radio back on
@@ -448,6 +449,9 @@ inline void netStep() {
         }
     }
     if (!txBleWanted()) txBleRefusedSaid = false;
+    // 0.9.921: and while it asks, a phone app that went quiet in the background is let go, so the screen finds us
+    // (BleConfig.h bleTxAskTick: 10 minutes of the idle watchdog before).
+    bleTxAskTick(armedNow, otaStarted || rxUpdState != RXU_IDLE);
     // Non-blocking WiFi re-begin: a STA retry used to do WiFi.disconnect() +
     // delay(200) + WiFi.begin() inline, which BLOCKED the main loop for ~208 ms
     // every retry — long enough to pause CRSF/SBUS output and starve radioPoll,

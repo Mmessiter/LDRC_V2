@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.920-review";
+constexpr const char* FW_VERSION = "RXV2-0.9.921-app-lets-go";
 
 //*********************************************************************
 //  Auto-update manifest URLs
