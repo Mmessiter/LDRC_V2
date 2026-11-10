@@ -283,7 +283,7 @@ There is nothing to buy from us. You build your own, and Malcolm will help.
 6. **App:** install it from the [App Store](https://apps.apple.com/app/id6789857533) or [messiter.com/apps](https://messiter.com/apps/).
 7. **Test on the ground**, blades off, before the first flight.
 
-**Prefer to build from source?** Every part builds with [PlatformIO](https://platformio.org/): `pio run -e teensy41` in [TXV2](TXV2), `pio run -e ips16` in [TXV2-Screen](TXV2-Screen) (`-e crowpanel50` for the older 4 MB screen), `pio run -e xiao_s3_usb` in [RXV2](RXV2). A fresh copy of this repository built all four on 10 November 2026.
+**Prefer to build from source?** Every part builds with [PlatformIO](https://platformio.org/): `pio run -e teensy41` in [TXV2/TransmitterCode](TXV2/TransmitterCode), `pio run -e ips16` in [TXV2-Screen](TXV2-Screen) (`-e crowpanel50` for the older 4 MB screen), `pio run -e xiao_s3_usb` in [RXV2](RXV2). A fresh copy of this repository built all four on 10 November 2026.
 
 After the first flash, everything updates over the air.
 Current versions and release notes: [Help & updates](https://messiter.com/ldrc/help.html).
