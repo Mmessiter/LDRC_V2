@@ -132,11 +132,11 @@
 | Sticks | **FrSky M9** Hall-sensor gimbals | 2 | |
 | Trims | **FrSky trim switches**, X9D Plus spare part | 4 | |
 | Top switches | Three-position switches made for RC transmitters, with a long lever (single pole, three tags; the middle position connects nothing: ON-OFF-ON) | 4 | Several brands make them |
-| Front controls | The same three-position switches, or knobs (potentiometers) | 4 | Any mix |
+| Front controls | The same three-position switches, or 10 kΩ linear knobs (potentiometers, often marked B10K) | 4 | Any mix |
 | Status light | **KY-016** RGB LED module (a 5 mm common-cathode RGB LED on a small board, its resistors already fitted) | 1 | Its pins are marked R, G, B and −. On the board's RGB LED header, GND is the end pin that beeps to the battery's −; then red, green, blue |
 | Speaker | 8 Ω (or 4 Ω), 1–2 W | 1 | On the screen's SPK socket (JST PH 2.0, 2-pin) |
-| Battery | 2S: LiPo, Li-ion or LiFePO4. Malcolm uses RadioMaster's 2S Li-ion 21700 pack, 5000 mAh | 1 | Always two cells. RadioMaster's larger pack fits too |
-| Charger | A small USB-C 2S charger module on the **IP2326** chip, in the charger bay on the back | 1 | Set it for two cells before the first charge. For a LiPo or Li-ion pack: a LiFePO4 pack needs a LiFePO4 charger |
+| Battery | 2S: LiPo, Li-ion or LiFePO4. Malcolm uses RadioMaster's 2S Li-ion 21700 pack, 5000 mAh | 1 | Always two cells. RadioMaster's 6200 mAh pack fits too |
+| Charger | A small USB-C charger board on the **IP2326** chip, such as the **LX-LISC-V3** (its name is on the back), in the charger bay on the back, and a red LED for its charge light | 1 | The LX-LISC-V3 comes set for two cells: change nothing (the Chinese words on it say how to make it charge three cells: do not). Its B+, BM and B− go to the pack's 3-pin balance plug (JST-XH). For a LiPo or Li-ion pack: a LiFePO4 pack needs a LiFePO4 charger |
 | Diodes | 1N5406 ×2, 1N4001 ×2 | 4 | |
 | Capacitors | Electrolytic 330 µF ×1, 100 µF ×1, and one for the radio module (Malcolm uses 220 µF; the value is not critical). Tantalum 330 µF (0E907) ×2, 47 µF 1206 ×2. Ceramic 1206: 330 nF ×2, 100 nF ×4, 10 µF ×1 | 14 | The radio's one goes across its power and ground pins, the striped leg (minus) to GND |
 | Aerial | 2.4 GHz aerial with an **SMA** plug (a pin in the middle) and a 20 cm SMA male-to-female extension | 1 | **Not RP-SMA.** Most WiFi aerials are RP-SMA: they screw on, but do not connect |
@@ -149,9 +149,13 @@
 
 <sub>The radio, its capacitor soldered across its power and ground pins. SMA: the aerial's plug has a pin in the middle, the radio's socket a hole.</sub>
 
+<img src="../docs/images/charger-in-bay.jpg" width="400" alt="Inside the transmitter: the RadioMaster battery in the case, its white balance plug joined by red and black wires to the small charger board screwed into the charger bay on the case back">
+
+<sub>The charger in its bay on the case back, joined to the pack's balance plug (white).</sub>
+
 **Cost:** over £120 in parts (approximate, October 2026; the full total is coming). See [Build one](https://messiter.com/ldrc/build.html) for current figures.
 
-<!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Battery ANSWERED 10 Nov 2026 (RadioMaster 2S Li-ion 21700 5000 mAh, HP157-BATT-5A2S; their larger one fits too); the speaker part still wanted. (7) ANSWERED 10 Nov 2026: all three-position, made for RC transmitters, several brands. (8) Re-cost the V2 parts. -->
+<!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Charger ANSWERED 10 Nov 2026 with photos (an IP2326 board, LX-LISC-V3; it comes 2S; B+/BM/B- to the balance plug; a red LED in the bay); the charge light's wiring (a resistor?) still wanted. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Battery ANSWERED 10 Nov 2026 (RadioMaster 2S Li-ion 21700 5000 mAh, HP157-BATT-5A2S; their larger one fits too); the speaker part still wanted. (7) ANSWERED 10 Nov 2026: all three-position, made for RC transmitters, several brands. (8) Re-cost the V2 parts. -->
 
 ### The case
 
@@ -189,7 +193,7 @@ Work in this order. Each step ends with a check.
 7. **Wire the controls** (pins in the table below):
    - **Sticks: wire them as for Mode 1**, whatever mode you fly. The firmware swaps them for Mode 2.
    - Trims, the four top switches, the four front controls and the RGB LED.
-   - A knob (potentiometer) has its ends on 3.3 V and ground and its wiper on the pin.
+   - A knob (potentiometer; 10 kΩ works well) has its ends on 3.3 V and ground and its wiper on the pin.
 8. **Wire the screen** to the old Nextion header:
    - Teensy **pin 1 (TX1)** → screen port **J10 pin 1** (IO44, the screen's RX).
    - Teensy **pin 0 (RX1)** ← screen port **J10 pin 2** (IO43, the screen's TX).
