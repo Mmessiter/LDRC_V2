@@ -258,6 +258,7 @@ After this, the transmitter updates itself. **There is nothing to compile.**
    PlatformIO fetches the libraries and runs the Teensy loader. If it sits waiting, press the small white button on the Teensy. It ends with `SUCCESS`.
 2. **Make the Teensy's card.** Copy everything in `TransmitterCode/SD Examples/Teensy SD Example/` to its microSD card: `help/`, `Images/`, `mod/` and `MODELS.DAT`. Add an empty folder called `log`.
    - The example `MODELS.DAT` holds Malcolm's models. Start with them, or reset (below) and make your own.
+   - A blank card works too: the transmitter makes its own `MODELS.DAT`. You then calibrate the sticks and set up each model yourself (tested by Malcolm, 10 Nov 2026).
    - (Version 1 owner: skip this. Keep your own card.)
 3. **Flash the screen** as [../TXV2-Screen/README.md](../TXV2-Screen/README.md) says, if you have not already.
 
