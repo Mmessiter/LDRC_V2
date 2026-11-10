@@ -235,9 +235,9 @@ Work in this order. Each step ends with a check.
 After this, the transmitter updates itself. **There is nothing to compile.**
 
 > [!WARNING]
-> **Flash the Teensy before it goes on the main board.** Do not plug USB into a Teensy fitted to the board unless its VUSB–VIN pad is cut.
+> **Never power the transmitter from the Teensy's USB.** Flash the Teensy before it goes on the main board. If it is already fitted, use a USB lead with its red (5 V) wire cut, and power the transmitter from its own battery.
 
-<!-- TODO Malcolm: confirm the VUSB/VIN advice. The Teensy 4.1 joins USB 5 V to VIN unless that pad is cut (PJRC's advice); with the board's 5 V rails on VIN, USB could back-feed the rails and the screen. Is the pad cut on your boards, or do you never plug USB into a fitted Teensy? Until you say, this README and the website flash the Teensy off the board. A Version 1 owner's Teensy is already fitted: should they lift it out of its socket for the first Version 2 flash? -->
+<!-- ANSWERED 10 Nov 2026, Malcolm: "It is not a good idea to power the transmitters, teensy, from its USB. It's better to connect a USB with the red wire cut, and apply power from the battery." The question was: confirm the VUSB/VIN advice. The Teensy 4.1 joins USB 5 V to VIN unless that pad is cut (PJRC's advice); with the board's 5 V rails on VIN, USB could back-feed the rails and the screen. Is the pad cut on your boards, or do you never plug USB into a fitted Teensy? Until you say, this README and the website flash the Teensy off the board. A Version 1 owner's Teensy is already fitted: should they lift it out of its socket for the first Version 2 flash? -->
 
 1. **Flash the Teensy on its own**, plugged into your computer with a micro-USB **data** cable:
    - Download [`ldrc-v2-teensy41.hex`](https://messiter.com/txv1b/release/ldrc-v2-teensy41.hex). That link always gives the latest release.
