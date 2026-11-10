@@ -128,7 +128,7 @@
 | 5 V regulator, screen | **7805** | 1 | No heatsink needed |
 | 3.3 V regulator | **AMS1117-3.3** | 1 | |
 | Battery sensor | **INA219** current/voltage sensor module (I²C) | 1 | Reads the transmitter's battery. Without it there is no battery reading |
-| Clock | "Tiny RTC" **DS1307** module with a coin cell | 1 | Use its **left** 5-pin header. It needs **5 V** to answer. The screen sets it from the internet |
+| Clock | "Tiny RTC" **DS1307** module with a coin cell | 1 | Use its **left** 5-pin header, and leave its 7-pin row unconnected. It needs **5 V** to answer. The screen sets it from the internet |
 | Sticks | **FrSky M9** Hall-sensor gimbals | 2 | |
 | Trims | **FrSky trim switches**, X9D Plus spare part | 4 | |
 | Top switches | Three-position switches made for RC transmitters, with a long lever (single pole, three tags; the middle position connects nothing: ON-OFF-ON) | 4 | Several brands make them |
@@ -194,7 +194,7 @@ Work in this order. Each step ends with a check.
    *Check:* Teensy Loader says **Reboot OK**.
 5. **Solder the small parts:** the 1206 capacitors, then the diodes, regulators, sockets and headers. Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header).\
    *Check:* battery off: the resistance across the battery plug is not near zero. With the meter on volts across the battery's own plug, the pin that meets the board's + reads plus 6 to 8.4 V. Then connect the battery, switch on, and measure 5 V on the Teensy socket's VIN, 5 V on the screen header's middle pin and 3.3 V on the radio socket's VCC.
-6. **Fit the modules:** first solder a capacitor across the radio's power and ground pins (VCC and GND; Malcolm uses 220 µF, the value is not critical; the striped leg to GND), as in the photo above. Then the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (left header, 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged. Both must be **SMA**: an RP-SMA aerial screws on, but does not connect.
+6. **Fit the modules:** first solder a capacitor across the radio's power and ground pins (VCC and GND; Malcolm uses 220 µF, the value is not critical; the striped leg to GND), as in the photo above. Then the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (its left, 5-pin header only; 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged. Both must be **SMA**: an RP-SMA aerial screws on, but does not connect.
 7. **Wire the controls** (pins in the table below):
    - **Sticks: wire them as for Mode 1**, whatever mode you fly. The firmware swaps them for Mode 2. Only the springs change: in Mode 2 the left stick's up-and-down stays where you leave it (the throttle), and the right stick's springs back to the centre.
    - Trims, the four top switches, the four front controls and the RGB LED.
