@@ -192,7 +192,7 @@ Work in this order. Each step ends with a check.
    *Check:* the screen joins your WiFi, fills its card and restarts as a complete screen.
 4. **Flash the Teensy on its own, by micro-USB, before it goes on the board.** See [Flash it, once](#flash-it-once), step 1.\
    *Check:* Teensy Loader says **Reboot OK**.
-5. **Solder the small parts:** the 1206 capacitors, then the diodes, regulators, sockets and headers. Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header).\
+5. **Solder the small parts:** the 1206 capacitors, then the diodes, regulators, sockets and headers. Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header). Power the main board only ever from its battery, switched on by the button and the 2808.\
    *Check:* battery off: the resistance across the battery plug is not near zero. With the meter on volts across the battery's own plug, the pin that meets the board's + reads plus 6 to 8.4 V. Then connect the battery, switch on, and measure 5 V on the Teensy socket's VIN, 5 V on the screen header's middle pin and 3.3 V on the radio socket's VCC.
 6. **Fit the modules:** first solder a capacitor across the radio's power and ground pins (VCC and GND; Malcolm uses 220 µF, the value is not critical; the striped leg to GND), as in the photo above. Then the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (its left, 5-pin header only; 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged. Both must be **SMA**: an RP-SMA aerial screws on, but does not connect.
 7. **Wire the controls** (pins in the table below):
@@ -211,7 +211,7 @@ Work in this order. Each step ends with a check.
 9. **Make the Teensy's card** ([Flash it, once](#flash-it-once), step 2).
 10. **Switch on.** First check the resistance across the battery plug again (not near zero). Then do the first start (below).
 
-<!-- TODO Malcolm: (0) Confirm the bench check in step 5: can the board be powered for a rail check with only the 2808 and button fitted? (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: ANSWERED 10 Nov 2026 (three-position switches made for RC transmitters, several brands; the centre tag to ground is the firmware's own requirement). (3) + (4) ANSWERED 10 Nov 2026: "No parts are obsolete and that gerber is the correct one." (5) Photos of the inside for this section. -->
+<!-- TODO Malcolm: (0) ANSWERED 10 Nov 2026: "the main board is only ever powered from its battery. By using the combination of the button and the 2808". (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: ANSWERED 10 Nov 2026 (three-position switches made for RC transmitters, several brands; the centre tag to ground is the firmware's own requirement). (3) + (4) ANSWERED 10 Nov 2026: "No parts are obsolete and that gerber is the correct one." (5) Photos of the inside for this section. -->
 
 ### Teensy pins
 
