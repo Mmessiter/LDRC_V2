@@ -184,7 +184,7 @@
 
 Work in this order. Each step ends with a check.
 
-1. **Order the main board.** Send the Gerbers in `Circuits/Transmitter - CADCAM` to any PCB maker.\
+1. **Order the main board.** Send the Gerbers in `Circuits/Transmitter - CADCAM` to any PCB maker. Or ask Malcolm: he has spare boards, and if you live close enough he can give you one or two, or perhaps post them ([email him](mailto:mmessiter@gmail.com)).\
    *Check:* the board matches the picture above.
 2. **Print the case.**\
    *Check:* the screen, sticks and switches fit their holes before you wire anything.

@@ -65,11 +65,12 @@ There are two ways: on the circuit board, or hand-wired.
 
 <sub>The receiver board, about 46 × 22 mm, drawn from its design files. The XIAO sits in the outlined area (not drawn). A second radio sits on the back.</sub>
 
-**The board files are in [kicad/receiver](kicad/receiver):** the KiCad design, Gerbers ready to send to a PCB maker, and the schematic as a PDF. Its README shows how to fit the parts, with photos. Or hand-wire a receiver (below).
+**The board files are in [kicad/receiver](kicad/receiver):** the KiCad design, Gerbers ready to send to a PCB maker, and the schematic as a PDF. Its README shows how to fit the parts, with photos. Malcolm has spare boards: if you live close enough, he can give you one or two, or perhaps post them ([email him](mailto:mmessiter@gmail.com)). Or hand-wire a receiver (below).
 
 <!-- (10 Nov 2026, Malcolm: "RXV2_NEWB is correct. When in doubt, the file with the later date and time is the most recent and the one to use.") -->
 <!-- (10 Nov 2026, Malcolm: "Yes, please publish RXV2_newb." Published to kicad/receiver: Gerbers plotted by KiCad 10.0.3 from the board file, DRC clean.) -->
-<!-- TODO Malcolm: publish the RXV2_VDIV divider board too? Will you offer bare boards from your batch of 100? -->
+<!-- (10 Nov 2026, Malcolm: "Yes, I have a large number of boards for the transmitter and the receiver. If anybody lives close enough, I can give them one or two, or perhaps post them".) -->
+<!-- TODO Malcolm: publish the RXV2_VDIV divider board too? -->
 
 **Parts for one board** (from the board's design):
 
