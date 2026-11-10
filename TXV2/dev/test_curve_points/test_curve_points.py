@@ -59,6 +59,14 @@ if HAVE_OLD:
     OLD += rename(lift_from(old_rates, 'float CalculateRate(', 'old'), 'CalculateRate(', 'CalculateRateOld(')
     OLD += rename(lift_from(old_rates, 'float UseFullRate(', 'old'), 'UseFullRate(', 'UseFullRateOld(')
     OLD += rename(lift_from(old_rates, 'void GetCurveDots(', 'old'), 'GetCurveDots(', 'GetCurveDotsOld(').replace('CalculateRate(i,', 'CalculateRateOld(i,').replace('UseFullRate(i,', 'UseFullRateOld(i,')
+    # (10 Nov 2026) The old line "CurveDots[i] = CalculateRate(...)" put a float into a uint16_t, and a rate above 100 % can make
+    # it negative: undefined, so this Mac's compiler and the Teensy's need not agree. What the TEENSY did is in its firmware:
+    # "vcvt.u32.f32" then "strh" (arm-none-eabi-objdump of GetCurveDots, B205) - below zero is 0, the rest cut to 16 bits.
+    # The old maths is given exactly that here, so that "the old" means the transmitter's, not this Mac's.
+    TEENSY_DOT = 'CurveDots[i] = CalculateRateOld(i, OutputChannel, TheRate);'
+    if OLD.count(TEENSY_DOT) != 1: raise SystemExit('the old GetCurveDots is not as expected')
+    OLD = OLD.replace(TEENSY_DOT, 'CurveDots[i] = TeensyFloatToU16(CalculateRateOld(i, OutputChannel, TheRate));')
+    OLD = 'static uint16_t TeensyFloatToU16(float v) { const uint32_t u = v <= 0 ? 0u : (v >= 4294967040.0f ? 0xFFFFFFFFu : (uint32_t) v); return (uint16_t) u; }\n' + OLD
 TEENSY_MAP = r'''
 #include <type_traits>
 template <class T, class A, class B, class C, class D>
@@ -174,7 +182,7 @@ int main()
 {
     // ---- 1. five points: byte for byte the old maths
 #ifndef NO_OLD
-    long compared = 0, differ = 0;
+    long compared = 0, differ = 0, unwrapped = 0;
     for (int trial = 0; trial < 400; ++trial) {
         const int ch = trial % 16, in = ch % 8;
         MaxRangeNarrow = trial % 2; Bank = 1 + trial % 4;
@@ -191,12 +199,58 @@ int main()
             if (InterpolationTypes[Bank][ch] == STRAIGHTLINES) a = StraightLineInterpolationOld(input, in, ch); else if (InterpolationTypes[Bank][ch] == SMOOTHEDCURVES) a = CatmullSplineInterpolationOld(input, in, ch); else a = ExponentialInterpolationOld(input, in, ch);
             GetCurveDots(ch, rate);
             b = Interpolate[InterpolationTypes[Bank][ch]](input, in, ch);
-            ++compared; if (a != b) { ++differ; if (differ < 4) fprintf(stderr, "differs: trial %d type %d input %d: old %u new %u\n", trial, InterpolationTypes[Bank][ch], input, a, b); }
+            ++compared;
+            if (a != b && a >= 0x8000 && b == 0 && InterpolationTypes[Bank][ch] == STRAIGHTLINES) ++unwrapped;   // (10 Nov 2026) the old straight line ran below zero and came out near 65535: held at 0 now
+            else if (a != b) { ++differ; if (differ < 4) fprintf(stderr, "differs: trial %d type %d input %d: old %u new %u\n", trial, InterpolationTypes[Bank][ch], input, a, b); }
         }
     }
-    printf("five points: %ld outputs compared with the old maths, %ld different\n", compared, differ);
+    printf("five points: %ld outputs compared with the old maths, %ld different (and %ld where the old straight line wrapped below zero: held at 0 now)\n", compared, differ, unwrapped);
     CHECK(differ == 0 && compared > 500000);
 #endif
+    // ---- 1b. (10 Nov 2026) nothing comes back round. A rate above 100 % carries a point past the ends of 0 .. 180: it must stay
+    //          past them (above 255 it used to come out as 0 .. 14 - CurveMicros takes a uint8_t - so with a point near the top and
+    //          a rate above 183 % full stick gave the BOTTOM of the range). And the straight line run on below zero is 0, not 65535.
+    {
+        const int ch = 0, in = 0; Bank = 1; MaxRangeNarrow = 0; InPutStick[ch] = (uint8_t) in; calibrate(in, 500, 2000, 3500);
+        for (int j = 0; j < 8; ++j) DualRateChannels[j] = 0;
+        DualRateChannels[0] = (uint8_t) (ch + 1);
+        bool inByte = true, upNeverFalls = true, downNeverRises = true, asBefore = true;
+        for (int p = 0; p <= 180; ++p) {
+            CurvePointCount[ch] = 5; for (int k = 0; k < CURVE_POINTS_MAX; ++k) CurvePoint[1][ch][k] = k < 5 ? (uint8_t) p : 0;
+            CurveStoreClear(1, ch); CurveStoreSync(1, ch);
+            int last = -1;
+            for (int rate = 0; rate <= 200; ++rate) {
+                GetCurveDots(ch, rate);
+                const int dot = CurveDots[0], us = CurveMicros(CurveDots[0]);          // (as every interpolation takes it)
+                if (dot > 255) inByte = false;
+                const float exact = (p - 90) * (rate / 100.0f) + 90;                    // (DualRates.h CalculateRate)
+                if (rate != 100 && exact >= 0 && exact < 256 && dot != (int) exact) asBefore = false;   // what fitted is what it was
+                if (rate == 100 && dot != p) asBefore = false;
+                if (rate > 0 && p >= 90 && us < last) { if (upNeverFalls) fprintf(stderr, "a point at %d: rate %d gives %d us, rate %d gave %d\n", p, rate, us, rate - 1, last); upNeverFalls = false; }
+                if (rate > 0 && p <= 90 && us > last) downNeverRises = false;
+                last = us;
+            }
+        }
+        CHECK(inByte); CHECK(upNeverFalls); CHECK(downNeverRises); CHECK(asBefore);
+        // full stick on a full-height curve at 200 %: the top of the range and beyond (the trims' clamp ends it), never the bottom
+        CurvePointCount[ch] = 5; { const uint8_t pts[5] = {0, 45, 90, 135, 180}; for (int k = 0; k < CURVE_POINTS_MAX; ++k) CurvePoint[1][ch][k] = k < 5 ? pts[k] : 0; }
+        CurveStoreClear(1, ch); CurveStoreSync(1, ch);
+        for (int type = 0; type < 3; ++type) {
+            InterpolationTypes[1][ch] = (uint8_t) type; Exponential[1][ch] = 100;
+            GetCurveDots(ch, 200);
+            CHECK(Interpolate[type](3500, in, ch) >= RangeHi());
+            CHECK(Interpolate[type](500, in, ch) <= RangeLo());
+        }
+        // the straight line: a steep first segment, the stick below its calibrated end
+        CurvePointCount[ch] = 9; { const uint8_t pts[9] = {0, 180, 180, 180, 180, 180, 180, 180, 180}; for (int k = 0; k < CURVE_POINTS_MAX; ++k) CurvePoint[1][ch][k] = pts[k]; }
+        CurveStoreClear(1, ch); CurveStoreSync(1, ch);
+        InterpolationTypes[1][ch] = STRAIGHTLINES; GetCurveDots(ch, 100);
+        bool noWrap = true; for (int input = 0; input <= 4095; ++input) if (StraightLineInterpolation((uint16_t) input, in, ch) > 10000) noWrap = false;
+        CHECK(noWrap);
+        CHECK(StraightLineInterpolation(400, in, ch) == 0);                             // (100 below the calibrated end: it was 64966)
+        CHECK(StraightLineInterpolation(500, in, ch) == CurveMicros(0));                // (at the end and inside: as ever)
+        for (int j = 0; j < 8; ++j) DualRateChannels[j] = 0;
+    }
     // ---- 2. three, seven and nine points
     Bank = 1; MaxRangeNarrow = 0; for (int j = 0; j < 8; ++j) DualRateChannels[j] = 0;
     for (int n : {3, 7, 9}) for (int trial = 0; trial < 60; ++trial) {
@@ -440,7 +494,7 @@ prog = (PROGRAM.replace('@DEFS@', DEFS).replace('@MAP@', TEENSY_MAP).replace('@I
         .replace('@STRAIGHT@', lift('include/Utilities.h', 'void CurveSetStraight(uint8_t b, uint8_t ch, uint8_t lo, uint8_t hi)'))
         .replace('@MAPWITHEXPO@', lift('include/Utilities.h', 'FASTRUN float MapWithExponential('))
         .replace('@NEWINTERP@', lift('src/main.cpp', 'uint16_t CatmullSplineInterpolation(') + lift('src/main.cpp', 'uint16_t StraightLineInterpolation(') + lift('src/main.cpp', 'uint16_t ExponentialInterpolation('))
-        .replace('@NEWRATES@', lift('include/DualRates.h', 'float CalculateRate(') + lift('include/DualRates.h', 'float UseFullRate(') + lift('include/DualRates.h', 'void GetCurveDots('))
+        .replace('@NEWRATES@', lift('include/DualRates.h', 'float CalculateRate(') + lift('include/DualRates.h', 'float UseFullRate(') + (lift('include/DualRates.h', 'static inline uint16_t RatedDot(float v)') if 'RatedDot(' in src('include/DualRates.h') else '') + lift('include/DualRates.h', 'void GetCurveDots('))
         .replace('@RANGEDEG@', lift('src/main.cpp', 'FLASHMEM static uint8_t RangeDegrees('))
         .replace('@RESAMPLE@', lift('src/main.cpp', 'FLASHMEM static void CurveResample('))
         .replace('@DOTSHOWN@', lift('src/main.cpp', 'bool CurveDotShown(uint8_t k)'))

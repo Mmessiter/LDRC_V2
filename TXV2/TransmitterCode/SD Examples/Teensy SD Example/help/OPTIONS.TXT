@@ -1,7 +1,7 @@
 System: three pages of settings for the transmitter itself.|
 Press 'OK' on each page you change:|
 it saves that page and goes back to Transmitter setup.|
-'Next >' and '< Back' move between pages, but may lose changes.||
+'Next >' and '< Previous' move between pages, but may lose changes.||
 GENERAL (1 OF 3):|
 'Automatic model selection (AMS)': when a model connects, the model|
 memory that holds its ID is loaded.|

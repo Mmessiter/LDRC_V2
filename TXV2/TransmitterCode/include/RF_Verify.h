@@ -348,7 +348,13 @@ FLASHMEM bool RfVerifyEnd(uint8_t kind)
     PlaySound(WHAHWHAHMSG);
     if (!VfSetSeen)
     { // nothing came back in any window: the page still shows what was sent (B177: three asks; the write may well have landed)
-        MsgBox((char *)VfPage(k), (char *)"NOT CONFIRMED after 3 read-backs: the\r\nflight controller did not answer. Leave the\r\npage and come back to check what it holds.");
+        // (10 Nov 2026, the code review) no box while the model may fly (the safety turned off since the Save): a box that waits
+        // does not read the switches. Then the sound, a line in the log, and the page keeps its edits (Save is still there).
+        static const char notConfirmed[] = "NOT CONFIRMED after 3 read-backs: the\r\nflight controller did not answer. Leave the\r\npage and come back to check what it holds.";
+        if (RfMayFly())
+            RfSayQuietly(notConfirmed);
+        else
+            MsgBox((char *)VfPage(k), (char *)notConfirmed);
         VfEdited(k);
         return true;
     }
@@ -362,7 +368,10 @@ FLASHMEM bool RfVerifyEnd(uint8_t kind)
     }
     char m[170];
     snprintf(m, sizeof(m), "NOT SAVED: the flight controller holds\r\nother values for %u box%s, shown in red.\r\nThe values you sent are back: press Save again.", (unsigned)nd, nd == 1 ? "" : "es");
-    MsgBox((char *)VfPage(k), m);           // (modal; the page comes back after it with its boxes as they were: they are global on the screen)
+    if (RfMayFly())                         // (10 Nov 2026: as above - no box while the model may fly)
+        RfSayQuietly(m);
+    else
+        MsgBox((char *)VfPage(k), m);       // (modal; the page comes back after it with its boxes as they were: they are global on the screen)
     for (uint8_t i = 0; i < n; ++i)
         VfPut(k, i, VfSent[i]);
     VfDisplay(k);

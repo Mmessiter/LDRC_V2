@@ -12,7 +12,10 @@
 // *********************************************************************************************************************************/
 FLASHMEM char *GetModelImageFileName(char *fname)
 {
-    FileNumberInView = GetValue((char *)"MMems");
+    const int row = ChosenFileRow("MMems"); // (10 Nov 2026: was GetValue straight as the row - 65535 on a missed reply)
+    if (row < 0)
+        return fname; // (the picture's name stays as it was)
+    FileNumberInView = row;
     for (int i = 0; i < 12; ++i)
     {
         fname[i] = TheFilesList[FileNumberInView][i];

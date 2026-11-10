@@ -443,6 +443,9 @@ bool NextionScript::parseCommand(const std::string& s, int lineNo, Stmt& st) {
             st.args.push_back(idx);
             return true;
         case C_PAGE:
+            // (10 Nov 2026, found by a fuzz test) "page ," gave an empty name: it compiled with no text and no expression, and
+            // running it read args[0] of an empty list. A damaged page file must be refused here, never run.
+            if (a[0].empty()) return fail(lineNo, "page needs a name or a number");
             if (isDigit(a[0][0]) || a[0].find('.') != std::string::npos) {
                 if (!parseExpr(a[0], lineNo, idx)) return false;
                 st.args.push_back(idx); st.text.clear();

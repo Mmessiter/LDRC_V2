@@ -698,7 +698,7 @@ void FlightScreen::touch(bool pressed, int x, int y, uint32_t now) {
         return;
     }
     releaseOn(was);
-    if (quickEdit && setup && chooser == -1 && colourFor < 0) closeSetup();   // a long press's chooser, done (or its theme page): the flight screen again
+    if (quickEdit && setup && chooser == -1 && colourFor < 0 && zoneFor < 0) closeSetup();   // a long press's chooser, done (or its theme or red zone page): the flight screen again (10 Nov 2026: "Red zone" from a double tap's chooser closed the page instead of opening its own)
 }
 FlightScreen::FlightScreen() {
     for (int i = 0; i < THEME_COUNT; ++i) { palPanels[i] = THEME_PAIRS[i].panel; palInks[i] = THEME_PAIRS[i].ink; }

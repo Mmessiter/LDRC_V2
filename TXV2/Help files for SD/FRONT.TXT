@@ -70,9 +70,8 @@ When a battery is low, Battery LOW shows and you hear a warning:|
 'Stop flying volts (per cell)' (Model setup / 'Options').|
 About 3.6 volts is a good start.||
 LINK QUALITY (the bar beside 'Connected'):|
-Green is the share of data packets that arrived, red the share|
-lost, over the last 1 to 6 seconds. Set the seconds in|
-'Connection quality measured over' (page 3 of 'System').||
+Green is the share of the last 200 data packets that arrived,|
+red the share lost.||
 TRIMS:|
 The yellow lines down the sides and along the bottom are the|
 four trims. The red dot shows where each trim is.|

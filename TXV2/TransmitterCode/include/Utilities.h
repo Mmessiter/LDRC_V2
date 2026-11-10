@@ -1475,10 +1475,11 @@ void ShowMismatchMsg()
 /************************************************************************************************************/
 
 void WarnUserOfVersionsMismatch()
-{
+{ // (10 Nov 2026, the code review) this runs inside the ack parser (transceiver.h): no box here - the once-a-second housekeeping
+  // (main.cpp) shows it ONCE (it showed it here and then again every second, for ever, and a box that waits does not read the
+  // switches), and not at all while the model may fly: then the sound and a line in the log are all.
     VersionMismatch = true;
     PlaySound(WHAHWHAHMSG); // Play warning sound
-    ShowMismatchMsg();
 }
 
 /************************************************************************************************************/

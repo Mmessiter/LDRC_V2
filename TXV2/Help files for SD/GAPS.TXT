@@ -32,7 +32,7 @@ How many were left out is written above the bottom row, as|
 'Not counted: 3764 (safety on)'. So an empty page on the|
 ground, with the safety on, is no surprise: the link is being|
 measured, but those gaps are not flight gaps.|
-Gaps while the 'PID (Rotorflight)' page is open are|
+Gaps while the 'PIDs (Rotorflight)' page is open are|
 neither counted nor logged.||
 'Clear', on the Telemetry page, sets the counts back to zero.|
 They also start again a few seconds after each connection, and|

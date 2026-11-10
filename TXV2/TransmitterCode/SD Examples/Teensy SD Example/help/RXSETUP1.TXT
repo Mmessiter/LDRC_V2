@@ -18,7 +18,7 @@ if you reverse the throttle, change this value to match.||
 Use motor kill switch: on, the transmitter checks the motor|
 switch before it connects: at switch-on, or after a lost link.|
 While the motor is on, it says 'The motor switch is ON.'|
-and waits until you switch it off.|
+and waits until you switch it off and press 'OK'.|
 The motor switch has the job 'Bank 4 & Motor'|
 ('Transmitter setup', 'Switches'). Its three positions:|
 Away = bank 1, 2 or 3, motor on.|
@@ -37,7 +37,8 @@ kept on the card, and come back if it is turned on again.||
 For Rotorflight to follow banks 5 and 6, the bank line's|
 channel needs a height of its own in each bank (its curve, on|
 'Model setup'), and the bank selector six positions: see|
-'In-flight adjustments' and the phone app's 'Switches' page.||
+'Switches & knobs ...' on the Rotorflight menu (in the phone app:|
+'In-flight adjustments' and 'Switches').||
 The receiver and the phone app follow this switch: whenever|
 the transmitter and the receiver connect, the transmitter|
 says how many banks the model has; the app's pages show that|

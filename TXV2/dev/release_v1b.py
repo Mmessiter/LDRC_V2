@@ -33,7 +33,9 @@
      v/<release>/release.txt     each release's own description (for going back)
      files/<CRC32>-<size>.bin    every file, under the name of its content: uploaded once, shared by all releases
      flash-screen.json           (3 Nov 2026) the browser flasher's list (messiter.com/ldrc/flash-screen.html): for a screen
-                                 on USB, each build's bootloader, partition table, boot_app0 and firmware, at their offsets"""
+                                 on USB, each build's bootloader, partition table, boot_app0 and firmware, at their offsets
+     ldrc-v2-teensy41.hex        (10 Nov 2026) the latest release's Teensy firmware as an Intel HEX file, for a new Teensy's
+                                 FIRST flash with PJRC's Teensy Loader: no PlatformIO, nothing to compile (teensy_hex)"""
 import argparse, datetime, json, os, re, shutil, subprocess, sys, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -68,6 +70,52 @@ def teensy_package(build):
     if size != len(b) - 64 or c != crc(b[64:]): sys.exit(f'{pkg} is damaged')
     if b[48:64].split(b'\0')[0] != b'fw_teensy41': sys.exit(f'{pkg} is not for the Teensy 4.1')
     return b, b[16:48].split(b'\0')[0].decode()
+
+TEENSY_HEX = 'ldrc-v2-teensy41.hex'      # its name on the website: one name, always the latest release's firmware
+def teensy_hex(package):
+    """(10 Nov 2026) A NEW TEENSY'S FIRST FLASH WITHOUT A TOOLCHAIN (Malcolm: a builder must be able to do it easily
+       from the repository; until now the Teensy's first flash needed PlatformIO and a build from source).
+       The release's own Teensy image - the update package without its 64-byte header, which is the image as it sits in
+       the Teensy's flash from 0x60000000 - as an Intel HEX file for PJRC's free Teensy Loader. Written the way PlatformIO
+       writes its firmware.hex: 16 bytes a record, an address record for every 64 kB, CR LF. Rows that are all FF are left
+       out (erased flash is FF, and the loader skips blank blocks anyway).
+       It is read back here, record by record, every checksum checked, and must give the package's image again: what is
+       published is proven to be the release's firmware, byte for byte."""
+    image = package[64:]; lines = []; upper = None
+    def record(addr, kind, data):
+        body = bytes([len(data), addr >> 8 & 255, addr & 255, kind]) + data
+        return ':' + (body + bytes([-sum(body) & 255])).hex().upper()
+    for off in range(0, len(image), 16):
+        row = image[off:off + 16]
+        if not row.strip(b'\xFF'): continue
+        addr = 0x60000000 + off
+        if addr >> 16 != upper: upper = addr >> 16; lines.append(record(0, 4, upper.to_bytes(2, 'big')))
+        lines.append(record(addr & 0xFFFF, 0, row))
+    lines.append(record(0, 1, b''))
+    text = ('\r\n'.join(lines) + '\r\n').encode()
+    back = bytearray(b'\xFF' * len(image)); upper = 0; ended = False
+    for line in text.decode().split('\r\n')[:-1]:
+        b = bytes.fromhex(line[1:])
+        if line[0] != ':' or sum(b) & 255 or b[0] != len(b) - 5 or ended: sys.exit('the Teensy HEX file: a record that does not read back')
+        addr, kind, data = b[1] << 8 | b[2], b[3], b[4:-1]
+        if kind == 4: upper = int.from_bytes(data, 'big')
+        elif kind == 1: ended = True
+        elif kind == 0:
+            at = (upper << 16 | addr) - 0x60000000
+            if at < 0 or at + len(data) > len(image): sys.exit('the Teensy HEX file: a record outside the image')
+            back[at:at + len(data)] = data
+    if not ended or bytes(back) != image or not lines[0].startswith(':020000046000'): sys.exit('the Teensy HEX file does not read back as the package\'s image')
+    return text
+
+def write_teensy_hex(file):
+    """The HEX file of the Teensy firmware that latest.txt names, into the staging folder. Staging, going back to an
+       earlier release and publishing all come through here: the file always stands for the latest release."""
+    package = open(os.path.join(REL, file), 'rb').read()
+    if package[:8] != b'LDRCFW01' or int.from_bytes(package[8:12], 'little') != len(package) - 64 or int.from_bytes(package[12:16], 'little') != crc(package[64:]):
+        sys.exit(f'{file} is not a whole Teensy update package: no HEX file made of it')
+    b = teensy_hex(package)
+    open(os.path.join(REL, TEENSY_HEX), 'wb').write(b)
+    return b
 
 CLEAN = os.path.join(HERE, 'out', 'screen_build')       # the screen's project WITHOUT its secrets.h: the firmware that is published is built here
 
@@ -330,6 +378,7 @@ def write_release(d, history=True):
     open(os.path.join(REL, 'v', slug(d['name']), 'release.txt'), 'w').write(text)
     json.dump(d, open(os.path.join(REL, 'v', slug(d['name']), 'release.json'), 'w'), indent=1)
     open(os.path.join(REL, 'latest.txt'), 'w').write(text)
+    write_teensy_hex(d['teensy']['file'])                    # (10 Nov 2026) the same firmware as a HEX file, for a new Teensy's first flash
     if 'flash' in d:                                         # (an older release made latest again has none: the flasher keeps the newest it had)
         json.dump({'product': 'LDRC V2 screen', 'release': d['name'], 'version': d['flash']['version'], 'builds': d['flash']['builds']},
                   open(os.path.join(REL, 'flash-screen.json'), 'w'), indent=1)
@@ -488,6 +537,7 @@ def publish():
     text, d = staged(); files = wanted(d)
     flasher = flasher_files()
     files.update({n: b for n, b in flasher.items() if n != 'flash-screen.json'})   # (read back with the rest, before anything points at them)
+    hexfile = write_teensy_hex(d['teensy.file'])             # the Teensy's HEX file, made again from the package that is being published
     private = private_values()
     for n, b in files.items(): refuse_private(n, b, private)
     searched = refuse_private_everywhere(private)            # ... and every other file that the upload will take along
@@ -534,6 +584,7 @@ def publish():
     if bad: sys.exit('NOT PUBLISHED: an earlier release is not whole on messiter.com:\n  ' + '\n  '.join(bad[:20]))
     script = ('set ftp:ssl-allow yes\nset ssl:verify-certificate no\nset net:max-retries 3\n'
               + ('put -O public_html/txv1b/release txv1b/release/flash-screen.json\n' if flasher else '') +
+              'put -O public_html/txv1b/release txv1b/release/' + TEENSY_HEX + '\n'
               'put -O public_html/txv1b/release txv1b/release/manifest.json\nput -O public_html/txv1b/release txv1b/release/recent.txt\nput -O public_html/txv1b/release txv1b/release/latest.txt\nquit\n')
     r = subprocess.run(['lftp', '--env-password', '-u', env['LDRC_FTP_USER'], env['LDRC_FTP_HOST']], input=script, cwd=SITE, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if r.returncode: sys.exit(r.stdout[-1500:] + '\nFAILED: the upload of latest.txt')
@@ -542,11 +593,13 @@ def publish():
     if flasher:
         status, body = fetch(conn, 'flash-screen.json?n=' + str(os.getpid()))
         if status != 200 or body != flasher['flash-screen.json']: sys.exit(f'flash-screen.json on messiter.com is not the one staged ({status})')
+    status, body = fetch(conn, TEENSY_HEX + '?n=' + str(os.getpid()))
+    if status != 200 or body != hexfile: sys.exit(f'{TEENSY_HEX} on messiter.com is not the one staged ({status}): a new Teensy would be flashed with something else')
     status, body = fetch(conn, 'recent.txt?n=' + str(os.getpid()))
     if status != 200 or body.decode(errors='replace') != rtext: sys.exit(f'recent.txt on messiter.com is not the one staged ({status})')
     print(f'{rcount} releases can be gone back to ("Earlier versions"):', ', '.join(l.split('=', 1)[1].split('|')[0] for l in rtext.splitlines() if l.startswith('release=')))
     print(f'PUBLISHED: "{d["name"]}" is the latest release.\n  Teensy {d["teensy.version"]}, screen {d.get("screen.version", "as it is")}' + (' (standard and full)' if 'screen_full.file' in d else '') + f', {d["teensy_files.count"]} help files, {d["screen_files.count"]} screen files'
-          f'\n  {BASE}latest.txt')
+          f'\n  {BASE}latest.txt\n  {BASE}{TEENSY_HEX}  (a new Teensy\'s first flash, with Teensy Loader: {len(hexfile) // 1024} kB)')
     # The public repository (github.com/Mmessiter/LDRC_V2) gets the same release as a snapshot, committed and pushed
     # (Malcolm, 2026-10-05: "Go!" - Version 2 is public).
     r = subprocess.run([sys.executable, os.path.join(HERE, 'publish_public.py'), '--push'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

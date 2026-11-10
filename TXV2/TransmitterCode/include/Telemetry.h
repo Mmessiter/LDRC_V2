@@ -144,7 +144,9 @@ void CheckBatteryStates()
 
     static bool WasLow = false;
     bool txLow = CheckTXVolts();
-    bool rxLow = (!txLow && ModelMatched && Connected) ? CheckRXVolts() : false;
+    bool rxLow = (ModelMatched && Connected) ? CheckRXVolts() : false; // (10 Nov 2026, the code review: it was skipped while the TRANSMITTER
+                                                                       // was low - the flight pack's 'Stop flying!' then never sounded, and the
+                                                                       // front page's model battery froze. Asked second: when both are low, its sound wins)
     if (txLow || rxLow)
     {
         if (!WasLow || Now - WarnTimer > 5000)

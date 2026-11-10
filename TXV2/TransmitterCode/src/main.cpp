@@ -637,8 +637,11 @@ uint16_t StraightLineInterpolation(uint16_t InputValue, uint16_t InputChannel, u
     uint8_t k = 0;
     while (k < n - 2 && InputValue > CurveX(InputChannel, k + 1, n))
         ++k;
-    uint16_t v = map(InputValue, CurveX(InputChannel, k, n), CurveX(InputChannel, k + 1, n), CurveMicros(CurveDots[k]), CurveMicros(CurveDots[k + 1]));
-    return v;
+    long v = map(InputValue, CurveX(InputChannel, k, n), CurveX(InputChannel, k + 1, n), CurveMicros(CurveDots[k]), CurveMicros(CurveDots[k + 1]));
+    // (10 Nov 2026) Past its ends the line runs on, and a steep first or last segment with the stick a little outside its
+    // calibration can run it below zero: as a uint16_t that came out near 65535, which the trims' clamp then took for the TOP
+    // of the range - full deflection the wrong way. Held at 0 .. 65535; every value that did not wrap is what it was.
+    return (uint16_t)constrain(v, 0L, 65535L);
 }
 /*********************************************************************************************************************************/
 uint16_t ExponentialInterpolation(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel)
@@ -3552,7 +3555,12 @@ bool WriteBackup() // B21: true when the file was written (a name too long, or w
 void EndRenameModel()
 {
     char NewName[31] = "NewName";
-    GetText(NewName, ModelName, sizeof(ModelName)); // ClaudeFix-2-7-2026
+    char typed[sizeof(ModelName)];
+    NextionTextMissed = false;
+    GetText(NewName, typed, sizeof(typed)); // ClaudeFix-2-7-2026
+    if (!NextionTextMissed && typed[0]) // (10 Nov 2026, the code review) a missed reply ("") saved the model with no name
+        strcpy(ModelName, typed);
+    NextionTextMissed = false;
     SaveOneModel(ModelNumber);
     GotoModelsView();
 }
@@ -4546,7 +4554,7 @@ FASTRUN void ButtonWasPressed()
         {
             i = strlen(SendModel);
             j = 0;
-            while (uint8_t(TextIn[i]) > 0)
+            while (uint8_t(TextIn[i]) > 0 && j < (int)sizeof(SingleModelFile) - 1) // (10 Nov 2026: bounded)
             {
                 SingleModelFile[j] = TextIn[i];
                 ++j;
@@ -4892,7 +4900,7 @@ FASTRUN void ButtonWasPressed()
         {
             j = 0;
             i = p + 5;
-            while (TextIn[i] > 0)
+            while (TextIn[i] > 0 && j < (int)sizeof(SingleModelFile) - 1) // (10 Nov 2026: bounded)
             {
                 SingleModelFile[j] = toUpperCase(TextIn[i]);
                 ++j;
@@ -5811,8 +5819,16 @@ void FASTRUN ManageTransmitter()
             LogRestartCause();
         }
         if (VersionMismatch)
-        {
-            ShowMismatchMsg(); // Show version mismatch message if needed
+        { // (10 Nov 2026) once per mismatch found (once a connection), and never a box while the model may fly
+            VersionMismatch = false;
+            if (RfMayFly())
+            {
+                char l[80];
+                snprintf(l, sizeof(l), PSTR("Versions mismatch: RX %s, TX %s"), ReceiverVersionNumber, TransmitterVersionNumber);
+                LogText(l, (uint16_t)strlen(l), true);
+            }
+            else
+                ShowMismatchMsg(); // Show version mismatch message if needed
         }
         if (((millis() - LedGreenMoment) <= 6000) && ((millis() - LedGreenMoment) >= 4000))
         {

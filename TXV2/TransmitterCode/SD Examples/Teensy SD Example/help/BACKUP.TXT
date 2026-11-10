@@ -78,6 +78,6 @@ GOOD TO KNOW:|
 The backup and the diff files are found by the model's name.|
 Rename the model and its old ones are no longer found.|
 The command line itself is 'Command line ...' on the|
-Rotorflight page.|
+Rotorflight page (16 MB screens: on 'Guide & checks ...').|
 Let each job finish before you press anything else.|
 'OK' goes back to the Rotorflight page.|

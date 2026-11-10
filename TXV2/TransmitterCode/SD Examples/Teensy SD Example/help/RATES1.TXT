@@ -28,7 +28,7 @@ Roll, Pitch and Yaw: degrees per second, which the flight|
 controller will seek (physics permitting).|
 Collective: degrees of blade pitch, if the mechanism allows.|
 A value between steps goes to the nearest step|
-(163 becomes 160).||
+(in steps of 10, 163 becomes 160; in steps of 5, 165).||
 THE COLUMNS:|
 They follow the rate's type, on the 'Rates type:' line.|
 '6 - ROTORFLIGHT': Rate, Shape and Expo.|

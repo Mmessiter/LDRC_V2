@@ -304,9 +304,8 @@ FASTRUN void LogMinGap()
 FASTRUN void LogConnection()
 {
     char TheText[] = "Connected to ";
-    char buf[40] = " ";
-    strcpy(buf, TheText);
-    strcat(buf, ModelName);
+    char buf[64] = " "; // (10 Nov 2026: was 40 - "Connected to " and a 30-character name ran past it, at every connection)
+    snprintf(buf, sizeof(buf), "%s%s", TheText, ModelName);
     LogText(buf, strlen(buf), true);
     LogMinGap();
     LogRXVoltsPerCell();
@@ -646,10 +645,9 @@ void LogRx_type()
 FASTRUN void LogDisConnection()
 {
     FlushDeferredLog(); // B47: any motor lines not yet written
-    char buf[40] = " ";
+    char buf[64] = " "; // (10 Nov 2026: was 40 - "Disconnected from " and a 22-character name ran past it, at every loss)
     char TheText[] = "Disconnected from ";
-    strcpy(buf, TheText);
-    strcat(buf, ModelName);
+    snprintf(buf, sizeof(buf), "%s%s", TheText, ModelName);
     LogText(buf, strlen(buf), true);
 
     LogConnectedDuration();

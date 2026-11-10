@@ -58,6 +58,9 @@ static void SendText(char *n, char *t) { texts[n] = t; }
 static void SendForegroundColour(const char *l, uint16_t c) { if (c == Red) reds.push_back(l); }
 static void PlaySound(uint16_t s) { sounds.push_back(s == BEEPCOMPLETE ? "done" : "whah"); }
 static void MsgBox(char *page, char *m) { ++boxes; lastBox = m; lastBoxPage = page; }
+static bool mayFly = false; static int quiet = 0;   // (10 Nov 2026) PipeHttp.h's: no box while the model may fly, a line in the log instead
+static bool RfMayFly() { return mayFly; }
+static void RfSayQuietly(const char *) { ++quiet; }
 static void RfSavedThenLeave(int) { ++leaves; }
 static void RfCutNote(const char *) { if (!RfValueWasCut) return; RfValueWasCut = false; ++cutNotes; }
 static void RatesMsg(const char *m, uint16_t) { msgs.push_back(std::string("rates:") + m); }
@@ -141,6 +144,8 @@ int main() {
     reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); Rate_Values[0] = 4; Rate_Values[12] = 99; CHECK(RfVerifySet() == 2); CHECK(EndDiffer(VK_RATES) && lastBox.find("other values for 2 boxes") != std::string::npos && reds.size() == 2 && reds[0] == "t10" && reds[1] == "tn11" && Rate_Values[0] == 10 && Rate_Values[12] == 22);
     // 4. nothing came in the window: "NOT CONFIRMED", Save shown, the page left as it is
     reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(EndNothing(VK_RATES) && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0 && displays.empty() && reds.empty() && has(edited, "rates") && has(hides, "rates") && sounds.size() == 1 && sounds[0] == "whah" && !RfVerifyPending());
+    // (10 Nov 2026, the code review) the safety turned off since the Save: no box (it would freeze the switches), a line in the log, the page as it is
+    reset(); mayFly = true; quiet = 0; nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(EndNothing(VK_RATES) && boxes == 0 && quiet == 1 && has(edited, "rates")); mayFly = false;
     // 5. a bank change read afresh (a new start time) or the page left: nothing compared, nothing said, the page's own hide runs as ever
     reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty() && !RfVerifyEnd(VK_RATES)); Rate_Values[1] = 11;
     reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty()); CurrentView = RATESVIEW_RF;

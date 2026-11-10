@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.196"
+#define SCREEN_VERSION "1.11.197"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -1892,9 +1892,11 @@ static void drawComp(Comp &c) {
         if (c.pic >= 0 && sdOk) {
             char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", c.pic);
             File f = sdOpenChecked(path);
-            if (f) { uint16_t wh[2]; f.read((uint8_t *) wh, 4); std::vector<uint16_t> row(wh[0]);
-                     for (int yy = 0; yy < wh[1] && c.y + yy < H; ++yy) { f.read((uint8_t *) row.data(), wh[0] * 2); gfx->draw16bitRGBBitmap(c.x, c.y + yy, row.data(), min((int) wh[0], W - c.x), 1); }
-                     f.close(); }
+            uint16_t wh[2] = { 0, 0 };                     // (10 Nov 2026, the code review: the header was read unchecked - a short file sized the row from whatever lay there)
+            if (f && f.read((uint8_t *) wh, 4) == 4 && wh[0] && wh[1] && wh[0] <= 1024 && wh[1] <= 1024 && c.x < W) {
+                     std::vector<uint16_t> row(wh[0]);
+                     for (int yy = 0; yy < wh[1] && c.y + yy < H; ++yy) { f.read((uint8_t *) row.data(), wh[0] * 2); gfx->draw16bitRGBBitmap(c.x, c.y + yy, row.data(), min((int) wh[0], W - c.x), 1); } }
+            if (f) f.close();
         }
         return;
     }
@@ -2412,6 +2414,7 @@ static bool loadPage(const std::string &name) {
         File f = assetOpen(path); if (!f) return false;
         const size_t n = f.size(); raw = (char *) psMallocRoom(n + 1); if (!raw) { f.close(); return false; }   // (1.11.132: a page must never fail for want of room - a resident picture goes first)
         got = sdReadPaced(f, (uint8_t *) raw, n); raw[got] = 0; f.close();   // read into memory (a File stream parses a byte at a time), in paced slabs (1.11.120), then parsed
+        if (got != n) { free(raw); return false; }       // (10 Nov 2026, the code review) a short read is never kept: it was cached, failed to parse, and every later ask for the page failed from the cache until a restart
         for (auto &e : rawCache) if (!e.buf) { slot = &e; break; }
         if (!slot) { slot = &rawCache[0]; for (auto &e : rawCache) if (e.used < slot->used) slot = &e; free(slot->buf); rawBytes -= slot->len; }
         *slot = { it->second, raw, got, millis() }; rawBytes += got; lmBufNote(lmRawNames[slot - rawCache], raw, got + 1);
@@ -2424,7 +2427,10 @@ static bool loadPage(const std::string &name) {
     pageSdUs = micros() - tp; tp = micros();
     JsonDocument doc(&psJsonAlloc);                        // (1.11.137) the tree in the PSRAM, not the chip's RAM (PsJsonAlloc)
     DeserializationError err = deserializeJson(doc, (const char *) raw, got);
-    if (err) return false;
+    if (err) {                                             // (10 Nov 2026) nor a page that does not parse: the next ask reads the card again
+        if (slot && slot->buf == raw) { free(slot->buf); rawBytes -= slot->len; *slot = {}; }
+        return false;
+    }
     pageParseUs = micros() - tp;
     Page np; np.name = name; np.id = it->second;
     JsonObject bg = doc["bg"];
@@ -2630,9 +2636,12 @@ static bool drawVerb(const std::string &cmd) {
     else if (verb == "pic" && n >= 3 && sdOk) {
         char path[32]; snprintf(path, sizeof(path), "/hmi/pic/%d.565", I(2));
         File f = sdOpenChecked(path);
-        if (f) { uint16_t wh[2]; f.read((uint8_t *) wh, 4); std::vector<uint16_t> row(wh[0]);
+        uint16_t wh[2] = { 0, 0 };                         // (10 Nov 2026: checked, as the picture component's)
+        if (f && f.read((uint8_t *) wh, 4) == 4 && wh[0] && wh[1] && wh[0] <= 1024 && wh[1] <= 1024 && I(0) < W) {
+                 std::vector<uint16_t> row(wh[0]);
                  for (int yy = 0; yy < wh[1] && I(1) + yy < H; ++yy) { f.read((uint8_t *) row.data(), wh[0] * 2); gfx->draw16bitRGBBitmap(I(0), I(1) + yy, row.data(), min((int) wh[0], W - I(0)), 1); }
-                 f.close(); drewArea(I(0), I(1), wh[0], wh[1]); }
+                 drewArea(I(0), I(1), wh[0], wh[1]); }
+        if (f) f.close();
     }
     else if (verb == "xstr" && n >= 11) {                  // xstr x,y,w,h,font,pco,bco,xcen,ycen,sta,"text"
         std::string t = a[10]; if (t.size() >= 2 && t.front() == '"' && t.back() == '"') t = t.substr(1, t.size() - 2);
@@ -2965,6 +2974,7 @@ static bool linkStart() {                                  // the jobs are queue
 
 static void pumpSerial() {
     static std::string buf; static int ffs = 0;
+    static bool tooLong = false;                           // (10 Nov 2026, the code review) a command past 8 kB: its tail is dropped up to its FF FF FF (it ran as a command of its own)
     static ldrc::Router router; static ldrc::Frame frame;
     const int waiting = Serial.available();
     if (waiting) { lastRxMs = millis(); if (waiting > perfRxMax) perfRxMax = waiting; }
@@ -2973,12 +2983,13 @@ static void pumpSerial() {
     while (Serial.available()) {
         uint8_t b = Serial.read();
         const ldrc::Router::What what = router.push(b, millis(), frame);
-        if (what == ldrc::Router::WHOLE_FRAME) { buf.clear(); ffs = 0; teensyLink.frameArrived(frame); continue; }
+        if (what == ldrc::Router::WHOLE_FRAME) { buf.clear(); ffs = 0; tooLong = false; teensyLink.frameArrived(frame); continue; }
         if (what != ldrc::Router::TO_DISPLAY) continue;
         if (b == 0xFF) {
             if (++ffs == 3) {
                 int bits = 0;
-                if (ldrc::txStatusCommand(buf.data(), (unsigned) buf.size(), bits)) { const bool modelWas = txStatus >= 0 && (txStatus & TX_MODEL); const bool bindWas = tx.binding, scanWas = tx.scanning; const char *why = tx.said(bits); if (scanWas && !tx.scanning) radiosNotBefore = millis() + 3000; if (why) applyRadios(why); if (modelWas != ((bits & TX_MODEL) != 0) || bindWas != tx.binding) needRedraw(); teensyCommands++; teensyLink.sawDisplayTraffic(); }   // (from the wire only: nothing the Mac sends can say what the transmitter is doing)
+                if (tooLong) tooLong = false;              // (the end of a command too long to keep: nothing of it is obeyed)
+                else if (ldrc::txStatusCommand(buf.data(), (unsigned) buf.size(), bits)) { const bool modelWas = txStatus >= 0 && (txStatus & TX_MODEL); const bool bindWas = tx.binding, scanWas = tx.scanning; const char *why = tx.said(bits); if (scanWas && !tx.scanning) radiosNotBefore = millis() + 3000; if (why) applyRadios(why); if (modelWas != ((bits & TX_MODEL) != 0) || bindWas != tx.binding) needRedraw(); teensyCommands++; teensyLink.sawDisplayTraffic(); }   // (from the wire only: nothing the Mac sends can say what the transmitter is doing)
                 else if (ldrc::rxStatusCommand(buf.data(), (unsigned) buf.size(), rxNews)) { rxNews.atMs = millis(); rxNewsAny = true; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 else if (!buf.empty()) { const uint32_t t0 = micros(); handle(buf); perfHandleUs += micros() - t0; perfCmds++; teensyCommands++; teensyLink.sawDisplayTraffic(); }
                 buf.clear(); ffs = 0;
@@ -2995,7 +3006,7 @@ static void pumpSerial() {
         }
         while (ffs) { buf.push_back((char) 0xFF); ffs--; }
         buf.push_back((char) b);
-        if (buf.size() > 8192) buf.clear();                   // the models list and a help window run to several kB
+        if (buf.size() > 8192) { buf.clear(); tooLong = true; }   // the models list and a help window run to several kB
     }
 }
 
@@ -3812,7 +3823,7 @@ static bool wavOpenPath(const char *path, uint32_t &rate, bool adpcmOk) {   // (
         uint8_t ch[8]; if (audioFile.read(ch, 8) != 8) break;
         const uint32_t sz = ch[4] | (ch[5] << 8) | (ch[6] << 16) | ((uint32_t) ch[7] << 24);
         if (!memcmp(ch, "fmt ", 4)) {
-            uint8_t f[16]; audioFile.read(f, 16); rate = f[4] | (f[5] << 8) | (f[6] << 16) | ((uint32_t) f[7] << 24);
+            uint8_t f[16]; if (audioFile.read(f, 16) != 16) break; rate = f[4] | (f[5] << 8) | (f[6] << 16) | ((uint32_t) f[7] << 24);
             tag = f[0] | (f[1] << 8); chans = f[2] | (f[3] << 8); align = f[12] | (f[13] << 8); bits = f[14] | (f[15] << 8);
             if (sz > 16) audioFile.seek(audioFile.position() + sz - 16);
         }
@@ -3823,6 +3834,7 @@ static bool wavOpenPath(const char *path, uint32_t &rate, bool adpcmOk) {   // (
         if (adpcmOk && chans == 1 && bits == 4 && align > 4 && align <= 1024) { audioBlock = align; audioBlockSamples = ldrcaudio::imaSamples(align); }
         else haveData = false;
     }
+    if (haveData && (rate < 4000 || rate > 48000)) haveData = false;   // (10 Nov 2026, the code review) a damaged header's rate 0 divided by zero in i2s_set_clk: a panic, again at every ask for that sound
     if (!haveData) audioFile.close();
     return haveData;
 }

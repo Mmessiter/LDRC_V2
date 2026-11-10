@@ -152,14 +152,14 @@ FLASHMEM void StoreModelID()
     strcat(prompt, ModelName);
     strcat(prompt, p1);
 
+    if (!ModelsMacUnion.Val64) // (10 Nov 2026, the code review: asked first - with nothing connected and no ID stored both are 0,
+    {                          // and the box said "ID was already stored." where IDS.TXT promises "No ID to store.")
+        MsgBox(pModelsIDView, NotConnected);
+        return;
+    }
     if (ModelsMacUnion.Val64 == ModelsMacUnionSaved.Val64)
     {
         MsgBox(pModelsIDView, DoneAlready);
-        return;
-    }
-    if (!ModelsMacUnion.Val64)
-    {
-        MsgBox(pModelsIDView, NotConnected);
         return;
     }
 

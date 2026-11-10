@@ -14,7 +14,7 @@ While switch on: records while the Black box switch is on.|
 Armed + switch on: records when armed with that switch on.|
 Never: turns it off.|
 The two switch choices need a 'Black box recording' switch on|
-the 'Switches ...' page. 'Save' asks if there is none.||
+the 'Switches & knobs ...' page. 'Save' asks if there is none.||
 WHERE:|
 FC memory: the flight controller's own memory chip, the usual|
 choice. Its size shows under 'Memory' (16 MB on many boards).|

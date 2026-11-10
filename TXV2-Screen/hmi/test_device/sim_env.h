@@ -66,7 +66,7 @@ enum wifi_storage_t { WIFI_STORAGE_FLASH = 0, WIFI_STORAGE_RAM = 1 };
 #define WIFI_SCAN_FAILED (-2)
 enum arduino_event_id_t { ARDUINO_EVENT_WIFI_SCAN_DONE = 1, ARDUINO_EVENT_WIFI_STA_START, ARDUINO_EVENT_WIFI_STA_STOP, ARDUINO_EVENT_WIFI_STA_CONNECTED, ARDUINO_EVENT_WIFI_STA_DISCONNECTED, ARDUINO_EVENT_WIFI_STA_GOT_IP, ARDUINO_EVENT_WIFI_STA_LOST_IP };
 typedef arduino_event_id_t WiFiEvent_t;
-struct WiFiEventInfo_t { struct { int reason; int8_t rssi = 0; uint8_t bssid[6] = { 0, 0, 0, 0, 0, 0 }; } wifi_sta_disconnected; };   // (1.11.147) the driver's rssi and bssid at a drop, for the radio's diary
+struct WiFiEventInfo_t { struct { int reason; int8_t rssi = 0; uint8_t bssid[6] = { 0, 0, 0, 0, 0, 0 }; } wifi_sta_disconnected; struct { uint8_t bssid[6] = { 0, 0, 0, 0, 0, 0 }; } wifi_sta_connected; };   // (1.11.147) the driver's rssi and bssid at a drop, for the radio's diary
 struct IPAddress {                                       // (1.11.147) as the library's: the first octet in the lowest byte
     uint32_t v = 0; IPAddress() {} explicit IPAddress(uint32_t a) : v(a) {}
     String toString() const { char b[20]; snprintf(b, sizeof b, "%u.%u.%u.%u", (unsigned) (v & 255), (unsigned) ((v >> 8) & 255), (unsigned) ((v >> 16) & 255), (unsigned) (v >> 24)); return String(b); }
@@ -161,7 +161,7 @@ struct SimWiFi {
                 if (reason == 8) { } else if (firstConnect) { firstConnect = false; again = true; } else if (autoReconnect_ && reconnectable(reason)) again = true; else if (reason == 203) status_ = WL_CONNECT_FAILED;
                 if (again) { disconnect(); begin(); }
             }
-            if (user && (e.id == ARDUINO_EVENT_WIFI_STA_DISCONNECTED || e.id == ARDUINO_EVENT_WIFI_STA_GOT_IP)) { WiFiEventInfo_t info; info.wifi_sta_disconnected.reason = e.reason; info.wifi_sta_disconnected.rssi = (int8_t) conRssi; memcpy(info.wifi_sta_disconnected.bssid, bssid_, 6); user((WiFiEvent_t) e.id, info); }   // (1.11.147) the joins too: the radio's diary marks them
+            if (user && (e.id == ARDUINO_EVENT_WIFI_STA_DISCONNECTED || e.id == ARDUINO_EVENT_WIFI_STA_GOT_IP || e.id == ARDUINO_EVENT_WIFI_STA_CONNECTED)) { WiFiEventInfo_t info; info.wifi_sta_disconnected.reason = e.reason; info.wifi_sta_disconnected.rssi = (int8_t) conRssi; memcpy(info.wifi_sta_disconnected.bssid, bssid_, 6); memcpy(info.wifi_sta_connected.bssid, bssid_, 6); user((WiFiEvent_t) e.id, info); }   // (1.11.147) the joins too: the radio's diary marks them
         }
         delivering = false;
     }

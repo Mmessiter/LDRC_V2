@@ -14,7 +14,8 @@ So store the model's ID BEFORE you send the model.|
 3. Give a switch the job 'Buddy' on the 'Switches' page.|
 A spring-return switch is best: let go to take control back.|
 4. Here, turn 'Instructor (Master)' on.|
-Under 'Buddy switch', choose who flies at Down, Middle and Up:|
+Under 'Buddy switch', choose who flies at Down (switch away),|
+Middle and Up (switch near):|
 'Master', 'Nudge' or 'Buddy'.|
 5. 'Buddy channels ...': turn on the channels the Pupil may fly.|
 'All' and 'None' set every channel, and 'Top switches too'.|

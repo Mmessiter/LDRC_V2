@@ -19,5 +19,6 @@ Puts back what the last Rotorflight save replaced - the line|
 under the button says which save. Switches & knobs, Copy a|
 bank, the ports and a level calibration cannot be undone.||
 COMMAND LINE:|
-The same as it was on the 'Rotorflight' page.||
+Rotorflight's own command line (CLI): see 'COMMAND LINE' in|
+the help of the 'Rotorflight' page.||
 All of them need the model connected and the safety on.|

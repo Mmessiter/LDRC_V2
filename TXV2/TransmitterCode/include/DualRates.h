@@ -324,6 +324,16 @@ float UseFullRate(short int Curve, uint8_t OutputChannel)
 
 /*********************************************************************************************************************************/
 
+// (10 Nov 2026) A point with its rate, as CurveDots holds it. A rate above 100 % carries a point past the ends of the curve's
+// 0 .. 180: below 0 (a negative float into an unsigned number is undefined; the Teensy gave 0) and, with a rate above 183 %
+// and a point near the top, above 255 - and CurveMicros takes a uint8_t, so 256 .. 270 came out as 0 .. 14: at full stick the
+// output fell from the top of the range to the BOTTOM. Held to 0 .. 255, which is exactly what every point and rate that
+// did not wrap gave before (181 .. 255 still ends at the edge of the range: the trims' clamp, main.cpp DoTrimsAndSubtrims).
+static inline uint16_t RatedDot(float v)
+{
+    return v <= 0 ? 0 : (v >= 255 ? 255 : (uint16_t)v);
+}
+
 void GetCurveDots(uint16_t OutputChannel, uint16_t TheRate) // This for the Dual Rates function
 {                                                           // This for the Dual Rates function
                                                             // Effectively, it just copies the Y dot's magnitude on the curve, but might reduce the extent if rate is not 100 and channel specified
@@ -338,7 +348,7 @@ void GetCurveDots(uint16_t OutputChannel, uint16_t TheRate) // This for the Dual
                 if (OutputChannel + 1 == DualRateChannels[j])
                 {
                     for (int i = 0; i < n; ++i)
-                        CurveDots[i] = CalculateRate(i, OutputChannel, TheRate);
+                        CurveDots[i] = RatedDot(CalculateRate(i, OutputChannel, TheRate));
                     return;
                 }
             }

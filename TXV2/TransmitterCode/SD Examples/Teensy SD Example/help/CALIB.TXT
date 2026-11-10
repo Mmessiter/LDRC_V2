@@ -19,8 +19,7 @@ Then press 'Next'.|
 and the front switches or knobs.|
 Push all four top edge switches AWAY from you,|
 not in the middle.|
-The box says back or forward:|
-always use away, so each switch works the right way round.|
+That way each switch works the right way round.|
 Then press 'Finish'.|
 This records the centres, and which way each top switch works.|
 The box then says 'Calibration saved.'|

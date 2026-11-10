@@ -108,6 +108,11 @@ void ShowRemoteID()
 /** @brief SEND A MODEL FILE */
 FLASHMEM void SendModelFile()
 {
+    if (LedWasGreen) // (10 Nov 2026, the code review) the exchange takes the radio to its own channel for up to 30 s: never under a model
+    {
+        MsgBox(pModelsView, (char *)PSTR("The model is connected.\r\nSwitch it off to send\r\nor receive a model."));
+        return;
+    }
     uint64_t TXPipe;
     uint8_t Fack[32];
     unsigned long Fsize = 0;
@@ -371,6 +376,11 @@ static void ReceiveAbandoned(const char *why, bool sadSound)
 /** @brief RECEIVE A MODEL FILE */
 FLASHMEM void ReceiveModelFile()
 {
+    if (LedWasGreen) // (10 Nov 2026, the code review) the exchange takes the radio to its own channel for up to 30 s: never under a model
+    {
+        MsgBox(pModelsView, (char *)PSTR("The model is connected.\r\nSwitch it off to send\r\nor receive a model."));
+        return;
+    }
     uint64_t RXPipe;
     uint32_t RXTimer = 0;
     char ModelsView_filename[] = "filename";

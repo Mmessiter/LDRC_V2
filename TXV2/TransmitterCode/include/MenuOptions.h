@@ -696,11 +696,18 @@ void DeleteModel()
     strcpy(Prompt, del);
     strcat(Prompt, ModelName);
     strcat(Prompt, ques);
+    const uint32_t Named = ModelNumber; // (10 Nov 2026) the model the question names: ModelName is the one loaded, ModelNumber's
+    (void)MMems;
     if (GetConfirmation(pModelsView, Prompt))
     {
-        ModelNumber = GetValue(MMems) + 1;
-        if (ModelNumber < 1 || ModelNumber > 90)
-            ModelNumber = 1; // ClaudeFix-2-7-2026 comms error 65535 must not become a file slot
+        // (10 Nov 2026, the code review) THAT model, not the screen asked again: a missed reply (65535) became model 1 - the
+        // wrong model erased -, and a wheel turned meanwhile chose a model the question never named
+        if (Named < 1 || Named >= MAXMODELNUMBER)
+        {
+            ClearText();
+            return;
+        }
+        ModelNumber = Named;
         SetDefaultValues();
         SaveOneModel(ModelNumber);
         LoadModelSelector();
@@ -1209,17 +1216,34 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
     char ProgressStart[] = "vis Progress,1";
     char Progress[] = "Progress";
 
+    // (10 Nov 2026, the code review) EVERY box here keeps the value it had when the screen's reply is missed (GetValue gives
+    // 65535, GetText ""), as the motor-off value and Six banks already did. Before: a missed trim step became 65535 - any trim
+    // off centre then drove its channel to the end of its travel until the model was next loaded -, a missed motor channel
+    // became channel 3 (the motor's real channel then followed its stick), and a missed 'Stop flying volts' became 0 (no
+    // low-battery warning).
     SendCommand(ProgressStart);
-    CopyTrimsToAll = GetValue(c1);
+    {
+        const uint32_t v = GetValue(c1);
+        if (v <= 1)
+            CopyTrimsToAll = (v == 1);
+    }
     SendValue(Progress, 5);
-    TrimMultiplier = GetValue(n3);
+    {
+        const uint32_t v = GetValue(n3);
+        if (v != 65535)
+            TrimMultiplier = CheckRange((int)v, 0, 25); // (as a model's load holds it, SDcard.h)
+    }
+    NextionTextMissed = false;
     GetText(t10, fbuf, sizeof(fbuf));  // ClaudeFix-2-7-2026
-    StopFlyingVoltsPerCell = atof(fbuf);
-    
+    if (!NextionTextMissed)
+        StopFlyingVoltsPerCell = atof(fbuf);
+
+    NextionTextMissed = false;
     GetText((char *)"t12", fbuf, sizeof(fbuf)); // MCMFix-2-7-2026
-    Max_Safe_Amps = atoi(fbuf);
-    
-    
+    if (!NextionTextMissed)
+        Max_Safe_Amps = atoi(fbuf);
+    NextionTextMissed = false;
+
     SFV = StopFlyingVoltsPerCell * 100; // this makes it a 16 bit value I can save easily
     SendValue(Progress, 15);
     {
@@ -1228,22 +1252,40 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
             MotorChannelZero = MotorOffFromMicros(mv); // B129: microseconds, 500 to 2500, to the byte's 0 to 180
     }
     SendValue(Progress, 30);
-    RxVoltageCorrection = GetValue(RxVCorrextion);
+    {
+        const uint32_t v = GetValue(RxVCorrextion);
+        if (v != 65535)
+            RxVoltageCorrection = (short int)v;
+    }
     SendValue(Progress, 40);
-    UseMotorKill = GetValue(UseKill);
+    {
+        const uint32_t v = GetValue(UseKill);
+        if (v <= 1)
+            UseMotorKill = (v == 1);
+    }
     SendValue(Progress, 50);
-    MotorChannel = GetValue(Mchannel) - 1;
-    if (MotorChannel > 15)
-        MotorChannel = 2; // ClaudeFix-2-7-2026 comms error returns 65535 -> 254 -> OOB writes every loop pass
+    {
+        const uint32_t v = GetValue(Mchannel); // ClaudeFix-2-7-2026 a comms error returned 65535 -> 254 -> OOB writes every loop pass
+        if (v >= 1 && v <= 16)
+            MotorChannel = (uint8_t)(v - 1);
+    }
     SendValue(Progress, 60);
-    TimerDownwards = GetValue(c2);
+    {
+        const uint32_t v = GetValue(c2);
+        if (v <= 1)
+            TimerDownwards = (v == 1);
+    }
     {
         const int six = GetValue((char *)"c3"); // B130: six banks (a comms error, 65535, keeps it as it was)
         if (six == 0 || six == 1)
             SixBanksSet(six == 1);
     }
     SendValue(Progress, 70);
-    TimerStartTime = GetValue(n4) * 60;
+    {
+        const uint32_t v = GetValue(n4);
+        if (v != 65535)
+            TimerStartTime = (uint16_t)(v * 60);
+    }
 
 }
 

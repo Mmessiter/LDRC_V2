@@ -795,6 +795,19 @@ uint32_t GetValue(char *nbox)
     return ValueIn;
 }
 
+/*********************************************************************************************************************************/
+// (10 Nov 2026, the code review) The row a file list box on the screen says is chosen, or -1. Three places took GetValue
+// straight as the row of TheFilesList (150 rows): a missed reply is 65535 and a list can be shorter than the box believes, so
+// they read far past the list (a wild read on the Teensy, a strcpy of whatever lay there into a 30-byte name - and Delete then
+// removed the file of THAT name). The lists are BuildDirectory's: ExportedFileCounter rows.
+FLASHMEM int ChosenFileRow(const char *box)
+{
+    const uint32_t row = GetValue((char *)box);
+    if (row >= ExportedFileCounter || row >= (uint32_t)(sizeof(TheFilesList) / sizeof(TheFilesList[0])))
+        return -1;
+    return (int)row;
+}
+
 // ***************************************************************************************************************
 // This function gets Nextion textbox Text into a char array pointed to by * TheText. There better be room!
 // It returns the length of array

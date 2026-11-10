@@ -5,8 +5,8 @@ Drag the text up or down to scroll.|
 'Top' and 'Bottom' jump to the start and the end.|
 'Files' lists all the log files, to view or delete them. With a|
 model connected it says 'Switch it off to see the files.'|
-No log yet today? Then it says 'File not found'.|
-Press 'Files' to read another day.|
+No log yet today? Then it says so: a log begins when a model|
+connects. Press 'Files' to read another day.|
 'OK' goes to the 'Telemetry' page.||
 WHAT IT RECORDS:|
 Connections, disconnections and gaps in the radio link.|

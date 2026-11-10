@@ -33,7 +33,9 @@ bool BleBridge::feed(const uint8_t *data, size_t len, uint32_t wantId) {
         if (p3 == std::string::npos) { head_.clear(); return false; }
         reply_ = BleReply();
         reply_.code = atoi(h.substr(1, p1 - 1).c_str()); reply_.type = h.substr(p1 + 1, p2 - p1 - 1);
-        bodyLen_ = (size_t) strtoul(h.substr(p2 + 1, p3 - p2 - 1).c_str(), nullptr, 10); reply_.location = h.substr(p3 + 1);
+        const unsigned long named = strtoul(h.substr(p2 + 1, p3 - p2 - 1).c_str(), nullptr, 10);
+        if (named > BLE_REPLY_MAX) { head_.clear(); return false; }   // (not a reply the receiver sends: the request times out instead)
+        bodyLen_ = (size_t) named; reply_.location = h.substr(p3 + 1);
         mine_ = reply_.location == "#" + std::to_string(wantId) || reply_.location.empty() || reply_.location[0] != '#';   // (a redirect names a page, not an id: it is ours)
         header_ = false; head_.clear(); body_.clear(); body_.reserve(bodyLen_);
         if (!rest.empty()) body_.append(rest.substr(0, bodyLen_));

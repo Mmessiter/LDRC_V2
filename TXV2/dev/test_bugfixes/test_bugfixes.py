@@ -55,7 +55,8 @@ static void SendText(char *n, char *t) { texts[n] = t; }
 static void SendText(const char *n, const char *t) { texts[n] = t; }
 static void SendValue(char *n, int v) { values[n] = v; }
 static uint32_t GetValue(char *n) { return values.count(n) ? (uint32_t) values[n] : 0; }
-static uint16_t GetText(char *n, char *out, uint16_t maxlen) { const std::string s = texts.count(n) ? texts[n] : ""; strncpy(out, s.c_str(), maxlen - 1); out[maxlen - 1] = 0; return (uint16_t) strlen(out); }
+static bool NextionTextMissed = false;   // (10 Nov 2026) as Nextion.h: a box the fake screen does not answer for is missed
+static uint16_t GetText(char *n, char *out, uint16_t maxlen) { if (!texts.count(n)) NextionTextMissed = true; const std::string s = texts.count(n) ? texts[n] : ""; strncpy(out, s.c_str(), maxlen - 1); out[maxlen - 1] = 0; return (uint16_t) strlen(out); }
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void PlaySound(int s) { sounds.push_back(s); }
 static void MsgBox(char *, char *m) { ++boxes; lastBox = m; }
@@ -350,6 +351,16 @@ int main() {
     values["n0"] = 1000; ReadRXOptionsView(); CHECK(MotorChannelZero == 45);
     values["n0"] = 2000; ReadRXOptionsView(); CHECK(MotorChannelZero == 135);
     values["n0"] = 2500; ReadRXOptionsView(); CHECK(MotorChannelZero == 180);
+    // (10 Nov 2026, the code review) a missed reply keeps EVERY value as it was: the trim step (65535 drove a trimmed channel to its
+    // end), the motor channel (it became channel 3), 'Stop flying volts' (0 = no low-battery warning), the amps, the timer
+    values["n3"] = 5; values["n1"] = 6; values["c1"] = 1; values["c0"] = 1; values["c2"] = 0; values["n4"] = 4; values["n2"] = 3;
+    texts["t10"] = "3.6"; texts["t12"] = "45"; ReadRXOptionsView();
+    CHECK(TrimMultiplier == 5 && MotorChannel == 5 && CopyTrimsToAll && UseMotorKill && !TimerDownwards && TimerStartTime == 240 && RxVoltageCorrection == 3 && SFV == 360 && Max_Safe_Amps == 45);
+    for (const char *box : { "n3", "n1", "c1", "c0", "c2", "n4", "n2" }) values[box] = 65535;
+    texts.erase("t10"); texts.erase("t12"); ReadRXOptionsView();
+    CHECK(TrimMultiplier == 5 && MotorChannel == 5 && CopyTrimsToAll && UseMotorKill && !TimerDownwards && TimerStartTime == 240 && RxVoltageCorrection == 3 && SFV == 360 && Max_Safe_Amps == 45);
+    values["n3"] = 99; values["n1"] = 0; texts["t10"] = "3.5"; texts["t12"] = "40"; ReadRXOptionsView();
+    CHECK(TrimMultiplier == 25 && MotorChannel == 5);                                        // (a step beyond 25 held at 25, as a load does; no channel 0: kept)
     values["n0"] = 9999; ReadRXOptionsView(); CHECK(MotorChannelZero == 180);
     MotorChannelZero = 90; values["n0"] = 65535; ReadRXOptionsView(); CHECK(MotorChannelZero == 90);   // a comms error keeps the old value
     // ---------------------------------------------------------------- B24: Scan RF refused while a model is connected
@@ -477,6 +488,7 @@ static void ReadTheRTC() { GmonthDay = rtcDay; Gmonth = rtcMonth; Gyear = rtcYea
 static char TextFileName[40] = "", LogWriteName[40] = "", SearchFile[80] = "", SingleModelFile[40] = "", MOD[10] = "", Mfiles[10] = "", TheFilesList[150][24];
 static File LogFileNumber, LogWriteFile; static bool LogFileOpen = false, LogWriteOpen = false, SingleModelFlag = false, FileError = false;
 static uint16_t LastFileInView = 0;
+static uint8_t ExportedFileCounter = 1;   // (10 Nov 2026) the rows BuildDirectory listed: ChosenFileRow refuses any other
 static std::string stamp = "12:00:00"; static void CreateTimeStamp(char *d) { strcpy(d, stamp.c_str()); }
 static int delays = 0; static void DelayWithDog(uint32_t) { ++delays; }
 static void CloseModelsFile() {}
@@ -495,7 +507,7 @@ C_LIFT = [('src/main.cpp', 'int InStrng(char *text1, char *text2)'), ('include/U
           ('include/LogFiles.h', 'FASTRUN void MakeDatedLogName(char *Dest)'), ('include/LogFiles.h', 'FASTRUN void MakeTextFileName()'), ('include/LogFiles.h', 'FASTRUN void MakeLogWriteName()'),
           ('include/LogFiles.h', 'FASTRUN void CheckLogFileIsOpen()'), ('include/LogFiles.h', 'FASTRUN void CloseLogFile()'), ('include/LogFiles.h', 'FASTRUN void CloseLogWriteFile()'),
           ('include/LogFiles.h', 'FASTRUN void WriteToLogFile(char *SomeData, uint16_t len)'), ('include/LogFiles.h', 'FASTRUN bool LogFilePreamble()'), ('include/LogFiles.h', 'FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp)'),
-          ('include/SDFiles.h', 'FASTRUN void OpenLogFileW()'), ('include/SDFiles.h', 'FASTRUN void DeleteLogFile()'), ('include/SDFiles.h', 'void DeleteThisLogFile()'),
+          ('include/SDFiles.h', 'FASTRUN void OpenLogFileW()'), ('include/SDFiles.h', 'FASTRUN void DeleteLogFile()'), ('include/Nextion.h', 'FLASHMEM int ChosenFileRow(const char *box)'), ('include/SDFiles.h', 'void DeleteThisLogFile()'),
           ('src/main.cpp', 'bool WriteBackup()'), ('src/main.cpp', 'void FixFileName()'), ('src/main.cpp', 'void ShowFileErrorMsg()'), ('include/SDFiles.h', 'void RenameFile()')]
 C_MAIN = r'''
 static void logIt(const char *s) { char b[100]; strcpy(b, s); LogText(b, (uint16_t) strlen(b), true); }
@@ -526,6 +538,11 @@ int main() {
     card["/log/01-10-26.LOG"] = "old"; strcpy(TheFilesList[0], "01-10-26.LOG"); values["FilesBox"] = 0; confirmAnswer = true;
     DeleteThisLogFile(); CHECK(card.count("/log/01-10-26.LOG") == 0 && strcmp(TextFileName, "") == 0 && selectors == 1);
     card["/log/02-10-26.LOG"] = "old"; strcpy(TheFilesList[0], "02-10-26.LOG"); confirmAnswer = false; DeleteThisLogFile(); CHECK(card.count("/log/02-10-26.LOG") == 1 && strcmp(TextFileName, "02-10-26.LOG") == 0);
+    // (10 Nov 2026) a missed reply (65535) or a row the list does not hold: nothing is asked and nothing deleted
+    confirmAnswer = true; strcpy(TextFileName, "kept.LOG");
+    values["FilesBox"] = 65535; DeleteThisLogFile(); CHECK(card.count("/log/02-10-26.LOG") == 1 && strcmp(TextFileName, "kept.LOG") == 0);
+    values["FilesBox"] = 1; DeleteThisLogFile(); CHECK(card.count("/log/02-10-26.LOG") == 1 && strcmp(TextFileName, "kept.LOG") == 0);
+    values["FilesBox"] = 0;
     // ---------------------------------------------------------------- B21: a backup rename deletes the old file only after the new one is written
     card.clear(); cmds.clear(); FileError = false;
     strcpy(SingleModelFile, "newname"); CHECK(WriteBackup() && card.count("/mod/NEWNAME.MOD") == 1 && !FileError && !SingleModelFlag);
@@ -693,6 +710,24 @@ def source_checks():
     chk('mk[1] = TX_EXT_MAGIC9;' in sdc and 'SDUpdate8BITS(end + i, mk[i]);' in sdc and 'SDRead8BITS(q + 1) == TX_EXT_MAGIC9' in sdc and 'ModelCrcFold(CurveStore[b][c], CURVE_STORE_MAX);' in sdc, 'B170 the mark is written after everything else and read back; the extension\'s content is folded in one canonical form')
     chk('wrote = WriteBackup();' in mc and 'MarkBackedUp = true;\n                SaveOneModel(ModelNumber);\n                MarkBackedUp = false;' in mc and 'MarkBackedUp = true; // B170: restored' in mc and 'MarkBackedUp = true; // B170: received' in me, 'B170 a backup, a restore and a received model set the mark')
     chk('if (ModelBackupCrc != 0 && ModelBackupCrc != ModelContentCrc)\n            strcat(buf, mark);' in mo and '(char)0x7F' in mo, 'B170 the Models list begins a changed model\'s name with DEL: the screen draws it in orange')
+    # (10 Nov 2026, the code review) no file list is indexed by a raw screen reply: GetValue gives 65535 on a miss, the list has 150 rows
+    import glob
+    raw = [os.path.relpath(h, TC) for h in glob.glob(os.path.join(TC, 'include', '*.h')) + [os.path.join(TC, 'src', 'main.cpp')]
+           if re.search(r'TheFilesList\[\s*GetValue\(', open(h, encoding='utf-8', errors='replace').read())
+           or re.search(r'FileNumberInView\s*=\s*GetValue\(\(char \*\)"MMems"\)', open(h, encoding='utf-8', errors='replace').read())]
+    chk(not raw, 'no TheFilesList[GetValue(...)] left (%s)' % ', '.join(raw))
+    nx = src('include/Nextion.h')
+    chk('FLASHMEM int ChosenFileRow(const char *box)' in nx and 'if (row >= ExportedFileCounter ||' in nx, 'ChosenFileRow refuses a row the list does not hold')
+    chk(src('include/SDFiles.h').count('ChosenFileRow(FileBox)') == 1 and src('include/LogFilesList.h').count('ChosenFileRow(FileBox)') == 1 and 'ChosenFileRow("MMems")' in src('include/ChooseImage.h'), 'the three file-list choosers ask ChosenFileRow')
+    # (10 Nov 2026, the code review, second batch)
+    lf = src('include/LogFiles.h'); me = src('include/ModelExchange.h'); mo = src('include/MenuOptions.h'); te = src('include/Telemetry.h'); mc = src('src/main.cpp')
+    chk(lf.count('char buf[64] = " ";') == 2 and 'snprintf(buf, sizeof(buf), "%s%s", TheText, ModelName);' in lf and 'char buf[40] = " ";\n    strcpy(buf, TheText);' not in lf, 'the connection log lines hold a 39-character name')
+    chk(me.count('if (LedWasGreen) // (10 Nov 2026, the code review) the exchange takes the radio') == 2, 'no model is sent or received with a model connected')
+    chk('const uint32_t Named = ModelNumber;' in mo and 'ModelNumber = Named;' in mo and 'ModelNumber = GetValue(MMems) + 1;' not in mo, 'Delete model erases the model its question named, never model 1 on a missed reply')
+    chk('bool rxLow = (ModelMatched && Connected) ? CheckRXVolts() : false;' in te, 'the model battery is checked while the transmitter battery is low')
+    chk('if (!NextionTextMissed && typed[0])' in mc and 'GetText(NewName, ModelName, sizeof(ModelName));' not in mc, 'a missed rename reply keeps the name')
+    chk(mc.count('j < (int)sizeof(SingleModelFile) - 1') == 2 and 'j < (int)sizeof(SingleModelFile) - 1' in src('include/SDFiles.h'), 'the screen\'s file names are copied within SingleModelFile')
+    chk('VersionMismatch = false;' in mc and 'ShowMismatchMsg();\n}' not in src('include/Utilities.h').split('void WarnUserOfVersionsMismatch()')[1][:400], 'the versions box once, never from the ack parser')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

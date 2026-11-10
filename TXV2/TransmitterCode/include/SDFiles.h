@@ -108,7 +108,11 @@ void DeleteThisLogFile()
     char pLogFiles[] = "page LogFiles";
     char Query[] = "?";
     char pprompt[80];
-    strcpy(TextFileName, TheFilesList[GetValue(FileBox)]);
+    const int row = ChosenFileRow(FileBox); // (10 Nov 2026: the raw GetValue was the row - a missed reply chose a name from wild memory, to DELETE)
+    if (row < 0)
+        return;
+    strncpy(TextFileName, TheFilesList[row], sizeof(TextFileName) - 1);
+    TextFileName[sizeof(TextFileName) - 1] = 0;
     strcpy(pprompt, prompt);
     strcat(pprompt, TextFileName);
     strcat(pprompt, Query);
@@ -448,7 +452,7 @@ void DeleteMODfile(int p)
     int i = p + 6;
     char ques[] = "?";
     char del[] = "Delete ";
-    while (uint8_t(TextIn[i]) > 0)
+    while (uint8_t(TextIn[i]) > 0 && j < (int)sizeof(SingleModelFile) - 1) // (10 Nov 2026: bounded)
     {
         SingleModelFile[j] = TextIn[i];
         ++j;

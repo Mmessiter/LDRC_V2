@@ -23,10 +23,10 @@ The values are those of the bank shown at the top left.|
 Move the bank switch and the page reads that bank. Save|
 first: changes not saved are lost (a message says so).||
 BEFORE YOU RELY ON IT:|
-Rescue also needs a switch: set one with 'Switches ...' on|
-the 'Rotorflight' page (Rescue - the safety net).|
-Calibrate the level first too ('Calibrate ...'): rescue|
-levels the model by it.|
+Rescue also needs a switch: set one with 'Switches & knobs ...'|
+on the 'Rotorflight' page (Rescue - the safety net).|
+Calibrate the level first too ('Settings ...', then|
+'Calibrate ...'): rescue levels the model by it.|
 Test rescue at a safe height before you trust it low down.||
 WHAT RESCUE DOES, STAGE BY STAGE:|
 1. Pull-up: it levels the model, on the pull-up collective.|

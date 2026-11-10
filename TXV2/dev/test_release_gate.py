@@ -75,5 +75,29 @@ with tempfile.TemporaryDirectory() as tmp:
     try: rel.check_paths({'/help/AUDIO.TXT': b'', '/help/RF GOV (1).TXT': b''}, ['/help/'], 'test'); check(True, '')
     except SystemExit: check(False, 'an ordinary name was refused')
 
+# (10 Nov 2026) The Teensy's HEX file for a first flash with Teensy Loader: read back by ANOTHER reader (the one that makes
+# the update package from PlatformIO's own HEX file, dev/make_fw_package.py) it must give the package's image again.
+print('- the Teensy firmware as a HEX file: read back by the package maker\'s own reader, it is the package\'s image')
+import zlib, struct
+spec2 = importlib.util.spec_from_file_location('pkg', os.path.join(HERE, 'make_fw_package.py'))
+pkg = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(pkg)
+image = bytearray(b'\xFF' * (3 * 65536 + 4096))
+image[0:512] = bytes(range(256)) * 2                       # the flash configuration block
+image[0x1000:0x1040] = b'\xD1\x00\x20\x43' * 16           # the vector table, after a gap of FF
+image[65530:65550] = bytes(range(20))                      # across a 64 kB boundary
+image[2 * 65536 + 17:2 * 65536 + 18] = b'\x00'             # one byte alone in its row
+image[-16:] = b'the last 16 byte'
+image = bytes(image)
+package = b'LDRCFW01' + struct.pack('<II', len(image), zlib.crc32(image) & 0xFFFFFFFF) + b'2.5.6 test'.ljust(32, b'\0') + b'fw_teensy41'.ljust(16, b'\0') + image
+hexfile = rel.teensy_hex(package)
+with tempfile.TemporaryDirectory() as tmp2:
+    hp = os.path.join(tmp2, 't.hex'); open(hp, 'wb').write(hexfile)
+    mem = pkg.read_hex(hp)
+check(all(mem.get(0x60000000 + i, 0xFF) == b for i, b in enumerate(image)) and all(0x60000000 <= a < 0x60000000 + len(image) for a in mem), 'every byte of the image, at its address in the flash, and nothing outside it')
+check(hexfile.startswith(b':020000046000') and hexfile.endswith(b':00000001FF\r\n') and all(len(l) <= 43 for l in hexfile.split(b'\r\n')), 'it begins at 0x60000000, ends with the end record, 16 bytes a record at most')
+check(len(mem) < len(image) // 2, 'rows of nothing but FF are left out')
+try: rel.teensy_hex(package[:64] + image[:-16] + b'\xFF' * 16) and check(True, '')
+except SystemExit: check(False, 'an image that ends in FF was refused')
+
 print(f'\n{checks} checks, {failures} failures')
 sys.exit(1 if failures else 0)

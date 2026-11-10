@@ -68,7 +68,11 @@ void EndLogFilesListScreen()
 void LoadNewLogFile()
 {
     char FileBox[] = "FilesBox";
-    strcpy(TextFileName, TheFilesList[GetValue(FileBox)]); // Get the selected file name
+    const int row = ChosenFileRow(FileBox); // (10 Nov 2026: the raw GetValue was the row - 65535 on a missed reply)
+    if (row < 0)
+        return; // (no file chosen that the list holds: the list stays as it is)
+    strncpy(TextFileName, TheFilesList[row], sizeof(TextFileName) - 1); // Get the selected file name
+    TextFileName[sizeof(TextFileName) - 1] = 0;
     ReadingaFile = true;
     LogVIEWNew(); // Start the log screen
 }

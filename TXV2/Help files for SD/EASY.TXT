@@ -25,8 +25,9 @@ a backup re-centres it.||
 START (the same for every bank):|
 Moves three numbers on the Governor page and nothing else:|
 spool-up time, startup time and handover throttle.|
-Full left doubles the two times and lowers the handover 15 %.|
-Full right halves the times and raises the handover 15 %.|
+Full left doubles the two times and lowers the handover by 15|
+(25 % becomes 10 %). Full right halves the times and raises|
+it by 15 (25 % becomes 40 %). It stays within 10 to 50 %.|
 Saving it restarts the flight controller: blades off.||
 AGILITY AND STICK FEEL (this rate):|
 Agility: how fast roll, pitch and yaw turn at full stick,|

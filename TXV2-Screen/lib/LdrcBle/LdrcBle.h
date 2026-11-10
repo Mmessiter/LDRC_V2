@@ -21,6 +21,11 @@ static const char *BLE_SVC_UUID = "8e400001-f315-4f60-9fb8-838830daea50";
 static const char *BLE_REQ_UUID = "8e400002-f315-4f60-9fb8-838830daea50";
 static const char *BLE_RESP_UUID = "8e400003-f315-4f60-9fb8-838830daea50";
 static const int BLE_WRITE_CHUNK = 240;            // bytes per write (the apps' lesson: 240 is what every stack carries)
+// (10 Nov 2026, the code review) the longest body a reply header may name. The receiver sends at most 160 kB in one reply
+// (RXV2 BleConfig.h BLE_MAX_RESPONSE; the command line's output is kept to 64 kB, UsbHostMsp.h CLI_BUF_MAX). A header naming
+// more is not a reply: the body's room was reserved at once, and a garbled length (up to 4 GB) threw from the Bluetooth task -
+// the screen restarted.
+static const size_t BLE_REPLY_MAX = 512 * 1024;
 
 struct BleReply { int code = 0; std::string type, body, location; };
 
