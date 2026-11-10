@@ -153,6 +153,10 @@
 
 <sub>The charger in its bay on the case back, joined to the pack's balance plug (white).</sub>
 
+<img src="../docs/images/charger-to-battery.jpg" width="600" alt="An open transmitter with its case back laid beside it: the charger in the back's bay, its red and black lead joined by a small white plug to the battery's balance lead">
+
+<sub>Before closing the case: the charger's lead plugs into the battery's balance lead (the white plug).</sub>
+
 **Cost:** over £120 in parts (approximate, October 2026; the full total is coming). See [Build one](https://messiter.com/ldrc/build.html) for current figures.
 
 <!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: ANSWERED 10 Nov 2026 - needed on every build (Malcolm); his is a GY-219 (his photo). (4) Charger ANSWERED 10 Nov 2026 with photos (an IP2326 board, LX-LISC-V3; it comes 2S; B+/BM/B- to the balance plug; a red LED in the bay); the charge light ANSWERED 10 Nov 2026 (a 100 ohm resistor; LED pad and G). (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Battery ANSWERED 10 Nov 2026 (RadioMaster 2S Li-ion 21700 5000 mAh, HP157-BATT-5A2S; their larger one fits too); the speaker ANSWERED 10 Nov 2026 (Nextion's Box Speaker: its plug fits the 16 MB screen). (7) ANSWERED 10 Nov 2026: all three-position, made for RC transmitters, several brands. (8) Re-cost the V2 parts. -->

@@ -44,7 +44,8 @@
 | `src/` | The firmware: the radio link, the flight-controller output, MSP to Rotorflight, the web and Bluetooth bridges, the simulator joystick |
 | `data/` | The web pages. The receiver serves them, and the apps carry a copy. Written to the chip's LittleFS |
 | `lib/` | Libraries kept with the project |
-| `case/` | The receiver's printed case (STEP). Print it in PETG or PLA |
+| `case/` | An early case design (STEP), not in use: Malcolm covers the receiver in clear heat-shrink |
+| `kicad/receiver/`, `kicad/vdiv/` | The receiver's circuit board, and the battery divider board (Gerbers ready to order) |
 | `kicad/dongle/` | **Do not order this board.** It is the dongle carrier with the wiring error. See [kicad/dongle/README.md](kicad/dongle/README.md) |
 | `dev/` | Tools: `flash_usb.sh` and `flash_receiver.sh` for a new board, `release.sh` for a release, the host tests, `stage_fs.py` (packs the pages) |
 | `Connections.txt` | The wiring of the radios and the flight controller |
@@ -70,7 +71,9 @@ There are two ways: on the circuit board, or hand-wired.
 <!-- (10 Nov 2026, Malcolm: "RXV2_NEWB is correct. When in doubt, the file with the later date and time is the most recent and the one to use.") -->
 <!-- (10 Nov 2026, Malcolm: "Yes, please publish RXV2_newb." Published to kicad/receiver: Gerbers plotted by KiCad 10.0.3 from the board file, DRC clean.) -->
 <!-- (10 Nov 2026, Malcolm: "Yes, I have a large number of boards for the transmitter and the receiver. If anybody lives close enough, I can give them one or two, or perhaps post them".) -->
-<!-- TODO Malcolm: publish the RXV2_VDIV divider board too? -->
+- **Flight battery voltage** without telemetry from the flight controller: the battery divider board, [kicad/vdiv](kicad/vdiv) (up to 12S, into pad D9; one or two radios only).
+
+<!-- (10 Nov 2026, Malcolm: "Yes, do publish the voltage divider board." Published to kicad/vdiv.) -->
 
 **Parts for one board** (from the board's design):
 
@@ -83,11 +86,11 @@ There are two ways: on the circuit board, or hand-wired.
 | Lead socket | JST-GH 4-pin, **SM04B-GHS-TB** | 1 | The lead to the flight controller |
 | Capacitors | 1206: 100 µF ×2, 22 µF ×1, 10 µF ×1 | 4 | |
 | Status light | LED 1206 and a 100 Ω 1206 resistor | 1 each | |
-| Case | [`case/`](case): `RXV2_A_CASE.step` and `RXV2_A_LID.step` | 1 set | Printed in PETG or PLA |
+| Cover | Clear heat-shrink, wide enough for the board | 1 | No case yet: the receiver is tiny. ([`case/`](case) holds an early design, not in use) |
 | USB-C cable (optional) | A short **data** cable, receiver to flight controller. Malcolm uses a Chenyang CY-UC-088-0.07M (70 mm, right-angled both ends) | 1 | Unlocks the full Rotorflight set-up |
 
 **Cost:** about £35 of parts (approximate, October 2026).
-<!-- TODO Malcolm: which board does the case fit, NEWA or NEWB? (NEWB is the production board, 10 Nov 2026.) -->
+<!-- (10 Nov 2026, Malcolm: "There is as yet no case for the receiver. I just use shrink wrap because it's tiny.") -->
 <!-- TODO Malcolm: re-cost the V2 receiver. compare.md estimates £15-£25 for the XIAO and radios alone; £35 is the figure in the receiver's own help text and on the website. -->
 
 **The lead socket (J2):**

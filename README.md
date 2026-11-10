@@ -307,7 +307,7 @@ Current versions and release notes: [Help & updates](https://messiter.com/ldrc/h
 |---|---|
 | [TXV2](TXV2) | The transmitter: the Teensy 4.1 firmware, help texts, sounds, the case (STL and STEP), the circuit boards (Gerbers), the change log |
 | [TXV2-Screen](TXV2-Screen) | The transmitter's screen: the ESP32-S3 firmware, everything on its card (pages, fonts, pictures, sounds), tools and tests |
-| [RXV2](RXV2) | The receiver (also the dongle and the simulator interface): firmware, web pages, the case, tools and tests |
+| [RXV2](RXV2) | The receiver (also the dongle and the simulator interface): firmware, web pages, the circuit boards, tools and tests |
 | [RXV2App](RXV2App) | The phone app for iPhone, iPad and Android |
 | [TXV3](TXV3) | Notes and boards for a future transmitter with boards of its own. Parked: Version 2 turned out so well that it may wait a long time |
 | [docs/images](docs/images) | The pictures in these READMEs |
