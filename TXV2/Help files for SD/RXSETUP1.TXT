@@ -19,6 +19,7 @@ Use motor kill switch: on, the transmitter checks the motor|
 switch before it connects: at switch-on, or after a lost link.|
 While the motor is on, it says 'The motor switch is ON.'|
 and waits until you switch it off and press 'OK'.|
+Not after a restart in flight (back within 30 seconds).|
 The motor switch has the job 'Bank 4 & Motor'|
 ('Transmitter setup', 'Switches'). Its three positions:|
 Away = bank 1, 2 or 3, motor on.|

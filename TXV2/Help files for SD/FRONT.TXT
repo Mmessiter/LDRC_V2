@@ -35,6 +35,9 @@ MOTOR IS ON! (only with 'Use motor kill switch' on): the motor|
 switch was on at switch-on, or when the link was lost.|
 Nothing is sent to the model until you switch the motor off|
 and press 'OK' on the message 'The motor switch is ON.'||
+A RESTART IN FLIGHT: if the transmitter restarts while flying|
+(a power dip) and is back within 30 seconds, it carries on as|
+it was: still armed, the motor switch as it is, no messages.||
 MODEL NAME (under the picture):|
 The number after the name is the model's number, as in (3).|
 Square brackets, as in [3], or [AMS is on] on the left, mean|

@@ -33,7 +33,9 @@ switches count while the Pupil has control.|
 For a beginner, leave it OFF:|
 the Instructor keeps motor on / off, safety, bank and rates.|
 A more advanced pupil, perhaps learning autorotations,|
-will need these switches too.|
+will need these switches too. With it on, the Pupil's motor|
+switch stops the motor while the Pupil flies (the Instructor's|
+does, if the Throttle channel is not one of the Pupil's).|
 When the Instructor flies, the Instructor's switches count.||
 NUDGE:|
 With 'Nudge' the Pupil flies, but the Instructor's sticks can gently|

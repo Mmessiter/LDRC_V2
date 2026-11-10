@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B206 10/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B207 10/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -681,6 +681,10 @@ enum
 };
 void NoteWhyOff(uint8_t why);
 extern uint8_t LastOffReason; // FlightGuard.h (B194: a start nobody chose never holds the link)
+extern bool FlightRestart;     // FlightGuard.h (11 Nov 2026): this start is a restart IN FLIGHT - until the model is connected again
+void FlightRestartCheck();     // setup(), once the clock has been checked
+void FlightRestartArm();       // setup(), last, before the first packet
+void FlightStampTick();        // the once-a-second round
 // V1B B14: the breadcrumb - where the code is, kept on the clock's coin cell (see FlightGuard.h, part 4).
 enum Crumb : uint8_t
 {

@@ -421,4 +421,125 @@ void TellScreen(bool evenIfUnchanged)
 }
 // TELLSCREEN-LOGIC-END
 
+// ---------------------------------------------------------------------------------------------------------------
+// 6. A RESTART IN FLIGHT (11 Nov 2026, Malcolm: "If transmitter restarts in flight - and was quiet for less than 30 seconds,
+//    then it should avoid sending disarmed to allow continued flight.")
+//    On the ground the rule is "connect DISARMED": Armed changes only when the safety switch CHANGES (Motor_sign.h
+//    SafetySwitchChanged), so a start with the safety already off sends the arming channel low until the safety is cycled;
+//    and a motor switch found ON before a connection silences the transmitter until it is switched off (Motor_sign.h
+//    MotorEnabledHasChanged, main.cpp EnsureMotorIsOff). After a restart in the AIR (a brown-out, a lead, the watchdog) the
+//    same rules would disarm a flying helicopter, or silence its link.
+//    So while a model is connected and flying (RadiosMustBeOff: the safety off, or with no safety switch the motor on), every
+//    2 s a stamp - the time, and whether it was armed - goes into the clock chip's battery-backed RAM (DS1307 0x08..0x0D).
+//    (Not the Teensy's own SNVS registers: they lose everything at a power cut - every "Started: power on" in the logs says
+//    "crumb 0, 0 s".) It is cleared when the flying stops (the safety on). At the next start, a stamp less than 30 s old
+//    with no reason noted on the way out (LastOffReason: not the power button, not an inactivity switch-off, not an update)
+//    makes this start a RESTART IN FLIGHT. Until the model is connected again (60 s at most) or the safety goes on:
+//    - the arming channel is sent ARMED from the first packet, if the model was armed and the safety switch is still off;
+//    - the motor switch is taken as it stands (no "switch it off first", no silence);
+//    - no box is put up at start-up (a box that waits reads no switches), and no "Safety off" warning at the connection.
+#define FLIGHT_STAMP_REG 0x08            // the DS1307's RAM, 0x08..0x3F: battery-backed, unused until now
+#define FLIGHT_STAMP_MAGIC 0xF5
+#define FLIGHT_RESTART_SECONDS 30
+#define FLIGHT_RESTART_LONGEST_MS 60000UL
+#define FLIGHT_STAMP_EVERY_MS 2000
+bool FlightRestart = false;
+static bool FlightRestartArmed = false;  // (the stamp's: the model was armed)
+static uint32_t FlightRestartAt = 0, FlightRestartQuiet = 0;
+static bool FlightRestartToLog = false;
+static bool FlightStampOnChip = false;
+static uint32_t FlightStampLastMs = 0;
+
+static bool ClockRam(uint8_t reg, uint8_t *b, uint8_t n, bool write) // the clock chip's RAM: write n bytes, or read them
+{
+    Wire.beginTransmission(DS1307_ADDRESS);
+    Wire.write(reg);
+    if (write)
+        Wire.write(b, n);
+    if (Wire.endTransmission() != 0)
+        return false;
+    if (write)
+        return true;
+    if (Wire.requestFrom((uint8_t)DS1307_ADDRESS, n) != n)
+        return false;
+    for (uint8_t i = 0; i < n; ++i)
+        b[i] = Wire.read();
+    return true;
+}
+
+FLASHMEM void FlightRestartCheck() // setup(): after ReadWhyOff and CheckTheClock
+{
+    if (ClockDead)
+        return;
+    uint8_t b[6];
+    if (!ClockRam(FLIGHT_STAMP_REG, b, 6, false) || b[0] != FLIGHT_STAMP_MAGIC)
+        return;
+    uint8_t z[6] = {0, 0, 0, 0, 0, 0};
+    ClockRam(FLIGHT_STAMP_REG, z, 6, true); // one look at each stamp
+    if (LastOffReason != OFF_NONE)
+        return; // switched off on purpose: the ground's rules
+    if (!RTC.read(tm))
+        return;
+    const uint32_t stamp = (uint32_t)b[1] | ((uint32_t)b[2] << 8) | ((uint32_t)b[3] << 16) | ((uint32_t)b[4] << 24);
+    const uint32_t now = (uint32_t)makeTime(tm);
+    if (now < stamp || now - stamp >= FLIGHT_RESTART_SECONDS)
+        return;
+    FlightRestart = true;
+    FlightRestartArmed = (b[5] & 1) != 0;
+    FlightRestartAt = millis();
+    FlightRestartQuiet = now - stamp;
+    FlightRestartToLog = true;
+}
+
+FLASHMEM void FlightRestartArm() // setup(), last, before the first packet: the switches as they stand, so that the first packet is right
+{
+    if (!FlightRestart)
+        return;
+    ReadSafetySwitch();
+    ReadAutoAndMotorSwitch();
+    if (SafetyON)
+        MotorEnabled = false;
+    SafetyWasOn = SafetyON;          // (no "change" at the first round of the switches: what is set here stands)
+    MotorWasEnabled = MotorEnabled;
+    Armed = FlightRestartArmed && SafetyIsOff();
+    if (MotorEnabled)
+        MotorStartTime = millis();
+}
+
+void FlightStampTick() // the once-a-second round
+{
+    if (FlightRestart && (LedWasGreen || millis() - FlightRestartAt > FLIGHT_RESTART_LONGEST_MS))
+        FlightRestart = false; // connected again (or given up): the ground's rules again
+    if (FlightRestartToLog && UseLog)
+    {
+        FlightRestartToLog = false;
+        char l[120];
+        snprintf(l, sizeof(l), PSTR("STARTED IN FLIGHT: the link was quiet %lu s - %s, the motor switch as it stands"), (unsigned long)FlightRestartQuiet,
+                 Armed ? PSTR("armed as it was") : PSTR("not armed (it was not, or the safety is on)"));
+        LogText(l, (uint16_t)strlen(l), true);
+    }
+    if (ClockDead)
+        return;
+    if (LedWasGreen && RadiosMustBeOff())
+    {
+        if (FlightStampOnChip && millis() - FlightStampLastMs < FLIGHT_STAMP_EVERY_MS)
+            return;
+        const uint32_t now = Teensy3Clock.get(); // (set from the clock chip at power-up: the same count of seconds)
+        if (now < 1704067200UL)
+            return; // (not set from the chip: 1 Jan 2024. No stamp, no restart in flight: the ground's rules)
+        uint8_t b[6] = {FLIGHT_STAMP_MAGIC, (uint8_t)now, (uint8_t)(now >> 8), (uint8_t)(now >> 16), (uint8_t)(now >> 24), (uint8_t)(Armed ? 1 : 0)};
+        if (ClockRam(FLIGHT_STAMP_REG, b, 6, true))
+        {
+            FlightStampOnChip = true;
+            FlightStampLastMs = millis();
+        }
+    }
+    else if (FlightStampOnChip && !RadiosMustBeOff())
+    { // the flying has stopped (the safety on): no start from now on is one in flight (a link merely lost keeps its stamp to age)
+        uint8_t z[6] = {0, 0, 0, 0, 0, 0};
+        if (ClockRam(FLIGHT_STAMP_REG, z, 6, true))
+            FlightStampOnChip = false;
+    }
+}
+
 #endif

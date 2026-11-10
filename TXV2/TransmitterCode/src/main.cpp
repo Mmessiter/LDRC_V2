@@ -248,6 +248,8 @@ void EnsureMotorIsOff()
         return;
     if (BuddyPupilOnWireless)
         return;
+    if (FlightRestart)
+        return; // (11 Nov 2026) a restart in flight: the motor switch is taken as it stands (FlightGuard.h)
     CheckMotorOff();
     CRUMB(CRUMB_MOTORWAIT);
     while (MotorEnabled) // disconnected now so stay here until motor switch really is off!
@@ -840,7 +842,7 @@ void ClockMessageTick()
 {
     static bool asked = false;
     char pFront[] = "page FrontView";
-    if (!asked) { asked = true; ClockMessagePending = ClockRecovered || ClockDead; }
+    if (!asked) { asked = true; ClockMessagePending = (ClockRecovered || ClockDead) && !FlightRestart; } // (11 Nov 2026: no box after a restart in flight)
     if (!ClockMessagePending || FwTrialRunning || CurrentView != FRONTVIEW || ModelMatched)
         return;
     ClockMessagePending = false;
@@ -858,6 +860,8 @@ void ClockMessageTick()
 void CentreNoteTick()
 {
     char pFront[] = "page FrontView";
+    if (FlightRestart)
+        CentreNotePending = false; // (11 Nov 2026) no box after a restart in flight: a box that waits reads no switches
     if (!CentreNotePending || FwTrialRunning || CurrentView != FRONTVIEW || ModelMatched || ModalWaits)
         return;
     CentreNotePending = false;
@@ -1330,6 +1334,9 @@ FLASHMEM void setup()
     Wire.begin();
     ScanI2c();
     CheckTheClock(); // V2 B30: a clock that does not answer is clocked back to life
+    FlightRestartCheck(); // (11 Nov 2026) a restart IN FLIGHT? (FlightGuard.h: the clock chip's stamp, less than 30 s old)
+    if (!ClockDead && RTC.read(tm))
+        ReadTheRTC(); // (11 Nov 2026) the Teensy's clock set from the chip now (B169), so that the flight stamps count the chip's seconds
     if (USE_INA219)
         ina219.begin();
     InitSwitchesAndTrims();
@@ -1402,6 +1409,7 @@ FLASHMEM void setup()
     SendCommand((char *)"ldrcframe=1"); // B177: the screen frames its bursts (Nextion.h; asked again should it answer a code unframed)
     SendWhoWord();                      // B199: who this board is, for the screen's quiet look at power-up - a word, not the file link (LinkMode.h)
     GotoFrontView();
+    FlightRestartArm(); // (11 Nov 2026) a restart in flight: the arming and the motor as the switches stand, before the first packet
     RedLedOn();
     ClockMessageTick(); // V2 B30/B62/B63: a clock that did not answer, said once - but not while new firmware is on trial (below)
     CentreNotePending = true; // B126: a Rotorflight model's cyclic and tail at stick centre, bank by bank
@@ -5818,6 +5826,7 @@ void FASTRUN ManageTransmitter()
             RestartSaid = true;
             LogRestartCause();
         }
+        FlightStampTick(); // (11 Nov 2026) while flying, the stamp a restart in flight is known by (FlightGuard.h)
         if (VersionMismatch)
         { // (10 Nov 2026) once per mismatch found (once a connection), and never a box while the model may fly
             VersionMismatch = false;
@@ -5896,10 +5905,20 @@ void FixMotorChannel()
 {
     if (MotorChannel > 15)
         return; // ClaudeFix-2-7-2026 never index SendBuffer OOB, whatever state the config is in
-    if (!MotorEnabled && !BuddyState && !BindingEnabled && !BuddyPupilOnWireless)
-    {
-        SendBuffer[MotorChannel] = IntoHigherRes(MotorChannelZero); // If safety is on, throttle will be zero whatever was shown.
+    if (MotorEnabled || BindingEnabled)
+        return;
+    if (BuddyPupilOnWireless)
+    { // (11 Nov 2026, Malcolm: "If buddy has all switches then buddy should be able to stop motor.") A pupil holding all the
+      // switches forces its motor channel low with ITS motor switch off (or its safety on): the master passes the pupil's
+      // channels on and, with 'Buddy has all switches', forces nothing of them (BuddyWireless.h GetTheChannelData). Before, a
+      // pupil never forced it - nobody's motor switch stopped the motor while the pupil flew. A pupil without the switches is
+      // told the master's, and the master forces it, as before.
+        if (BuddyHasAllSwitches)
+            SendBuffer[MotorChannel] = IntoHigherRes(MotorChannelZero);
+        return;
     }
+    if (!BuddyState)
+        SendBuffer[MotorChannel] = IntoHigherRes(MotorChannelZero); // If safety is on, throttle will be zero whatever was shown.
 }
 //************************************************************************************************************/
 void FixArmingChannel()

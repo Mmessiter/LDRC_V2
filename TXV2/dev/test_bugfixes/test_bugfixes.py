@@ -177,6 +177,7 @@ static int CurrentView = FRONTVIEW;
 static uint8_t TrimNumber[8] = {TRIM1A, TRIM1B, TRIM2A, TRIM2B, TRIM3A, TRIM3B, TRIM4A, TRIM4B};
 static uint32_t MotorStartTime = 0, LastSeconds = 0, Secs = 0, MotorOnSeconds = 0, PausedSecs = 0, Mins = 0, Hours = 0, ModelNumber = 1, RotorRPM = 0, LastShowTime = 0, LastTimeRead = 0;
 static bool LostContactFlag = false, BoundFlag = false, ModelMatched = false, Switch[8], SwitchReversed[8], BuddyHasAllSwitches = true, BuddyPupilOnWireless = false, LedWasGreen = false, LedWasRed = true;
+static bool FlightRestart = false;   // (11 Nov 2026: FlightGuard.h's - a restart in flight takes the motor switch as it stands)
 static uint8_t Autoswitch = 0, SafetySwitch = 0, DualRatesSwitch = 0, FrontSwitchPos[4], InPutStick[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, InputTrim[4] = {0, 1, 2, 3};
 static uint16_t FrontSwitchRaw[4], TrimMultiplier = 5, ReversedChannelBITS = 0, ServoCentrePulse[11], ServoFrequency[11], SFV = 0, TimerStartTime = 300, ScreenData[50], Max_Safe_Amps = 0;
 static bool FailSafeChannel[17], UseLog = false, TrimClicks = false, SpeakingClock = true, ClockSpoken = false, ClockSpoken1 = false, AnnounceBanks = false, CopyTrimsToAll = false, UseMotorKill = true, MotorEnabled = false, SendNoData = false, MotorWasEnabled = false, SafetyON = false, SafetyWasOn = false, TimerDownwards = false, TimesUp = false, UseMacros = false, BlockBankChanges = false, LinkRatesToBanks = false, Armed = false, BindingEnabled = false;
@@ -728,6 +729,17 @@ def source_checks():
     chk('if (!NextionTextMissed && typed[0])' in mc and 'GetText(NewName, ModelName, sizeof(ModelName));' not in mc, 'a missed rename reply keeps the name')
     chk(mc.count('j < (int)sizeof(SingleModelFile) - 1') == 2 and 'j < (int)sizeof(SingleModelFile) - 1' in src('include/SDFiles.h'), 'the screen\'s file names are copied within SingleModelFile')
     chk('VersionMismatch = false;' in mc and 'ShowMismatchMsg();\n}' not in src('include/Utilities.h').split('void WarnUserOfVersionsMismatch()')[1][:400], 'the versions box once, never from the ack parser')
+    # (11 Nov 2026, Malcolm) the restart in flight and the buddy box's motor switch: the hooks that the two host tests cannot reach
+    mc = src('src/main.cpp'); ms = src('include/Motor_sign.h'); fg = src('include/FlightGuard.h'); bw = src('include/BuddyWireless.h')
+    su = mc[mc.index('FLASHMEM void setup()'):]
+    chk(su.index('CheckTheClock();') < su.index('FlightRestartCheck();') < su.index('EnsureMotorIsOff();'), 'the restart in flight is known before the start-up motor check')
+    chk(su.index('FlightRestartArm();') < su.index('    RedLedOn();'), 'the arming and the motor are set before the first packet')
+    chk('    if (FlightRestart)\n        return; // (11 Nov 2026) a restart in flight' in mc, 'EnsureMotorIsOff stands aside after a restart in flight')
+    chk('if (LedWasRed && !BuddyPupilOnWireless && !FlightRestart)' in ms, 'the motor switch found on before a connection is not refused after a restart in flight')
+    chk('if (!fresh || !SafetyIsOff() || FlightRestart)' in ms and 'FlightRestart = false; // (11 Nov 2026) the pilot has put the safety on' in ms, 'no Safety-off warning after a restart in flight; the safety on ends it')
+    chk('ClockMessagePending = (ClockRecovered || ClockDead) && !FlightRestart;' in mc and '    if (FlightRestart)\n        CentreNotePending = false;' in mc, 'no start-up box after a restart in flight')
+    chk('FlightStampTick();' in mc and 'bool FlightRestart = false;' in fg, 'the stamp is kept every second round')
+    chk(bw.count('if (BuddyMotorIsOurs() && !MotorEnabled)') == 2 and 'if (BuddyHasAllSwitches)\n            SendBuffer[MotorChannel] = IntoHigherRes(MotorChannelZero);' in mc, 'whoever flies the motor channel, their motor switch stops it')
     print('test_bugfixes source checks: %d checks, %d failures' % (n, f))
     return 1 if f else 0
 

@@ -25,6 +25,7 @@ static uint32_t now = 100000; static uint32_t millis() { return now; }
 static uint8_t RotorFlight_V = 1, LastOffReason = OFF_BUTTON; static int ModelNumber = 3, CurrentView = FRONTVIEW, CurrentMode = NORMAL;
 static bool LedWasGreen = false, BuddyPupilOnWireless = false, MotorEnabled = false, BatteryWarningShown = false, UseLog = true, Force_Early_Sound = false;
 static bool safetyDefined = true, safetyOn = false, rxUpd = false;
+static bool FlightRestart = false;   // (11 Nov 2026: FlightGuard.h's - a restart in flight gives no warning at the connection)
 static bool SafetyIsOff() { return safetyDefined && !safetyOn; }
 static bool ReceiverUpdateBusy() { return rxUpd; }
 static std::vector<int> sounds; static std::vector<std::string> cmds; static std::string box; static int logs = 0;

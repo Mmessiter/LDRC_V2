@@ -138,7 +138,7 @@ void MotorEnabledHasChanged() //
 {
     if (MotorEnabled)
     {
-        if (LedWasRed && !BuddyPupilOnWireless)
+        if (LedWasRed && !BuddyPupilOnWireless && !FlightRestart) // (11 Nov 2026: not after a restart in flight - FlightGuard.h)
         {
             MotorEnabled = false;  // user has not turned on motor, so turn it back off
             PlaySound(PLSTURNOFF); // Tell the pilot to turn off motor before it will work
@@ -228,7 +228,7 @@ void SafetyOffAtConnect() // GreenLedOn, once per connection
 {
     const bool fresh = !LostJustNow();
     LastGreenModel = (int)ModelNumber;
-    if (!fresh || !SafetyIsOff())
+    if (!fresh || !SafetyIsOff() || FlightRestart) // (11 Nov 2026: not after a restart in flight - it was flying, and flies on)
         return;
     SafetyOffWarning = true;
     SafetyWarnStart();
@@ -317,6 +317,7 @@ void SafetySwitchChanged()
     {
         SendNoData = false;
         Armed = false;
+        FlightRestart = false; // (11 Nov 2026) the pilot has put the safety on: the ground's rules again
     }
     else
     {

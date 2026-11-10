@@ -62,6 +62,16 @@ bool LoadCorrectModel(uint64_t ModelID)
 }
 
 //*************************************************************************************************************************
+// (11 Nov 2026) While the pupil flies, the master's motor switch stops the motor unless the pupil holds all the switches AND
+// flies the motor channel - then the pupil's own motor switch does (the pupil forces it in its channels, main.cpp
+// FixMotorChannel). Before, with 'Buddy has all switches' (the default) the master forced nothing, so a motor channel the
+// pupil did not fly followed the master's stick with no motor switch at all.
+bool BuddyMotorIsOurs()
+{
+    if (MotorChannel > 15)
+        return false;
+    return !BuddyHasAllSwitches || !(BuddyControlled & (1u << MotorChannel));
+}
 
 void GetTheChannelData()
 {
@@ -70,7 +80,7 @@ void GetTheChannelData()
         if (BuddyControlled & (1 << j))
             SendBuffer[j] = BuddyBuffer[j]; // Test if this channel is buddy controlled. If not leave it unchanged otherwise replace it with the buddy's value
     }
-    if (!BuddyHasAllSwitches && !MotorEnabled)
+    if (BuddyMotorIsOurs() && !MotorEnabled)
     {
         SendBuffer[MotorChannel] = IntoHigherRes(MotorChannelZero); // If safety is on, throttle will be zero whatever was shown.
     }
@@ -97,7 +107,7 @@ void GetTheChannelDataToMixWithOurs()
         }
     }
 
-    if (!BuddyHasAllSwitches && !MotorEnabled)
+    if (BuddyMotorIsOurs() && !MotorEnabled)
     {
         SendBuffer[MotorChannel] = IntoHigherRes(MotorChannelZero);
     }
