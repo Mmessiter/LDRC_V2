@@ -118,7 +118,7 @@
 |---|---|---|---|
 | Main board | Printed circuit board from the Gerbers in `Circuits/Transmitter - CADCAM` | 1 | 2 layers, about 83 × 91 mm. Any PCB maker |
 | Microcontroller | PJRC **Teensy 4.1** | 1 | |
-| Radio | Ebyte **E01-ML01DP5** (nRF24L01+ with amplifier) | 1 | In a 2 × 4 socket |
+| Radio | Ebyte **E01-ML01DP5** (nRF24L01+ with amplifier) | 1 | In a 2 × 4 socket. Its aerial socket is **SMA**. It needs a capacitor across its power and ground pins (below) |
 | Screen | **Buy the 16 MB screen:** Elecrow's **5-inch IPS panel, SKU DLE06050B** (ESP32-S3 N16R8: 16 MB flash, 8 MB PSRAM). New features need it. The older **CrowPanel 5.0" ESP32 HMI, SKU DIS07050H, N4R8** (4 MB flash) is full: it gets fixes only, no new features. Do not buy it | 1 | The firmware tells the two apart by itself; print the case front for the one you have. Not Elecrow's "Advance" series: its card slot is on other pins |
 | microSD card | For the Teensy. FAT32 or exFAT | 1 | |
 | microSD card | For the screen. **FAT32** (cards over 32 GB come as exFAT: reformat them) | 1 | The screen fills it itself |
@@ -138,16 +138,20 @@
 | Battery | 2S: LiPo, Li-ion or LiFePO4 | 1 | Always two cells |
 | Charger | A small USB-C 2S charger module on the **IP2326** chip, in the charger bay on the back | 1 | Set it for two cells before the first charge. For a LiPo or Li-ion pack: a LiFePO4 pack needs a LiFePO4 charger |
 | Diodes | 1N5406 ×2, 1N4001 ×2 | 4 | |
-| Capacitors | Electrolytic 330 µF ×1, 100 µF ×1. Tantalum 330 µF (0E907) ×2, 47 µF 1206 ×2. Ceramic 1206: 330 nF ×2, 100 nF ×4, 10 µF ×1 | 13 | |
-| Aerial | RP-SMA 2.4 GHz aerial and a 20 cm RP-SMA extension | 1 | |
+| Capacitors | Electrolytic 330 µF ×1, 100 µF ×1, and one for the radio module (Malcolm uses 220 µF; the value is not critical). Tantalum 330 µF (0E907) ×2, 47 µF 1206 ×2. Ceramic 1206: 330 nF ×2, 100 nF ×4, 10 µF ×1 | 14 | The radio's one goes across its power and ground pins, the striped leg (minus) to GND |
+| Aerial | 2.4 GHz aerial with an **SMA** plug (a pin in the middle) and a 20 cm SMA male-to-female extension | 1 | **Not RP-SMA.** Most WiFi aerials are RP-SMA: they screw on, but do not connect |
 | Screen leads | A USB-C lead to cut up (5 V into the screen). An HY2.0 4-pin lead (the screen's serial port) | 1 each | |
 | Connectors | Male and female headers, 3-row headers, a 2 × 4 socket, servo cable, DuPont 3- and 4-pin | Various | |
 | Case | Printed in PETG (or what you prefer) | 1 set | See below |
 | Fixings | Self-tapping screws (3 mm, 2 mm flange), M3 bolts and lock-nuts, 2 mm cable ties, 5-minute epoxy | Various | |
 
+<img src="../docs/images/radio-module-capacitor.jpg" width="400" alt="The Ebyte radio module with a black capacitor soldered onto two of its pins, and its gold SMA aerial socket"> <img src="../docs/images/radio-sma-plug-socket.jpg" width="400" alt="Left, the end of the aerial: an SMA plug with a pin in the middle. Right, the radio module's SMA socket, with a hole in the middle">
+
+<sub>The radio, its capacitor soldered across its power and ground pins. SMA: the aerial's plug has a pin in the middle, the radio's socket a hole.</sub>
+
 **Cost:** over £120 in parts (approximate, October 2026; the full total is coming). See [Build one](https://messiter.com/ldrc/build.html) for current figures.
 
-<!-- TODO Malcolm: (1) The old README said "common anode" for the RGB LED; the board's netlist and the firmware (analogWrite HIGH = on) suit common cathode. Which do you fit? (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ML01DP5 aerial connector gender (SMA or RP-SMA). (6) Recommended battery pack and speaker part. (7) The exact three-position switch part, and whether any are two-position. (8) Re-cost the V2 parts. -->
+<!-- TODO Malcolm: (1) RGB LED: common cathode is the firmware's own requirement (analogWrite HIGH = on; settled 10 Nov 2026); its resistors and the R/G/B pin order are still wanted. (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Recommended battery pack and speaker part. (7) The exact three-position switch part, and whether any are two-position. (8) Re-cost the V2 parts. -->
 
 ### The case
 
@@ -181,7 +185,7 @@ Work in this order. Each step ends with a check.
    *Check:* Teensy Loader says **Reboot OK**.
 5. **Solder the small parts:** the 1206 capacitors, then the diodes, regulators, sockets and headers. Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header).\
    *Check:* battery off: the resistance across the battery plug is not near zero. With the meter on volts across the battery's own plug, the pin that meets the board's + reads plus 6 to 8.4 V. Then connect the battery, switch on, and measure 5 V on the Teensy socket's VIN, 5 V on the screen header's middle pin and 3.3 V on the radio socket's VCC.
-6. **Fit the modules:** the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (left header, 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged.
+6. **Fit the modules:** first solder a capacitor across the radio's power and ground pins (VCC and GND; Malcolm uses 220 µF, the value is not critical; the striped leg to GND), as in the photo above. Then the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (left header, 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged. Both must be **SMA**: an RP-SMA aerial screws on, but does not connect.
 7. **Wire the controls** (pins in the table below):
    - **Sticks: wire them as for Mode 1**, whatever mode you fly. The firmware swaps them for Mode 2.
    - Trims, the four top switches, the four front controls and the RGB LED.
@@ -198,7 +202,7 @@ Work in this order. Each step ends with a check.
 9. **Make the Teensy's card** ([Flash it, once](#flash-it-once), step 2).
 10. **Switch on.** First check the resistance across the battery plug again (not near zero). Then do the first start (below).
 
-<!-- TODO Malcolm: (0) Confirm the bench check in step 5: can the board be powered for a rail check with only the 2808 and button fitted? (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: confirm ON-OFF-ON with the centre tag to ground. (3) Do the 2023 Gerbers ("Transmitter2_v5") match the board you build today? (4) Any obsolete parts on the board? (5) Photos of the inside for this section. -->
+<!-- TODO Malcolm: (0) Confirm the bench check in step 5: can the board be powered for a rail check with only the 2808 and button fitted? (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: the centre tag to ground is the firmware's own requirement (INPUT_PULLUP, active low; settled 10 Nov 2026); the exact part (ON-OFF-ON?) is still wanted. (3) Do the 2023 Gerbers ("Transmitter2_v5") match the board you build today? (4) Any obsolete parts on the board? (5) Photos of the inside for this section. -->
 
 ### Teensy pins
 
