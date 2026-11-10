@@ -2592,7 +2592,7 @@ inline void handleFactoryReset() {
 
     String body = "<p>All saved settings have been cleared. The "
                   "receiver is rebooting and will come up as a "
-                  "fresh unit at <code>RXV2.local</code>.</p>"
+                  "fresh unit named <b>Untitled</b> (<code>Untitled.local</code>).</p>"   // (10 Nov 2026: it said RXV2.local - the name before 0.9.829, Storage.h defaultName)
                   "<p>The new owner can set things up from scratch "
                   "on the welcome screen.</p>";
     server.send(200, "text/html",
