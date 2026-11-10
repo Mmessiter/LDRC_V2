@@ -131,11 +131,11 @@
 | Clock | "Tiny RTC" **DS1307** module with a coin cell | 1 | Use its **left** 5-pin header. It needs **5 V** to answer. The screen sets it from the internet |
 | Sticks | **FrSky M9** Hall-sensor gimbals | 2 | |
 | Trims | **FrSky trim switches**, X9D Plus spare part | 4 | |
-| Top switches | Three-position RC switches | 4 | |
-| Front controls | Three-position switches or knobs (potentiometers) | 4 | Any mix |
+| Top switches | Three-position switches made for RC transmitters, with a long lever (single pole, three tags; the middle position connects nothing: ON-OFF-ON) | 4 | Several brands make them |
+| Front controls | The same three-position switches, or knobs (potentiometers) | 4 | Any mix |
 | Status light | **KY-016** RGB LED module (a 5 mm common-cathode RGB LED on a small board, its resistors already fitted) | 1 | Its pins are marked R, G, B and −. On the board's RGB LED header, GND is the end pin that beeps to the battery's −; then red, green, blue |
 | Speaker | 8 Ω (or 4 Ω), 1–2 W | 1 | On the screen's SPK socket (JST PH 2.0, 2-pin) |
-| Battery | 2S: LiPo, Li-ion or LiFePO4 | 1 | Always two cells |
+| Battery | 2S: LiPo, Li-ion or LiFePO4. Malcolm uses RadioMaster's 2S Li-ion 21700 pack, 5000 mAh | 1 | Always two cells. RadioMaster's larger pack fits too |
 | Charger | A small USB-C 2S charger module on the **IP2326** chip, in the charger bay on the back | 1 | Set it for two cells before the first charge. For a LiPo or Li-ion pack: a LiFePO4 pack needs a LiFePO4 charger |
 | Diodes | 1N5406 ×2, 1N4001 ×2 | 4 | |
 | Capacitors | Electrolytic 330 µF ×1, 100 µF ×1, and one for the radio module (Malcolm uses 220 µF; the value is not critical). Tantalum 330 µF (0E907) ×2, 47 µF 1206 ×2. Ceramic 1206: 330 nF ×2, 100 nF ×4, 10 µF ×1 | 14 | The radio's one goes across its power and ground pins, the striped leg (minus) to GND |
@@ -151,7 +151,7 @@
 
 **Cost:** over £120 in parts (approximate, October 2026; the full total is coming). See [Build one](https://messiter.com/ldrc/build.html) for current figures.
 
-<!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Recommended battery pack and speaker part. (7) The exact three-position switch part, and whether any are two-position. (8) Re-cost the V2 parts. -->
+<!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Battery ANSWERED 10 Nov 2026 (RadioMaster 2S Li-ion 21700 5000 mAh, HP157-BATT-5A2S; their larger one fits too); the speaker part still wanted. (7) ANSWERED 10 Nov 2026: all three-position, made for RC transmitters, several brands. (8) Re-cost the V2 parts. -->
 
 ### The case
 
@@ -202,7 +202,7 @@ Work in this order. Each step ends with a check.
 9. **Make the Teensy's card** ([Flash it, once](#flash-it-once), step 2).
 10. **Switch on.** First check the resistance across the battery plug again (not near zero). Then do the first start (below).
 
-<!-- TODO Malcolm: (0) Confirm the bench check in step 5: can the board be powered for a rail check with only the 2808 and button fitted? (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: the centre tag to ground is the firmware's own requirement (INPUT_PULLUP, active low; settled 10 Nov 2026); the exact part (ON-OFF-ON?) is still wanted. (3) Do the 2023 Gerbers ("Transmitter2_v5") match the board you build today? (4) Any obsolete parts on the board? (5) Photos of the inside for this section. -->
+<!-- TODO Malcolm: (0) Confirm the bench check in step 5: can the board be powered for a rail check with only the 2808 and button fitted? (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: ANSWERED 10 Nov 2026 (three-position switches made for RC transmitters, several brands; the centre tag to ground is the firmware's own requirement). (3) Do the 2023 Gerbers ("Transmitter2_v5") match the board you build today? (4) Any obsolete parts on the board? (5) Photos of the inside for this section. -->
 
 ### Teensy pins
 
