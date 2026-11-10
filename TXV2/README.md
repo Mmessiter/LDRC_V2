@@ -9,8 +9,8 @@
 - **The main board flies the model.** A Teensy 4.1 reads the sticks, does the mixing and runs the radio link.
 - **The screen talks to the pilot.** Elecrow's 5-inch IPS panel (ESP32-S3 with 16 MB, touchscreen, WiFi, Bluetooth) draws the pages and fetches updates. Its firmware is in [../TXV2-Screen](../TXV2-Screen).
 - **It is Version 1 with a new screen and a new case front.** The main board, radio, sticks and switches are Version 1's.
-- **Have a Version 1?** Your models, main board, sticks and switches stay. Print the Version 2 case front from [STL files/V2](STL%20files/V2): it holds the new screen. Fit the screen, and update the firmware. Keep your Teensy's own card (copy it to a computer first). Do not make the example card.
-  <!-- TODO Malcolm: does a Version 1 owner also need the Version 2 case back (TX_BACK12a_V2), or only the front? Until you say, these READMEs and the website say front only. If yes, say "front and back" in all three READMEs and on the website. -->
+- **Have a Version 1?** Your models, main board, sticks, switches and case back stay (fill the back's old charger hole with epoxy resin). Print the Version 2 case front from [STL files/V2](STL%20files/V2): it holds the new screen. Fit the screen, and update the firmware. Keep your Teensy's own card (copy it to a computer first). Do not make the example card.
+  <!-- (10 Nov 2026, Malcolm: "A version one back is okay, except it has an unnecessary hole for the old style charger, but it can be used if this hole is blocked up with epoxy resin".) -->
 - **Building one?** Start with [Build one](https://messiter.com/ldrc/build.html) on the website. This README has the same steps, with the files. **Nothing to compile:** the Teensy takes a ready-made file, and the screen is flashed from a web browser.
 
 ---
@@ -192,7 +192,7 @@ Work in this order. Each step ends with a check.
    *Check:* the screen joins your WiFi, fills its card and restarts as a complete screen.
 4. **Flash the Teensy on its own, by micro-USB, before it goes on the board.** See [Flash it, once](#flash-it-once), step 1.\
    *Check:* Teensy Loader says **Reboot OK**.
-5. **Solder the small parts:** the 1206 capacitors, then the diodes, regulators, sockets and headers. Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header). Power the main board only ever from its battery, switched on by the button and the 2808.\
+5. **Solder the small parts:** the surface-mount (SMD) parts first, such as the 1206 capacitors; after that the order is up to you: the diodes, regulators, sockets and headers. Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header). Power the main board only ever from its battery, switched on by the button and the 2808.\
    *Check:* battery off: the resistance across the battery plug is not near zero. With the meter on volts across the battery's own plug, the pin that meets the board's + reads plus 6 to 8.4 V. Then connect the battery, switch on, and measure 5 V on the Teensy socket's VIN, 5 V on the screen header's middle pin and 3.3 V on the radio socket's VCC.
 6. **Fit the modules:** first solder a capacitor across the radio's power and ground pins (VCC and GND; Malcolm uses 220 µF, the value is not critical; the striped leg to GND), as in the photo above. Then the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (its left, 5-pin header only; 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged. Both must be **SMA**: an RP-SMA aerial screws on, but does not connect.
 7. **Wire the controls** (pins in the table below):
