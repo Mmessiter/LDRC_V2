@@ -16,16 +16,18 @@
 ## What it does
 
 - **Drives a flight controller** on one wire: **CRSF** (the default, 250 frames a second), **SBUS**, **IBUS** or **PPM**.
+- **Range and channels: more than enough.** Some radios offer more range and more channels. Sixteen channels and about 2 km of range are more than enough for almost all model flying. In ground-level tests the link held at more than 1 km; the radio modules' makers claim more than 2.
 - **Sends Rotorflight telemetry** to the transmitter: flight-battery volts, current, capacity used, head speed, ESC temperature.
 - **Sets up Rotorflight** from the phone app (Bluetooth) or any browser (its own WiFi): wizards for a new helicopter and for tuning, PIDs, rates, governor, rescue, servos, filters, switches and knobs, six banks (following a Version 2 transmitter's bank count), backups, flight recordings, a black box check.
-- **Lets a Version 2 transmitter edit Rotorflight** too, over Bluetooth.
+- **Lets a Version 2 transmitter set up Rotorflight** too, over Bluetooth: tuning, a guide for a new helicopter, a set-up check, and a backup on the transmitter's card.
 - **With a short USB-C cable to the flight controller** it can do almost everything Rotorflight's configurator does. Only flashing Rotorflight itself needs a computer. That includes the command line, in-flight adjustments, ports, and reading the black box.
   <!-- TODO Malcolm: confirm the app covers every Configurator 2.3.0 tab before saying "everything". -->
 - **Updates itself over the air:** from the phone, over WiFi, or through a Version 2 transmitter. A failed update leaves the old firmware in place.
 - **Looks after itself:**
   - It starts **disarmed and safe** before any transmitter is heard.
-  - WiFi and Bluetooth **switch off about a second after arming**, and come back when you disarm, or 10 seconds after the transmitter goes quiet.
+  - WiFi and Bluetooth **switch off about a second after arming**, and come back when you disarm, or 10 seconds after the transmitter goes quiet. On a Rotorflight model, the flight controller's own word on armed decides it.
   - **Nothing can be changed while the model is armed.** Every setting it writes is read back to check it.
+  - **A tune that cannot fly is refused.** It will not pass on rates, PIDs or governor settings that would leave roll, pitch or yaw with no response, or no head speed. That holds from the phone and from the transmitter. A blank box stops the save: it is never sent as zero.
 - **The same board has other jobs:**
   - **Dongle:** with no radios fitted, on a spare flight-controller port, it gives the phone app to a helicopter flown with any make of radio. See [messiter.com/rotorflight/dongle.html](https://messiter.com/rotorflight/dongle.html).
   - **Simulator mode:** plugged into a computer (flight controller unplugged), it becomes a USB joystick and keyboard, so your transmitter flies RealFlight or neXt.
@@ -82,7 +84,7 @@ There are two ways: on the circuit board, or hand-wired.
 | USB-C cable (optional) | A short **data** cable, receiver to flight controller. Malcolm uses a Chenyang CY-UC-088-0.07M (70 mm, right-angled both ends) | 1 | Unlocks the full Rotorflight set-up |
 
 **Cost:** about £35 of parts (approximate, October 2026).
-<!-- TODO Malcolm: the case (RXV2/case, commit 9bc8f12c, June 2026) is still local only: push 9bc8f12c with this README: receiver.html and build.html already link RXV2/case. Which board does it fit, NEWA or NEWB? -->
+<!-- TODO Malcolm: which board does the case fit, NEWA or NEWB? -->
 <!-- TODO Malcolm: re-cost the V2 receiver. compare.md estimates £15-£25 for the XIAO and radios alone; £35 is the figure in the receiver's own help text and on the website. -->
 
 **The lead socket (J2):**
@@ -250,7 +252,7 @@ Three ways, all keeping your settings, binding, flights and backups:
 
 1. **From the app**, over Bluetooth. The phone downloads the update and passes it on. It works at the field.
 2. **Over the receiver's WiFi**, from its *Check for update* page.
-3. **Through a Version 2 transmitter:** *Model setup → Receiver updates*, with the model on and connected, with the safety on (with no safety switch: the motor off). The receiver joins the WiFi it knows and installs. No app needed.
+3. **Through a Version 2 transmitter:** *Model setup → Receiver updates → Check → Install now*, with the model on and connected, with the safety on (with no safety switch: the motor off). The receiver joins the WiFi it knows and installs. No app needed.
 
 You can roll back to an older version from the same page. Updates never run while the model is armed.
 Current version and notes: [Help & updates](https://messiter.com/ldrc/help.html).

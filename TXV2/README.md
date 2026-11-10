@@ -1,25 +1,25 @@
 # The Version 2 transmitter
 
-<img src="Images/V2_transmitter.jpg" width="600" alt="The black Version 2 transmitter: two sticks, the status light, and the 5-inch touchscreen showing a flight screen of coloured boxes">
+<img src="Images/V2_transmitter.jpg" width="600" alt="The black Version 2 transmitter: two sticks, the status light, and the 5-inch touchscreen showing a front screen of coloured boxes">
 
-<sub>A Version 2 transmitter, showing a flight screen of its own design.</sub>
+<sub>A Version 2 transmitter, showing one of its front screens.</sub>
 
 **A 16-channel 2.4 GHz transmitter that you build yourself.**
 
 - **The main board flies the model.** A Teensy 4.1 reads the sticks, does the mixing and runs the radio link.
-- **The screen talks to the pilot.** An Elecrow CrowPanel 5.0 (ESP32-S3, 5-inch touchscreen, WiFi, Bluetooth) draws the pages and fetches updates. Its firmware is in [../TXV2-Screen](../TXV2-Screen).
+- **The screen talks to the pilot.** Elecrow's 5-inch IPS panel (ESP32-S3 with 16 MB, touchscreen, WiFi, Bluetooth) draws the pages and fetches updates. Its firmware is in [../TXV2-Screen](../TXV2-Screen).
 - **It is Version 1 with a new screen and a new case front.** The main board, radio, sticks and switches are Version 1's.
 - **Have a Version 1?** Your models, main board, sticks and switches stay. Print the Version 2 case front from [STL files/V2](STL%20files/V2): it holds the new screen. Fit the screen, and update the firmware. Keep your Teensy's own card (copy it to a computer first). Do not make the example card.
   <!-- TODO Malcolm: does a Version 1 owner also need the Version 2 case back (TX_BACK12a_V2), or only the front? Until you say, these READMEs and the website say front only. If yes, say "front and back" in all three READMEs and on the website. -->
-- **Building one?** Start with [Build one](https://messiter.com/ldrc/build.html) on the website. This README has the same steps, with the files.
+- **Building one?** Start with [Build one](https://messiter.com/ldrc/build.html) on the website. This README has the same steps, with the files. **Nothing to compile:** the Teensy takes a ready-made file, and the screen is flashed from a web browser.
 
 ---
 
 ## What it does
 
-<img src="../docs/images/tx-themes-six.png" width="900" alt="The same six-box flight screen in six colour themes: navy, sky blue, white, green, black and wine">
+<img src="../docs/images/tx-themes-six.png" width="900" alt="The same six-box front screen in six colour themes: navy, sky blue, white, green, black and wine">
 
-<sub>One flight screen in six of the twelve themes. Sample values.</sub>
+<sub>One front screen in six of the twelve themes. Sample values.</sub>
 
 **Flying**
 - 16 channels. Any stick, switch or knob can drive any channel.
@@ -32,25 +32,45 @@
 - 90 model memories, and as many backups as the card holds.
   <!-- TODO Malcolm: 90 memories: the code (MAXMODELNUMBER 91: the Models page, automatic model selection and the buddy match run 1-90) and MODELS.TXT say 90. Only the Check IDs page (Model_IDs.h) scans 1-89: please check memory 90 shows there. -->
 - **The right memory loads by itself** when you switch a model on. This is rare: elsewhere we found it only on Multiplex's SMART SX, with its ID receivers (some have a fixed ID, some can be set), and on Mikado's VBar Control, which keeps each model's settings in the model.
+- **Check for duplicates** lists every model with its stored ID, and names any two that share one.
 - **Send a model memory to another transmitter** over the radio link. A Version 1 transmitter can send its models to a Version 2 over the air (tested), and two Version 2s swap them.
 
 **The screen**
-- **Your own flight screens:** six designs on tabs, each with up to nine boxes of big numbers or round dials, with amber and red zones.
-- **Twelve colour themes**, each one editable.
+- **Six front screens, ready-made and yours to change:** an overview, head speed, the timer, the link, power, and the model with its channels. One to nine boxes each, in big numbers or round dials, with amber and red zones.
+- **Twelve colour themes**, each one editable. Give each box its own theme, or press **Apply to all boxes** to give the whole screen one.
 - **Model pictures** sent from your phone by scanning a QR code.
-- **Help on every page**, each with an **animation** of the page in use, and ten more under **Fix problems**; spoken messages, log files, and Pong for rainy days.
+- **See what moves what:** the Inputs and outputs page and the Switches page light the stick, trim or switch you move.
+- **Help on every page:** 72 help pages in plain words. Most have an **animation** of the page in use, with a spoken voice. There are 76 animations; ten of them, under **Fix problems**, cure common helicopter problems.
+- Spoken messages, log files, and Pong for rainy days.
 
-<img src="../docs/images/tx-defined-screen-dials.png" width="600" alt="A defined front screen of six round dials: the timer with hands, both batteries, head speed with a red zone from 2400 RPM, the link, ESC temperature, and capacity used with a red zone from 4000 mAh">
+<img src="../docs/images/tx-front-six-ready.png" width="900" alt="The six ready-made front screens, each with its own tab lit. 1: an overview in big digits on navy. 2: one big head speed dial and four small dials on black. 3: a very big timer on blue. 4: link and frame rate dials on teal. 5: power, with two battery dials and six small dials. 6: the model's photo and its channel bars on sky blue">
 
-<sub>A flight screen of round dials, each with its amber and red zones. Sample values.</sub>
+<sub>The six ready-made front screens. Use them as they are, or change any box. Sample values.</sub>
+
+<p>
+  <img src="../docs/images/tx-defined-screen-dials.png" width="400" alt="A defined front screen of six round dials: the timer with hands, both batteries, head speed with a red zone from 2400 RPM, the link, ESC temperature, and capacity used with a red zone from 4000 mAh">
+  <img src="../docs/images/tx-defined-screen-box-theme.png" width="400" alt="Choose a theme for box 2: twelve numbered themes with number 10 chosen, a preview of the batteries box, and the buttons Same as screens, Apply to all boxes and OK">
+</p>
+
+<sub>Left: a front screen of round dials, each with its amber and red zones. Right: give a box its own theme, or apply it to all boxes. Sample values.</sub>
 
 
 **Rotorflight on the transmitter** (needs a Version 2 receiver)
-- Easy tuning, PIDs, rates, governor, rescue, servos, travel extents, filters, switches and knobs, copy a bank, battery, black box, calibrate, first-time basics.
-- **Back up the Rotorflight tune and set-up**, every bank, to the card, and put it back exactly. Ports, LED, GPS and ESC settings are not included.
+- Easy tuning, PIDs, rates, governor, rescue, servos, travel extents, filters, switches and knobs, copy a bank, battery, black box, calibrate, first-time basics. On the 16 MB screen, the beeper and Rotorflight's name for the model too.
+- **A new helicopter, step by step** (16 MB screen). The **New helicopter guide** takes you through every set-up step in order and ticks each one off. **Check my setup** lists anything unfinished and says what stops the model arming. **Direction check** tells you whether the flight controller is the right way round.
+- **Back up the Rotorflight tune and set-up**, every bank, to the card, and put it back exactly. Ports, LED, GPS and ESC settings are not included. **Copy tuning** writes another model's PIDs, rates, governor and rescue from its backup into this one.
+- **What changed?** (16 MB screen) compares the whole set-up with its backup, setting by setting, and puts any one setting back. **Undo the last save** takes back a save. We did not find this comparison on any other radio.
 - **Edit with the model switched off.** The changes go across when it next connects.
+- **Every save is read back** from the flight controller and compared with what you typed, before the page says saved. A difference, or no answer, is told.
 - With the receiver's USB cable to the flight controller: setting up the selectors and knobs on Switches and knobs (they then work without the cable), Rotorflight's command line, and the whole set-up saved to the card as text (Rotorflight's `diff all`).
 - The settings travel over Bluetooth from the screen to the receiver, never over the flying link, and only while the model is disarmed.
+
+<p>
+  <img src="../docs/images/tx-rf-guide-checks.png" width="400" alt="The Guide and checks page: New helicopter guide, Check my setup, Direction check, What changed?, Undo the last save and Command line, with the line Last save: PIDs (bank 2), 3 min ago">
+  <img src="../docs/images/tx-rf-direction.png" width="400" alt="Direction check, 2 of 3: Tilt the RIGHT side down about 30 degrees. A live line shows what the flight controller feels: nose 2 degrees down, right side 14 degrees down, heading 87. The first move, Tilt the nose DOWN, is green: agrees">
+</p>
+
+<sub>Left: Guide &amp; checks, five helpers and the command line. Right: Direction check, as you tilt the model. Sample values.</sub>
 
 <!-- TODO Malcolm: compare.md says Battery, Black box and Calibrate (B88) were not yet tried on hardware on 10 Oct. Confirm before release notes call them proven. -->
 
@@ -59,9 +79,10 @@
 - A chart of reconnection times, and a scan of the 2.4 GHz band for interference.
 
 **Updates and safety**
-- **One button updates the whole transmitter** from the internet: screen, card, main board, help texts.
+- **One button updates the whole transmitter** from the internet: screen, card, main board, help texts. It tells you when a new version is ready.
 - **The receiver can be updated through the transmitter.**
 - Nothing changes in flight. No transmitter update, file transfer or restart starts while a model is connected. A receiver update runs only with the safety on, and the receiver refuses while armed. WiFi and Bluetooth switch off whenever the model could fly.
+- Switch a Rotorflight model on with the safety already off, and the transmitter will not connect to it until the safety is on.
 
 <img src="../docs/images/tx-rotorflight-six.png" width="900" alt="Six Rotorflight pages on the transmitter: the menu with Ready to arm, PIDs, rates, the governor, a switch on Switches and knobs, and Rotorflight's command line">
 
@@ -77,7 +98,7 @@
 |---|---|
 | `TransmitterCode/` | The Teensy 4.1 firmware (PlatformIO). `include/` holds nearly all of it, one header per subject. `src/main.cpp` is set-up and the main loop |
 | `TransmitterCode/SD Examples/Teensy SD Example/` | What goes on the Teensy's microSD card |
-| `Help files for SD/` | The help texts (68): one for each of the 66 help pages, and two kept for reference |
+| `Help files for SD/` | The help texts (74): one for each of the 72 help pages, and two kept for reference |
 | `Noises/` | The sounds: voice messages, prompts and sound effects |
 | `Circuits/` | The circuit boards as Proteus projects, with Gerbers in the `CADCAM` folders. `Transmitter - CADCAM` is the transmitter's main board. The `Receiver` and `SensorHub` folders are Version 1's receiver boards |
 | `STL files/` | The printed case. `STL files/V2/` holds the Version 2 parts. The rest are the Version 1 parts that Version 2 shares. STEP sources in `STL files/STEP files/` |
@@ -157,7 +178,7 @@ Work in this order. Each step ends with a check.
 3. **Flash the screen first, by USB, before it is wired in.** Its serial port is shared with its USB chip, so do it while the USB socket is free. Follow [../TXV2-Screen/README.md](../TXV2-Screen/README.md).\
    *Check:* the screen joins your WiFi, fills its card and restarts as a complete screen.
 4. **Flash the Teensy on its own, by micro-USB, before it goes on the board.** See [Flash it, once](#flash-it-once), step 1.\
-   *Check:* PlatformIO ends with `SUCCESS`.
+   *Check:* Teensy Loader says **Reboot OK**.
 5. **Solder the small parts:** the 1206 capacitors, then the diodes, regulators, sockets and headers. Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header).\
    *Check:* battery off: the resistance across the battery plug is not near zero. With the meter on volts across the battery's own plug, the pin that meets the board's + reads plus 6 to 8.4 V. Then connect the battery, switch on, and measure 5 V on the Teensy socket's VIN, 5 V on the screen header's middle pin and 3.3 V on the radio socket's VCC.
 6. **Fit the modules:** the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (left header, 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged.
@@ -198,23 +219,29 @@ Work in this order. Each step ends with a check.
 
 ## Flash it, once
 
-After this, the transmitter updates itself.
-
-**You need** [PlatformIO](https://platformio.org/) (the VS Code extension, or the `pio` command).
+After this, the transmitter updates itself. **There is nothing to compile.**
 
 > [!WARNING]
 > **Flash the Teensy before it goes on the main board.** Do not plug USB into a Teensy fitted to the board unless its VUSB–VIN pad is cut.
 
 <!-- TODO Malcolm: confirm the VUSB/VIN advice. The Teensy 4.1 joins USB 5 V to VIN unless that pad is cut (PJRC's advice); with the board's 5 V rails on VIN, USB could back-feed the rails and the screen. Is the pad cut on your boards, or do you never plug USB into a fitted Teensy? Until you say, this README and the website flash the Teensy off the board. A Version 1 owner's Teensy is already fitted: should they lift it out of its socket for the first Version 2 flash? -->
 
-1. **Flash the Teensy on its own**, plugged into your computer with a micro-USB data cable:
+1. **Flash the Teensy on its own**, plugged into your computer with a micro-USB **data** cable:
+   - Download [`ldrc-v2-teensy41.hex`](https://messiter.com/txv1b/release/ldrc-v2-teensy41.hex). That link always gives the latest release.
+   - Install PJRC's free [Teensy Loader](https://www.pjrc.com/teensy/loader.html) (Mac, Windows or Linux). On Linux, install PJRC's udev rules first (the Teensy Loader page has them).
+   - Open Teensy Loader. Choose **File**, then **Open HEX File**, and pick `ldrc-v2-teensy41.hex`.
+   - Press the small white button on the Teensy.
+   - In the loader, press **Program**, then **Reboot**. With its **Auto** button on, it does both by itself.
+   - *Check:* Teensy Loader says **Reboot OK**.
+
+   **Prefer to build it from source?** Install [PlatformIO](https://platformio.org/) (the VS Code extension, or the `pio` command), then:
 
    ```
    cd TXV2/TransmitterCode
    pio run -e teensy41 -t upload
    ```
 
-   PlatformIO fetches the libraries and runs the Teensy loader. If it sits waiting, press the small white button on the Teensy.
+   PlatformIO fetches the libraries and runs the Teensy loader. If it sits waiting, press the small white button on the Teensy. It ends with `SUCCESS`.
 2. **Make the Teensy's card.** Copy everything in `TransmitterCode/SD Examples/Teensy SD Example/` to its microSD card: `help/`, `Images/`, `mod/` and `MODELS.DAT`. Add an empty folder called `log`.
    - The example `MODELS.DAT` holds Malcolm's models. Start with them, or reset (below) and make your own.
    - (Version 1 owner: skip this. Keep your own card.)
@@ -260,7 +287,8 @@ Blades off for every test. Unplug the motor too, unless the test needs it. The f
 **Transmitter setup → Transmitter updates.**
 
 - The screen fetches the latest release from messiter.com over WiFi.
-- It shows what is new. Nothing is installed until you press **Install now**.
+- It shows what is new. A newer release installs straight away; an earlier version asks first.
+- **It tells you when one is ready.** At power-up, on a WiFi it knows and with no model connected, the transmitter looks for a newer release and says *Update ready*. Nothing is installed until you press **Transmitter updates**.
 - It updates what differs: the screen's firmware, the screen's card, the Teensy's firmware and the help texts.
 - **Your files come first.** Before the Teensy is updated, your models, settings and logs are copied to the screen's card and read back. No copy, no update.
 - **New Teensy firmware runs on trial.** If it does not start properly, the old one comes back by itself.
@@ -268,7 +296,7 @@ Blades off for every test. Unplug the motor too, unless the test needs it. The f
 - **Earlier versions** puts back an older release just as easily.
 - No update runs while a model is connected or the safety is off.
 
-**The receiver too:** *Model setup → Receiver updates*, with the model switched on and connected, with the safety on (with no safety switch: the motor off). Version 2 receivers only.
+**The receiver too:** *Model setup → Receiver updates → Check → Install now*, with the model switched on and connected, with the safety on (with no safety switch: the motor off). Version 2 receivers only.
 
 Current versions and what changed: [Help & updates](https://messiter.com/ldrc/help.html).
 
@@ -278,8 +306,8 @@ Current versions and what changed: [Help & updates](https://messiter.com/ldrc/he
 
 - The Teensy sends Nextion display commands at 921,600 baud: `page`, `vis`, `X.txt=`, `X.val=`, `get` and the rest.
 - The screen draws the pages from their definitions on its card, and answers with exactly the bytes a Nextion would.
-- So the Teensy's code did not need to know the display had changed. It now drives 76 pages: Version 1's 58, and 18 new Rotorflight pages.
-- The screen's own features (updates, WiFi, themes, flight screens, pictures, the Bluetooth link to the receiver, Pong) are a few extra words on the same wire. They are listed in [../TXV2-Screen/README.md](../TXV2-Screen/README.md).
+- So the Teensy's code did not need to know the display had changed. It now drives 90 pages: Version 1's 58, and 32 new Rotorflight pages.
+- The screen's own features (updates, WiFi, themes, front screens, pictures, the Bluetooth link to the receiver, Pong) are a few extra words on the same wire. They are listed in [../TXV2-Screen/README.md](../TXV2-Screen/README.md).
 
 ## Change log
 

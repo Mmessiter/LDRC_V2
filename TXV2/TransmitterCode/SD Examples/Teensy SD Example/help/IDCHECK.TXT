@@ -1,11 +1,12 @@
-Lists every model memory with its stored ID,|
+Lists every model memory in use with its stored ID,|
 and finds any ID stored twice.||
 Each line shows the model's number, its name and its stored ID.|
-'(ID OK)' means no other model has that ID.|
-'(same as 9)' means model 9 has the same ID.|
-A model with no stored ID shows its name only.|
-'Duplicates' at the bottom counts the models whose ID is also|
-stored with another model. It should be 0.|
+'same as 8' after an ID means model 8 has the same ID.|
+'no ID stored' means the model has none yet.|
+Empty model memories are left out.|
+The line below the list sums it up.|
+'All 7 stored IDs are different.' is what you want.|
+'2 of 7 IDs are shared' means two models have the same ID.|
 'OK' goes to the 'Model IDs' page, to store or delete an ID.||
 WHAT THE ID IS:|
 Each receiver has its own ID: the 6-byte (48-bit) number of its|

@@ -97,7 +97,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
         <div class=fldRow><label data-help="Smoothing of the head-speed signal, Hz. Lower it if RPM readings are jumpy; too low makes the governor sluggish.">RPM filter</label>               <input type=number id=g_frpm></div>
         <div class=fldRow><label data-help="Smoothing of the tail-torque-assist signal, Hz.">Tail-torque assist filter (TTA)</label>               <input type=number id=g_ftta></div>
         <div class=fldRow><label data-help="Smoothing of the anticipation signal (collective/cyclic demands adding throttle early), Hz.">Feed-forward filter (FF)</label>                <input type=number id=g_fff></div>
-        <div class=fldRow><label data-help="Smoothing of the governor D-term, Hz. 0 = off.">D filter</label>                 <input type=number id=g_fd></div>
+        <div class=fldRow><label data-help="Smoothing of the governor D-term, in TENTHS of a Hz: 50 = 5 Hz (Rotorflight divides it by 10). 0 = off.">D filter (x0.1 Hz)</label>                 <input type=number id=g_fd></div>
     </div>
 
     <div class=card>
@@ -145,7 +145,7 @@ input:disabled,select:disabled{background:#eee;color:#999}
 //   [22]     u8   gov_tta_filter (Hz)
 //   [23]     u8   gov_ff_filter (Hz)
 //   [24]     u8   reserved (was spoolup_min_throttle — write 0)
-//   [25]     u8   gov_d_filter (Hz) — new in 4.6
+//   [25]     u8   gov_d_filter (0.1 Hz: governor.c divides by 10) — new in 4.6
 //   [26..27] u16  gov_spooldown_time (0.1 s) — new in 4.6
 //   [28]     u8   gov_throttle_type — new in 4.6
 //   [29]     i8   reserved (write 0)
