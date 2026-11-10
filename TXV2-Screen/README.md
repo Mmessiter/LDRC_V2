@@ -55,7 +55,7 @@
    - **Power the panel with 5 V through its USB-C socket** (a cut USB-C lead from the board's screen rail). The pins of its ports are outputs, not power inputs.
    - Find the cut lead's + and − with a meter: colours vary.
    - **Never two power supplies:** do not plug a computer into the USB-C socket while the screen is wired to the board.
-   - The **speaker** goes on the SPK socket.
+   - The **speaker** goes on the SPK socket. Nextion's Box Speaker (the one that comes with a Nextion display) plugs straight into the 16 MB screen's.
    - Why flash first: the serial port on J10 is shared with the USB chip. A USB cable would fight the Teensy.
 
 From then on the transmitter updates itself: *Transmitter setup → Transmitter updates.*
