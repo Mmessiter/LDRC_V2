@@ -205,7 +205,7 @@ Work in this order. Each step ends with a check.
    - **Ground** to J10 pin 4. **Leave J10 pin 3 unconnected**: it is a 3.3 V *output*.
    - **5 V** from the board's screen rail (the Nextion header's pin 3) through a cut USB-C lead into the screen's USB-C socket. The screen takes power only through USB-C.
    - The **speaker** on the screen's SPK socket.
-   - Pin 1 of the board's screen header is GND. Find it with a meter on beep, battery off: it beeps to the battery's −.
+   - Pin 1 of the board's screen header is GND: the end pin nearer the bottom of the transmitter. Then pin 2 (not used), pin 3 in the middle (5 V), and pins 4 and 5 (the Teensy's transmit and receive). Check pin 1 with a meter on beep, battery off: it beeps to the battery's −.
    - **Never two power supplies:** do not plug a computer into the screen's USB-C socket while it is wired to the board.
    - *Check:* both sides are 3.3 V logic. TX goes to RX, RX to TX.
 9. **Make the Teensy's card** ([Flash it, once](#flash-it-once), step 2).
