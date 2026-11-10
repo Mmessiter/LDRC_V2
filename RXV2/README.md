@@ -67,7 +67,8 @@ There are two ways: on the circuit board, or hand-wired.
 
 **The board files are being prepared for publishing.** Until then, hand-wire a receiver (below), or email Malcolm at [mmessiter@gmail.com](mailto:mmessiter@gmail.com).
 
-<!-- TODO Malcolm: which board is the production one, RXV2_NEWA or RXV2_NEWB? Publish its KiCad files and Gerbers to RXV2/kicad/receiver/ (and the RXV2_VDIV divider board). Will you offer bare boards from your batch of 100? -->
+<!-- (10 Nov 2026, Malcolm: "RXV2_NEWB is correct. When in doubt, the file with the later date and time is the most recent and the one to use.") -->
+<!-- TODO Malcolm: may RXV2_NEWB's KiCad files and Gerbers be published to RXV2/kicad/receiver/ (and the RXV2_VDIV divider board)? Will you offer bare boards from your batch of 100? -->
 
 **Parts for one board** (from the board's design):
 
@@ -84,7 +85,7 @@ There are two ways: on the circuit board, or hand-wired.
 | USB-C cable (optional) | A short **data** cable, receiver to flight controller. Malcolm uses a Chenyang CY-UC-088-0.07M (70 mm, right-angled both ends) | 1 | Unlocks the full Rotorflight set-up |
 
 **Cost:** about £35 of parts (approximate, October 2026).
-<!-- TODO Malcolm: which board does the case fit, NEWA or NEWB? -->
+<!-- TODO Malcolm: which board does the case fit, NEWA or NEWB? (NEWB is the production board, 10 Nov 2026.) -->
 <!-- TODO Malcolm: re-cost the V2 receiver. compare.md estimates £15-£25 for the XIAO and radios alone; £35 is the figure in the receiver's own help text and on the website. -->
 
 **The lead socket (J2):**

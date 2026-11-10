@@ -143,7 +143,7 @@
 | Screen leads | A USB-C lead to cut up (5 V into the screen). An HY2.0 4-pin lead (the screen's serial port) | 1 each | |
 | Connectors | Male and female headers, 3-row headers, a 2 × 4 socket, servo cable, DuPont 3- and 4-pin | Various | |
 | Case | Printed in PETG (or what you prefer) | 1 set | See below |
-| Fixings | Self-tapping screws (3 mm, 2 mm flange), M3 bolts and lock-nuts, 2 mm cable ties, 5-minute epoxy | Various | |
+| Fixings | Tiny flange-head self-tapping screws (photo below), M3 bolts and lock-nuts, 2 mm cable ties, 5-minute epoxy | Various | The tiny screws hold the screen, the charger board and the case back: buy plenty |
 
 <img src="../docs/images/radio-module-capacitor.jpg" width="400" alt="The Ebyte radio module with a black capacitor soldered onto two of its pins, and its gold SMA aerial socket"> <img src="../docs/images/radio-sma-plug-socket.jpg" width="400" alt="Left, the end of the aerial: an SMA plug with a pin in the middle. Right, the radio module's SMA socket, with a hole in the middle">
 
@@ -166,9 +166,14 @@
 - **Version 2 parts** in [`STL files/V2`](STL%20files/V2): **two case fronts**, one for each screen (`TXV12_FRONT_16m_V2.step` for the 16 MB IPS panel, `TXV12a_Front_4meg_V2.step` for the 4 MB CrowPanel: their dimensions differ slightly), the case back `TXV12a_BACK_V2.step`, and the charger bay `CHARGERBAY.stl`, which takes the place of Version 1's JR module bay on the back and holds the USB-C charger module. The fronts and the back are STEP files; most slicers open them directly.
 - **Shared with Version 1** in `STL files/`: `TX_HANDLE`, `TX_SUPPORT`, `GimbalP` (gimbal protector), `LEDMOUNT`, `SPACER`. (`MODBAY` and `Blank` are Version 1's JR module bay: a Version 2 prints the charger bay there instead.)
 - `TX_FRONT.stl` and `TX_BACK12.stl` are **Version 1's** (cut for the old Nextion screen). Do not print them for a Version 2.
-- The CrowPanel has no mounting holes. The case front holds it.
+- The screen has no mounting holes. Four tiny self-tapping screws hold it in the case front; the same screws hold the charger board and the case back, so buy plenty.
+- **Printing** is not critical: Malcolm uses 0.16 mm layers and the slicer's default infill.
 
-<!-- TODO Malcolm: print settings (layer height, walls, infill, supports) for each part, and how the screen is held in the front. -->
+<img src="../docs/images/tiny-screw.jpg" width="300" alt="One of the tiny flange-head self-tapping screws on a cutting mat's centimetre grid: about half a centimetre long">
+
+<sub>One of the tiny self-tapping screws, on a centimetre grid.</sub>
+
+<!-- (10 Nov 2026, Malcolm: layer height and infill "not important"; he uses 0.16 mm and the default infill. Four tiny screws hold the screen; the same screws hold the charger and the case back.) -->
 
 ---
 
@@ -206,7 +211,7 @@ Work in this order. Each step ends with a check.
 9. **Make the Teensy's card** ([Flash it, once](#flash-it-once), step 2).
 10. **Switch on.** First check the resistance across the battery plug again (not near zero). Then do the first start (below).
 
-<!-- TODO Malcolm: (0) Confirm the bench check in step 5: can the board be powered for a rail check with only the 2808 and button fitted? (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: ANSWERED 10 Nov 2026 (three-position switches made for RC transmitters, several brands; the centre tag to ground is the firmware's own requirement). (3) Do the 2023 Gerbers ("Transmitter2_v5") match the board you build today? (4) Any obsolete parts on the board? (5) Photos of the inside for this section. -->
+<!-- TODO Malcolm: (0) Confirm the bench check in step 5: can the board be powered for a rail check with only the 2808 and button fitted? (1) Front three-position switches on the analogue pins A6-A9: what resistor values? (2) Top switches: ANSWERED 10 Nov 2026 (three-position switches made for RC transmitters, several brands; the centre tag to ground is the firmware's own requirement). (3) + (4) ANSWERED 10 Nov 2026: "No parts are obsolete and that gerber is the correct one." (5) Photos of the inside for this section. -->
 
 ### Teensy pins
 
