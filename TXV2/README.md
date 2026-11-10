@@ -133,7 +133,7 @@
 | Trims | **FrSky trim switches**, X9D Plus spare part | 4 | |
 | Top switches | Three-position RC switches | 4 | |
 | Front controls | Three-position switches or knobs (potentiometers) | 4 | Any mix |
-| Status light | 5 mm RGB LED | 1 | The board and the firmware suit a common-cathode LED |
+| Status light | **KY-016** RGB LED module (a 5 mm common-cathode RGB LED on a small board, its resistors already fitted) | 1 | Its pins are marked R, G, B and −. On the board's RGB LED header, GND is the end pin that beeps to the battery's −; then red, green, blue |
 | Speaker | 8 Ω (or 4 Ω), 1–2 W | 1 | On the screen's SPK socket (JST PH 2.0, 2-pin) |
 | Battery | 2S: LiPo, Li-ion or LiFePO4 | 1 | Always two cells |
 | Charger | A small USB-C 2S charger module on the **IP2326** chip, in the charger bay on the back | 1 | Set it for two cells before the first charge. For a LiPo or Li-ion pack: a LiFePO4 pack needs a LiFePO4 charger |
@@ -151,7 +151,7 @@
 
 **Cost:** over £120 in parts (approximate, October 2026; the full total is coming). See [Build one](https://messiter.com/ldrc/build.html) for current figures.
 
-<!-- TODO Malcolm: (1) RGB LED: common cathode is the firmware's own requirement (analogWrite HIGH = on; settled 10 Nov 2026); its resistors and the R/G/B pin order are still wanted. (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Recommended battery pack and speaker part. (7) The exact three-position switch part, and whether any are two-position. (8) Re-cost the V2 parts. -->
+<!-- TODO Malcolm: (1) RGB LED: ANSWERED 10 Nov 2026 - a KY-016 module, "comes complete with all resistors fitted" (Malcolm); common cathode (the firmware); the header RG1: 1 = GND, 2/3/4 = red/green/blue (the netlist). (2) 5 V regulators: ANSWERED 3 Nov 2026 (a step-up/step-down Pololu for the Teensy - S13V10F5, 1 A is plenty, or S13V20F5 - and a 7805 for the screen, no heatsink needed). (3) INA219: confirm the exact module. (4) Exact USB-C 2S charger module (the "2326" board) and its wiring. (5) ANSWERED 10 Nov 2026 with two photos: SMA (the module's socket has a hole, the aerial a pin), and a capacitor across the module's power and ground, 220 µF, "its value does not appear to matter much". (6) Recommended battery pack and speaker part. (7) The exact three-position switch part, and whether any are two-position. (8) Re-cost the V2 parts. -->
 
 ### The case
 
