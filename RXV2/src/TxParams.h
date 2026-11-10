@@ -430,6 +430,15 @@ inline void txParamsWords(const uint16_t* w) {
     // same thing our web "Save failsafe" button does. Not Rotorflight-
     // gated: this must work on FC-less models (PWM converters etc).
     if (id == 1) {
+        // (10 Nov 2026, the code review) refused while the model is ARMED, as the web page's Save (refuseIfArmed: "would
+        // store arm-high as the failsafe") and the Bluetooth words (/api/txparams) already were: the arming channel HIGH and
+        // the throttle where it is would be stored as the posture to fly to on signal loss. The same test as a transmitter's
+        // update order (rxUpdOrder): the flight controller's word, or the arming channel high on this live link.
+        {
+            const bool armedFc = fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000;
+            const bool armedCh = armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
+            if (armedFc || armedCh) { events.add("Failsafe NOT captured (transmitter command): the model is ARMED"); return; }
+        }
         // B29: the page's ticks say which channels move on signal loss; the rest
         // hold their last position, as a V1 receiver does. (Before 0.9.885 every
         // channel moved, whatever was ticked.)
