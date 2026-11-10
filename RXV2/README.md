@@ -65,10 +65,11 @@ There are two ways: on the circuit board, or hand-wired.
 
 <sub>The receiver board, about 46 × 22 mm, drawn from its design files. The XIAO sits in the outlined area (not drawn). A second radio sits on the back.</sub>
 
-**The board files are being prepared for publishing.** Until then, hand-wire a receiver (below), or email Malcolm at [mmessiter@gmail.com](mailto:mmessiter@gmail.com).
+**The board files are in [kicad/receiver](kicad/receiver):** the KiCad design, Gerbers ready to send to a PCB maker, and the schematic as a PDF. Its README shows how to fit the parts, with photos. Or hand-wire a receiver (below).
 
 <!-- (10 Nov 2026, Malcolm: "RXV2_NEWB is correct. When in doubt, the file with the later date and time is the most recent and the one to use.") -->
-<!-- TODO Malcolm: may RXV2_NEWB's KiCad files and Gerbers be published to RXV2/kicad/receiver/ (and the RXV2_VDIV divider board)? Will you offer bare boards from your batch of 100? -->
+<!-- (10 Nov 2026, Malcolm: "Yes, please publish RXV2_newb." Published to kicad/receiver: Gerbers plotted by KiCad 10.0.3 from the board file, DRC clean.) -->
+<!-- TODO Malcolm: publish the RXV2_VDIV divider board too? Will you offer bare boards from your batch of 100? -->
 
 **Parts for one board** (from the board's design):
 
@@ -109,7 +110,10 @@ With this order, a straight one-to-one lead to a Nexus port (RX, TX, +, −) cro
   - Controls work, but no Rotorflight or telemetry: the D5 joint.
 - Keep parts with a polarity on the front of the board, to avoid mirror mistakes.
 
-<!-- TODO Malcolm: (1) U4: in the NEWA/NEWB schematic the supply goes to the regulator's pin 3 and 5 V comes out of pin 1, the reverse of a 7805. On the first board the module went on upside down. Which way does it go on the production board? (2) D1: the schematic has the LED's anode on ground, but the firmware drives D4 high to light it. Fit the cathode to ground? (3) Weight and current draw of a finished receiver (none measured). -->
+- **Fitting order and which way round:** the AMS1117 first (it sits under the XIAO); the Pololu regulator flat, its printed side (VIN, GND, VOUT) facing out; the LED's − to the ground plane; the XIAO last. Photos in [kicad/receiver](kicad/receiver).
+
+<!-- (10 Nov 2026, Malcolm: U4 "should be positioned as shown. with it flat side out and its component side towards the board"; the LED: "By looking at the board, one can see which side goes to the ground plane. If the LED is the wrong way round, it simply won't light"; "The AMS 1117 regulator is hidden below the microcontroller".) -->
+<!-- TODO Malcolm: weight and current draw of a finished receiver (none measured). -->
 
 ### Hand-wired (no circuit board)
 

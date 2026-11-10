@@ -279,7 +279,7 @@ There is nothing to buy from us. You build your own, and Malcolm will help.
 2. **Get the files.** On this page press **Code**, then **Download ZIP**. The case, the circuit board files and the files for the main board's card are inside. You do not need git.
 3. **Transmitter:** order the circuit board, print the case, solder. Flash the Teensy once with the ready-made HEX file. See [TXV2/README.md](TXV2/README.md).
 4. **Screen:** flash it once from your browser, give it your WiFi, and it fills its own card. See [TXV2-Screen/README.md](TXV2-Screen/README.md).
-5. **Receiver:** build it, flash it in your browser, wire it to the flight controller. See [RXV2/README.md](RXV2/README.md). Its small circuit board's files are not in the repository yet; Build one shows how to wire it by hand.
+5. **Receiver:** build it, flash it in your browser, wire it to the flight controller. See [RXV2/README.md](RXV2/README.md). Its circuit board's files are in [RXV2/kicad/receiver](RXV2/kicad/receiver), ready to order; or wire one by hand.
 6. **App:** install it from the [App Store](https://apps.apple.com/app/id6789857533) or [messiter.com/apps](https://messiter.com/apps/).
 7. **Test on the ground**, blades off, before the first flight.
 
