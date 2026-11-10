@@ -196,7 +196,7 @@ Work in this order. Each step ends with a check.
    *Check:* battery off: the resistance across the battery plug is not near zero. With the meter on volts across the battery's own plug, the pin that meets the board's + reads plus 6 to 8.4 V. Then connect the battery, switch on, and measure 5 V on the Teensy socket's VIN, 5 V on the screen header's middle pin and 3.3 V on the radio socket's VCC.
 6. **Fit the modules:** first solder a capacitor across the radio's power and ground pins (VCC and GND; Malcolm uses 220 µF, the value is not critical; the striped leg to GND), as in the photo above. Then the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (left header, 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged. Both must be **SMA**: an RP-SMA aerial screws on, but does not connect.
 7. **Wire the controls** (pins in the table below):
-   - **Sticks: wire them as for Mode 1**, whatever mode you fly. The firmware swaps them for Mode 2.
+   - **Sticks: wire them as for Mode 1**, whatever mode you fly. The firmware swaps them for Mode 2. Only the springs change: in Mode 2 the left stick's up-and-down stays where you leave it (the throttle), and the right stick's springs back to the centre.
    - Trims, the four top switches, the four front controls and the RGB LED.
    - A knob (potentiometer; 10 kΩ works well) has its ends on 3.3 V and ground and its wiper on the pin.
 8. **Wire the screen** to the old Nextion header:
