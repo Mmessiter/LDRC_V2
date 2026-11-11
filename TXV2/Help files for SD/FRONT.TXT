@@ -32,12 +32,17 @@ With Rotorflight: head speed (RPM), current (Amps), capacity|
 used (mAh) and the ESC temperature (ESC).|
 Battery LOW: see BATTERIES below.|
 MOTOR IS ON! (only with 'Use motor kill switch' on): the motor|
-switch was on at switch-on, or when the link was lost.|
+switch was on at switch-on, or when the link was lost|
+(no answer from the model for three seconds).|
 Nothing is sent to the model until you switch the motor off|
 and press 'OK' on the message 'The motor switch is ON.'||
 A RESTART IN FLIGHT: if the transmitter restarts while flying|
 (a power dip) and is back within 30 seconds, it carries on as|
-it was: still armed, the motor switch as it is, no messages.||
+it was: armed, the motor switch as it is, no messages.|
+A start takes about 5 s, so a Rotorflight model's failsafe|
+(about 4 s) will usually have stopped the motor. To start it|
+again: safety on and motor off, then safety off and motor on.|
+The power button is not a restart: the next start is normal.||
 MODEL NAME (under the picture):|
 The number after the name is the model's number, as in (3).|
 Square brackets, as in [3], or [AMS is on] on the left, mean|

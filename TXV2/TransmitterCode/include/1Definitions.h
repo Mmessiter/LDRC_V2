@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B207 10/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B208 11/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -88,7 +88,12 @@
 #define MAXBUFFERSIZE 1024 * 6                //
 #define MAXMODELNUMBER 91                     //
 #define CRLF "\r\n"                           //
-#define RED_LED_ON_TIME 2000                  // How many ms of no connection before RED led comes on
+// B208 (Malcolm, 11 Nov 2026: "let's put both timeouts to 3 seconds. A gap of over 3 seconds is very unlikely and remains a
+// problem. Under three seconds and recovery is immediate."): BOTH = this one and the Version 2 receiver's hold
+// (OUTPUT_FAILSAFE_MS, 3000 from its 0.9.922: the last positions go on to the flight controller as live ones, which
+// sees nothing of the gap). They are kept EQUAL (dev/test_linktimeout): at 2000 here, with the motor switch on, the
+// box "The motor switch is ON." went up - and nothing more was sent - while the model still flew and listened.
+#define RED_LED_ON_TIME 3000                  // How many ms of no connection before RED led comes on
 #define LOW_VOLTAGE_TIME 10000                // How many ms to endure low voltage before announcing it. (10 seconds)
 #define SHOWCOMMSDELAY 100                    // ms pauses between updated info on NEXTION
 #define WARMUPDELAY 300                       // fails at 200 so must be >200 ...

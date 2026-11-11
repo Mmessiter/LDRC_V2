@@ -14,9 +14,14 @@ If not, it says 'No model is connected.' and saves nothing.|
 'Save' also sends the ticks.|
 After changing them, press 'Save' again.||
 WHAT HAPPENS:|
-If the receiver hears nothing for about one and a half|
-seconds, it moves the controls to the saved positions.|
-When the signal comes back, full control returns.||
+While the receiver hears nothing, it holds the last|
+positions. A gap of under three seconds changes nothing.|
+After about three seconds it moves the controls to the saved|
+positions, and the transmitter says the model is|
+disconnected.|
+When the signal comes back, full control returns.|
+(A Version 1 receiver, and Version 2 firmware before 0.9.922,|
+wait one and a half seconds.)||
 WHICH RECEIVERS USE THE TICKS:|
 A Version 1 receiver moves only the ticked channels.|
 The others stay where they were.|

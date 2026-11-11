@@ -59,7 +59,7 @@ void PipeReplyFromScreen(const char *text) // "<id> <code> <body>" (up to the li
 bool BakOffline();                                                  // RF_Backup.h (B70): no model, but this model's backup file
 // B90 (Malcolm, 9 Oct: "when I disconnected the receiver, I went immediately to the adjustments page, but it failed to
 // give me the offline reading. After rebooting the transmitter, it succeeded"): the transmitter declares a model lost
-// two seconds after its last packet (RED_LED_ON_TIME). A page opened inside those two seconds asks the receiver, which
+// three seconds after its last packet (RED_LED_ON_TIME; two until B208). A page opened inside those seconds asks the receiver, which
 // has gone, and waits nine seconds for nothing; by then the backup file could answer, but nothing asks it. The last
 // read sent to the receiver is kept; when the model is declared lost with it unanswered, the file answers it, as it
 // would have had the page been opened a moment later (PipeModelGoneTick). A write is left alone: it is reported as
