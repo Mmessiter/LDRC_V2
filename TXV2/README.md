@@ -182,12 +182,19 @@
 - `TX_FRONT.stl` and `TX_BACK12.stl` are **Version 1's** (cut for the old Nextion screen). Do not print them for a Version 2.
 - The screen has no mounting holes. Four tiny self-tapping screws hold it in the case front; the same screws hold the charger board and the case back, so buy plenty.
 - **Printing** is not critical: Malcolm uses 0.16 mm layers and the slicer's default infill.
+- **Wiring:** run the wires through the case's cable guides and hold them with a few cable ties, as tidy as you can, so nothing can rub or pull (photo below).
 
 <img src="../docs/images/tiny-screw.jpg" width="300" alt="One of the tiny flange-head self-tapping screws on a cutting mat's centimetre grid: about half a centimetre long">
 
 <sub>One of the tiny self-tapping screws, on a centimetre grid.</sub>
 
 <!-- (10 Nov 2026, Malcolm: layer height and infill "not important"; he uses 0.16 mm and the default infill. Four tiny screws hold the screen; the same screws hold the charger and the case back.) -->
+
+<img src="../docs/images/wiring-cable-guides.jpg" width="600" alt="Inside the transmitter: twisted red, black and yellow leads run along the case wall, through a white printed cable guide and a small black cable tie, then behind the raised edge of the battery tray">
+
+<sub>The leads through a cable guide (left), held by a cable tie, and along the wall behind the battery tray.</sub>
+
+<!-- (11 Nov 2026, Malcolm, with this photo: "Use the cable guides and some cable ties to keep wiring as tidy as possible".) -->
 
 ---
 
