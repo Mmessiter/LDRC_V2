@@ -182,7 +182,7 @@
 - `TX_FRONT.stl` and `TX_BACK12.stl` are **Version 1's** (cut for the old Nextion screen). Do not print them for a Version 2.
 - The screen has no mounting holes. Four tiny self-tapping screws hold it in the case front; the same screws hold the charger board and the case back, so buy plenty.
 - **Printing** is not critical: Malcolm uses 0.16 mm layers and the slicer's default infill.
-- **Wiring:** run the wires through the case's cable guides and hold them with a few cable ties, as tidy as you can, so nothing can rub or pull (photo below).
+- **Wiring:** run the wires through the case's cable guides and hold them with a few cable ties. They need not be tidy: Malcolm's often are not. What matters is that every wire goes to the right place, and that none can catch a gimbal or stop the back closing (photos below).
 
 <img src="../docs/images/tiny-screw.jpg" width="300" alt="One of the tiny flange-head self-tapping screws on a cutting mat's centimetre grid: about half a centimetre long">
 
@@ -195,6 +195,12 @@
 <sub>The leads through a cable guide (left), held by a cable tie, and along the wall behind the battery tray.</sub>
 
 <!-- (11 Nov 2026, Malcolm, with this photo: "Use the cable guides and some cable ties to keep wiring as tidy as possible".) -->
+
+<img src="../docs/images/transmitter-wired-back-off.jpg" width="450" alt="Inside a finished Version 2 transmitter with its back off: the two gimbals at the top, the red main board with the Teensy, the radio module and its aerial lead, the INA219 and power switch boards, a RadioMaster 6200 mAh battery on the right, and many red, black and yellow leads, held by cable ties, running round the edges and across the board">
+
+<sub>Malcolm's, ready for its back. Not tidy, but every wire is in its place, none near the gimbals, nothing in the way of the back.</sub>
+
+<!-- (11 Nov 2026, Malcolm, with this photo: "It does not really matter if yours is untidy! Mine often are! What matters is that the cables go to the right places, and they cannot interfere with the gimbles or the closing of the back.") -->
 
 ---
 
