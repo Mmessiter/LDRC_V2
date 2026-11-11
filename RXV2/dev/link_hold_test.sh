@@ -29,7 +29,8 @@ sed '$d' "$T/out" | sed '$d'            # (its own last lines are said once more
 bad=0
 # 1. The output stage and the sim's failsafe posture compare with the constant, not with a number of their own.
 grep -q 'age > OUTPUT_FAILSAFE_MS' "$SRC/Output.h" && echo "PASS Output.h: the hold is OUTPUT_FAILSAFE_MS" || { echo "FAIL Output.h no longer compares the link's age with OUTPUT_FAILSAFE_MS"; bad=1; }
-grep -q '(millis() - linkRef) > OUTPUT_FAILSAFE_MS' "$SRC/main.cpp" && echo "PASS main.cpp: the sim's failsafe posture waits for the same hold" || { echo "FAIL main.cpp: the sim's failsafe posture no longer waits for OUTPUT_FAILSAFE_MS"; bad=1; }
+# (0.9.924: through simGivenFailsafe, 1Defs.h SIM-NOTX - the hold it is handed is still OUTPUT_FAILSAFE_MS, and it compares "> holdMs": dev/sim_notx_test.sh.)
+grep -q 'simGivenFailsafe(everHeard, (uint32_t)(millis() - linkRef), OUTPUT_FAILSAFE_MS)' "$SRC/main.cpp" && grep -q 'return !everHeard || quietMs > holdMs;' "$SRC/1Defs.h" && echo "PASS main.cpp: the sim's failsafe posture waits for the same hold" || { echo "FAIL main.cpp: the sim's failsafe posture no longer waits for OUTPUT_FAILSAFE_MS"; bad=1; }
 # 2. The files whose waits end in a flash write or in taking the flight controller: no bare 2000 or 3000 of silence.
 for f in FlightLog.h MspFc.h main.cpp BlackboxCheck.h; do
     hits=$(grep -n -E 'rx\.lastMillis\) *(<|>|<=|>=) *(2000|3000)\b' "$SRC/$f" || true)

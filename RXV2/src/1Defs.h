@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.923-fc-says-armed";
+constexpr const char* FW_VERSION = "RXV2-0.9.924-sim-restart-quiet";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -697,6 +697,26 @@ inline bool failsafeDrive() {
     return true;
 }
 // B29-FAILSAFE-MASK-END
+// SIM-NOTX-BEGIN (dev/sim_notx_test.sh compiles this block on the Mac)
+// 0.9.924 (Malcolm, 11 Nov 2026: Test1 left on the simulator with the transmitter off, the sim's motor off on the saved
+// failsafe - then the automatic update of 0.9.923 restarted the receiver and "suddenly and unexpectedly it turned on the
+// sim motor - which was noisy so I disconnected it!!"). After a restart no transmitter has been heard yet, and the
+// start-up positions went to the simulator: sticks centred, every switch channel LOW - and low on his motor channel
+// means motor ON. A real model must never be given the saved positions at power-up (the arm switch may be among them:
+// main.cpp setup, Output.h), but a simulator has no flight controller and nothing to arm, and the saved positions are
+// exactly what the pilot chose for "no transmitter". So in simulator mode:
+//  - they are given from the start, not only after a transmitter has been heard and lost;
+//  - with none saved, the motor channel the spool-up was told of is put at its OFF end until a transmitter is heard.
+inline bool simGivenFailsafe(bool everHeard, uint32_t quietMs, uint32_t holdMs) {
+    return !everHeard || quietMs > holdMs;
+}
+// The microseconds for the motor channel while no transmitter has been heard and no failsafe drives it; 0 = leave it.
+// (LDRC channels run 500..2500; "inverted" = HIGH means motor off.)
+inline uint16_t simMotorOffUs(bool everHeard, bool failsafeDrives, uint8_t motorCh, bool inverted) {
+    if (everHeard || failsafeDrives || motorCh < 1 || motorCh > 16) return 0;
+    return inverted ? 2500 : 500;
+}
+// SIM-NOTX-END
 // ARM-LIVE-BEGIN (0.9.886, Malcolm 14 Oct 2026, setting up the Havoc: on the Switches page "if I switch on arming, I
 // immediately get a banner that covers the entire screen ... it hides the position of the little blip showing me where
 // the channel is in relation to the threshold"). Two things hid it: the banner, and that every flight-controller request

@@ -891,20 +891,32 @@ void loop() {
         // place the captured positions are driven — never runs in sim mode, so
         // the sim previously froze at the last stick values when the TX went
         // off (which looked exactly like "failsafe never saved"). Same
-        // link-age rule as sbusTick, same everConnected gate (a no-TX boot
-        // keeps the disarmed-safe defaults, never the captured posture).
+        // link-age rule as sbusTick. (Until 0.9.924 the same everConnected
+        // gate too: a no-TX boot kept the start-up defaults - right for a
+        // real model, wrong for a simulator, see below.)
+        // 0.9.924: and FROM THE START - a simulator has nothing to arm, so the saved positions are given before any
+        // transmitter is heard too (1Defs.h SIM-NOTX: a restart with the transmitter off started the sim's motor).
         {
             static bool simFsPosture = false;
             uint32_t linkRef = (bindState.bound && rx.lastMillis) ? rx.lastMillis
                                                                   : lastChannelDataMs;
-            bool lost = (lastChannelDataMs != 0) &&
-                        (uint32_t)(millis() - linkRef) > OUTPUT_FAILSAFE_MS;
-            if (lost && failsafeDrive()) {   // B29: the ticked channels only
+            const bool everHeard = lastChannelDataMs != 0;
+            const bool lost = simGivenFailsafe(everHeard, (uint32_t)(millis() - linkRef), OUTPUT_FAILSAFE_MS);
+            const bool driven = lost && failsafeDrive();   // B29: the ticked channels only
+            if (driven) {
                 if (!simFsPosture) { simFsPosture = true;
-                    events.add("Signal lost — sim driven to failsafe positions"); }
+                    events.add(everHeard ? "Signal lost — sim driven to failsafe positions"
+                                         : "No transmitter yet — sim held at the saved failsafe positions"); }
             } else if (simFsPosture && !lost) {
                 simFsPosture = false;
                 events.add("Link restored — sim left failsafe posture");
+            }
+            // No failsafe saved: at least the motor the spool-up knows of stays off until a transmitter is heard.
+            const uint16_t offUs = simMotorOffUs(everHeard, driven, simMotorChannel, simMotorInverted);
+            if (offUs) {
+                channelMicros[simMotorChannel - 1] = offUs;
+                static bool said = false;
+                if (!said) { said = true; events.add("No transmitter yet — sim motor channel held at OFF"); }
             }
         }
         // Spool-up realism (Malcolm 2026-08-17, for neXt autorotation
