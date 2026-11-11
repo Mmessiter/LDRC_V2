@@ -240,7 +240,7 @@ Prices are approximate retail prices in October 2026. LDRC prices are for parts 
 - It costs far less than the X20, NX10+ or VBar Control in the table. Ethos and Spektrum also make cheaper radios (a FrSky X14 is about £170).
 - The value is not "the cheapest radio". Budget EdgeTX radios can already tune Rotorflight with Rotorflight's own scripts. We did not find the Rotorflight backup, editing with the model off, the comparison with the backup, or the command line on any other radio.
 <!-- Sources: FrSky Twin X14 £168–£178.90 at FlyingTech UK; VBar Control Touch EVO combo £749.99 "Includes VBar EVO VLink Flybarless/Receiver unit" (modelhelicopters.co.uk), both checked 11 Oct 2026. TODO Malcolm: once the full parts total is known, put back a fair comparison with a budget EdgeTX radio. -->
-- Add your own time: a transmitter takes a few evenings, plus printing the case; a receiver about an evening.
+- Add your own time: a transmitter takes a day, but an intense one (Malcolm advises at least two); a receiver about an evening.
 
 <!-- TODO Malcolm: the transmitter says "over £120 in parts (approximate)", as on the website: the parts the Build one page prices (Teensy, INA219, Pololu 2808, CrowPanel, gimbals £40-£60 a pair) already come to about £120-£143, and the rest are unpriced. "about £35 of parts" for the receiver is the receiver's own help text (RXV2/data/dongle.html), the same as the website. Please re-cost the V2 parts. -->
 

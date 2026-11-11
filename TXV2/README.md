@@ -220,6 +220,10 @@
 > [!WARNING]
 > **Radio rules.** The radio modules that transmit and receive, Ebyte's E01-ML01DP5 (transmitter) and E01-ML01SP4 (receiver), carry the CE mark and FCC ID 2ALPH-E01. They run at about 100 mW (20 dBm), the UK and EU limit for 2.4 GHz; an aerial cannot add power, it only shapes where the signal goes. As with any model you build yourself, check the radio rules where you live before you fly.
 
+**How Malcolm plans a new transmitter.** It can be built in a day, but it is an intense day: take at least two. Start the 3D printer on all the case parts first. While it prints, solder everything to the main board, with sockets (female DuPont headers) for any module you might want to swap, such as the Teensy. Take a break. Then flash the Teensy and the screen, and begin the assembly: the screen goes in first.
+
+<!-- (11 Nov 2026, Malcolm: "A new transmitter from scratch can be built in a day but it's an intense day, so I'd advise taking at least two days over it. First job is to get the 3D printer started with all the parts for the case. While it prints, solder all components to the PCB using female DuPont headers for all IC components you might want to swap such as the Teensy. Then a break. Then get the firmware into the Teensy and the screen and begin assembly - screen goes in first.") -->
+
 Work in this order. Each step ends with a check.
 
 1. **Order the main board.** Send the Gerbers in `Circuits/Transmitter - CADCAM` to any PCB maker. Or ask Malcolm: he has spare boards, and if you live close enough he can give you one or two, or perhaps post them ([email him](mailto:mmessiter@gmail.com)).\
