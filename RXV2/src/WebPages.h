@@ -1300,10 +1300,10 @@ inline void handleMspApi() {
     // never again, so a change made while running left the radios-off rule, the armed lock and the ARMED banner on the
     // OLD channel until a reboot. A channel the pilot set on the Receiver page (NVS) is their choice and stays.
     if (ok && fn == 35 && reqLen >= 5 && reqBuf[1] == 0 && reqBuf[3] != reqBuf[4] && !prefs.getUChar(NVS_KEY_ARM_CH, 0)) {   // 35 = MSP_SET_MODE_RANGE: slot, mode id (0 = ARM), aux, start, end
-        const uint8_t ch = (uint8_t)(reqBuf[2] + 6);                                                                           // aux0 = channel 6 (0.9.572)
-        if (ch <= 16 && ch != armingChannel) {
+        const uint8_t ch = auxToChannel(reqBuf[2], fcInfo.rcMap, fcInfo.rcMapLen);   // through Rotorflight's channel map (0.9.925; AUX1 = channel 6 only by default)
+        if (ch && ch <= 16 && ch != armingChannel) {
             char m[EventLog::MSG_LEN];
-            snprintf(m, sizeof(m), "Arming channel now ch%u (AUX%u): the arm switch was written from a page", ch, ch - 5);
+            snprintf(m, sizeof(m), "Arming channel now ch%u (AUX%u): the arm switch was written from a page", ch, (unsigned)reqBuf[2] + 1);
             events.add(m);
             armingChannel = ch;
         }
@@ -4053,12 +4053,23 @@ inline CliArmWhy cliArmKnown() {
     if (!rf || UsbHostMsp::cliMode) return CLI_ARM_NO_FC;
     static uint8_t modes[640];
     uint16_t n = 0;
+    // 0.9.925: the channel map first, when the background probe has not had it yet (AUX1 is channel 5 once the pilot maps
+    // it there for ExpressLRS). No answer = the default map, as before.
+    if (fcInfo.rcMapLen == 0) {
+        uint16_t mn = 0;
+        if (mspRequestAndWait(MSP_RX_MAP, nullptr, 0, modes, &mn, 1200) && mn >= 5) {
+            const uint8_t k = mn > sizeof(fcInfo.rcMap) ? (uint8_t)sizeof(fcInfo.rcMap) : (uint8_t)mn;
+            memcpy(fcInfo.rcMap, modes, k);
+            fcInfo.rcMapLen = k;
+        }
+    }
     if (!mspRequestAndWait(34, nullptr, 0, modes, &n, 1200)) return CLI_ARM_NO_ANSWER;
-    const uint8_t ch = armChannelFromModeRanges(modes, n);
+    const uint8_t ch = armChannelFromModeRanges(modes, n, fcInfo.rcMap, fcInfo.rcMapLen);
     if (!ch) return CLI_ARM_NONE_SET;
     armingChannel = ch;                                    // RAM only, as the background learner's
     char m[EventLog::MSG_LEN];
-    snprintf(m, sizeof m, "Arming channel found from Rotorflight: ch%u (AUX%u), asked by the command line", ch, ch - 5);
+    snprintf(m, sizeof m, "Arming channel found from Rotorflight: ch%u%s, asked by the command line", ch,
+             fcInfo.rcMapLen ? " (through its channel map)" : "");
     events.add(m);
     return CLI_ARM_KNOWN;
 }

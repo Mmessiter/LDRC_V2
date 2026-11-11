@@ -22,6 +22,23 @@ HERE        = PROJECT_DIR / "dev"
 RUNTIME_DIR = Path("/Users/Shared/rxv2-firmware-server")
 DEFS_H      = PROJECT_DIR / "src" / "1Defs.h"
 VERSION_RE  = re.compile(r'FW_VERSION\s*=\s*"([^"]+)"')
+XYZ_RE      = re.compile(r'RXV2-(\d+\.\d+\.\d+)')
+
+
+def released_dirs(version):
+    """The release folders of this version that already exist (empty = not released yet).
+
+    11 Nov 2026: a check build of UNRELEASED changes, made before FW_VERSION was bumped, was mirrored over the
+    PUBLISHED RXV2-0.9.924 .bin in the fleet server's folder (put back before any board fetched it). A version
+    that has been released is never overwritten from here: dev/release.sh bumps FW_VERSION before it builds, so
+    its own build is always a version with no release folder yet.
+    """
+    m = XYZ_RE.search(version)
+    if not m:
+        return []
+    v = "v" + m.group(1)
+    return [d for d in (RUNTIME_DIR / v,
+                        PROJECT_DIR / "NewWebSite" / "public_html" / "rxv2" / "release" / v) if d.is_dir()]
 
 
 def archive(source, target, env):
@@ -34,6 +51,11 @@ def archive(source, target, env):
         print("[archive] FW_VERSION not found in 1Defs.h — skipping")
         return
     version = m.group(1)
+    rel = released_dirs(version)
+    if rel:
+        print(f"[archive] {version} is already RELEASED ({rel[0]}): this build is NOT copied to dev/ or to "
+              f"the fleet server - dev/release.sh bumps FW_VERSION to publish new code")
+        return
     dest = HERE / f"{version}.bin"
     shutil.copy2(src, dest)
     print(f"[archive] {dest.name} ({dest.stat().st_size} bytes)")

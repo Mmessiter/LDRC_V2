@@ -1256,6 +1256,11 @@ struct FcInfo {
     // once from MSP_RX_MAP / MSP_GOVERNOR_CONFIG, kept in NVS (a TX-on
     // boot never gets to ask), refreshed whenever a page reads them.
     uint8_t  throttleCh       = 0;       // FC's throttle channel 1..16 (0 = unknown)
+    // 0.9.925: the whole channel map (MSP_RX_MAP: the channel, 0-based, feeding A E R C T AUX1 AUX2 AUX3), asked at EVERY
+    // boot - RAM only. The arm switch's channel is learned through it (MspFc.h auxToChannel): arming on channel 5 for
+    // ExpressLRS is a map change ("map AECR1T23"), which the NVS throttle cache above would never have noticed.
+    uint8_t  rcMap[8]         = {0};
+    uint8_t  rcMapLen         = 0;       // bytes held (0 = not answered since boot)
     uint8_t  govMode          = 0xFF;    // MSP 142 byte 0 (3 electric / 4 nitro = governed; 0xFF = unknown)
     uint8_t  rxMapTries       = 0;       // silent-probe caps so an unhelpful FC can't hold the latch open
     uint8_t  govTries         = 0;

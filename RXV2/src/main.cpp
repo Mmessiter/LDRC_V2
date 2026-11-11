@@ -1313,7 +1313,10 @@ void loop() {
         static bool     armLearned = false;
         const bool rfConfirmed = fcInfo.detected && fcInfo.versionKnown &&
                                  strncmp(fcInfo.variant, "RTFL", 4) == 0;
-        if (!armLearned && !armingChannel && rfConfirmed &&
+        // 0.9.925: and the channel map first (MspFc.h asks for it at every boot) - with arming on channel 5 for
+        // ExpressLRS, AUX1 is channel 5, not 6. A flight controller that never answers it (6 tries) is read the old way.
+        const bool mapSettled = fcInfo.rcMapLen > 0 || fcInfo.rxMapTries >= 6;
+        if (!armLearned && !armingChannel && rfConfirmed && mapSettled &&
             (int32_t)(millis() - armLearnNextMs) >= 0) {
             if (!armLearnPending) {
                 // Same hold-off as the heartbeat probe (0.9.562/563): the FC
@@ -1340,13 +1343,14 @@ void loop() {
             // yaw, collective, throttle), so AUX1 = channel 6. The Betaflight habit (+5) put the Goblin's arming channel on
             // the THROTTLE — "armed" meant "motor on", so the radios went off with the motor and the landing wiggle came at
             // motor-off with the model still armed (Malcolm 2026-09-06). 0.9.572.
-            const uint8_t ch = armChannelFromModeRanges(mspAsyncBuf, mspAsyncLen);
+            // 0.9.925: through Rotorflight's channel map (AUX1 is channel 5 when the pilot maps it there for ExpressLRS).
+            const uint8_t ch = armChannelFromModeRanges(mspAsyncBuf, mspAsyncLen, fcInfo.rcMap, fcInfo.rcMapLen);
             if (ch && !armingChannel) {                          // (0.9.905: the command line may have found it first)
                 armingChannel = ch;                              // RAM only — not NVS
                 armLearned = true;
-                char m[64];
-                snprintf(m, sizeof(m), "Arming channel found from Rotorflight: ch%u (AUX%u)",
-                         ch, ch - 5);
+                char m[80];
+                snprintf(m, sizeof(m), "Arming channel found from Rotorflight: ch%u%s",
+                         ch, fcInfo.rcMapLen ? " (through its channel map)" : " (its channel map unread)");
                 events.add(m);
             }
             mspAsyncFunc = 0xFF;

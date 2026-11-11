@@ -587,6 +587,13 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
             // Rotorflight's order only (A E R C T: [4] = throttle). Betaflight
             // and INAV put AUX1 there, and this channel now decides which
             // channel the receiver holds low before a transmitter is heard.
+            // 0.9.925: the whole map is kept (RAM) for the arm switch's
+            // channel - AUX1 is channel 5 once a pilot maps it there.
+            if (size >= 5 && strncmp(fcInfo.variant, "RTFL", 4) == 0) {
+                const uint8_t n = size > sizeof(fcInfo.rcMap) ? (uint8_t)sizeof(fcInfo.rcMap) : (uint8_t)size;
+                memcpy(fcInfo.rcMap, payload, n);
+                fcInfo.rcMapLen = n;
+            }
             if (size >= 5 && payload[4] < 16 && strncmp(fcInfo.variant, "RTFL", 4) == 0) {
                 uint8_t ch = payload[4] + 1;
                 if (ch != fcInfo.throttleCh) {
@@ -836,15 +843,26 @@ inline bool mspRequestAndWait(uint8_t function, const uint8_t* req, uint8_t reqL
 
 // The arm switch's channel in Rotorflight's mode ranges (MSP 34, four bytes a slot: permanentId, auxChannel, startStep,
 // endStep). Unused slots read id 0 with an EMPTY range, so ARM (id 0) must also have start != end to count. Rotorflight has
-// FIVE control channels, so AUX1 = channel 6 (0.9.572). 0 = no arm switch set up. (The background learner in main.cpp and,
-// 0.9.905, the command line's own look when that has not happened yet.)
+// FIVE control channels, so AUX1 = channel 6 (0.9.572) - BY DEFAULT. 0 = no arm switch set up. (The background learner in
+// main.cpp and, 0.9.905, the command line's own look when that has not happened yet.)
+// 0.9.925 (Malcolm, 11 Nov 2026, readying Bthundr 1 for ExpressLRS, which arms on channel 5): Rotorflight's CHANNEL MAP
+// decides which receiver channel each function reads (MSP_RX_MAP = 8 bytes: the channel, 0-based, feeding roll, pitch, yaw,
+// collective, throttle, AUX1, AUX2, AUX3; past those eight a channel is itself - rx.c readRxChannels). Arming on channel 5
+// is `map AECR1T23`: AUX1 then comes from channel 5 and the throttle from 6. Read as "AUX1 = channel 6", this receiver
+// would have watched the THROTTLE as its arm switch. So the AUX index goes through the map when the map is known.
 // ARMCH-BEGIN (dev/armch_test.sh)
-inline uint8_t armChannelFromModeRanges(const uint8_t* b, uint16_t n) {
+// AUX index (0 = AUX1) -> receiver channel 1..16 through the map (map = MSP_RX_MAP's bytes, mapLen of them; none = the
+// default, AUX1 = channel 6). 0 = not one of our sixteen.
+inline uint8_t auxToChannel(uint8_t aux, const uint8_t* map, uint8_t mapLen) {
+    const uint16_t f = 5u + aux;                  // the function's place: A E R C T = 0..4, AUX1 = 5
+    uint16_t raw = f;                             // past the mapped eight, or no map: the channel is itself
+    if (map && f < mapLen) raw = map[f];
+    return raw < 16 ? (uint8_t)(raw + 1) : 0;
+}
+inline uint8_t armChannelFromModeRanges(const uint8_t* b, uint16_t n, const uint8_t* map = nullptr, uint8_t mapLen = 0) {
     for (uint16_t o = 0; o + 3 < n; o += 4)
-        if (b[o] == 0 && b[o + 2] != b[o + 3]) {
-            const uint8_t ch = (uint8_t)(b[o + 1] + 6);
-            return ch <= 16 ? ch : 0;
-        }
+        if (b[o] == 0 && b[o + 2] != b[o + 3])
+            return auxToChannel(b[o + 1], map, mapLen);
     return 0;
 }
 // ARMCH-END
@@ -1419,7 +1437,10 @@ inline void mspFcPoll() {
     // can't hold the latch open for a whole flight.
     static bool fcIdLatched = false;
     const bool isRf = strncmp(fcInfo.variant, "RTFL", 4) == 0;
-    const bool wantRxMap = isRf && fcInfo.throttleCh == 0 && fcInfo.rxMapTries < 6;
+    // 0.9.925: the channel map is asked at every boot (was: only while the NVS throttle cache was empty), so a map changed
+    // in the configurator - arming on channel 5 for ExpressLRS - is seen by the next power-up, for the arm switch's channel
+    // (main.cpp's learner waits for it) as well as the throttle's.
+    const bool wantRxMap = isRf && fcInfo.rcMapLen == 0 && fcInfo.rxMapTries < 6;
     const bool wantGov   = isRf && fcInfo.govMode == 0xFF && fcInfo.govTries < 6;
     // 0.9.556: the telemetry setup too (MSP 73) — an emptied sensor list
     // is the one FC fault that looks exactly like a dead ESC or a broken
