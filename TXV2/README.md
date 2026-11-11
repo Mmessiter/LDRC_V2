@@ -135,7 +135,7 @@
 | Front controls | The same three-position switches (each with two equal resistors, below), or 10 kΩ linear knobs (potentiometers, often marked B10K) | 4 | Any mix |
 | Status light | **KY-016** RGB LED module (a 5 mm common-cathode RGB LED on a small board, its resistors already fitted) | 1 | Its pins are marked R, G, B and −. On the board's RGB LED header, GND is the end pin that beeps to the battery's −; then red, green, blue |
 | Speaker | **Nextion's Box Speaker** (2 W), the one that comes with a Nextion display. Any 8 Ω (or 4 Ω, louder) 1–2 W speaker works too | 1 | Its 2-pin plug (1.25 mm) fits the 16 MB screen's SPK socket. The older 4 MB CrowPanel's socket is a 2 mm PH2.0 |
-| Battery | 2S: LiPo, Li-ion or LiFePO4. Malcolm uses RadioMaster's 2S Li-ion 21700 pack, 5000 mAh | 1 | Always two cells. RadioMaster's 6200 mAh pack fits too. Give its main lead a 3-pin DuPont female plug: + in the middle, − on both sides (the BATTERY header matches), so it cannot go on the wrong way round |
+| Battery | 2S: LiPo or Li-ion. LiFePO4 can be used, but Malcolm does not recommend it, and the built-in charger is not for it. Malcolm uses RadioMaster's 2S Li-ion 21700 pack, 5000 mAh | 1 | Always two cells. RadioMaster's 6200 mAh pack fits too. Give its main lead a 3-pin DuPont female plug: + in the middle, − on both sides (the BATTERY header matches), so it cannot go on the wrong way round |
 | Charger | A small USB-C charger board on the **IP2326** chip, such as the **LX-LISC-V3** (its name is on the back), in the charger bay on the back, and a red LED with a 100 Ω resistor for its charge light (+ through the resistor to the board's LED pad, − to GND) | 1 | The LX-LISC-V3 comes set for two cells: change nothing (the Chinese words on it say how to make it charge three cells: do not). Its B+, BM and B− go to the pack's 3-pin balance plug (JST-XH). For a LiPo or Li-ion pack: a LiFePO4 pack needs a LiFePO4 charger |
 | Diodes | 1N5406 ×2, 1N4001 ×2 | 4 | |
 | Capacitors | Electrolytic 330 µF ×1, 100 µF ×1, and one for the radio module (Malcolm uses 220 µF; the value is not critical). Tantalum 330 µF (0E907) ×2, 47 µF 1206 ×2. Ceramic 1206: 330 nF ×2, 100 nF ×4, 10 µF ×1 | 14 | The radio's one goes across its power and ground pins, the striped leg (minus) to GND |
@@ -144,6 +144,8 @@
 | Connectors | Male and female headers, 3-row headers, a 2 × 4 socket, servo cable, DuPont 3- and 4-pin | Various | |
 | Case | Printed in PETG (or what you prefer) | 1 set | See below |
 | Fixings | Tiny flange-head self-tapping screws (photo below), M3 bolts and lock-nuts, 2 mm cable ties, 5-minute epoxy | Various | The tiny screws hold the screen, the charger board and the case back: buy plenty |
+
+<!-- (11 Nov 2026, Malcolm: LiFePO4 packs "can be used, but I don't really recommend them!") -->
 
 <img src="../docs/images/radio-module-capacitor.jpg" width="400" alt="The Ebyte radio module with a black capacitor soldered onto two of its pins, and its gold SMA aerial socket"> <img src="../docs/images/radio-sma-plug-socket.jpg" width="400" alt="Left, the end of the aerial: an SMA plug with a pin in the middle. Right, the radio module's SMA socket, with a hole in the middle">
 
