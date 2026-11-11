@@ -149,11 +149,13 @@
 
 <sub>The radio, its capacitor soldered across its power and ground pins. SMA: the aerial's plug has a pin in the middle, the radio's socket a hole.</sub>
 
-**Fitting the charger.** Before you tighten its two tiny screws, push a USB-C plug (a lead plugged into nothing) into its socket through the bay's opening. That lines the board up, so a plug goes in and out easily later. Leave its charge LED loose until the charger bay is in the case back: in its hole it sticks out, and gets in the way as the bay goes in.
+**Fitting the charger.** Before you tighten its two tiny screws, push a USB-C plug (a lead plugged into nothing) into its socket through the bay's opening. That lines the board up, so a plug goes in and out easily later. Leave its charge LED loose until the charger bay is in the case back: in its hole it sticks out, and gets in the way as the bay goes in. When everything is in position, fix the bay with plenty of five-minute epoxy from the inside, so none shows on the outside.
 
-<img src="../docs/images/charger-fit-usb-plug.jpg" width="500" alt="The printed charger bay on the bench, the purple charger board held in it by two tiny screws, a USB-C plug pushed into its socket through the bay's opening, and the red charge LED still loose on its wires outside the bay">
+<img src="../docs/images/charger-fit-usb-plug.jpg" width="400" alt="The printed charger bay on the bench, the purple charger board held in it by two tiny screws, a USB-C plug pushed into its socket through the bay's opening, and the red charge LED still loose on its wires outside the bay"> <img src="../docs/images/charger-bay-epoxy.jpg" width="400" alt="The inside of the white printed case back: the charger bay set into it, the charger board screwed into the bay, the red charge LED pushed into its hole at the top of the bay, and clear epoxy spread all round the bay's edge">
 
-<sub>Tighten the two screws with a USB-C plug in the socket. The LED stays loose until the bay is in the case back.</sub>
+<sub>Left: tighten the two screws with a USB-C plug in the socket; the LED stays loose. Right: the bay in the case back, the LED in its hole, epoxy all round from the inside.</sub>
+
+<!-- (11 Nov 2026, Malcolm, with the right-hand photo: "When everything is in position, secure with generous five-minute epoxy resin resin from the inside so that it does not show on the outside.") -->
 
 <!-- (11 Nov 2026, Malcolm, with this photo: "when adding the charging board into the charger bay with two tiny screws, I recommend inserting a disconnected USB-C plug, as shown in the image before tightening the screws. This ensures it is correctly located and the plug will go in and out easily. Also, the LED should remain loose until the charging bay has been inserted into the transmitters back, because it sticks out a bit and gets in the way when you insert it if it's already in position.") -->
 
