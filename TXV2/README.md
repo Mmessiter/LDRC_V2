@@ -119,7 +119,7 @@
 | Main board | Printed circuit board from the Gerbers in `Circuits/Transmitter - CADCAM` | 1 | 2 layers, about 83 × 91 mm. Any PCB maker |
 | Microcontroller | PJRC **Teensy 4.1** | 1 | |
 | Radio | Ebyte **E01-ML01DP5** (nRF24L01+ with amplifier) | 1 | In a 2 × 4 socket. Its aerial socket is **SMA**. It needs a capacitor across its power and ground pins (below) |
-| Screen | **Buy the 16 MB screen:** Elecrow's **5-inch IPS panel, SKU DLE06050B** (ESP32-S3 N16R8: 16 MB flash, 8 MB PSRAM). New features need it. The older **CrowPanel 5.0" ESP32 HMI, SKU DIS07050H, N4R8** (4 MB flash) is full: it gets fixes only, no new features. Do not buy it | 1 | The firmware tells the two apart by itself; print the case front for the one you have. Not Elecrow's "Advance" series: its card slot is on other pins |
+| Screen | **Buy the 16 MB screen:** Elecrow's **5-inch IPS panel, SKU DLE06050B** (ESP32-S3 N16R8: 16 MB flash, 8 MB PSRAM). New features need it. The older **CrowPanel 5.0" ESP32 HMI, SKU DIS07050H, N4R8** (4 MB flash) is full: it gets fixes only, no new features. Do not buy it | 1 | The firmware tells the two apart by itself; print the case front for the one you have. Already on the 4 MB screen? Moving a transmitter to the 16 MB one takes Malcolm about 3 hours (it needs the 16 MB case front). Not Elecrow's "Advance" series: its card slot is on other pins |
 | microSD card | For the Teensy. FAT32 or exFAT | 1 | |
 | microSD card | For the screen. **FAT32** (cards over 32 GB come as exFAT: reformat them) | 1 | The screen fills it itself |
 | Power switch | **Pololu 2808** pushbutton power switch | 1 | |
@@ -146,6 +146,7 @@
 | Fixings | Tiny flange-head self-tapping screws (photo below), M3 bolts and lock-nuts, 2 mm cable ties, 5-minute epoxy | Various | The tiny screws hold the screen, the charger board and the case back: buy plenty |
 
 <!-- (11 Nov 2026, Malcolm: LiFePO4 packs "can be used, but I don't really recommend them!") -->
+<!-- (11 Nov 2026, Malcolm: "meanwhile I converted another transmitter (black) to the 16 meg screen (white). it takes me about 3 hours.") -->
 
 <img src="../docs/images/radio-module-capacitor.jpg" width="400" alt="The Ebyte radio module with a black capacitor soldered onto two of its pins, and its gold SMA aerial socket"> <img src="../docs/images/radio-sma-plug-socket.jpg" width="400" alt="Left, the end of the aerial: an SMA plug with a pin in the middle. Right, the radio module's SMA socket, with a hole in the middle">
 
