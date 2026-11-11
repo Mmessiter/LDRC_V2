@@ -415,6 +415,10 @@ inline void loadNextAck() {
                 // (b) choose the rate-display factor table — sending a flat "1" forced the
                 // 2.2 factors and mis-scaled 2.3 rates. Falls back to a 0/1 telemetry flag
                 // if the FC is only telemetry-detected (API not yet probed).
+                // KEEP the telemetry fallback (Malcolm, 11 Nov 2026, of the OMP M2, whose OFS3 controller has no MSP but sends
+                // CRSF telemetry: "the OMP M2 uses arming just like Rotorflight so I guess it counts as rotorflight flavoured!").
+                // Since TX B209 the transmitter drives an arming channel ONLY for a model this says is Rotorflight; a
+                // flight controller that sends telemetry is "Rotorflight-flavoured" and keeps its safety-switch arming.
                 {
                     uint8_t rfv = rotorflightTxVersion();
                     if (rfv == 0 && fcTelem.valid) rfv = 1;
