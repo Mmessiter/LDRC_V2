@@ -27,7 +27,7 @@ DMAMEM static SwSlot SwRead[SW_SLOTS], SwNow[SW_SLOTS];   // as read from the fl
 static int SwShown[SW_SLOTS];                               // the slots in use, in order: what the arrows walk through
 static int SwN = 0, SwAt = 0;
 static bool SwHave = false, Sw_Was_Edited = false;
-enum { SW_IDLE = 0, SW_READ, SW_WRITE, SW_STORE, SW_VERIFY };
+enum { SW_IDLE = 0, SW_READ, SW_WRITE, SW_STORE, SW_VERIFY, SW_MAP };   // (B210: SW_MAP = the channel map, read after the switches)
 static int SwStep = SW_IDLE, SwReq = 0, SwTries = 0, SwWriteAt = 0;
 static uint32_t SwMsgUntil = 0, SwLiveMs = 0;
 static int SwLiveCh = -1, SwLiveUs = -1;
@@ -48,7 +48,7 @@ static inline int SwUs(uint8_t b) { return 1500 + 5 * (b > 127 ? (int)b - 256 : 
 static inline uint8_t SwStepOf(int us) { int st = (int)floorf((float)(us - 1500) / 5.0f + 0.5f); if (st < -125) st = -125; if (st > 125) st = 125; return (uint8_t)(st < 0 ? st + 256 : st); }
 static inline bool SwUsed(const SwSlot &s) { return s.hi > s.lo; }
 static inline bool SwSame(const SwSlot &a, const SwSlot &b) { return a.perm == b.perm && a.aux == b.aux && SwStepOf(a.lo) == SwStepOf(b.lo) && SwStepOf(a.hi) == SwStepOf(b.hi); }
-FLASHMEM static int SwArmChannel() { return (RotorFlight_V && ArmingChannel >= 6 && ArmingChannel <= CHANNELSUSED) ? ArmingChannel : 0; }   // 1-based, 0 = none set (B48: 1-5 cannot be a switch channel: as none)
+FLASHMEM static int SwArmChannel() { return (ArmingManaged() && RfChAux(ArmingChannel) >= 0) ? ArmingChannel : 0; }   // B210: a switch channel BY THE MAP (5 when the arm switch is mapped there for ExpressLRS); B209: Rotorflight found   // 1-based, 0 = none set (B48: 1-5 cannot be a switch channel: as none)
 // B97 (Malcolm, 14 Oct, setting up the Havoc: "I discovered using the transmitter that for some reason I could not set the
 // arming channel. So I reverted to the app."): the arm action's channel could be neither tapped nor saved when it differed
 // from this model's arming channel - the page refused both - so a flight controller set up from another model, or from the
@@ -62,9 +62,9 @@ FLASHMEM static bool SwArmFollow()
     for (int i = 0; i < SW_SLOTS; ++i)
     {
         SwSlot &s = SwNow[i];
-        if (!SwUsed(s) || s.perm != 0 || s.aux + 6 == ac) continue;
-        SwArmFrom = s.aux + 6;
-        s.aux = (uint8_t)(ac - 6);
+        if (!SwUsed(s) || s.perm != 0 || RfAuxCh(s.aux) == ac) continue;   // (B210: through the channel map)
+        SwArmFrom = RfAuxCh(s.aux);
+        s.aux = (uint8_t)RfChAux(ac);
         moved = true;
     }
     return moved;
@@ -94,7 +94,7 @@ FLASHMEM static void SwLive() // the switch's position now, from this transmitte
 {
     if (!SwN) { if (SwLiveCh != -1) { SwLiveCh = -1; SwText("tn8", ""); } return; }
     const SwSlot &s = SwNow[SwShown[SwAt]];
-    const int ch = s.aux + 6;
+    const int ch = RfAuxCh(s.aux);   // (B210: through the channel map)
     const int us = (ch >= 1 && ch <= CHANNELSUSED) ? SwFcUs(SendBuffer[ch - 1]) : -1;
     if (ch == SwLiveCh && us == SwLiveUs) return;
     SwLiveCh = ch; SwLiveUs = us;
@@ -112,7 +112,7 @@ FLASHMEM static void SwShow() // the switch job at SwAt on the page: "Does [job]
     const SwSlot &s = SwNow[SwShown[SwAt]];
     SwText("ltn0", (char *)"Does"); SwText("tn2", (char *)"Switch"); SendCommand((char *)"vis tn3,0"); SwText("tn3", (char *)"");   // (B140: the page's row, as the adjustments draw theirs)
     SwText("tn0", SwModeName(s.perm));
-    const int ch = s.aux + 6;
+    const int ch = RfAuxCh(s.aux);   // (B210: through the channel map)
     snprintf(b, sizeof(b), "Channel %d: %s", ch, (ch >= 1 && ch <= CHANNELSUSED) ? ChannelNames[ch - 1] : "?");
     SwText("tn1", b);
     SendCommand((char *)"bar.kind=1"); SendCommand((char *)"bar.n=3");
@@ -182,6 +182,16 @@ FLASHMEM void SwitchPoll() // the MSP state machine (B140: on the Switches and k
         uint8_t b[96];
         const int n = PipeReplyBytes(b, sizeof(b));
         if (!SwTake(b, n)) { snprintf(PipeRepBody, sizeof(PipeRepBody), "only %d bytes came (Rotorflight sends 80)", n); SwFail("Could not read the switches", true); return; }
+        // B210: the channel map next - which channel each AUX is (a failed read: the default, as before)
+        SwBusy("Reading the channel map ...");
+        SwReq = MspAsk(64, nullptr, 0); SwStep = SW_MAP; SwTries = 0;
+        return;
+    }
+    case SW_MAP:
+    {
+        if (again) { ++SwTries; SwReq = MspAsk(64, nullptr, 0); return; }
+        uint8_t m[16];
+        if (!ok || !RfMapTake(m, PipeReplyBytes(m, sizeof(m)))) RfMapLen = 0;
         SwHave = true; Sw_Was_Edited = false; SwStep = SW_IDLE; SwArmFrom = 0;
         if (SwArmFollow()) Sw_Was_Edited = true;   // B97: the arm action on this model's arming channel, as an edit for Save
         SwBusy("");   // (B140: JobsPoll shows the page and reads the adjustments next)
@@ -225,9 +235,9 @@ FLASHMEM void SwitchPoll() // the MSP state machine (B140: on the Switches and k
 FLASHMEM static bool SwArmOk(const SwSlot &s, char *why, size_t n) // the arm action and this transmitter's safety switch agree
 {
     if (s.perm != 0) return true;
-    if (RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 5) { snprintf(why, n, "This model's arming channel is %d (Settings).\r\nRotorflight's switches start at channel 6:\r\nset it to 6 - 16 there first.", ArmingChannel); return false; }   // B48: said, not 'Channel 257: ?'
+    if (ArmingManaged() && RfChAux(ArmingChannel) < 0) { snprintf(why, n, "This model's arming channel is %d (Settings),\r\nnot a switch channel of this flight\r\ncontroller. Set it to one there first.", ArmingChannel); return false; }   // B48: said, not 'Channel 257: ?' (B210: by the map - 5 can be one)
     const int ac = SwArmChannel();
-    if (ac && s.aux + 6 != ac) { snprintf(why, n, "The arm switch must be on channel %d,\r\nthis model's arming channel (Settings).", ac); return false; }
+    if (ac && RfAuxCh(s.aux) != ac) { snprintf(why, n, "The arm switch must be on channel %d,\r\nthis model's arming channel (Settings).", ac); return false; }
     if (s.lo <= 988) { snprintf(why, n, "The arm zone reaches 988 us: the model\r\nwould arm with the safety ON. Move the\r\nleft end above 988."); return false; }
     if (s.hi < 2012) { snprintf(why, n, "The arm zone stops short of 2012 us: the\r\nsafety OFF would not arm. Move the right\r\nend to 2012 us."); return false; }
     return true;
@@ -275,7 +285,7 @@ FLASHMEM static bool SwPickApply(uint8_t perm, bool isNew, int chAux)
         SwSlot &s = SwNow[freeSlot];
         s.perm = perm;
         const int ac = SwArmChannel();
-        s.aux = perm == 0 && ac ? (uint8_t)(ac - 6) : (uint8_t)(chAux >= 0 && chAux <= CHANNELSUSED - 6 ? chAux : 1);
+        s.aux = perm == 0 && ac ? (uint8_t)RfChAux(ac) : (uint8_t)(chAux >= 0 && chAux <= CHANNELSUSED - 6 ? chAux : 1);   // (B210: the arming channel's AUX by the map)
         s.lo = perm == 0 ? 1500 : 1700; s.hi = 2125;
         SwList();
         for (int i = 0; i < SwN; ++i) if (SwShown[i] == freeSlot) SwAt = i;

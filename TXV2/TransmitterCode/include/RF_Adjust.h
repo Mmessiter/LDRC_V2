@@ -690,7 +690,7 @@ FLASHMEM static void AdjLiveBody() // the chosen channel's position, from this t
 {
     if (!AdjN) { if (AdjLiveCh != -1) { AdjLiveCh = -1; AdjText("tn8", ""); } return; }
     const AdjRow &r = AdjRows[AdjAt];
-    const int ch = r.ch + 6;   // 1-based channel
+    const int ch = RfAuxCh(r.ch);   // 1-based channel (B210: through the channel map)
     const int us = (ch >= 1 && ch <= CHANNELSUSED) ? AdjFcUs(SendBuffer[ch - 1]) : -1;
     if (Bank >= 1 && Bank <= BANKS_USED && (BoundFlag && ModelMatched) && (int32_t)(millis() - AdjSeenHoldUntil) >= 0)
     { // what this transmitter sends in the bank in use, for the bank line's fit (measured beats computed; B141: not just after a
@@ -751,7 +751,7 @@ FLASHMEM static void AdjShow()
     if (bankRow && AdjBankFitted[AdjAt]) snprintf(b, sizeof(b), "Banks 1 to %d of this transmitter", r.n);
     else if (r.kind == AK_SWITCH) snprintf(b, sizeof(b), "Switch, %d positions", r.n); else snprintf(b, sizeof(b), "%s", r.kind == AK_KNOB ? "Knob" : "Step adjustment");
     AdjText("tn2", b);
-    const int ch = r.ch + 6;
+    const int ch = RfAuxCh(r.ch);   // (B210: through the channel map)
     snprintf(b, sizeof(b), "Channel %d: %s", ch, (ch >= 1 && ch <= CHANNELSUSED) ? ChannelNames[ch - 1] : "?");
     AdjText("tn1", b);
     // the bar: its kind, its zones and their dividers, the values in them; and the boxes the keypad edits, out of sight

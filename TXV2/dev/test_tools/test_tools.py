@@ -12,6 +12,7 @@ INC = os.path.join(ROOT, 'TransmitterCode', 'include')
 SCREEN = os.path.join(os.path.dirname(ROOT), 'ESP32-board2', 'board4', 'nextion-emulator')
 def src(name): return open(os.path.join(INC, name), encoding='utf-8', errors='replace').read()
 def strip(t): return t.replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '')
+RFMAP = (lambda d: d[d.index('// RFMAP-BEGIN'):d.index('// RFMAP-END')])(open(os.path.join(INC, '1Definitions.h'), encoding='utf-8', errors='replace').read())   # (B210: the channel map's block, the real one)
 def line(text, start):
     for l in text.split('\n'):
         if l.startswith(start): return l + '\n'
@@ -123,6 +124,8 @@ static int CurrentView = 0, CurrentMode = NORMAL, PipeState = 2;
 static bool BoundFlag = true, ModelMatched = true, BlockBankChanges = false, bigScreen = true, armedFake = false, refuseOpen = false;
 static char ModelName[32] = "Black Thunder 2";
 static uint8_t Bank = 1, DualRateInUse = 1, RotorFlight_V = 2, ArmingChannel = 6, ScreenEventArg = 0;
+static bool ArmingManaged() { return RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16; }   // (B209: as 1Definitions.h's ARMRULE)
+''' + RFMAP + r'''
 static uint8_t ModalWaits = 0;
 static uint32_t now = 1000;
 static uint32_t millis() { return now; }

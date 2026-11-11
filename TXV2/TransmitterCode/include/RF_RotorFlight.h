@@ -123,7 +123,7 @@ FLASHMEM void RFSettingsGather() // B99: the settings page's fields read back an
     if (armDigitsOnly && newArming >= 1 && newArming <= 5 && newArming != ArmingChannel)
     {
         char q[120];
-        snprintf(q, sizeof(q), "Rotorflight has the collective on 5\r\nand its switches from channel 6.\r\nUse channel %d for arming anyway?", newArming);
+        snprintf(q, sizeof(q), "Rotorflight's switches start at channel 6,\r\nunless its channel map moves one there.\r\nUse channel %d for arming?", newArming);   // (B210: was "the collective on 5" - it is the throttle by default, and AUX1 when arming moves to 5 for ExpressLRS)
         if (GetConfirmation((char *)"page RFSetupView", q))
             ArmingChannel = (uint8_t)newArming;
     }

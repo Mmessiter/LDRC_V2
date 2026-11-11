@@ -26,7 +26,7 @@ struct CkRow { uint8_t sev; uint8_t fix; char text[52]; };   // sev: 0 red (stop
 static const int CK_MAX = 16, CK_ROWS = 6;
 DMAMEM static CkRow CkRows[CK_MAX];
 static int CkN = 0, CkFirst = 0;
-enum { CK_IDLE = 0, CK_STATUS, CK_MODES, CK_RESCUE, CK_BATTERY, CK_MEMORY, CK_MOTOR, CK_GOV, CK_LEVEL, CK_RESTARTING, CK_RESTART_ASK };
+enum { CK_IDLE = 0, CK_STATUS, CK_MODES, CK_MAP, CK_RESCUE, CK_BATTERY, CK_MEMORY, CK_MOTOR, CK_GOV, CK_LEVEL, CK_RESTARTING, CK_RESTART_ASK };   // (B210: CK_MAP, the channel map)
 static int CkStep = CK_IDLE, CkReq = 0, CkTries = 0;
 static uint32_t CkAskedAt = 0, CkWaitUntil = 0;
 static bool CkDone = false, CkArmFlag8 = false;
@@ -85,7 +85,7 @@ FLASHMEM static void CkFindings() // the rows, from what was read
             if (s.perm == 53) rescueSwitch = true;
             if (s.perm != 0) continue;
             arm = true;
-            if (ac && s.aux + 6 != ac) { snprintf(t, sizeof(t), "Arm switch on channel %d: the safety drives %d", s.aux + 6, ac); CkAdd(0, RFO_SWITCHES, t); }
+            if (ac && RfAuxCh(s.aux) != ac) { snprintf(t, sizeof(t), "Arm switch on channel %d: the safety drives %d", RfAuxCh(s.aux), ac); CkAdd(0, RFO_SWITCHES, t); }   // (B210: by the map)
             else if (s.lo <= 988) CkAdd(0, RFO_SWITCHES, "Arm zone reaches 988 us: arms, safety ON");
             else if (s.hi < 2012) CkAdd(0, RFO_SWITCHES, "Arm zone ends below 2012 us: may not arm");
         }
@@ -164,7 +164,7 @@ FLASHMEM static bool CkAsk(uint8_t fn) // one read at a time, never on top of an
     CkReq = MspAsk(fn, nullptr, 0); CkAskedAt = millis();
     return true;
 }
-static const uint8_t CkFnOf[] = {0, 101, 34, 146, 32, 70, 131, 142, 108};
+static const uint8_t CkFnOf[] = {0, 101, 34, 64, 146, 32, 70, 131, 142, 108};
 FLASHMEM static void CkBegin()
 {
     CkN = 0; CkFirst = 0; CkDone = false; CkTries = 0;
@@ -187,7 +187,8 @@ FLASHMEM static void CkTake(bool ok) // the answer to the step in hand, kept; on
     case CK_LEVEL: dst = CkLevel; dn = &CkLevelN; max = sizeof(CkLevel); break;
     default: break;
     }
-    if (ok && CkStep == CK_RESCUE) { uint8_t b[32]; if (PipeReplyBytes(b, sizeof(b)) >= 1) CkRescueMode = b[0]; }
+    if (CkStep == CK_MAP) { uint8_t m[16]; if (!ok || !RfMapTake(m, PipeReplyBytes(m, sizeof(m)))) RfMapLen = 0; }   // (B210: none read = the default)
+    else if (ok && CkStep == CK_RESCUE) { uint8_t b[32]; if (PipeReplyBytes(b, sizeof(b)) >= 1) CkRescueMode = b[0]; }
     else if (ok && dst) *dn = PipeReplyBytes(dst, max);
     CkTries = 0;
     ++CkStep;

@@ -11,6 +11,7 @@ import os, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INC = os.path.join(ROOT, 'TransmitterCode', 'include')
 def hdr(name): return open(os.path.join(INC, name)).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '')
+RFMAP = (lambda d: d[d.index('// RFMAP-BEGIN'):d.index('// RFMAP-END')])(open(os.path.join(INC, '1Definitions.h'), encoding='utf-8', errors='replace').read())   # (B210: the channel map's block, the real one)
 prog = r'''
 #include <cstdio>
 #include <cstdlib>
@@ -38,6 +39,8 @@ static int CurrentView = 0;
 static bool BoundFlag = true, ModelMatched = true;
 static char ModelName[20] = "Goblin";
 static uint8_t ArmingChannel = 6, RotorFlight_V = 2;
+static bool ArmingManaged() { return RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16; }   // (B209: as 1Definitions.h's ARMRULE)
+''' + RFMAP + r'''
 static char ChannelNames[16][11] = {{"Aileron"}, {"Elevator"}, {"Throttle"}, {"Rudder"}, {"Gear"}, {"AUX1"}, {"AUX2"}, {"AUX3"}, {"AUX4"}, {"AUX5"}, {"AUX6"}, {"AUX7"}, {"AUX8"}, {"AUX9"}, {"AUX10"}, {"AUX11"}};
 static uint16_t SendBuffer[17] = {1500, 1500, 1000, 1500, 1500, 667, 1500, 1900, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 0};
 static uint32_t now = 1000;
@@ -103,12 +106,14 @@ int PipeReplyBytes(uint8_t *out, int max) { int n = 0; const char *p = PipeRepBo
 struct FcReq { int fn; std::string data; };
 static std::vector<FcReq> fcLog;
 static std::string hexOf(const uint8_t *d, int n) { char b[4]; std::string s; for (int i = 0; i < n; ++i) { snprintf(b, sizeof b, "%02X", d[i]); s += b; } return s; }
+static uint8_t rcmap[8] = {0, 1, 3, 2, 4, 5, 6, 7};   // (B210) MSP 64: LDRC's helis, AECRT123 - AUX1 is channel 6
 static uint8_t adj[588]; static uint8_t modes[80]; static bool usb = true; static int busyOnce = 0; static uint8_t pidImg[34], ratesImg[40]; static int pidBank = 1, rateBank = 0;
 static void fcReply(int code, const std::string &body) { PipeRepCode = code; strncpy(PipeRepBody, body.c_str(), sizeof(PipeRepBody) - 1); PipeRepBody[sizeof(PipeRepBody) - 1] = 0; PipeRepId = PipeReqId; }
 int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     ++PipeReqId; PipeReqSentMs = now; fcLog.push_back({fn, hexOf(data, len)});
     if (busyOnce > 0) { --busyOnce; fcReply(503, "busy with a transmitter edit"); return PipeReqId; }
     if (fn == 34) { fcReply(200, hexOf(modes, 80)); return PipeReqId; }
+    if (fn == 64) { fcReply(200, hexOf(rcmap, 8)); return PipeReqId; }   // (B210: the channel map)
     if (fn == 35 && len == 5) { const int i = data[0]; if (i < 20) memcpy(modes + i * 4, data + 1, 4); fcReply(200, ""); return PipeReqId; }
     if (fn == 52) { if (!usb) { fcReply(409, "refused: Rotorflight 4.6 cannot send its adjustments list over the receiver link ... Plug the flight controller's USB into the dongle or receiver"); return PipeReqId; } fcReply(200, hexOf(adj, 588)); return PipeReqId; }
     if (fn == 53 && len == 15) { const int i = data[0]; if (i < 42) memcpy(adj + i * 14, data + 1, 14); fcReply(200, ""); return PipeReqId; }
@@ -322,6 +327,23 @@ int main() {
     boxes = 0; fcLog.clear(); SaveJobs(); run(30); CHECK(boxes == 0 && writes(35) == 1 && modes[1] == 3 && !Sw_Was_Edited);
     ArmingChannel = 3; StartJobsView(); run(8); CHECK(SwN == 2 && SwNow[0].aux == 3 && !Sw_Was_Edited && fields["hint"].find("Arm switch:") == 0);
     ArmingChannel = 6;
+    // 15b. B210 (11 Nov 2026): THE CHANNEL MAP. Arming on channel 5 for ExpressLRS = map AECR1T23: AUX1 IS channel 5 and
+    // channel 6 the throttle. The page reads the map (MSP 64) after the switches and names, moves and checks by it.
+    {
+        static const uint8_t ldrcMap[8] = {0, 1, 3, 2, 4, 5, 6, 7}, elrsMap[8] = {0, 1, 3, 2, 5, 4, 6, 7}, bad[8] = {0, 1, 3, 2, 4, 4, 6, 7};
+        const uint16_t keep4 = SendBuffer[4], keep5 = SendBuffer[5];
+        memcpy(rcmap, elrsMap, 8); blankModes(); slot(0, 0, 0, 1500, 2125);              // ARM on AUX1
+        ArmingChannel = 5; cmds.clear(); fcLog.clear(); StartJobsView(); run(8);
+        CHECK(writes(64) == 1 && RfMapLen == 8 && SwArmChannel() == 5 && SwN == 1 && SwNow[0].aux == 0 && !Sw_Was_Edited);   // 5 IS a switch channel now
+        CHECK(fields["tn1"] == "Channel 5: Gear");                                      // named by its channel (this test's name for 5)
+        SendBuffer[4] = 2233; SendBuffer[5] = 1000; SwLiveCh = -1; SwLive(); CHECK(fields["tn8"] == "ON: 2012 us");   // the marker reads 5, not 6
+        ArmingChannel = 6; CHECK(SwArmChannel() == 0);                                  // 6 is the throttle under this map
+        boxes = 0; SwNow[0].lo = 1600; SwEdited(); SaveJobs(); run(4);
+        CHECK(boxes == 1 && lastBox.find("This model's arming channel is 6") == 0 && lastBox.find("not a switch channel") != std::string::npos);
+        memcpy(rcmap, bad, 8); ArmingChannel = 6; blankModes(); slot(0, 0, 0, 1500, 2125); StartJobsView(); run(8);   // not a whole map: none
+        CHECK(RfMapLen == 0 && SwArmChannel() == 6 && fields["tn1"] == "Channel 6: AUX1");
+        memcpy(rcmap, ldrcMap, 8); ArmingChannel = 6; SendBuffer[4] = keep4; SendBuffer[5] = keep5;
+    }
     // 16. no model, no backup: refused before anything
     needModel = true; boxes = 0; fcLog.clear(); rfStarts = 0; StartJobsView(); CHECK(boxes == 1 && fcLog.empty() && lastBox.find("need the model") != std::string::npos); needModel = false;
     // 17. SIX BANKS (B130/B138/B139): a bank selector added on channel 7, which tells six banks apart; the switch walks every bank;

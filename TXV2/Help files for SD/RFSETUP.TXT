@@ -26,7 +26,8 @@ The Rates page's columns follow each bank's rates type.||
 ARMING CHANNEL:|
 The channel the safety switch drives (usually 6), on a|
 Rotorflight model only. Safety off arms the flight controller.|
-6 to 16: Rotorflight's switches start at channel 6.|
+6 to 16: Rotorflight's switches start at channel 6 - or 5,|
+when its channel map puts the arm switch there (ExpressLRS).|
 Any other entry is ignored: the old channel stays.||
 GEAR RATIO (V1 RECEIVER):|
 Motor turns for one turn of the main rotor, such as 10.3.|

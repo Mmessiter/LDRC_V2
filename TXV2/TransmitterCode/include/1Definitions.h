@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B209 11/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B210 11/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -2379,6 +2379,48 @@ void RfRecordTick(bool connected) // once a second
         ++RfNoneSecs;
 }
 // ARMRULE-END
+
+// RFMAP-BEGIN (dev/test_jobs)
+// B210 (11 Nov 2026, readying arming on channel 5 for ExpressLRS): Rotorflight's CHANNEL MAP - MSP 64, 8 bytes: the
+// receiver channel (0-based) feeding roll, pitch, yaw, collective, throttle, AUX1, AUX2, AUX3; past those eight a channel
+// is itself. AUX1 is channel 6 only by DEFAULT: with the arm switch on channel 5 (map AECR1T23) it is channel 5, and the
+// Switches and knobs page and Check my setup counted "AUX n = channel n + 5" - naming, moving and checking the wrong
+// channel (the throttle's, for the arm switch). Read with the switches (RF_Switches.h) and by the check (RF_Check.h);
+// none read, or not a whole one (the eight channels 0-7, each once): the default.
+uint8_t RfMap[8];
+uint8_t RfMapLen = 0;
+bool RfMapTake(const uint8_t *b, int n)
+{
+    RfMapLen = 0;
+    if (!b || n < 8)
+        return false;
+    uint8_t seen = 0;
+    for (int f = 0; f < 8; ++f)
+    {
+        if (b[f] > 7 || (seen & (1u << b[f])))
+            return false;
+        seen |= (uint8_t)(1u << b[f]);
+    }
+    memcpy(RfMap, b, 8);
+    RfMapLen = 8;
+    return true;
+}
+int RfAuxCh(int aux) // AUX index (0 = AUX1) -> channel 1..16; 0 = none of ours
+{
+    if (aux < 0)
+        return 0;
+    const int f = 5 + aux;
+    const int raw = (f < RfMapLen) ? RfMap[f] : f;
+    return raw < CHANNELSUSED ? raw + 1 : 0;
+}
+int RfChAux(int ch) // channel 1..16 -> AUX index; -1 = a stick, the throttle, or none
+{
+    for (int a = 0; a < CHANNELSUSED - 5; ++a)
+        if (RfAuxCh(a) == ch)
+            return a;
+    return -1;
+}
+// RFMAP-END
 
 char ModelImageFileName[9];
 bool Armed = false;
