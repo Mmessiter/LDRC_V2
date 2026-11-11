@@ -1260,7 +1260,7 @@ void loop() {
         // protocol (Malcolm 2026-08-05, Black-Thunder-2). Now: disarmed with
         // the link up = healthy by definition — announce a gap pardon, then
         // clear ~300 ms later. NEVER while armed (the stall stops output).
-        bool linkLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 2000;
+        bool linkLive = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < LINK_QUIET_MS;   // (0.9.922: counted from the hold - no flash write inside it)
         const bool armedNow = (armingChannel >= 1 && armingChannel <= 16 &&
                                rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
                                channelMicros[armingChannel - 1] > 1500);

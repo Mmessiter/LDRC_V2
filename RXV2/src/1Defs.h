@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.921-app-lets-go";
+constexpr const char* FW_VERSION = "RXV2-0.9.922-hold-3s";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -744,12 +744,33 @@ inline uint8_t  gapMinMs           = 5;    // definable via POST /api/gapmin
 // rejects it and holds the last good values — v1 CheckForCrazyValues parity.
 constexpr uint16_t CH_MIN_MICROS = 500;
 constexpr uint16_t CH_MAX_MICROS = 2500;
+// LINK-AGES-BEGIN (dev/link_hold_test.sh compiles this block on the Mac)
 // Output failsafe timeout (ms): how long the link may be silent before the
-// output stage treats it as lost. == v1 FAILSAFE_TIMEOUT (1500). The old 500 ms
-// was short enough that a brief glitch detached the CRSF UART and the FC saw a
-// momentary RX-loss (channels flashed to zero). Below this we keep streaming the
-// held channel values, exactly as v1 keeps sending SbusChannels.
-constexpr uint32_t OUTPUT_FAILSAFE_MS = 1500;
+// output stage treats it as lost. Below this we keep streaming the held channel
+// values, exactly as v1 keeps sending SbusChannels: the flight controller sees
+// nothing of a shorter gap. (The first 500 ms was short enough that a brief glitch
+// detached the CRSF UART and the FC saw a momentary RX-loss - channels flashed to
+// zero. Then 1500, v1's FAILSAFE_TIMEOUT.)
+// (0.9.922) 3000 - Malcolm, 11 Nov 2026: "let's put both timeouts to 3 seconds. A gap of over 3 seconds is very
+// unlikely and remains a problem. Under three seconds and recovery is immediate." BOTH = this one and the
+// transmitter's RED_LED_ON_TIME (its red LED, "disconnected", the motor-switch box that stops it sending): the two
+// are kept EQUAL (the test checks the transmitter's source when it is on this Mac). At 1500 a gap of 2 s had already
+// handed a Rotorflight model to its own failsafe: 0.4 s after our frames stop (rx.c: 100 ms to notice, then
+// MAX_INVALID_PULSE_TIME_MS 300) it centres the sticks and the collective and takes the throttle to its failsafe value,
+// and failsafe_delay (1.5 s as it comes) after the loss it disarms. The price, his to pay: a link that never returns
+// leaves the model on its held sticks for 3 s, not 1.5.
+constexpr uint32_t OUTPUT_FAILSAFE_MS = 3000;
+// Two later ages of silence, counted FROM the hold so that they move with it. Until 0.9.922 they were the literals
+// 2000 and 3000, written beside a hold of 1500; left alone they would now fall INSIDE the hold, and what waits for
+// them writes flash - a stalled loop: no frames to the flight controller, deaf to the transmitter - with the model
+// still flying on its held sticks.
+// LINK_QUIET_MS: the channels' arming word no longer counts (the flight's "disarm edge", the governor's verdict, the
+//                quick-boot count), and a phone may be given another bank. Half a second after the hold, as before.
+// LINK_DEAD_MS:  the transmitter is taken to be off: deferred settings and the flight are written to flash, and the
+//                black-box check may have the flight controller. A second and a half after the hold, as before.
+constexpr uint32_t LINK_QUIET_MS = OUTPUT_FAILSAFE_MS + 500;
+constexpr uint32_t LINK_DEAD_MS  = OUTPUT_FAILSAFE_MS + 1500;
+// LINK-AGES-END
 inline uint8_t  sbusFrame[25];
 inline uint8_t  crsfFrame[26];
 inline uint8_t  ibusFrame[32];

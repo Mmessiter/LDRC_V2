@@ -143,7 +143,7 @@ inline const char* refuse() {
     if (!UsbHostMsp::active()) return "needs the USB cable: connect the flight controller's USB socket to the receiver's (or the dongle's)";
     if (UsbHostMsp::cliMode) return "the command line is open - exit it first";
     if (fcInfo.armed) return "the flight controller is armed - disarm first";
-    if (!dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 3000) return "switch the transmitter off first: the check needs the flight controller to itself for a minute";
+    if (!dongleEnabled && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < LINK_DEAD_MS) return "switch the transmitter off first: the check needs the flight controller to itself for a minute";
     if (txParamBusy || mspWaitFunction != 0xFF || mspBridgeActive || mspProbeOutstanding()) return "the receiver is busy talking to the flight controller - try again in a moment";
     // The check owns the link for minutes, and bankPutBackTick stands down while
     // it runs. If a phone session has left the flight controller on a bank that

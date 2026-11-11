@@ -187,6 +187,8 @@ zsh dev/armch_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/armch_test.sh f
 ok "armch_test"
 zsh dev/txask_free_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/txask_free_test.sh failed - run it to see why"
 ok "txask_free_test"
+zsh dev/link_hold_test.sh | tail -1 | grep -q "ALL PASS" || die "dev/link_hold_test.sh failed - run it to see why"
+ok "link_hold_test"
 node dev/gear_test.js | tail -1 | grep -q "ALL PASS" || die "dev/gear_test.js failed - run it to see why"
 ok "gear_test"
 node dev/escprog_proto_test.js | tail -1 | grep -q "ALL PASS" || die "dev/escprog_proto_test.js failed - run it to see why"

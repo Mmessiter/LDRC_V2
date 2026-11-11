@@ -675,7 +675,7 @@ inline void govThrottleWatchTick() {
     if ((uint32_t)(now - lastMs) < 1000) return;
     lastMs = now;
 
-    const bool linkLive = rx.lastMillis && (uint32_t)(now - rx.lastMillis) < 2000;
+    const bool linkLive = rx.lastMillis && (uint32_t)(now - rx.lastMillis) < LINK_QUIET_MS;   // (0.9.922: counted from the hold - 1Defs.h)
     const bool armed = linkLive && armingChannel >= 1 && armingChannel <= 16 &&
                        channelMicros[armingChannel - 1] > 1500;
     if (armed && !wasArmed) { armedS = parkedS = 0; parkedPctSum = 0; maxPct = 0; }
@@ -719,7 +719,7 @@ inline void govThrottleWatchTick() {
     // which may have arrived mid-flight on a TX-on boot.
     if ((verdictDirty || fcInfoNvsDirty || telemGoodNvsDirty || txBanksNvsDirty) && !armed) {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
-        const bool linkDead    = !rx.lastMillis || (uint32_t)(now - rx.lastMillis) > 3000;
+        const bool linkDead    = !rx.lastMillis || (uint32_t)(now - rx.lastMillis) > LINK_DEAD_MS;
         if (sticksStill || linkDead) {
             if (verdictDirty) {
                 prefs.putUChar(NVS_KEY_GOV_THR_PARKED, govThrParkedPct);
@@ -1073,7 +1073,7 @@ inline bool govProfileDead(const uint8_t* b, uint8_t len, char* why, size_t whyL
 }
 inline bool bankTxLive() {
     if (dongleEnabled) return true;          // unknown = assume the model's transmitter may be on: never switch banks unasked
-    return rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) < 2000;
+    return rx.lastMillis != 0 && (uint32_t)(millis() - rx.lastMillis) < LINK_QUIET_MS;   // (0.9.922: while its held channels still go out, the transmitter's bank switch is in command)
 }
 inline bool bankHeld()   { return banks.switchPid != 0xFF; }
 inline void bankRelease() { banks.switchPid = banks.switchRate = 0xFF; banks.savedPid = banks.savedRate = 0xFF; banks.tries = 0; }

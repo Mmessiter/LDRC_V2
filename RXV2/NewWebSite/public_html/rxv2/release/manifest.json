@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.922-hold-3s",
+      "url": "https://messiter.com/rxv2/release/v0.9.922/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.922/littlefs.bin",
+      "fs_md5": "5d70bf2f3bc4567d2d54f5104b891c09",
+      "notes": "A gap in the radio link of under 3 seconds now changes nothing: the receiver holds the last positions for 3 seconds (it was 1.5) before failsafe, and the transmitter (B208) waits the same 3 seconds before it calls the model lost. Update the transmitter too."
+    },
+    {
       "name": "RXV2-0.9.921-app-lets-go",
       "url": "https://messiter.com/rxv2/release/v0.9.921/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.921/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.911/littlefs.bin",
       "fs_md5": "c0c4957dcf4739f1a43f444a514329ec",
       "notes": "Help: how to level the swash by a test lift-off in still air - a new paragraph in the Travel extents help, a line under its swash trims, and the New helicopter wizard's last step. A swash levelled on the bench is seldom quite level; a new model heads off at lift-off until the swash trims are right. No firmware change."
-    },
-    {
-      "name": "RXV2-0.9.910-quick-follow",
-      "url": "https://messiter.com/rxv2/release/v0.9.910/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.910/littlefs.bin",
-      "fs_md5": "fe0f44581d076b50d798141c56e38e3a",
-      "notes": "0.9.910: the app's bank pages follow the transmitter's switch within about a second (was about 3 s): the receiver asks the flight controller 120 ms after it sees the switch move and every 0.5 s while a page polls; the pages poll every 0.4 s and read without re-selecting the bank."
     }
   ],
   "rotorflight": {

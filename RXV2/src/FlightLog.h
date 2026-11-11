@@ -131,7 +131,7 @@ inline uint32_t fltSessionArmedMs   = 0;
 inline void tunePersistTick() {
     if (!tuneEditsPending) return;
     const uint32_t now = millis();
-    const bool linkDead = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > 3000;
+    const bool linkDead = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > LINK_DEAD_MS;   // (0.9.922: counted from the hold - 1Defs.h)
     const bool armKnown = armingChannel >= 1 && armingChannel <= 16;
     const bool armed    = armKnown && !linkDead && channelMicros[armingChannel - 1] > 1500;
     const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
@@ -472,12 +472,12 @@ inline bool fltSessionSaved = false;
 inline void maybeSaveFlight() {
     static uint32_t armedConnStart = 0;   // the connStart of a flight awaiting save
     const uint32_t now = millis();
-    const bool connected = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 3000);
+    const bool connected = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < LINK_DEAD_MS);
     if (connected) {
         armedConnStart = linkStats.connStartMs;   // a flight is running; arm it
         return;
     }
-    const uint32_t waitMs = fltSaveAsapActive() ? 3000 : FLIGHT_SAVE_AFTER_MS;
+    const uint32_t waitMs = fltSaveAsapActive() ? LINK_DEAD_MS : FLIGHT_SAVE_AFTER_MS;   // (0.9.922: never inside the hold)
     if (armedConnStart != 0 && armedConnStart == linkStats.connStartMs &&
         rx.lastMillis != 0 && (uint32_t)(now - rx.lastMillis) > waitMs) {
         const uint32_t durMs = (rx.lastMillis > linkStats.connStartMs)
@@ -532,7 +532,9 @@ inline void flightSaveTick() {
 
     // Armed only counts while the link is actually live — a lost link freezes
     // channelMicros at its last value, which must not read as "still armed".
-    const bool linkLive = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < 2000);
+    // (0.9.922: LINK_QUIET_MS, half a second after the output's hold ends - while the held channels still go to the
+    //  flight controller as live ones the model IS armed, and no save may start.)
+    const bool linkLive = (rx.lastMillis != 0) && ((uint32_t)(now - rx.lastMillis) < LINK_QUIET_MS);
     const bool armed    = linkLive && (channelMicros[armingChannel - 1] > 1500);
 
     if (armed && !wasArmed) { armedSince = now; sessionEverArmed = true; fltSessionEverArmed = true; }   // arm edge
@@ -551,7 +553,7 @@ inline void flightSaveTick() {
     // ring; later saves overwrite the same slot (one flight per battery).
     if (fltSavePending && !armed) {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
-        const bool linkDead    = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > 3000;
+        const bool linkDead    = rx.lastMillis && (uint32_t)(now - rx.lastMillis) > LINK_DEAD_MS;
         if (sticksStill || linkDead || fltSaveAsapActive()) {   // a data request ends the wait
             if (startFlightSaveAsync(!fltSessionSaved)) {
                 fltSessionSaved = true;        // (the RAM ring spans the whole session, so each save holds everything so far)
