@@ -1216,6 +1216,7 @@ void loop() {
 
     if (!simEnabled && !dongleEnabled) { StallScope s("sbusTick"); sbusTick(); }   // no RC output frames at all in sim or dongle mode
     { StallScope s("usbHost"); UsbHostMsp::poll(); }              // dongle AND receiver (0.9.639): adopt/drop a USB flight controller, drain its bytes; a no-op unless the host is up
+    armSwitchTick();                                               // (0.9.923) when the arm switch went on, for the lock on an armed model (1Defs.h ARMLOCK)
     if (dongleEnabled) { StallScope s("dongleStatus"); dongleStatusTick(); }
     else               { StallScope s("bankFollow");   bankFollowTick(); }     // the phone follows the transmitter's bank switch (0.9.844)
     { StallScope s("heartbeat"); heartbeat(); }

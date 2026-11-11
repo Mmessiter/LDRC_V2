@@ -938,6 +938,56 @@ inline void handleFcTelemSet() {
     server.send(200, "application/json", String("{\"ok\":true,\"fc_telem\":") + (fcTelemetryEnabled ? "true" : "false") + "}");
 }
 
+// THE LOCK ON AN ARMED MODEL, for everything a page or the transmitter's screen may ask (0.9.923; the rule itself, the
+// question and its bounds are 1Defs.h ARMLOCK, tested by dev/armlock_test.sh). The arm switch alone no longer says
+// "armed" when a flight controller is here to be asked.
+//
+// The flight controller asked whether it is armed: one MSP 101, sent as the phone's follow sends it (bankFollowTick) and
+// waited for - for a bounded time - with the link and the output running (keepLinkTick); its answer lands in
+// fcInfo.armed by the digest every reply goes through, here or later in loop(). 1 = a word came in, 0 = a question is
+// out and unanswered, -1 = it cannot be asked now, or it does not answer: the caller then keeps to the arm switch.
+// Never on a dongle (it asks four times a second itself) or in simulator mode, nor while the line is somebody else's:
+// the command line, a Configurator on the bridge, an update being written, the vibration check, a transmitter edit in
+// flight, a page's own request, a UART parked for failsafe.
+inline ArmAsk fcArmedAskState = { 0, 0 };
+inline int fcArmedAsk(bool renewing) {
+    if (dongleEnabled || simEnabled || !fcInfo.detected) return -1;
+    if (UsbHostMsp::cliMode || mspBridgeActive || bbCheckActive || bleOtaActive || outputDetachedForFailsafe) return -1;
+    if (!UsbHostMsp::active() && (currentProtocol != PROTO_CRSF || !fcTelemetryEnabled)) return -1;   // no Rotorflight settings on this line
+    if (mspWaitFunction != 0xFF) return -1;
+    struct IO {
+        uint32_t nowMs()       { return millis(); }
+        uint32_t wordMs()      { return fcInfo.armedMs; }
+        bool     outstanding() { return mspProbeOutstanding(); }
+        bool     send() {
+            if (txParamBusy || mspWaitFunction != 0xFF) return false;   // the transmitter's own edit has the line
+            mspSendRequest(MSP_STATUS);
+            mspProbeSentMs = millis();
+            return true;
+        }
+        void     pump()        { keepLinkTick(); delay(1); }
+    } io;
+    return armAsk(fcArmedAskState, io, renewing);
+}
+// The lock now (1Defs.h armLockFrom has the rule and what the answers mean). A request that arrives within 0.3 s of the
+// arm switch going on waits that out first. One line in the log for each time the arm switch is on and the flight
+// controller says it is not armed - that is a model worth a look: the switch on the wrong channel, the wrong way up, or
+// an arming the flight controller refuses.
+inline ArmLock armLockNow(bool lastWordToo = false) {
+    const ArmLock lock = armLockWaiting(
+        [lastWordToo]() { return armFactsNow(lastWordToo); },
+        [](bool renewing) -> int { return fcArmedAsk(renewing); },
+        [](uint32_t ms) { for (uint32_t t0 = millis(); (uint32_t)(millis() - t0) < ms; ) { keepLinkTick(); delay(1); } });
+    static uint32_t saidForOnMs = 0;
+    if (lock == ARMLOCK_OPEN && armSwitch.onSinceMs && saidForOnMs != armSwitch.onSinceMs) {
+        saidForOnMs = armSwitch.onSinceMs;
+        char m[EventLog::MSG_LEN];
+        snprintf(m, sizeof m, "Arm switch ON (ch%u at %u) but the FC says NOT armed: not locked", (unsigned)armingChannel, (unsigned)channelMicros[armingChannel - 1]);
+        events.add(m);
+    }
+    return lock;
+}
+
 inline void handleMspApi() {
     // ARMED = configuration locked, instantly (Malcolm 2026-08-24, after the
     // crash: "if arming is switched on, go directly to fly mode — without
@@ -946,29 +996,34 @@ inline void handleMspApi() {
     // radios ~3 s after arming; this closes the door for those 3 seconds
     // and for every other path: no config request touches the FC while the
     // model is armed with a live transmitter.
+    // 0.9.923: "armed" is the flight controller's own word when it can be asked (armLockNow, above). The arm switch
+    // still locks at once; it no longer locks for good when the flight controller says it is not armed.
     {
-        const bool fcArmed = fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000;   // the FC's own word, dongle or receiver (0.9.640)
         const bool armLink = rx.lastMillis &&
                              (uint32_t)(millis() - rx.lastMillis) < 1000;
-        const bool linkArmed = armLink && armingChannel >= 1 && armingChannel <= 16 &&
-                               channelMicros[armingChannel - 1] > 1500;
+        const ArmLock lock = armLockNow();
         // 0.9.886: the live channel positions (MSP_RC) are the one read a page still needs while armed - the Switches
         // page shows where the arm switch sits against its zone. They are answered from this receiver's own output
         // (fcRcMicrosFromTx, 1Defs.h), on the flight controller's scale, without a word to the flight controller. Only
         // with a live transmitter link: a dongle has no channels of its own.
-        if ((fcArmed || linkArmed) && armLink && !dongleEnabled && server.hasArg("fn") && server.arg("fn").toInt() == MSP_RC) {
+        if (lock != ARMLOCK_OPEN && armLink && !dongleEnabled && server.hasArg("fn") && server.arg("fn").toInt() == MSP_RC) {
             char hex[65];
             mspRcFromLink(hex);
             server.sendHeader("Cache-Control", "no-store");
             server.send(200, "text/plain", hex);
             return;
         }
-        if (fcArmed) {
+        if (lock == ARMLOCK_FC) {
             server.sendHeader("Cache-Control", "no-store");
             server.send(409, "text/plain", "ARMED - the flight controller says it is armed. Disarm first.");
             return;
         }
-        if (linkArmed) {
+        if (lock == ARMLOCK_ASKING) {         // its answer is on its way: the page tries again 200 ms later (app.js LDRC.msp), as for any "busy"
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(503, "text/plain", "busy: the arm switch is on - asking the flight controller whether it is armed. Try again.");
+            return;
+        }
+        if (lock != ARMLOCK_OPEN) {
             static uint32_t lastArmRefuseLog = 0;
             if ((uint32_t)(millis() - lastArmRefuseLog) > 10000) {
                 lastArmRefuseLog = millis();
@@ -3033,12 +3088,22 @@ inline bool refuseIfArmed(const char* what) {
         server.send(409, "text/plain", "ARMED - the flight controller says it is armed. Disarm first.");
         return true;
     }
-    const bool armLink = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
-    if (armLink && armingChannel >= 1 && armingChannel <= 16 &&
-        channelMicros[armingChannel - 1] > 1500) {
-        { char m[96]; snprintf(m, sizeof m, "Refused while ARMED: %s", what); events.add(m); }
+    // 0.9.923: HERE the arm switch still counts by itself, whatever the flight controller says of the model now (the
+    // pages' own requests ask it: armLockNow, beside handleMspApi). What comes through this door restarts the receiver,
+    // stalls it on a flash write or saves the failsafe positions - and a receiver that restarts shows the flight
+    // controller the arm switch OFF (its start-up positions) and then ON again: a fresh arming, where a moment ago there
+    // was one the flight controller had refused. So the switch goes off first. The words now say which switch, because
+    // "ARMED" was not true of a model whose flight controller says otherwise (Malcolm, 11 Nov 2026).
+    if (armSwitchReadsOn()) {
+        const bool fcSaysNo = armVerdict(armFactsNow()) == ARM_NOT;
+        char m[96];
+        snprintf(m, sizeof m, fcSaysNo ? "Refused, arm switch ON (ch%u): %s" : "Refused while ARMED (ch%u): %s", (unsigned)armingChannel, what);
+        events.add(m);
+        char b[120];
+        if (fcSaysNo) snprintf(b, sizeof b, "The arm switch (channel %u) is ON - switch it off first. The flight controller says it is not armed.", (unsigned)armingChannel);
+        else          snprintf(b, sizeof b, "ARMED - disarm first.");
         server.sendHeader("Cache-Control", "no-store");
-        server.send(409, "text/plain", "ARMED - disarm first.");
+        server.send(409, "text/plain", b);
         return true;
     }
     // On a dongle that KNOWS a flight controller, insist on a fresh "disarmed"
@@ -3667,9 +3732,11 @@ inline void handleApiState() {
     j += ",\"autofly\":"; j += (autoFlyActive() ? "true" : "false");
     j += ",\"arm_auto\":"; j += ((armingChannel && !prefs.getUChar(NVS_KEY_ARM_CH, 0)) ? "true" : "false");
     // live armed state (so the config page can confirm the channel is right)
-    { bool live = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
-      bool armed = dongleEnabled ? (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)
-                                 : (live && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500);
+    // 0.9.923: by the rule the radios go by (1Defs.h armShown) - the flight controller's word while it is fresh, else
+    // the arm switch. The app's red banner hangs on this, and it announced "WiFi and Bluetooth are switching OFF" on
+    // the switch alone while the radios, believing the flight controller, stayed on.
+    { bool armed = dongleEnabled ? (fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000)
+                                 : armShownNow();
       j += ",\"armed\":"; j += (armed ? "true" : "false"); }
     j += ",\"head_speed\":"; j += (uint32_t)((gearRatio > 0.1f ? fcTelem.fcMotorRPM / gearRatio : fcTelem.fcMotorRPM) + 0.5f);
     { char tb[48]; snprintf(tb, sizeof(tb), ",\"esc_temp_c\":%.1f", fcTelem.fcEscTempC); j += tb; }
@@ -4142,11 +4209,9 @@ inline void registerWebRoutes() {
     // txParamsWords), and the block being read as the ack payload would carry it.
     server.on("/api/txparams", HTTP_POST, []() {
         {   // 0.9.912: the same door as /api/msp - nothing of this touches the flight controller while the model is armed
-            const bool fcArmed = fcInfo.armed && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 5000;
-            const bool armLink = rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000;
-            const bool linkArmed = armLink && armingChannel >= 1 && armingChannel <= 16 && channelMicros[armingChannel - 1] > 1500;
-            const bool lastWordArmed = armingChannel >= 1 && armingChannel <= 16 && lastRxArmUs > 1500;
-            if (fcArmed || linkArmed || lastWordArmed) {
+            // (0.9.923: by the same rule - the flight controller's word when it can be asked; with no live link the
+            // transmitter's last word on the arming channel stands in for the switch, as it did.)
+            if (armLockNow(true) != ARMLOCK_OPEN) {
                 static uint32_t lastSaid = 0;
                 if ((uint32_t)(millis() - lastSaid) > 10000) { lastSaid = millis(); events.add("Transmitter words refused: model is ARMED"); }
                 server.send(409, "text/plain", "ARMED - configuration is locked in flight. Disarm first.");

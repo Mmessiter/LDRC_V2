@@ -663,9 +663,8 @@ inline void bleStreamPoll() {
     // so the page's live ARMED indicator rides the stream instead of costing
     // a 2.5 kB state poll every second (which paused the stream — the
     // "brief pauses" Malcolm saw). Same computation as /api/state.json.
-    bool live    = (rx.lastMillis != 0) && ((uint32_t)(millis() - rx.lastMillis) < 2000);
-    bool armedNow = live && armingChannel >= 1 && armingChannel <= 16 &&
-                    channelMicros[armingChannel - 1] > 1500;
+    // (0.9.923: and by the same rule - the flight controller's word while it is fresh, else the arm switch: 1Defs.h armShown.)
+    bool armedNow = armShownNow();
     int armState = armingChannel ? (armedNow ? 1 : 0) : -1;
     n += snprintf(f + n, sizeof(f) - n, "|%ld|%d\n", age, armState);
     bleRespChr->notify((const uint8_t*)f, (size_t)n);

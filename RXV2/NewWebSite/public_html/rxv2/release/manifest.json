@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.923-fc-says-armed",
+      "url": "https://messiter.com/rxv2/release/v0.9.923/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.923/littlefs.bin",
+      "fs_md5": "5d70bf2f3bc4567d2d54f5104b891c09",
+      "notes": "The app no longer says ARMED, or refuses the Rotorflight pages, while the flight controller says the model is not armed (an arm switch that is on but refused, or on another channel than the transmitter's model uses). With a flight controller answering, the pages and the red banner go by its own word. Arming still locks the pages at once. Restarting or updating the receiver and saving the failsafe still need the arm switch off."
+    },
+    {
       "name": "RXV2-0.9.922-hold-3s",
       "url": "https://messiter.com/rxv2/release/v0.9.922/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.922/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.912/littlefs.bin",
       "fs_md5": "1d761d02ea9f599b483f26ed76315383",
       "notes": "Safety review, the day after the zero-rate save: the Rescue, Travel extents, Filters, First-time basics and Governor pages refuse a blank box (it went to the flight controller as 0). The receiver now refuses a PID or governor block that would leave an axis with no response or a head speed that is none, any block shorter than the flight controller reads, and a transmitter save whose first packet never arrived; it no longer re-selects a phone's bank while the transmitter's switch owns the banks, refuses the transmitter's words while the model is armed, and never starts a receiver update when the last packet heard said armed. New gates: save_test (every save page in node) and deadblock_test."
-    },
-    {
-      "name": "RXV2-0.9.911-liftoff-note",
-      "url": "https://messiter.com/rxv2/release/v0.9.911/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.911/littlefs.bin",
-      "fs_md5": "c0c4957dcf4739f1a43f444a514329ec",
-      "notes": "Help: how to level the swash by a test lift-off in still air - a new paragraph in the Travel extents help, a line under its swash trims, and the New helicopter wizard's last step. A swash levelled on the bench is seldom quite level; a new model heads off at lift-off until the swash trims are right. No firmware change."
     }
   ],
   "rotorflight": {

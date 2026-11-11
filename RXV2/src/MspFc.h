@@ -1335,7 +1335,9 @@ inline void bankFollowTick() {
     bool moved = false;
     for (uint8_t i = 4; i < 16; ++i) { const int d = (int)channelMicros[i] - (int)askedUs[i]; if (d > 100 || d < -100) moved = true; }
     if (moved && !movedAt) movedAt = millis();
-    const uint32_t gap = movedAt ? 120 : polling ? 500 : 2000;
+    // 0.9.923: every second while the arm switch reads ON and the flight controller has not said "armed" - its word is
+    // then all that keeps the radios up and the pages open (1Defs.h ARMLOCK), so it is kept well inside its 2.5 s.
+    const uint32_t gap = movedAt ? 120 : polling ? 500 : armSwitch.onSinceMs ? 1000 : 2000;
     const uint32_t since = (uint32_t)(millis() - (movedAt ? movedAt : lastMs));
     if (since < gap || (uint32_t)(millis() - lastMs) < 250) return;
     if (txParamBusy || mspWaitFunction != 0xFF || mspProbeOutstanding()) return;

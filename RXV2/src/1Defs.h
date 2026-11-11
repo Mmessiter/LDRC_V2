@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.922-hold-3s";
+constexpr const char* FW_VERSION = "RXV2-0.9.923-fc-says-armed";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -650,11 +650,13 @@ inline void keepFlyingTick() {
 // the background prober — pumped by loop() — was answered normally. Malcolm
 // 2026-09-19, a dongle on a Nexus-X port B: "it's not reading PIDs".
 // In simulator mode Serial1 belongs to RcInput, so it is left alone.
+inline void armSwitchTick();      // below, beside the flight controller's own word (0.9.923): when the arm switch went ON
 inline void keepLinkTick() {
     extern void protocolRx();     // Telemetry.h
     if (dongleEnabled) { protocolRx(); return; }
     if (simEnabled) return;
     keepFlyingTick();
+    armSwitchTick();              // (0.9.923) a wait is not blind to the arm switch: off and on again inside one is a new arming
 }
 
 inline uint16_t channelMicros[16];                       // initialised in setup() to 1500us
@@ -1287,6 +1289,187 @@ inline FcInfo fcInfo;
 // 2.5 s (the dongle's rule, dongleDisarmedConfirmed); stale or none = the arming channel, as before. Used by the auto fly
 // mode's teardown (main.cpp), the Bluetooth boot window, the flying heuristic and the disarm revival (Network.h).
 inline bool fcArmedWordFresh() { return fcInfo.detected && fcInfo.armedMs && (uint32_t)(millis() - fcInfo.armedMs) < 2500; }
+
+// ARMLOCK-BEGIN (dev/armlock_test.sh compiles this block on the Mac)
+// 0.9.923 (Malcolm, 11 Nov 2026, Test1: a transmitter model that arms on channel 16, while that board's Rotorflight has
+// its arm switch on channel 6, where the model keeps another switch high: "frequently the iOS app has warned me that
+// arming is on when it was not"). The log: "Config refused: model is ARMED" four times in half a minute - while the
+// flight controller, asked every two seconds for the phone, said it was NOT armed, and the radios (0.9.917) believed
+// it. The app's pages and its red banner did not: they went by the arming channel alone, and that is a guess (which
+// channel, which way up, a switch that is on while the flight controller refuses to arm). Now they go by the one who
+// knows, without giving up the instant lock:
+//  - the flight controller's own "armed" locks everything, as before (it counts for 5 s), and once it has said so
+//    with the arm switch on, the lock stays until the switch is seen OFF - through a gap in the radio link too, while
+//    the model flies on its held channels - and it is not asked again in flight;
+//  - the arm switch going ON locks at once, and for the first 0.3 s nobody is asked: a model that IS being armed is
+//    not talked to in that moment (a page's request that arrives then waits it out, the link and the output running);
+//  - after that the switch alone no longer says "armed". The flight controller's "not armed" lifts the lock when it
+//    was said at least those 0.3 s after the switch went on and is not older than a second and a half; without such
+//    a word it is ASKED (one MSP 101, the question a dongle asks four times a second). No answer, or nobody to ask
+//    = the switch stands, as before.
+// Rotorflight arms within a frame or two of its switch, and latches a refused arming until the switch goes off (core.c,
+// ARMING_DISABLED_ARM_SWITCH); an arming it only delays (a DShot beacon, the gyro calibration) is seen at the next
+// question, a second and a half later at most.
+// The question is BOUNDED (the independent review of this change, the same morning): the first one of an arming may
+// hold loop() for 0.4 s and no more - with the 0.3 s before it, 0.7 s at the very worst, the link and the output
+// running throughout - and an answer that is slower than that is collected by loop() itself, the page being told
+// "busy, try again". Only a question that renews a "not armed" given a moment ago may wait the 1.5 s a flight
+// controller busy with a page's reads can take. And an answer never opens the door by itself: when it is in, the
+// rule is read again, so a switch flicked off and on while the question was out is a new arming, locked.
+constexpr uint32_t FC_ARMED_HOLD_MS     = 5000;   // the flight controller's "armed" counts this long
+constexpr uint32_t FC_NOT_ARMED_MS      = 1500;   // its "not armed" lifts a switch that is on for this long; then it is asked again
+constexpr uint32_t FC_WORD_FRESH_MS     = 2500;   // what the radios call fresh (fcArmedWordFresh, 0.9.917): the app is shown the same
+constexpr uint32_t ARM_SWITCH_SETTLE_MS = 300;    // its "not armed" must have been said this long after the switch went on
+constexpr uint32_t FC_ASK_FIRST_MS      = 400;    // the first question of an arming may hold loop() this long
+constexpr uint32_t FC_ASK_RENEW_MS      = 1500;   // one that renews a "not armed" given for this switch-on, this long
+constexpr uint32_t FC_RENEW_MAX_AGE_MS  = 5000;   // ... if that "not armed" is no older than this
+constexpr uint32_t FC_ASK_ANSWER_MS     = 1500;   // a question still unanswered after this: the flight controller is deaf
+constexpr uint32_t FC_DEAF_REST_MS      = 5000;   // ... and is left alone this long (the arm switch stands meanwhile)
+enum ArmVerdict : uint8_t { ARM_NOT = 0, ARM_FC_SAYS = 1, ARM_SWITCH_SAYS = 2, ARM_ASK_FC = 3 };
+struct ArmFacts {
+    bool     fcAnswers;              // a flight controller is known here and can be asked
+    bool     fcWordKnown;            // it has said "armed" or "not armed" at least once
+    bool     fcArmed;                // its last word
+    uint32_t fcWordAgeMs;            // how old that word is
+    bool     switchOn;               // the arming channel reads ON
+    uint32_t switchOnForMs;          // and has for this long
+    bool     fcArmedSinceSwitchOn;   // it has said "armed" since the switch went on
+};
+inline ArmVerdict armVerdict(const ArmFacts& f) {
+    if (f.fcWordKnown && f.fcArmed && f.fcWordAgeMs < FC_ARMED_HOLD_MS) return ARM_FC_SAYS;
+    if (!f.switchOn) return ARM_NOT;
+    if (f.fcArmedSinceSwitchOn) return ARM_FC_SAYS;                         // this arming was confirmed: locked until the switch goes off
+    if (!f.fcAnswers) return ARM_SWITCH_SAYS;                               // nobody to ask: the switch is all there is
+    if (f.switchOnForMs < ARM_SWITCH_SETTLE_MS) return ARM_SWITCH_SAYS;     // just switched on: locked, and nobody is asked yet
+    if (f.fcWordKnown && !f.fcArmed && f.fcWordAgeMs < FC_NOT_ARMED_MS &&
+        f.fcWordAgeMs + ARM_SWITCH_SETTLE_MS <= f.switchOnForMs) return ARM_NOT;   // its own fresh "not armed", said after the switch had settled
+    return ARM_ASK_FC;
+}
+// What the app is SHOWN (the red banner, the ARMED dot on the channels page, the pages' own look before a write): the rule
+// the radios go by - the flight controller's word while it is fresh, else the switch - so the banner never announces
+// "WiFi and Bluetooth are switching off" while they stay on. The switch alone must have been on for the settle time, so
+// a transmitter switched on beside an open app does not flash ARMED before the flight controller's first answer.
+inline bool armShown(const ArmFacts& f) {
+    if (f.fcWordKnown && f.fcArmed && f.fcWordAgeMs < FC_ARMED_HOLD_MS) return true;
+    if (f.switchOn && f.fcArmedSinceSwitchOn) return true;
+    if (f.fcAnswers && f.fcWordKnown && f.fcWordAgeMs < FC_WORD_FRESH_MS) return false;   // its fresh "not armed"
+    return f.switchOn && f.switchOnForMs >= ARM_SWITCH_SETTLE_MS;
+}
+// The arm switch followed: when it went ON, and whether the flight controller has said "armed" since. Stepped on every
+// pass of loop() and inside the waits (keepLinkTick), so the moment is known to a millisecond or two; off and on again
+// is a new arming, and the flight controller's word from before it no longer counts.
+// quietButLastOn: the link has gone quiet with the transmitter's last word on the arming channel ON, and not yet for
+// so long that the transmitter is taken to be off. A CONFIRMED arming is kept through that - the model is flying on
+// its held channels, and when the packets return it is the same arming: locked at once, nobody asked. An arming the
+// flight controller never confirmed is not kept: with no link there is no switch, as before.
+struct ArmSwitchTrack { uint32_t onSinceMs; bool fcConfirmed; };   // onSinceMs 0 = it does not read ON
+inline void armSwitchStep(ArmSwitchTrack& t, bool readsOn, bool quietButLastOn, bool fcArmed, uint32_t fcWordMs, uint32_t nowMs) {
+    if (!readsOn) {
+        if (quietButLastOn && t.onSinceMs && t.fcConfirmed) return;
+        t.onSinceMs = 0; t.fcConfirmed = false;
+        return;
+    }
+    if (!t.onSinceMs) { t.onSinceMs = nowMs ? nowMs : 1; t.fcConfirmed = false; }
+    if (fcArmed && fcWordMs && (int32_t)(fcWordMs - t.onSinceMs) >= 0) t.fcConfirmed = true;
+}
+inline ArmFacts armFactsFrom(const ArmSwitchTrack& t, bool fcAnswers, bool fcArmed, uint32_t fcWordMs, uint32_t nowMs) {
+    ArmFacts f;
+    f.fcAnswers            = fcAnswers;
+    f.fcWordKnown          = fcWordMs != 0;
+    f.fcArmed              = fcArmed;
+    f.fcWordAgeMs          = fcWordMs ? (uint32_t)(nowMs - fcWordMs) : 0xFFFFFFFFu;
+    f.switchOn             = t.onSinceMs != 0;
+    f.switchOnForMs        = t.onSinceMs ? (uint32_t)(nowMs - t.onSinceMs) : 0;
+    f.fcArmedSinceSwitchOn = t.fcConfirmed;
+    return f;
+}
+// The question itself, bounded. io gives nowMs(), wordMs() (when the flight controller last said armed or not armed),
+// outstanding() (a question of anybody's is out and unanswered: nothing may be sent behind it, the flight controller
+// would throw it away), send() (ours goes out; false = the line is not free) and pump() (a millisecond of the link and
+// the output running). Returns 1 = a word came in, 0 = a question is out and not answered yet (loop() will collect the
+// answer), -1 = it cannot be put, or the flight controller does not answer.
+struct ArmAsk { uint32_t sentMs; uint32_t deafSinceMs; };   // our own question still unanswered since (0 = none); deaf since (0 = it is not)
+template <typename IO> inline int armAsk(ArmAsk& a, IO& io, bool renewing) {
+    const uint32_t t0 = io.nowMs();
+    if (a.deafSinceMs) {
+        if ((uint32_t)(t0 - a.deafSinceMs) < FC_DEAF_REST_MS) return -1;
+        a.deafSinceMs = 0;
+    }
+    if (a.sentMs) {
+        if (io.wordMs() && (int32_t)(io.wordMs() - a.sentMs) >= 0) a.sentMs = 0;              // answered since (loop() collected it): ask afresh
+        else if ((uint32_t)(t0 - a.sentMs) < FC_ASK_ANSWER_MS) return 0;                      // still out: nothing behind it, and nobody waits
+        else { a.sentMs = 0; a.deafSinceMs = t0 ? t0 : 1; return -1; }                        // it never answered
+    }
+    const uint32_t capMs = renewing ? FC_ASK_RENEW_MS : FC_ASK_FIRST_MS;
+    const uint32_t before = io.wordMs();
+    while (io.outstanding() && io.wordMs() == before && (uint32_t)(io.nowMs() - t0) < capMs) io.pump();   // somebody else's question: its answer will do
+    if (io.wordMs() != before) return 1;
+    if (io.outstanding()) return 0;
+    if (!io.send()) return -1;
+    a.sentMs = io.nowMs() ? io.nowMs() : 1;
+    while (io.wordMs() == before && (uint32_t)(io.nowMs() - t0) < capMs) io.pump();
+    if (io.wordMs() == before) return 0;
+    a.sentMs = 0;
+    return 1;
+}
+// The lock itself, for everything a page or the transmitter's screen may ask. OPEN = not armed. FC = the flight controller
+// says armed. SWITCH = the arm switch is on and nobody could say otherwise. SETTLING = it went on less than 0.3 s ago:
+// locked, and the flight controller is not asked yet. ASKING = the flight controller has been asked and its answer is
+// not in yet: locked, try again in a moment. askFc(renewing) puts the question when the rule calls for it (armAsk above).
+enum ArmLock : uint8_t { ARMLOCK_OPEN = 0, ARMLOCK_FC = 1, ARMLOCK_SWITCH = 2, ARMLOCK_SETTLING = 3, ARMLOCK_ASKING = 4 };
+template <typename FactsNow, typename AskFc> inline ArmLock armLockFrom(FactsNow factsNow, AskFc askFc) {
+    ArmFacts f = factsNow();
+    ArmVerdict v = armVerdict(f);
+    if (v == ARM_SWITCH_SAYS && f.fcAnswers && f.switchOnForMs < ARM_SWITCH_SETTLE_MS) return ARMLOCK_SETTLING;
+    if (v == ARM_ASK_FC) {
+        const bool renewing = f.fcWordKnown && !f.fcArmed && f.fcWordAgeMs < FC_RENEW_MAX_AGE_MS &&
+                              f.fcWordAgeMs + ARM_SWITCH_SETTLE_MS <= f.switchOnForMs;
+        const int a = askFc(renewing);
+        if (a < 0) return ARMLOCK_SWITCH;
+        if (a == 0) return ARMLOCK_ASKING;
+        f = factsNow();                    // the answer is in the facts now - and so is whatever the switch did meanwhile
+        v = armVerdict(f);
+        if (v == ARM_SWITCH_SAYS || v == ARM_ASK_FC) return ARMLOCK_SWITCH;   // off and on again while the question was out: not this arming's answer
+    }
+    return v == ARM_NOT ? ARMLOCK_OPEN : v == ARM_FC_SAYS ? ARMLOCK_FC : ARMLOCK_SWITCH;
+}
+// A request that arrives while the switch is settling waits it out - waitMs() keeps the link and the output running -
+// and is then answered by the rule. (The switch off and on again during that wait: locked, as it says.)
+template <typename FactsNow, typename AskFc, typename WaitMs> inline ArmLock armLockWaiting(FactsNow factsNow, AskFc askFc, WaitMs waitMs) {
+    ArmLock l = armLockFrom(factsNow, askFc);
+    if (l != ARMLOCK_SETTLING) return l;
+    const ArmFacts f = factsNow();
+    waitMs(f.switchOn && f.switchOnForMs < ARM_SWITCH_SETTLE_MS ? ARM_SWITCH_SETTLE_MS - f.switchOnForMs : 0);
+    l = armLockFrom(factsNow, askFc);
+    return l == ARMLOCK_SETTLING ? ARMLOCK_SWITCH : l;
+}
+// ARMLOCK-END
+// The arm switch as this receiver sees it: the arming channel above centre on a live link.
+inline ArmSwitchTrack armSwitch = { 0, false };
+inline bool armSwitchReadsOn() {
+    return armingChannel >= 1 && armingChannel <= 16 && rx.lastMillis && (uint32_t)(millis() - rx.lastMillis) < 1000 &&
+           channelMicros[armingChannel - 1] > 1500;
+}
+// The link quiet, the transmitter's last word on the arming channel ON (lastRxArmUs: the holds and the failsafe never
+// rewrite it), and quiet for less than LINK_DEAD_MS - after which the transmitter is taken to be off (and Rotorflight,
+// 1.5 s after this receiver stopped its frames, has disarmed).
+inline bool armSwitchQuietButLastOn() {
+    if (armingChannel < 1 || armingChannel > 16 || !rx.lastMillis || lastRxArmUs <= 1500) return false;
+    const uint32_t quietMs = (uint32_t)(millis() - rx.lastMillis);
+    return quietMs >= 1000 && quietMs < LINK_DEAD_MS;
+}
+inline void armSwitchTick() { armSwitchStep(armSwitch, armSwitchReadsOn(), armSwitchQuietButLastOn(), fcInfo.armed, fcInfo.armedMs, millis()); }
+// lastWordToo: with no live link, the transmitter's LAST word on the arming channel stands in for the switch (an outage
+// is not a disarm - 0.9.912, lastRxArmUs). It counts as long settled, so the flight controller is asked at once.
+inline ArmFacts armFactsNow(bool lastWordToo = false) {
+    armSwitchTick();
+    ArmFacts f = armFactsFrom(armSwitch, fcInfo.detected, fcInfo.armed, fcInfo.armedMs, millis());
+    if (!f.switchOn && lastWordToo && armingChannel >= 1 && armingChannel <= 16 && lastRxArmUs > 1500) {
+        f.switchOn = true; f.switchOnForMs = 0x7FFFFFFFu;
+    }
+    return f;
+}
+inline bool armShownNow() { return armShown(armFactsNow()); }
 inline bool   fcInfoNvsDirty = false;   // throttleCh/govMode changed in RAM; written to NVS at the next quiet moment
 inline bool   txBanksNvsDirty = false;  // the transmitter's bank count changed in RAM (0.9.904); written to NVS at the next quiet moment
 
