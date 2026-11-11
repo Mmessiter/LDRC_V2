@@ -72,7 +72,8 @@ static int digitalRead(int pin) { return pinLevel[pin]; }
 static uint8_t SwitchNumber[8] = {31, 32, 29, 30, 27, 28, 26, 25};
 static void swap(uint8_t *a, uint8_t *b) { uint8_t t = *a; *a = *b; *b = t; }
 static uint8_t InPutStick[CHANNELSUSED] = {0, 1, 2, 3, 2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};   // (the Havok's: channel 5, the throttle, from the collective stick)
-static uint8_t MotorChannel = 4, ArmingChannel = 6;
+static uint8_t MotorChannel = 4, ArmingChannel = 6, RotorFlight_V = 2;   // (the Havok: a Rotorflight model)
+static bool ArmingManaged() { return RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16; }   // (B209: as 1Definitions.h's ARMRULE)
 static uint16_t SendBuffer[CHANNELSUSED + 1];
 static char ChannelNames[CHANNELSUSED][11] = {{"Aileron"}, {"Elevator"}, {"Collective"}, {"Rudder"}, {"Throttle"}, {"Arming"}, {"Bank"}, {"Ch8"}, {"Ch9"}, {"Rescue"}, {"Ch11"}, {"Ch12"}, {"Ch13"}, {"Ch14"}, {"Ch15"}, {"Ch16"}};
 ''' + lift('include/Switches.h', 'void CalibrateEdgeSwitches()').replace('void CalibrateEdgeSwitches()', 'static void CalibrateEdgeSwitchesReal()') + 'static void CalibrateEdgeSwitches() { ++edgeSwitches; CalibrateEdgeSwitchesReal(); }\n' + lift('src/main.cpp', 'FLASHMEM void CalibrationNote(') + r'''

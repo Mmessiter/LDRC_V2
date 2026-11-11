@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B208 11/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B209 11/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -2302,6 +2302,83 @@ const float FactorTableRF2_3[13] = {1, 5, 1, 1, 5, 1, 1, 5, 1, 1, .125, 1, 1};  
 uint8_t RotorFlight_V = 0;           // 0 = NO RF, 1 = RF v2.2, 2 = RF v2.3
 float RotorFlight_Version = 0;       // none, V2.2, V2.3 for display only
 float RFVersions[3] = {0, 2.2, 2.3}; // for display only
+
+// ARMRULE-BEGIN (dev/test_armrule)
+// B209 (Malcolm, 11 Nov 2026): "When Rotorflight is NOT detected, and was not detected at last connection (if not yet
+// connected) arming channel should be entirely ignored. No gaps should be ignored - the arming channel is never forced high
+// or low. And any other arming channel functions are not needed."
+// So EVERYTHING about the arming channel asks ArmingManaged(): the safety driving it (FixArmingChannel), gaps begun with
+// the safety on left out of the count (CheckGap), "Model is armed" (ModelSeemsArmed), not connecting with the safety off
+// (SafetyHoldUpdate), "ARMING ON!!" in the red box, the calibration notes leaving it out. It is true when the receiver has
+// said Rotorflight in this session, or said it at the last connection (the model file's flag, as loaded) - until then a
+// model is "not yet connected". Within a session it never goes from true to false: a receiver whose flight controller has
+// not answered IT says 0 (B46), and a Rotorflight heli must not lose its arming in the middle of a session - or in the air.
+// What the file keeps for the NEXT time is this session's answer (RfRecordValue): Rotorflight if it was said; none after
+// RF_NONE_AFTER_S seconds connected hearing only "none"; otherwise what the file held. The power-off countdown saves it.
+bool RfSaidThisSession = false;            // the receiver said Rotorflight (1 or 2) since this model was chosen
+uint8_t RfSaidValue = 0;                   // ... and which (the last it said)
+uint8_t RfAtStart = 0;                     // the file's flag when the session began: "detected at the last connection"
+uint8_t RfInFile = 0;                      // what the file holds now (as read, or as last written)
+uint16_t RfNoneSecs = 0;                   // seconds connected this session with answers heard and none of them Rotorflight
+uint8_t RfAnswers = 0;                     // item-31 answers heard this session (stops at 255)
+uint32_t RfSessionModel = 0xFFFFFFFF;      // the model the session is about (none at power-up)
+const uint16_t RF_NONE_AFTER_S = 30;
+bool ArmingManaged() { return RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= CHANNELSUSED; }
+uint8_t RfRecordValue()
+{
+    if (RfSaidThisSession)
+        return RfSaidValue;
+    if (RfAnswers && RfNoneSecs >= RF_NONE_AFTER_S)
+        return 0;
+    return RfInFile;
+}
+// ReadOneModel, with the flag it read. The CURRENT model's first read begins its session; a re-read of the same model
+// (after a calibration, a buddy session, a search through the models) keeps what this session knows. Another model read
+// for a moment (lists, copies) is its own data, as before.
+uint8_t RfFlagAfterRead(uint32_t mnum, uint8_t fromFile)
+{
+    if (fromFile > 2)
+        fromFile = 0;
+    if (mnum != ModelNumber)
+        return fromFile;
+    if (RfSessionModel != mnum)
+    {
+        RfSessionModel = mnum;
+        RfSaidThisSession = false;
+        RfSaidValue = 0;
+        RfAtStart = fromFile;
+        RfNoneSecs = 0;
+        RfAnswers = 0;
+        RfInFile = fromFile;
+        return fromFile;
+    }
+    RfInFile = fromFile;
+    return RfSaidThisSession ? RfSaidValue : RfAtStart;
+}
+// SaveOneModel: the byte to write for model mnum (the session's answer for the current model, else what RAM holds).
+uint8_t RfFlagToSave(uint32_t mnum)
+{
+    if (mnum != ModelNumber || RfSessionModel != mnum)
+        return RotorFlight_V;
+    RfInFile = RfRecordValue();
+    return RfInFile;
+}
+void RfAnswer(uint8_t v) // the receiver's item 31, already range-checked
+{
+    if (RfAnswers < 255)
+        ++RfAnswers;
+    if (v)
+    {
+        RfSaidThisSession = true;
+        RfSaidValue = v;
+    }
+}
+void RfRecordTick(bool connected) // once a second
+{
+    if (connected && RfAnswers && !RfSaidThisSession && RfNoneSecs < 65535)
+        ++RfNoneSecs;
+}
+// ARMRULE-END
 
 char ModelImageFileName[9];
 bool Armed = false;

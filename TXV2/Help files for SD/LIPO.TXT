@@ -6,6 +6,16 @@ Touch a choice: it is saved at once.|
 Its name is at the top left. Each model keeps its own.|
 'Transmitter battery': 2 cells, LiFePO4 or LiPo / Li-ion.|
 It is the same for every model.||
+Charging the transmitter:|
+With the charger in its back (LiPo or Li-ion packs only; a|
+LiFePO4 pack needs a LiFePO4 charger), plug it into any 5 V|
+USB outlet, a wall plug or a computer. The red light goes|
+out when it is charged.|
+You may use the transmitter while it charges, and watch the|
+voltage on its front page.|
+For a longer battery life, do not always charge it full.|
+Stop once it is over 4 V a cell, and do not run it below|
+about 3.75 V a cell.||
 The warnings are set elsewhere:|
 - the transmitter's on Transmitter setup > 'System';|
 - the model's on Model setup > 'Options'.||

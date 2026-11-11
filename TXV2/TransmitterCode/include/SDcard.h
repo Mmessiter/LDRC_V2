@@ -494,7 +494,7 @@ FLASHMEM bool ReadOneModel(uint32_t Mnum)
     LinkRatesToBanks = SDRead8BITS(SDCardAddress);
     ++SDCardAddress;
 
-    RotorFlight_V = SDRead8BITS(SDCardAddress);
+    RotorFlight_V = RfFlagAfterRead(Mnum, SDRead8BITS(SDCardAddress)); // B209: the current model's session keeps what it knows (1Definitions.h ARMRULE)
     // Look(RotorFlight_V);
     ++SDCardAddress;
 
@@ -1928,7 +1928,7 @@ FLASHMEM void SaveOneModel(uint32_t mnum)
     }
     SDUpdate8BITS(SDCardAddress, LinkRatesToBanks);
     ++SDCardAddress;
-    SDUpdate8BITS(SDCardAddress, RotorFlight_V);
+    SDUpdate8BITS(SDCardAddress, RfFlagToSave(mnum)); // B209: this session's answer for the next time (1Definitions.h ARMRULE)
     ++SDCardAddress;
 
     // Governor profile saved values — 17 bytes x 4 banks = 68 bytes

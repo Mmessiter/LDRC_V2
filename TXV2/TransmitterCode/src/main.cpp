@@ -185,6 +185,9 @@
 #include "RF_Governor_Global.h"
 #include "RF_Verify.h" // B153: a save read back from the flight controller (after the pages: their arrays and box names)
 #include "RF_Easy.h" // B104: Easy tuning, the phone app's sliders, over the pipe (after RF_Backup.h: the backup is the sliders' centre)
+#ifdef ELRS_TEST
+#include "ElrsCrsf.h" // TEST BUILDS ONLY (-DELRS_TEST, 11 Nov 2026): the channels also to an ExpressLRS module on pin 24 - the bench test
+#endif
 #include "RF_Undo.h"      // B196: Undo the last save - what a save replaced, kept (sees MspAsk; after RF_Backup.h: its engine writes it back)
 #include "RF_Check.h"     // B196: Check my setup (16 MB screens)
 #include "RF_Direction.h" // B196: the Direction check, and the two mountings
@@ -457,8 +460,8 @@ FLASHMEM void CalibrationNote(char *out, size_t n)
     for (uint8_t ch = 0; ch < CHANNELSUSED; ++ch)
     {
         const uint8_t dev = InPutStick[ch];
-        if (dev > 3 || ch == MotorChannel || (ArmingChannel >= 1 && ch == ArmingChannel - 1))
-            continue; // a knob or a switch feeds it, or the firmware forces it
+        if (dev > 3 || ch == MotorChannel || (ArmingManaged() && ch == ArmingChannel - 1))
+            continue; // a knob or a switch feeds it, or the firmware forces it (B209: the arming channel only when it does)
         if (abs(StickMicros(dev, AnalogueReed(dev)) - 1500) > 10)
             continue; // its stick is not at the centre now
         if (abs((int)SendBuffer[ch] - 1500) <= 10)
@@ -508,7 +511,7 @@ FLASHMEM void CentreNote(char *out, size_t n) // out: "" when every bank is cent
         for (uint8_t ch = 0; ch < 4 && found < 3; ++ch)
         {
             const uint8_t dev = InPutStick[ch];
-            if (ch == 2 || dev > 3 || dev == collective || ch == MotorChannel || (ArmingChannel >= 1 && ch == ArmingChannel - 1))
+            if (ch == 2 || dev > 3 || dev == collective || ch == MotorChannel || (ArmingManaged() && ch == ArmingChannel - 1))   // (B209: the arming channel only when forced)
                 continue; // (B176) channel 3, the collective or throttle; a knob or a switch feeds it, the throttle or collective stick does, or the firmware forces it
             const uint8_t at = ChannelOutPut[ch] < CHANNELSUSED ? ChannelOutPut[ch] : ch; // where RerouteOutputs put it
             const int v = SendBuffer[at];
@@ -2156,6 +2159,7 @@ FLASHMEM void SetDefaultValues(bool Calibrating) // B16: the calibration branch 
     }
     ArmingChannel = 6; // for Rotorflight
     RotorFlight_V = 0;        // B06: not a Rotorflight model until it is set up as one (a reused or reset slot kept the old flag)
+    RfSessionModel = 0xFFFFFFFF; // B209: and the defaults end the model's session, so a save cannot write the old flag back
     LinkRatesToBanks = false; // B06
     GearRatio = 10.3;  // for helicopters with swash plates. This is the ratio between servo movement and blade pitch change. 10.3 is a typical value for a 700 size heli
     for (j = 0; j < 4; ++j)
@@ -5847,6 +5851,7 @@ void FASTRUN ManageTransmitter()
         CheckScreenTime();    // Check if screen needs to be turned off
         CheckBatteryStates(); // Check battery states
         SafetyOffWarningTick(); // B192: a fresh connection with the safety off - said and shown until it goes on
+        RfRecordTick(LedWasGreen); // B209: a session that hears only "no Rotorflight" for 30 s connected says so to the next one
         if (CurrentView != BLANKVIEW)
         {
             ReadTime();
@@ -5928,8 +5933,8 @@ void FixArmingChannel()
     // garbled model file can hand back anything), and SendBuffer[0 - 1] wrote
     // 667/2233 into whatever global the linker happened to place just before
     // SendBuffer — EVERY loop pass. Out-of-range now means "do nothing".
-    if (RotorFlight_V && !BindingEnabled && !BuddyPupilOnWireless &&
-        ArmingChannel >= 1 && ArmingChannel <= CHANNELSUSED)
+    // B209: never forced high or low unless Rotorflight was found - this session, or at the last connection (ArmingManaged)
+    if (ArmingManaged() && !BindingEnabled && !BuddyPupilOnWireless)
         SendBuffer[ArmingChannel - 1] = ArmValue[(uint8_t)Armed]; // If safety is on, arming is off UNLESS BINDING!!
 }
 /************************************************************************************************************/
@@ -5961,6 +5966,10 @@ FASTRUN void loop()
         if (BindingEnabled && !BoundFlag)
             SendBindingPipe(); // Only if binding and not bound yet - override low throttle setting
     }
+#ifdef ELRS_TEST
+    if (CurrentMode == NORMAL)
+        ElrsTestTick(); // TEST BUILDS ONLY: the same channels (SendBuffer, final for this pass) as CRSF to the module (ElrsCrsf.h)
+#endif
 
     switch (CurrentMode)
     {

@@ -146,10 +146,14 @@ void PipeOff()
 // else. So: when this transmitter drives the arming channel (FixArmingChannel: a Rotorflight version set), armed means
 // the safety is off, which is what drives it. Otherwise only the channel's upper third counts as armed. Either way the
 // message says what was seen, so a refusal explains itself.
+// B209 (Malcolm, 11 Nov 2026: with no Rotorflight found "any other arming channel functions are not needed"): no arming
+// channel is asked about then - the safety (or the motor switch) still guards the radios through RadiosMustBeOff.
 bool ModelSeemsArmed(char *why, size_t n)
 {
+    if (!ArmingManaged())
+        return false;
     const bool inRange = ArmingChannel >= 1 && ArmingChannel <= CHANNELSUSED;
-    const bool managed = RotorFlight_V && inRange && !BindingEnabled && !BuddyPupilOnWireless;
+    const bool managed = inRange && !BindingEnabled && !BuddyPupilOnWireless;
     const uint16_t v = inRange ? SendBuffer[ArmingChannel - 1] : 0;
     const bool armed = managed ? !SafetyON : (v >= 1800);   // B156: the switch itself (Armed is set only when the switch CHANGES: a power-up with the safety off left it false)
     if (!armed)

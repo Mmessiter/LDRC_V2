@@ -50,6 +50,7 @@ long map(T _x, A _in_min, B _in_max, C _out_min, D _out_max, typename std::enabl
 }
 ''' + DEFS + r'''
 static uint8_t RotorFlight_V = 2, Bank = 1, MotorChannel = 4, ArmingChannel = 6;
+static bool ArmingManaged() { return RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16; }   // (B209: as 1Definitions.h's ARMRULE)
 static uint8_t InPutStick[CHANNELSUSED] = {0, 1, 2, 3, 2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};   // the Havok's: channel 5, the throttle, from the collective stick
 static uint16_t ChannelCentre[CHANNELSUSED + 1] = {2010, 2030, 1990, 2050, 2000, 2000, 2000, 2000};
 static uint8_t ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};

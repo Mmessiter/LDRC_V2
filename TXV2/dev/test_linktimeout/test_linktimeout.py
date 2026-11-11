@@ -29,6 +29,7 @@ static uint32_t millis() { return Clock; }
 static uint32_t GapStart = 0;
 static bool GapStartedDisarmed = false, GapStartedUnlinked = false, RotorFlight_V = true, Armed = true, LedWasGreen = true, LedWasRed = false;
 static uint8_t ArmingChannel = 5;
+static bool ArmingManaged() { return RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16; }   // (B209: as 1Definitions.h's ARMRULE)
 static int Reds = 0;
 static void RedLedOn() { ++Reds; LedWasRed = true; LedWasGreen = false; }   // (as main.cpp's: the model is called lost)
 ''' + CHECKGAP + r'''

@@ -245,7 +245,7 @@ void SafetyHoldUpdate() // GetBank, every pass, before anything else
     // written on the way out) may be IN THE AIR: until its first connection the model is never held - it gets B192's
     // warning once connected instead.
     const bool unexplainedStart = LastOffReason == OFF_NONE && LastGreenModel < 0;
-    const bool hold = RotorFlight_V && SafetyIsOff() && !LedWasGreen && !LostJustNow() && !unexplainedStart && !BuddyPupilOnWireless &&
+    const bool hold = ArmingManaged() && SafetyIsOff() && !LedWasGreen && !LostJustNow() && !unexplainedStart && !BuddyPupilOnWireless &&   // (B209: Rotorflight found)
                       !ReceiverUpdateBusy() && CurrentMode == NORMAL;
     if (hold && !SafetyHold)
     {
@@ -285,7 +285,7 @@ void SafetyOffWarningTick() // the main loop's once-a-second round (beside Check
             SendCommand((char *)"Warning.bco=4426"); // the battery has the box
         else
         { // B193: the box is one line of 190 px ("SAFETY IS OFF!!" is 199, fontw.py 6): 168, 158 and 100
-            k = (k + 1) % (SafetyHold ? 3 : 2);
+            k = (k + 1) % (SafetyHold ? 3 : ArmingManaged() ? 2 : 1); // B209: "ARMING ON!!" only where the safety drives an arming channel
             SendCommand((char *)"Warning.bco=63488"); // bright red
             SendCommand(WarnNow);
             SendText((char *)"Warning", (char *)(k == 0 ? "SAFETY OFF!!" : k == 1 ? "ARMING ON!!" : "NO LINK"));

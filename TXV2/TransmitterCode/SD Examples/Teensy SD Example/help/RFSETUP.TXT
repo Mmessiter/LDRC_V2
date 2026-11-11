@@ -10,18 +10,22 @@ The switch is saved as soon as you touch it.||
 ROTORFLIGHT VERSION:|
 The version the receiver reports from the flight controller:|
 2.2 or 2.3. It cannot be typed.|
-0.0 means no version is known yet.|
-Once one is known, the model keeps it,|
-even while the flight controller is silent.|
-At 0.0 the safety switch does not drive the arming channel,|
-and 'Link rates and banks' has no effect.|
+0.0 means no Rotorflight is known.|
+The model remembers what the last connection found, and uses|
+it until the receiver answers. Once found, it stays for the|
+rest of the session, even while the flight controller is|
+silent. After 30 seconds connected with no Rotorflight found,|
+the model starts at 0.0 next time, until it is found again.|
+At 0.0 the arming channel is not used at all: the safety|
+switch does not drive it and no gap is left out of the count.|
+'Link rates and banks' has no effect either.|
 At 2.2 or 2.3 the transmitter's own rate percentages|
 are not used: Rotorflight's rates are.|
 'Governor ...' needs 2.3.|
 The Rates page's columns follow each bank's rates type.||
 ARMING CHANNEL:|
-The channel the safety switch drives (usually 6).|
-Safety off arms the flight controller.|
+The channel the safety switch drives (usually 6), on a|
+Rotorflight model only. Safety off arms the flight controller.|
 6 to 16: Rotorflight's switches start at channel 6.|
 Any other entry is ignored: the old channel stays.||
 GEAR RATIO (V1 RECEIVER):|

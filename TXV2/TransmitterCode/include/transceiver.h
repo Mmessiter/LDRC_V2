@@ -215,7 +215,7 @@ void CheckGap()
         GapStart = millis(); // To keep track of this gap's length
         // Armed state as the gap BEGINS (a real in-flight loss followed by a
         // quick disarm must still count).
-        GapStartedDisarmed = RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16 && !Armed;
+        GapStartedDisarmed = ArmingManaged() && !Armed; // B209: no Rotorflight found - no gap is left out
         GapStartedUnlinked = !LedWasGreen; // B157: a gap is a loss of a link that was UP when it began
     }
     else
@@ -1743,6 +1743,9 @@ FASTRUN void ParseTelemetryItem()
             // Rotorflight - wrongly in this case"): the receiver answers 0 while its flight controller has not answered IT, not
             // only when there is none. A model its file knows as Rotorflight stays so (the arming channel keeps following the
             // safety switch); the receiver's answer, once it has one, still rules, and is kept when the model is next saved.
+            // B209: what the session heard goes to the file for the NEXT time (1Definitions.h ARMRULE); within the session the
+            // flag still never goes from Rotorflight to none (above).
+            RfAnswer(v);
             if (v != 0 || RotorFlight_V == 0)
                 RotorFlight_V = v;
             RotorFlight_Version = RFVersions[RotorFlight_V];

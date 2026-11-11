@@ -22,11 +22,12 @@ prog = r'''
 #define SCANWAVEBAND 5
 enum { OFF_NONE = 0, OFF_BUTTON = 1 };
 static uint32_t now = 100000; static uint32_t millis() { return now; }
-static uint8_t RotorFlight_V = 1, LastOffReason = OFF_BUTTON; static int ModelNumber = 3, CurrentView = FRONTVIEW, CurrentMode = NORMAL;
+static uint8_t RotorFlight_V = 1, LastOffReason = OFF_BUTTON, ArmingChannel = 6; static int ModelNumber = 3, CurrentView = FRONTVIEW, CurrentMode = NORMAL;
 static bool LedWasGreen = false, BuddyPupilOnWireless = false, MotorEnabled = false, BatteryWarningShown = false, UseLog = true, Force_Early_Sound = false;
 static bool safetyDefined = true, safetyOn = false, rxUpd = false;
 static bool FlightRestart = false;   // (11 Nov 2026: FlightGuard.h's - a restart in flight gives no warning at the connection)
 static bool SafetyIsOff() { return safetyDefined && !safetyOn; }
+static bool ArmingManaged() { return RotorFlight_V && ArmingChannel >= 1 && ArmingChannel <= 16; }   // (B209: as 1Definitions.h's ARMRULE)
 static bool ReceiverUpdateBusy() { return rxUpd; }
 static std::vector<int> sounds; static std::vector<std::string> cmds; static std::string box; static int logs = 0;
 static void PlaySound(int s) { sounds.push_back(s); }
@@ -62,6 +63,8 @@ int main() {
     // not Rotorflight: never held; on connecting with the safety off, the red warning
     RotorFlight_V = 0; safetyOn = false; now += 120000; secs(1); CHECK(!SafetyHold);
     sounds.clear(); cmds.clear(); LedWasGreen = true; SafetyOffAtConnect(); CHECK(SafetyOffWarning); secs(4); CHECK(has("Warning.bco=63488")); CHECK(!sounds.empty());
+    { bool arming = false; for (int i = 0; i < 4; ++i) { secs(1); if (box == "ARMING ON!!") arming = true; }   // B209 (Malcolm, 11 Nov 2026): no Rotorflight found,
+      CHECK(!arming); CHECK(box == "SAFETY OFF!!"); }                                                              // no arming channel driven: never "ARMING ON!!"
     MotorEnabled = true; secs(1); CHECK(!SafetyOffWarning);       // the motor on: the warning goes
     MotorEnabled = false; LedWasGreen = false; NoteConnectionLost(); RotorFlight_V = 1;
     // no safety switch: never held
