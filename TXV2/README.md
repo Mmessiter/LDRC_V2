@@ -1,8 +1,8 @@
 # The Version 2 transmitter
 
-<img src="Images/V2_transmitter.jpg" width="600" alt="The black Version 2 transmitter: two sticks, the status light, and the 5-inch touchscreen showing a front screen of coloured boxes">
+<img src="../docs/images/v2-transmitter-white.jpg" width="400" alt="A finished white Version 2 transmitter on the bench: the aerial on top, eight switches with red bezels, two sticks with their trims, a red status light, the power button and the 5-inch touchscreen showing its front page">
 
-<sub>A Version 2 transmitter, showing one of its front screens.</sub>
+<sub>A finished Version 2 transmitter (Malcolm's). The screen shows its front page.</sub>
 
 **A 16-channel 2.4 GHz transmitter that you build yourself.**
 
@@ -182,7 +182,7 @@
 - `TX_FRONT.stl` and `TX_BACK12.stl` are **Version 1's** (cut for the old Nextion screen). Do not print them for a Version 2.
 - The screen has no mounting holes. Four tiny self-tapping screws hold it in the case front; the same screws hold the charger board and the case back, so buy plenty.
 - **Printing** is not critical: Malcolm uses 0.16 mm layers and the slicer's default infill.
-- **Wiring:** run the wires through the case's cable guides and hold them with a few cable ties. They need not be tidy: Malcolm's often are not. What matters is that every wire goes to the right place, and that none can catch a gimbal or stop the back closing (photos below).
+- **Wiring:** run the wires through the case's cable guides and hold them with a few cable ties. They need not be tidy: Malcolm's often are not, and with the back on it always looks tidy anyway. What matters is that every wire goes to the right place, and that none can catch a gimbal or stop the back closing (photos below).
 
 <img src="../docs/images/tiny-screw.jpg" width="300" alt="One of the tiny flange-head self-tapping screws on a cutting mat's centimetre grid: about half a centimetre long">
 
@@ -314,6 +314,10 @@ After this, the transmitter updates itself. **There is nothing to compile.**
 ---
 
 ## Test before you fly
+
+**A new transmitter: check every function very carefully before a model goes into the air, and do a range check as well.**
+
+<!-- (11 Nov 2026, Malcolm: "after building a new transmitter, check every function very carefully before putting a model into the air and make a range check as well.") -->
 
 Blades off for every test. Unplug the motor too, unless the test needs it. The full list is on [Build one](https://messiter.com/ldrc/build.html).
 

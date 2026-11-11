@@ -34,10 +34,10 @@
 
 ### 1. The transmitter
 
-<img src="TXV2/Images/V2_transmitter.jpg" width="600" alt="The black Version 2 transmitter: two sticks, the status light and the 5-inch touchscreen showing a front screen of nine coloured boxes">
+<img src="docs/images/v2-transmitter-white.jpg" width="400" alt="A finished white Version 2 transmitter on the bench: the aerial on top, eight switches with red bezels, two sticks with their trims, a red status light, the power button and the 5-inch touchscreen showing its front page">
 
-<sub>A Version 2 transmitter. The pilot chooses the nine boxes on its front screen.</sub>
-<!-- TODO Malcolm: a better daylight photo of the V2 transmitter, ideally beside a helicopter, when you have one. -->
+<sub>A finished Version 2 transmitter (Malcolm's). The screen shows its front page.</sub>
+<!-- (11 Nov 2026: Malcolm's photo of the whole white Version 2, screen lit, replaces the dim black one - his answer to question 42. One in daylight beside a helicopter is still welcome.) -->
 
 - **The main board flies the model.** A Teensy 4.1 reads the sticks, does the mixing and runs the radio link.
 - **The screen talks to the pilot.** An Elecrow 5-inch ESP32-S3 touchscreen (buy the **16 MB** one, SKU DLE06050B: the older 4 MB CrowPanel 5.0 gets fixes only) draws the pages and looks after WiFi, Bluetooth and updates.
