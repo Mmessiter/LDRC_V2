@@ -18,7 +18,22 @@
 # Pings go through dev/notify.sh (gitignored ntfy topic) when that exists.
 set -u
 WANT=$1; FSMD5=$2; NET=${3:-192.168.1}
-SRV=http://192.168.1.193:8000
+# Where the boards fetch the images from: THIS Mac's firmware server, at the address the Mac has on the watched
+# network NOW. It stood here as a number (192.168.1.193) until 11 Nov 2026 - the router had since given the Mac .170,
+# and Test1 answered "firmware: HTTP -1" to the install of 0.9.923, to be followed by a ping telling Malcolm to move
+# it nearer the router. Now it is asked for before every install, and no board is told to install anything unless the
+# server answers there for the very file.
+myip() {
+  local ip
+  ip=$(python3 -c "
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+try:
+    s.connect(('$NET.254', 9)); print(s.getsockname()[0])
+except Exception: pass" 2>/dev/null)
+  [[ "$ip" == $NET.* ]] && print -r -- $ip
+}
+SRV=http://$(myip):8000
 HERE=$(cd "$(dirname "$0")" && pwd)
 LOG=$HERE/fleet_watch.log
 log(){ echo "$(date +%H:%M:%S) $*" >> $LOG }
@@ -96,7 +111,14 @@ except Exception: pass" 2>/dev/null)
     log "$NAME @ $IP fw=$FW rssi=$RSSI armed=$ARMED hs=$HS msp=$MACT/$MCON ble=$BLEC dongle=$DON idle=${IDLE[$IP]}"
 
     if (( ${IDLE[$IP]} >= 2 )); then
-      log "$NAME @ $IP: idle twice - installing $WANT"
+      MYIP=$(myip)
+      SRV=http://$MYIP:8000
+      CODE=$(curl -s -m 5 -o /dev/null -w '%{http_code}' -r 0-0 $SRV/$WANT.bin 2>/dev/null)
+      if [[ -z "$MYIP" || ( "$CODE" != 200 && "$CODE" != 206 ) ]]; then
+        log "$NAME @ $IP: idle twice, but this Mac's firmware server does not answer at $SRV for $WANT.bin (HTTP ${CODE:-none}) - NOT installing"
+        IDLE[$IP]=0; continue
+      fi
+      log "$NAME @ $IP: idle twice - installing $WANT from $SRV"
       OUT=$(curl -s -m 900 -X POST http://$IP/api/firmware/install \
               --data-urlencode url=$SRV/$WANT.bin \
               --data-urlencode fs_url=$SRV/littlefs-$WANT.bin \
@@ -121,7 +143,7 @@ except Exception: pass" 2>/dev/null)
         local_backoff=$(( 1 << ${FAILS[$IP]} )); (( local_backoff > 16 )) && local_backoff=16
         IDLE[$IP]=$(( -local_backoff ))
         log "$NAME: backing off $local_backoff sweeps (failure ${FAILS[$IP]})"
-        (( ${FAILS[$IP]} == 1 )) && ping_watch "$NAME did NOT take ${WANT#RXV2-} (reads ${V:-no answer}) - signal was ${RSSI} dBm. Move it nearer the router."
+        (( ${FAILS[$IP]} == 1 )) && ping_watch "$NAME did NOT take ${WANT#RXV2-} (reads ${V:-no answer}; it said: ${OUT:0:40}) - signal was ${RSSI} dBm."
       fi
     fi
   done
