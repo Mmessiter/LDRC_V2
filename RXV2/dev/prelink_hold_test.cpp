@@ -11,7 +11,9 @@ static uint32_t fakeMs = 0;
 static uint32_t millis() { return fakeMs; }
 static uint8_t throttleChannel = 3;
 static bool fcTelemetryEnabled = true;
-struct { bool detected = false; char variant[5] = {0}; uint8_t throttleCh = 0; } fcInfo;
+struct { bool detected = false; char variant[5] = {0}; uint8_t throttleCh = 0; uint8_t rcMap[8] = {0}; uint8_t rcMapLen = 0; } fcInfo;
+static uint8_t bootMapNvs[8] = {0};   // (0.9.926) the channel map the FC answered last time (NVS)
+static uint8_t bootMapNvsLen = 0;
 static uint16_t channelMicros[16];
 constexpr uint16_t THROTTLE_SAFE_US = 885;
 struct { std::vector<std::string> log; void add(const char* m) { log.push_back(m); } } events;
@@ -77,6 +79,41 @@ int main() {
     applyPreLinkHolds(true, true);
     expect("setting = FC throttle: ch5 held", 5, 885);
     expect("setting = FC throttle: ch3 centred", 3, 1500);
+    // 8. (0.9.926, the night review of 11 Nov 2026) THE POSTURE FOLLOWS ROTORFLIGHT'S CHANNEL MAP: roll, pitch, yaw and
+    //    collective centred, the throttle and every AUX low - by the map answered this power-up, else the one kept (NVS).
+    static const uint8_t ldrcMap[8] = {0, 1, 3, 2, 4, 5, 6, 7};   // AECRT123: Black Thunder 2's own (its backup, "64=0001030204050607")
+    static const uint8_t elrsMap[8] = {0, 1, 3, 2, 5, 4, 6, 7};   // AECR1T23: the arm switch on channel 5 for ExpressLRS
+    static const uint8_t colOn5[8]  = {0, 1, 2, 4, 3, 5, 6, 7};   // AERTC123: the collective on channel 5 (another pilot's)
+    static const uint8_t badMap[8]  = {0, 1, 3, 2, 4, 4, 6, 7};   // channel 5 twice: not a whole map
+    auto bd = [](const char* what, int ch, uint16_t want) {
+        const uint16_t got = bootDefaultMicros((uint8_t)(ch - 1)); const bool ok = got == want; if (!ok) fails++;
+        printf("%s %-58s ch%d=%u (want %u)\n", ok ? "PASS" : "FAIL", what, ch, got, want); };
+    fcInfo = {}; bootMapNvsLen = 0;
+    bd("no map: the old shape, ch5 centred", 5, 1500); bd("no map: ch6 low", 6, 500);
+    memcpy(fcInfo.rcMap, ldrcMap, 8); fcInfo.rcMapLen = 8;
+    bd("AECRT123: ch1 roll centred", 1, 1500); bd("AECRT123: ch3 collective centred", 3, 1500); bd("AECRT123: ch4 yaw centred", 4, 1500);
+    bd("AECRT123: ch5 the throttle low", 5, 500); bd("AECRT123: ch6 AUX1 (arm) low", 6, 500); bd("AECRT123: ch12 low", 12, 500);
+    memcpy(fcInfo.rcMap, elrsMap, 8);
+    bd("AECR1T23: ch5 = AUX1 = ARM, LOW (was 1500)", 5, 500); bd("AECR1T23: ch6 the throttle low", 6, 500); bd("AECR1T23: ch4 yaw centred", 4, 1500);
+    fcInfo.rcMapLen = 0; memcpy(bootMapNvs, elrsMap, 8); bootMapNvsLen = 8;
+    bd("not answered yet: the map kept (NVS) - ch5 arm LOW", 5, 500);
+    memcpy(fcInfo.rcMap, colOn5, 8); fcInfo.rcMapLen = 8;
+    bd("answered this power-up wins over the kept one: ch5 collective centred", 5, 1500); bd("... ch4 its throttle low", 4, 500);
+    memcpy(fcInfo.rcMap, badMap, 8); bootMapNvsLen = 0;
+    bd("a map that is not whole: the old shape", 5, 1500);
+    // 9. THE HOLE IT CLOSES: the first power-up after the pilot moved arming to channel 5 (the phone's Transmitter channels
+    //    page: map AECR1T23, the receiver's throttle setting 6). The learned throttle kept in NVS is still 5: held low
+    //    until the FC answers. Then the FC says throttle 6: the hold moves, and channel 5 - now the arm switch - is let go.
+    //    Before 0.9.926 it went back to 1500, an arm edge with the transmitter off. Now: LOW.
+    holdRfSeen = false; fcInfo = {}; bootMapNvsLen = 0; throttleChannel = 6; fcInfo.throttleCh = 5; fakeMs = 1000;
+    for (int i = 0; i < 16; ++i) channelMicros[i] = bootDefaultMicros((uint8_t)i);
+    applyPreLinkHolds(true, true);
+    expect("arm on 5, first seconds: the old throttle (5) held", 5, 885);
+    expect("arm on 5, first seconds: the setting (6) at the floor", 6, 988);
+    fcInfo.detected = true; strcpy(fcInfo.variant, "RTFL"); memcpy(fcInfo.rcMap, elrsMap, 8); fcInfo.rcMapLen = 8; fcInfo.throttleCh = 6; fakeMs = 7000;
+    applyPreLinkHolds(true, true);
+    expect("FC answered AECR1T23: the throttle (6) held", 6, 885);
+    expect("FC answered AECR1T23: ch5 (ARM) let go LOW, not 1500", 5, 500);
     for (auto& m : events.log) printf("  event: %s\n", m.c_str());
     printf(fails ? "%d FAILED\n" : "ALL PASS\n", fails);
     return fails ? 1 : 0;

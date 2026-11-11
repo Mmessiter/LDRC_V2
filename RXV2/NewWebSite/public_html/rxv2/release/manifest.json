@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.926-posture-follows-map",
+      "url": "https://messiter.com/rxv2/release/v0.9.926/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.926/littlefs.bin",
+      "fs_md5": "fc8971b738725fb75cd8dd673e54125b",
+      "notes": "Before a transmitter is heard, the receiver sets each channel by the flight controller's channel map: roll, pitch, yaw and collective centred, the throttle and every switch low. With the arm switch on channel 5 (for ExpressLRS), channel 5 now starts low."
+    },
+    {
       "name": "RXV2-0.9.925-follows-channel-map",
       "url": "https://messiter.com/rxv2/release/v0.9.925/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.925/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.915/littlefs.bin",
       "fs_md5": "6dee652fd16c0a9f01b7f11649d73a4f",
       "notes": "A block just written to the flight controller keeps streaming to the transmitter for 3 s after the save is confirmed, so the transmitter's read-back sees the new values even when its own request was lost (with transmitter B177)."
-    },
-    {
-      "name": "RXV2-0.9.914-read-back-help",
-      "url": "https://messiter.com/rxv2/release/v0.9.914/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.914/littlefs.bin",
-      "fs_md5": "6dee652fd16c0a9f01b7f11649d73a4f",
-      "notes": "The Rotorflight help says it plainly: every save is read back from the flight controller and compared with what you typed; the app never says saved on trust."
     }
   ],
   "rotorflight": {

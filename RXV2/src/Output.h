@@ -342,7 +342,27 @@ inline bool outputDetachedForFailsafe = false;
 constexpr uint16_t CH_FLOOR_US        = 988;     // bottom of the normal stick range (CRSF 172)
 constexpr uint32_t PRELINK_FC_WAIT_MS = 10000;   // how long a learned map is trusted without the FC answering
 struct PreLinkHold { uint8_t low; uint8_t floor; };   // channels 1..16, 0 = none
-inline uint16_t bootDefaultMicros(uint8_t idx) { return idx < 5 ? 1500 : 500; }   // main.cpp's pre-link posture
+// The pre-link posture (main.cpp's, and what a channel the hold lets go goes back to). 0.9.926 (the night review of 11 Nov
+// 2026, before arming moves to channel 5 for ExpressLRS): it follows Rotorflight's CHANNEL MAP. "Channels 1-5 centred, the
+// rest low" is the default map's shape - roll, pitch, yaw, collective and the throttle are channels 1-5 there. With the arm
+// switch on channel 5 (map AECR1T23) channel 5 is AUX1 = ARM, and 1500 sits in an arm range that starts at 1500: the first
+// power-up after the remap held the old throttle (5) low until the FC answered, then let it go back to 1500 - an arm edge
+// with the transmitter off, after the FC's boot grace. Now roll, pitch, yaw and collective are centred and the throttle and
+// every AUX low, by the map the FC answered this power-up or, until it has, the one it answered last time (NVS). A map that
+// is not a whole one (the eight channels 0-7, each once) is no map: the old shape.
+inline bool rcMapWhole(const uint8_t* m) {
+    uint8_t seen = 0;
+    for (uint8_t f = 0; f < 8; ++f) { if (m[f] > 7 || (seen & (1u << m[f]))) return false; seen |= (uint8_t)(1u << m[f]); }
+    return true;
+}
+inline uint16_t bootDefaultMicros(uint8_t idx) {
+    const uint8_t* m = (fcInfo.rcMapLen >= 8 && rcMapWhole(fcInfo.rcMap)) ? fcInfo.rcMap
+                     : (bootMapNvsLen >= 8 && rcMapWhole(bootMapNvs)) ? bootMapNvs : nullptr;
+    if (!m) return idx < 5 ? 1500 : 500;
+    for (uint8_t f = 0; f < 8; ++f)
+        if (m[f] == idx) return f < 4 ? 1500 : 500;   // A E R C centred; the throttle and AUX1-3 low
+    return 500;                                       // past the map's eight: an AUX, low
+}
 // A Rotorflight FC answered this power-up. Sticky until the next boot: an FC
 // that goes quiet (rebooting after a restore, a busy USB line, a long flash
 // write here) is the same FC - "FC lost" after 10 s must not put the hold

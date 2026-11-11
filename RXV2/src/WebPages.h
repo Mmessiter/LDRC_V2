@@ -921,6 +921,7 @@ inline bool isSetupWriteFn(uint8_t fn) {
 inline void fcForget() {
     fcInfo.detected = false; fcInfo.variant[0] = '\0'; fcInfo.throttleCh = 0; fcInfo.govMode = 0xFF;
     prefs.remove(NVS_KEY_FC_THR_CH); prefs.remove(NVS_KEY_FC_GOV_MODE);
+    prefs.remove(NVS_KEY_FC_RCMAP); bootMapNvsLen = 0; fcMapNvsDirty = false;   // (0.9.926) its channel map too
 }
 // (0.9.918) The one switch "a flight controller is on this line", by itself: the home page's banner puts it back on when it
 // finds it off with a Rotorflight FC remembered here (Black Thunder 1, 5 Nov 2026: unticked by an old firmware, the heli had

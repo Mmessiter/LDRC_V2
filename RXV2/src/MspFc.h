@@ -593,6 +593,8 @@ inline void mspDeliverResponse(uint8_t func, const uint8_t* payload, uint16_t si
                 const uint8_t n = size > sizeof(fcInfo.rcMap) ? (uint8_t)sizeof(fcInfo.rcMap) : (uint8_t)size;
                 memcpy(fcInfo.rcMap, payload, n);
                 fcInfo.rcMapLen = n;
+                // 0.9.926: kept for the next power-up's posture (Output.h bootDefaultMicros) when it is new
+                if (n >= 8 && (bootMapNvsLen < 8 || memcmp(bootMapNvs, fcInfo.rcMap, 8) != 0)) fcMapNvsDirty = true;
             }
             if (size >= 5 && payload[4] < 16 && strncmp(fcInfo.variant, "RTFL", 4) == 0) {
                 uint8_t ch = payload[4] + 1;
@@ -724,7 +726,7 @@ inline void govThrottleWatchTick() {
     // flight-save doctrine — disarmed with sticks still 2 s, or TX off).
     // Also commits the throttle channel / governor mode the probe learned,
     // which may have arrived mid-flight on a TX-on boot.
-    if ((verdictDirty || fcInfoNvsDirty || telemGoodNvsDirty || txBanksNvsDirty) && !armed) {
+    if ((verdictDirty || fcInfoNvsDirty || fcMapNvsDirty || telemGoodNvsDirty || txBanksNvsDirty) && !armed) {
         const bool sticksStill = lastChMoveMs && (uint32_t)(now - lastChMoveMs) >= 2000;
         const bool linkDead    = !rx.lastMillis || (uint32_t)(now - rx.lastMillis) > LINK_DEAD_MS;
         if (sticksStill || linkDead) {
@@ -737,6 +739,12 @@ inline void govThrottleWatchTick() {
                 prefs.putUChar(NVS_KEY_FC_THR_CH, fcInfo.throttleCh);
                 prefs.putUChar(NVS_KEY_FC_GOV_MODE, fcInfo.govMode);
                 fcInfoNvsDirty = false;
+            }
+            if (fcMapNvsDirty) {                     // 0.9.926: the channel map, for the next power-up's posture
+                prefs.putBytes(NVS_KEY_FC_RCMAP, fcInfo.rcMap, 8);
+                memcpy(bootMapNvs, fcInfo.rcMap, 8);
+                bootMapNvsLen = 8;
+                fcMapNvsDirty = false;
             }
             if (txBanksNvsDirty) {                   // the transmitter's bank count (0.9.904)
                 prefs.putUChar(NVS_KEY_TX_BANKS, (uint8_t)(fcInfo.txBanks | (fcInfo.txRatesFollow ? 0x10 : 0)));

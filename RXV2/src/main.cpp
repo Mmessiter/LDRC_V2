@@ -234,6 +234,11 @@ void setup() {
     govThrParkedPct   = prefs.isKey(NVS_KEY_GOV_THR_PARKED) ? prefs.getUChar(NVS_KEY_GOV_THR_PARKED, 0) : 0;
     govThrMaxPct      = prefs.isKey(NVS_KEY_GOV_THR_MAX) ? prefs.getUChar(NVS_KEY_GOV_THR_MAX, 0)    : 0;
     if (fcInfo.throttleCh > 16) fcInfo.throttleCh = 0;
+    // 0.9.926: the pre-link posture again, now that NVS is open - by the channel map the flight controller answered last
+    // time, so with the arm switch on channel 5 (ExpressLRS order) channel 5 starts LOW, not centred (Output.h
+    // bootDefaultMicros). No map kept: exactly the posture set above.
+    if (prefs.getBytesLength(NVS_KEY_FC_RCMAP) == 8) { prefs.getBytes(NVS_KEY_FC_RCMAP, bootMapNvs, 8); bootMapNvsLen = 8; }
+    for (uint8_t i = 0; i < 16; ++i) channelMicros[i] = bootDefaultMicros(i);
     // Telemetry speed + the last good telemetry setup (0.9.563): the
     // preference the pages apply, and the image the guard puts back when the
     // FC's copy turns up empty (MspFc.h is included after Storage.h, so the

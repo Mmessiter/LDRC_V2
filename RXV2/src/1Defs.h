@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.925-follows-channel-map";
+constexpr const char* FW_VERSION = "RXV2-0.9.926-posture-follows-map";
 
 //*********************************************************************
 //  Auto-update manifest URLs
@@ -513,6 +513,7 @@ constexpr const char* NVS_KEY_FC_TELEM    = "fctelem";
 constexpr const char* NVS_KEY_VBAT_PIN    = "vbatpin";  // uint8 GPIO of the battery divider (0=off; 6=D4, 9=D9 — the free radio-3 pins on 2-radio boards)
 constexpr const char* NVS_KEY_VBAT_RATIO  = "vbatrat";  // float divider ratio ((Rtop+Rbot)/Rbot): 23.0 for 220k/10k (12S), 11.0 for 100k/10k (6S)
 constexpr const char* NVS_KEY_VBAT_CELLS  = "vbatcel";
+constexpr const char* NVS_KEY_FC_RCMAP    = "fcrcmap";  // 8 bytes: the FC's channel map (MSP_RX_MAP) last answered - the pre-link posture's (0.9.926)
 constexpr const char* NVS_KEY_FC_THR_CH   = "fcthrch";  // uint8 the FC's OWN throttle channel (1..16) learned from MSP_RX_MAP — what Rotorflight's governor reads
 constexpr const char* NVS_KEY_FC_GOV_MODE = "fcgovmd";  // uint8 Rotorflight governor mode (MSP 142 byte 0: 0 off, 1 passthrough, 2 standard, 3 electric, 4 nitro; 255 unknown)
 constexpr const char* NVS_KEY_GOV_THR_PARKED = "govthrpk"; // uint8 verdict of the last long armed spell: 0 = throttle reached full, else the % it sat at
@@ -1496,6 +1497,11 @@ inline ArmFacts armFactsNow(bool lastWordToo = false) {
 }
 inline bool armShownNow() { return armShown(armFactsNow()); }
 inline bool   fcInfoNvsDirty = false;   // throttleCh/govMode changed in RAM; written to NVS at the next quiet moment
+// 0.9.926: the channel map the FC answered LAST time (NVS_KEY_FC_RCMAP), for the pre-link posture until it answers this
+// power-up (Output.h bootDefaultMicros), and the flag that writes a newly answered one at the next quiet moment.
+inline uint8_t bootMapNvs[8]   = {0};
+inline uint8_t bootMapNvsLen   = 0;
+inline bool    fcMapNvsDirty   = false;
 inline bool   txBanksNvsDirty = false;  // the transmitter's bank count changed in RAM (0.9.904); written to NVS at the next quiet moment
 
 //*********************************************************************
