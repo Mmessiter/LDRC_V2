@@ -383,6 +383,37 @@
             } finally { this.busyEnd(); }
         },
 
+        // Rotorflight's CHANNEL MAP (0.9.925). MSP 64 = 8 bytes: the receiver channel (0-based) feeding roll, pitch,
+        // yaw, collective, throttle, AUX1, AUX2, AUX3; past those eight a channel is itself. "AUX1 = channel 6" is only
+        // the default: arming on channel 5 for ExpressLRS is `map AECR1T23` (the Transmitter channels page writes it
+        // when Arm is put on 5 and Throttle on 6), and a page counting "AUX n = channel n+5" would then name the
+        // throttle's channel for the arm switch. rcMap() reads the map once per page; null = unknown (default count).
+        // auxToCh / chToAux use that read unless given a map.
+        _rcMap: undefined,
+        async rcMap() {
+            if (this._rcMap !== undefined) return this._rcMap;
+            try {
+                const h = await this.msp(64);
+                const b = [];
+                for (let i = 0; i + 1 < h.length; i += 2) b.push(parseInt(h.substr(i, 2), 16));
+                this._rcMap = (b.length >= 5 && b.every(v => v >= 0 && v < 32)) ? b : null;
+            } catch (e) { this._rcMap = null; }
+            return this._rcMap;
+        },
+        // AUX index (0 = AUX1) -> receiver channel 1..16; 0 = not one of ours.
+        auxToCh(aux, map) {
+            if (map === undefined) map = this._rcMap || null;
+            const f = 5 + aux;
+            const raw = (map && f < map.length) ? map[f] : f;
+            return raw < 16 ? raw + 1 : 0;
+        },
+        // receiver channel 1..16 -> AUX index; -1 = not an AUX channel (a stick or the throttle, or past AUX11).
+        chToAux(ch, map) {
+            if (map === undefined) map = this._rcMap || null;
+            for (let a = 0; a < 11; a++) if (this.auxToCh(a, map) === ch) return a;
+            return -1;
+        },
+
         // "Reading from the flight controller…" — one indicator for EVERY page
         // that talks MSP, rather than one bolted onto each (Malcolm 2026-09-14:
         // the command line's Please wait was good, "but reading PIDs and

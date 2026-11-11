@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Switches and knobs &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=418">
-<script src="/app.js?v=418" defer></script>
+<link rel=stylesheet href="/style.css?v=419">
+<script src="/app.js?v=419" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -165,8 +165,9 @@ function setStatus(k,t){const s=$('status');s.className='banner '+k;s.textConten
 
 function chOptions(sel){
     let h='';
-    // Rotorflight: AUX1 = channel 6 (five control channels incl. collective) — index a ↔ channel a+6
-    for(let a=0;a<11;a++){const ch=a+6;h+='<option value='+a+(a===sel?' selected':'')+'>Channel '+ch+' (AUX '+(a+1)+')</option>';}
+    // Rotorflight: AUX1 = channel 6 BY DEFAULT (five control channels incl. collective); its channel map can move it -
+    // AUX1 on channel 5 for ExpressLRS (0.9.925, LDRC.auxToCh)
+    for(let a=0;a<11;a++){const ch=LDRC.auxToCh(a)||a+6;h+='<option value='+a+(a===sel?' selected':'')+'>Channel '+ch+' (AUX '+(a+1)+')</option>';}
     return h;
 }
 function modeOptions(sel){
@@ -306,7 +307,7 @@ async function loadFromReceiver(){
             const mine=ADJ.filter(l=>l.fn===p.adj&&l.stp===0);
             if(!mine.length){ const l=PROF.find(x=>x.k===p.k); if(l) out.push({...l,slot:null,extra:[]}); continue; }
             const l=mine[0], old=l.min===l.max;                       // (the once-only form: one line per position)
-            const tx=l.adj+6;
+            const tx=LDRC.auxToCh(l.adj)||l.adj+6;   // through the channel map (0.9.925)
             const b=old?{lo:988,hi:2012,k:Math.max(2,Math.min(6,mine.length))}:{lo:l.a1Lo,hi:l.a1Hi,k:Math.max(2,Math.min(6,l.max-l.min+1))};
             localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); localStorage.setItem('rfTxCh.'+p.k,String(tx));
             out.push({...p,tx,b,secs:profSecs(b),src:'fc',slot:l.slot,extra:mine.slice(1).map(x=>x.slot),old,lineK:b.k});   // (lineK: the positions the flight controller's line has)
@@ -323,7 +324,7 @@ async function loadDeclared(){
         for(const p of [{k:'bank',t:'Bank (Profile)',sb:23,base:30,adj:2},{k:'rate',t:'Rates',sb:25,base:36,adj:1}]){
             const h=d['adj'+p.base];
             if(typeof h==='string'&&h.length>=30&&parseInt(h.substr(2,2),16)===p.adj){
-                const tx=parseInt(h.substr(10,2),16)+6;
+                const tx=LDRC.auxToCh(parseInt(h.substr(10,2),16))||parseInt(h.substr(10,2),16)+6;   // through the channel map (0.9.925)
                 const b={lo:stepUsQ(parseInt(h.substr(12,2),16)), hi:stepUsQ(parseInt(h.substr(14,2),16)), k:parseInt(h.substr(24,2),16)};
                 if(b.k>=2&&b.hi>b.lo){ localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); localStorage.setItem('rfTxCh.'+p.k,String(tx));
                     out.push({...p,tx,b,secs:profSecs(b),src:'fc'}); continue; }
@@ -385,13 +386,15 @@ async function saveProf(k){
             // the line where the flight controller has it (or the page's own slot when it has none), every duplicate blanked
             const slot=p.slot===null||p.slot===undefined?p.base:p.slot;
             const blank=s=>[s, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0];
-            const todo=[{slot,payload:selPayload(slot, p.adj, tx-6, b, usStepQ)}];
+            const auxOf=c=>{const a=LDRC.chToAux(c); return a>=0?a:c-6;};   // (0.9.925) the channel back to its AUX through the map
+            const todo=[{slot,payload:selPayload(slot, p.adj, auxOf(tx), b, usStepQ)}];
             for(const x of (p.extra||[])) todo.push({slot:x,payload:blank(x)});
             for(const t of todo){ await LDRC.msp(53,hx(t.payload)); }
         } else {
             for(let n=1;n<=6;n++){
                 const slot=p.base+n-1;
-                const payload=hx(n===1 ? selPayload(slot, p.adj, tx-6, b, usStepQ) : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
+                const a0=LDRC.chToAux(tx);   // (0.9.925) through the channel map
+                const payload=hx(n===1 ? selPayload(slot, p.adj, a0>=0?a0:tx-6, b, usStepQ) : [slot, 0, 0, 0,0, 0, 0,0, 0,0, 0,0, 0,0, 0]);
                 await LDRC.msp(53,payload);
                 try{ fetch('/app/declare?key=adj'+slot+'&hex='+payload,{cache:'no-store'}); }catch(e){}
             }
@@ -420,7 +423,7 @@ function paintProf(){
         if(want!==b.k){ b.k=want; localStorage.setItem('rfTxCh.'+p.k+'.bounds',JSON.stringify(b)); }
         const lineK=p.src==='fc'&&p.lineK?p.lineK:0; p.mismatch=!!(sp.locked&&lineK&&lineK!==sp.tx);
         let z=''; for(let n=1;n<=6;n++) z+='<div class=qZone id=q_'+p.k+n+'></div>';
-        let co=''; for(let c=6;c<=16;c++) co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(c-5)+')</option>';
+        let co=''; for(let a=0;a<11;a++){ const c=LDRC.auxToCh(a)||a+6; co+='<option value='+c+(c===p.tx?' selected':'')+'>Channel '+c+' (AUX '+(a+1)+')</option>'; }   // (0.9.925) the AUX channels through the map
         let ko=''; for(const k of sp.options) ko+='<option value='+k+(k===b.k?' selected':'')+'>'+k+' positions'+(sp.locked?' (set on the transmitter)':'')+'</option>';
         h+='<div class="card modeCard">'
           +'<div class=mRow>'
@@ -451,7 +454,9 @@ function paintProf(){
 function pollProf(b, st){
     for(const p of PROF){
         const dot=$('dot_'+p.k); if(!dot||!p.b)continue;
-        const i=(p.tx-1)*2;
+        // MSP_RC is rcInput, in the flight controller's own order (AUXn at index n+4): the channel goes back to its AUX
+        // through the map (0.9.925) - by default the same as channel-1
+        const pa=LDRC.chToAux(p.tx), i=(pa>=0?pa+5:p.tx-1)*2;
         if(b.length>=i+2){ const us=b[i]|(b[i+1]<<8); dot.style.display=''; dot.style.left=qpct(us)+'%';
             const sec=selSection(p.b,us);
             for(let n=1;n<=6;n++){ const z=$('q_'+p.k+n); if(z) z.classList.toggle('on', n===sec); }
@@ -478,6 +483,7 @@ function paint(){
 async function load(){
     if (window.LDRC && LDRC.replayReady) await LDRC.replayReady;
     setStatus('info', LDRC.replay?'Reading from the phone…':'Reading switch assignments from the flight controller…');
+    await LDRC.rcMap();            // (0.9.925) Rotorflight's channel map: AUX1 is channel 5 when the arm switch is mapped there for ExpressLRS
     TXB=await LDRC.fetchBanks();   // (0.9.904) the transmitter's bank count: the Bank selector follows it
     try{
         const b=hexToBytes(await LDRC.msp(34));
@@ -507,7 +513,7 @@ async function saveRow(i){
     let lo=slots[i].lo, hi=slots[i].hi;
     if(hi<=lo){ $('msg'+i).textContent='⚠ The active zone has no width — drag its ends apart'; return; }
     const m=MODES.find(x=>x.id===perm)||{};
-    if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(aux+6)+', active '+lo+'–'+hi+' µs?'
+    if(!(await LDRC.confirm('Save: '+(m.name||'mode')+' on channel '+(LDRC.auxToCh(aux)||aux+6)+' (AUX '+(aux+1)+'), active '+lo+'–'+hi+' µs?'
         +(m.warn?'\n\n⚠ This is the ARM switch — be certain the model is safe.':''),
         {title:'Save switch job',icon:'🎚️',yes:'Save',kind:m.warn?'warn':'go'})))return;
     $('msg'+i).textContent='writing…';
@@ -762,7 +768,7 @@ async function usbGate() {
 }
 function chanSel(id, v) {
     let h = '<select id=' + id + ' class=usbOnly>';
-    for (let a = 0; a < 13; a++) h += '<option value=' + a + (v === a ? ' selected' : '') + '>AUX' + (a + 1) + ' (channel ' + (a + 6) + ')</option>';
+    for (let a = 0; a < 13; a++) h += '<option value=' + a + (v === a ? ' selected' : '') + '>AUX' + (a + 1) + ' (channel ' + (LDRC.auxToCh(a) || a + 6) + ')</option>';   // (0.9.925) through the channel map
     return h + '</select>';
 }
 // The whole choice in one list: 'Yaw P gain in bank 1' ... grouped by bank, then 'in the bank in use'.
@@ -996,6 +1002,7 @@ function scaleRows(rows, k) {                            // k = 1: raw -> page u
     });
 }
 async function load() {
+    try { await LDRC.rcMap(); } catch (e) {}   // (0.9.925) the channel map, for the AUX lists' channel numbers
     if (!(await usbGate())) { if (cacheLoad()) { await usbGate(); } paint(); return; }   // no cable: the last USB read, greyed
     setStatus('info', 'Reading…');
     try {
@@ -1094,7 +1101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 <p>A line for bank 1 works only while your bank switch (the Bank card at the top of this page) has bank 1 in use. Another line can serve bank 3 with values that suit it.</p>
 <p>The list offers PIDs and rates. <b>Show every setting</b> adds the rest of Rotorflight&rsquo;s adjustments, over 400 entries, including &ldquo;in the bank in use&rdquo;: whichever bank is flying at the time.</p>
 <h3>Numbers</h3>
-<p>Rate, Shape and expo use the same numbers as the Rates page. AUX1 is channel 6 on a helicopter.</p>
+<p>Rate, Shape and expo use the same numbers as the Rates page. AUX1 is channel 6 on a helicopter, unless its channel map moves it: with the arm switch on channel 5 for ExpressLRS, AUX1 is channel 5. The lists here follow the map.</p>
 <h3>USB</h3>
 <p>Setting up needs the USB cable from the dongle or receiver to the flight controller, not a laptop. Rotorflight 4.6 cannot send its adjustments list over the receiver link &mdash; the reply is too big for its own buffer and it overwrites its telemetry setup &mdash; so the cable is the only safe way to read them. Afterwards the adjustments work with the cable unplugged. Without the cable this part of the page shows what it last read over USB, greyed; the switch marker still moves.</p>
 <h3>From the configurator</h3>

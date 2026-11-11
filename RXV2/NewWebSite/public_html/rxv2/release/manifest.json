@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "name": "RXV2-0.9.925-follows-channel-map",
+      "url": "https://messiter.com/rxv2/release/v0.9.925/firmware.bin",
+      "fs_url": "https://messiter.com/rxv2/release/v0.9.925/littlefs.bin",
+      "fs_md5": "fc8971b738725fb75cd8dd673e54125b",
+      "notes": "The receiver and the phone's Switches, Rescue and Transmitter channels pages now follow Rotorflight's channel map. With the arm switch moved to channel 5 (for ExpressLRS), the receiver watches the right channel for arming, and the pages name the right channel."
+    },
+    {
       "name": "RXV2-0.9.924-sim-restart-quiet",
       "url": "https://messiter.com/rxv2/release/v0.9.924/firmware.bin",
       "fs_url": "https://messiter.com/rxv2/release/v0.9.924/littlefs.bin",
@@ -76,13 +83,6 @@
       "fs_url": "https://messiter.com/rxv2/release/v0.9.914/littlefs.bin",
       "fs_md5": "6dee652fd16c0a9f01b7f11649d73a4f",
       "notes": "The Rotorflight help says it plainly: every save is read back from the flight controller and compared with what you typed; the app never says saved on trust."
-    },
-    {
-      "name": "RXV2-0.9.913-read-back",
-      "url": "https://messiter.com/rxv2/release/v0.9.913/firmware.bin",
-      "fs_url": "https://messiter.com/rxv2/release/v0.9.913/littlefs.bin",
-      "fs_md5": "c94682376d2b421660c17e7d73f2ef47",
-      "notes": "Every page that writes to the flight controller now reads the values back and compares them with what you sent: Filters, Ports, the channel wizard, the channel order and the level calibration join the pages that already did. A difference is said plainly, never Saved."
     }
   ],
   "rotorflight": {

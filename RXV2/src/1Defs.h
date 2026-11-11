@@ -32,7 +32,7 @@
 //  Firmware version
 //*********************************************************************
 
-constexpr const char* FW_VERSION = "RXV2-0.9.924-sim-restart-quiet";
+constexpr const char* FW_VERSION = "RXV2-0.9.925-follows-channel-map";
 
 //*********************************************************************
 //  Auto-update manifest URLs

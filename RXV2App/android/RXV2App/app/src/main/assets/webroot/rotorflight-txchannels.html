@@ -8,8 +8,8 @@
 <meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="LDRC RX V2">
 <title>Transmitter channels &middot; LDRC RX V2</title>
-<link rel=stylesheet href="/style.css?v=418">
-<script src="/app.js?v=418" defer></script>
+<link rel=stylesheet href="/style.css?v=419">
+<script src="/app.js?v=419" defer></script>
 <style>
 .banner{padding:.7em;border-radius:10px;text-align:center;font-weight:600;margin:0 0 1em}
 .banner.info{background:#c8d2dc;color:#3a5165}
@@ -513,7 +513,7 @@ async function saveAll(){
         const fc=fcChannelOf(x.ch,map);
         if(fc<6||fc>16){ flash('⚠️ Added functions must end up on channel 6 or higher'); return; }
         const base=(EXTRA_MODES.find(m=>m.id===x.perm)||{name:'function'}).name;
-        xw.push({perm:x.perm,fc,name:x.label?x.label+' ('+base.replace(/ \(.*/,'')+')':base});
+        xw.push({perm:x.perm,fc,tx:x.ch,name:x.label?x.label+' ('+base.replace(/ \(.*/,'')+')':base});
     }
     // Profile selectors: 4-position switches, may share one channel.
     const prof=[];
@@ -523,15 +523,17 @@ async function saveAll(){
         if(map.slice(0,5).includes(tx-1)||tx===armTx||tx===rscTx){ flash('⚠️ '+f.t+' shares a channel with a stick or the Arm/Rescue switch'); return; }
         const fc=fcChannelOf(tx,map);
         if(fc<6||fc>16){ flash('⚠️ '+f.t+' must end up on channel 6 or higher'); return; }
-        prof.push({f,fc});
+        prof.push({f,fc,tx});
     }
     if(!(await LDRC.confirm(
         'Write to the flight controller:\n'
         +'• channel order '+map.slice(0,5).map(x=>x+1).join(',')+' (AERCT)\n'
-        +'• ARM on channel '+armFc+' (ON above '+sw2Boundary('arm')+'µs)\n'
-        +(rscFc?'• RESCUE on channel '+rscFc+' (ON above '+sw2Boundary('rsc')+'µs)\n':'')
-        +xw.map(x=>'• '+x.name+' on channel '+x.fc+'\n').join('')
-        +prof.filter(p=>p.fc).map(p=>'• '+p.f.t+' on channel '+p.fc+' ('+selBounds(LS+p.f.k+'.bounds').k+' positions)\n').join('')
+        // (0.9.925) YOUR channel numbers, with the AUX they arrive on: the flight controller's own count (fc) is AUX n+5,
+        // which said "ARM on channel 6" for an arm switch on channel 5 mapped to AUX1 for ExpressLRS
+        +'• ARM on channel '+armTx+' (AUX'+(armFc-5)+', ON above '+sw2Boundary('arm')+'µs)\n'
+        +(rscFc?'• RESCUE on channel '+rscTx+' (AUX'+(rscFc-5)+', ON above '+sw2Boundary('rsc')+'µs)\n':'')
+        +xw.map(x=>'• '+x.name+' on channel '+x.tx+' (AUX'+(x.fc-5)+')\n').join('')
+        +prof.filter(p=>p.fc).map(p=>'• '+p.f.t+' on channel '+p.tx+' (AUX'+(p.fc-5)+', '+selBounds(LS+p.f.k+'.bounds').k+' positions)\n').join('')
         +'Blades off / motor unplugged?',
         {title:'Save channels',icon:'🎛️',yes:'Write & verify'})))return;
     setStatus('info','Writing…');
