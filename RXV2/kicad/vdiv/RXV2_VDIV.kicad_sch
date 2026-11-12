@@ -1209,7 +1209,7 @@
 	)
 	(text "RXV2 battery-voltage divider  (12S max)\n50.4V -> 2.19V at D9/GPIO8.  Ratio (110k+110k+10k)/10k = 23.0\nTop leg split in two: voltage margin + fails safe if one resistor shorts.\nR3 + D1 guard the GPIO; D1 optional (fit for extra safety).\nONE lead does everything: J1 pin1 SENSE -> D9, pin2 BAT+ (CENTRE,\nservo convention), pin3 GND. A reversed plug swaps SENSE/GND = harmless."
 		(exclude_from_sim no)
-		(at 50.8 99.06 0)
+		(at 50.8 121.92 0)
 		(effects (font (size 1.7 1.7)) (justify left bottom))
 		(uuid "91be23fc-1de9-47a0-b3f9-0b4e02301dc4")
 	)

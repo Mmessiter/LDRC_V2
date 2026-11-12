@@ -278,7 +278,10 @@
         "track_width": 0.3,
         "tuning_profile": "",
         "via_diameter": 0.6,
-        "via_drill": 0.3
+        "via_drill": 0.3,
+        "wire_width": 6,
+        "bus_width": 12,
+        "line_style": 0
       }
     ],
     "meta": {
