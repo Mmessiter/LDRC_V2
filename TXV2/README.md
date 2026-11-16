@@ -234,7 +234,7 @@ Work in this order. Each step ends with a check.
    *Check:* the screen joins your WiFi, fills its card and restarts as a complete screen.
 4. **Flash the Teensy on its own, by micro-USB, before it goes on the board.** See [Flash it, once](#flash-it-once), step 1.\
    *Check:* Teensy Loader says **Reboot OK**.
-5. **Solder the small parts:** the surface-mount (SMD) parts first, such as the 1206 capacitors; after that the order is up to you: the diodes, regulators, sockets and headers (leave the BUDDY and TX_MODULE headers empty: Version 2 does not use them). Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header). Power the main board only ever from its battery, switched on by the button and the 2808.\
+5. **Solder the small parts:** the surface-mount (SMD) parts first, such as the 1206 capacitors; after that the order is up to you: the diodes, regulators, sockets and headers (leave the BUDDY and TX_MODULE headers empty: Version 2 does not use them; if you may want ELRS one day, first make the small change in [Optional: ready for an ELRS module](#optional-ready-for-an-elrs-module)). Then fit the Pololu 2808 power switch, wire the push button, and fit the battery lead (BATTERY header). Power the main board only ever from its battery, switched on by the button and the 2808.\
    *Check:* battery off: the resistance across the battery plug is not near zero. With the meter on volts across the battery's own plug, the pin that meets the board's + reads plus 6 to 8.4 V. Then connect the battery, switch on, and measure 5 V on the Teensy socket's VIN, 5 V on the screen header's middle pin and 3.3 V on the radio socket's VCC.
 6. **Fit the modules:** first solder a capacitor across the radio's power and ground pins (VCC and GND; Malcolm uses 220 µF, the value is not critical; the striped leg to GND), as in the photo above. Then the flashed Teensy 4.1, the ML01DP5 radio, the INA219, the clock (its left, 5-pin header only; 5 V). Screw the aerial and its extension onto the radio now: it transmits at full power from switch-on, and with no aerial its amplifier can be damaged. Both must be **SMA**: an RP-SMA aerial screws on, but does not connect.
 7. **Wire the controls** (pins in the table below):
@@ -260,6 +260,28 @@ Work in this order. Each step ends with a check.
 
 <sub>Inside one of Malcolm's transmitters, the screen lifted out.</sub>
 
+### Optional: ready for an ELRS module
+
+<!-- (16 Nov 2026, Malcolm: "add to the website and GitHub these instructions for those wanting eventually to add ELRS support; including the
+current need for a power switch. We should add that a mosfet software switching circuit is on the way, and a new version of the main
+motherboard is coming later on. This is because it's much more convenient to modify the PCB before finishing construction of the transmitter.") -->
+
+The transmitter can also carry an **ExpressLRS (ELRS) transmitter module** inside its case, to fly models that have an ELRS receiver as well as your LDRC models: for example a helicopter on a RadioMaster Nexus-XR, which has Rotorflight and an ELRS receiver built in. This is being tested now. It is not in the released firmware yet, and LDRC flying is unchanged.
+
+**If you may want ELRS one day, make this small change to the main board before you build it in.** It is much easier now than later. The released firmware does not use the TX_MODULE header, so a board changed like this flies LDRC exactly as before.
+
+1. **Cut one track.** On the underside, cut the track from the TX_MODULE header's **SIGNAL** pin to Teensy pin 6, on its long straight run (the red mark in the picture). A small burr in a rotary tool gives the neatest cut: slowly, only through the copper. Leave the wide battery track beside it alone.
+2. **Add one wire, with a 1 kΩ resistor in it,** from Teensy **pin 24** to the TX_MODULE header's **SIGNAL** pin. Pin 24 is on the same row as pin 6, eight pads further on. Its neighbour is the 3.3 V pad: do not mix them up.\
+   *Check with a meter:* SIGNAL to pin 24 about 1 kΩ. SIGNAL to pin 6 open. SIGNAL to ground open.
+
+<img src="../docs/images/elrs-board-mod.png" width="600" alt="The underside of the transmitter's main board by the TX_MODULE header, drawn from its Gerber files: the track from the header's SIGNAL pin to Teensy pin 6 marked CUT, and a new wire with a 1 kΩ resistor from SIGNAL to Teensy pin 24, whose neighbour is the 3.3 V pad. The wide battery track beside it is marked: leave it.">
+
+<sub>The underside of the main board by the TX_MODULE header, drawn from its Gerber files: the cut, and the new wire to pin 24.</sub>
+
+**Power for the module, for now.** The module must be off when you fly LDRC, so for now it needs a switch of its own. Power it from its own small 2S pack through a switch, with its ground joined to the transmitter's ground. Or take its power from the TX_MODULE header's middle pin (the battery, whenever the transmitter is on) through a switch. Always switch the + side, never the ground. If the module plugs into the TX_MODULE header, use a plug that fits only one way round: turned round, ground and signal swap. Check your module's input voltage, and fit its aerial before you power it.
+
+**On the way:** a MOSFET switch, so that the transmitter turns the module on and off by itself (from Teensy pin 10, on the BUDDY header). Later, a new version of the main board with all of this built in.
+
 ### Teensy pins
 
 | Teensy pin | Goes to |
@@ -269,6 +291,7 @@ Work in this order. Each step ends with a check.
 | 5 | Power off (Pololu 2808) |
 | 7, 8 + SPI | Radio: CE, CSN |
 | 18, 19 (I²C) | INA219 (0x40) and the clock (0x68) |
+| 24 (Serial6) | An ELRS module's signal, optional ([above](#optional-ready-for-an-elrs-module)) |
 | 25–32 | The four top switches, two pins each |
 | 33 | The power button (sensed) |
 | 34–41 | The four trims, two pins each |
