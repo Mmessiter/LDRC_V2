@@ -30,15 +30,17 @@ Print in PETG or PLA, like the rest of the case. Most slicers open STEP files di
 
 ## The jig
 
-Holding the pin strip still while its glue sets is very hard by hand. The jig holds it for you: hands off.
+Holding the pin strip still while its glue sets is very hard by hand. The jig holds it for you. Malcolm's way, from experience:
 
-1. Put the strip in the comb. The wires go through the window.
-2. Rub a little candle wax or grease on the jig's nose, so that the glue cannot hold it.
-3. Slide the jig in from the top end, like the module, until it stops. The pins lie in its slots and touch nothing.
-4. Put a few drops of epoxy on the comb and the wires. Keep it off the pins.
-5. When the glue is hard, press the tab and slide the jig out.
+1. Put the strip in the comb, its fat brass collars against the comb and its long thin pins pointing up. The wires go through the window.
+2. Put sticky tape over the window at the back, so that glue cannot run through it.
+3. Rub a little candle wax or grease on the jig's nose, so that the glue cannot hold it.
+4. Slide the jig in from the top end, like the module, until it stops. The pins lie in its slots and touch nothing.
+5. Very carefully, put one drop of thin superglue where the strip meets the comb. It runs: keep it well away from the pins.
+6. When the superglue has set, press the tab and slide the jig out.
+7. Then reinforce the joint with a generous amount of five-minute epoxy, over the comb and the wires. Be extremely careful not to get any on the pins or their connections.
 
-A spring tab goes under the upper strap. The strap presses on its slope, and that holds the strip down on its pad and back against the comb. Always glue the strip with the jig, never with the module in place: glue must not reach the module.
+A spring tab goes under the upper strap. The strap presses on its slope, and that holds the strip down on its pad and back against the comb. Never glue the strip with the module in place: glue must not reach the module.
 
 <img src="elrs-pin-strip-jig.png" width="600" alt="The pin strip jig: a cut through one pin shows the jig holding the strip down and back against the comb, the pins lying in its slots, and its spring tab under the upper strap; below, the jig in place in the bay, and lying on its side as it prints.">
 
