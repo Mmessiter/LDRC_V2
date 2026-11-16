@@ -26,7 +26,7 @@ Print in PETG or PLA, like the rest of the case. Most slicers open STEP files di
 - Above it is a pocket for the module. The module slides in from the top, under two straps, onto a strip of pins. One tiny self-tapping screw each side (6 mm or longer) stops it sliding out. A strip of felt or foam tape under each strap stops any rattle.
 - **The pins:** an 8-way 2.54 mm **turned-pin** strip (round pins, about 0.5 mm: the module's sockets do not take square DuPont pins). It lies in a little comb, its fat brass collars against the comb and its long thin pins pointing up, towards the module. The wires go through the window behind it.
 - Only three pins are wired. The module's sockets 1, 2 and 3 are SIGNAL, GROUND and BATTERY: from the left, looking at the module's back with its aerial up. Check yours before you glue. The module's own XT30 power socket then stays empty.
-- The module needs a power switch for now: see the build guide's [Power for the module](https://messiter.com/ldrc/build.html#tx-elrs).
+- The module must be off when you fly LDRC. The simplest and safest way is no switch at all: the module in only when you fly ELRS, out for LDRC, and in or out only with the transmitter off. See the build guide's [Power for the module](https://messiter.com/ldrc/build.html#tx-elrs).
 
 ## The jig
 
