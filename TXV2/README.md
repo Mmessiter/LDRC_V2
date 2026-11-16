@@ -190,6 +190,7 @@
 
 - **Version 2 parts** in [`STL files/V2`](STL%20files/V2): **two case fronts**, one for each screen (`TXV12_FRONT_16m_V2.step` for the 16 MB IPS panel, `TXV12a_Front_4meg_V2.step` for the 4 MB CrowPanel: their dimensions differ slightly), the case back `TXV12a_BACK_V2.step`, and the charger bay `CHARGERBAY.stl`, which takes the place of Version 1's JR module bay on the back and holds the USB-C charger module. The fronts and the back are STEP files; most slicers open them directly.
 - **Shared with Version 1** in `STL files/`: `TX_HANDLE`, `TX_SUPPORT`, `GimbalP` (gimbal protector), `LEDMOUNT`, `SPACER`. (`MODBAY` and `Blank` are Version 1's JR module bay: a Version 2 prints the charger bay there instead.)
+- **For an ELRS module** (optional): a new back, the module and charger bay, a taller handle and a gluing jig in [`STL files/V2/ELRS`](STL%20files/V2/ELRS). See [Optional: ready for an ELRS module](#optional-ready-for-an-elrs-module).
 - `TX_FRONT.stl` and `TX_BACK12.stl` are **Version 1's** (cut for the old Nextion screen). Do not print them for a Version 2.
 - The screen has no mounting holes. Four tiny self-tapping screws hold it in the case front; the same screws hold the charger board and the case back, so buy plenty.
 - **Printing** is not critical: Malcolm uses 0.16 mm layers and the slicer's default infill.
@@ -281,6 +282,12 @@ The transmitter can also carry an **ExpressLRS (ELRS) transmitter module** insid
 **Power for the module, for now.** The module must be off when you fly LDRC, so for now it needs a switch of its own. Power it from its own small 2S pack through a switch, with its ground joined to the transmitter's ground. Or take its power from the TX_MODULE header's middle pin (the battery, whenever the transmitter is on) through a switch. Always switch the + side, never the ground. If the module plugs into the TX_MODULE header, use a plug that fits only one way round: turned round, ground and signal swap. Check your module's input voltage, and fit its aerial before you power it.
 
 **On the way:** a MOSFET switch, so that the transmitter turns the module on and off by itself (from Teensy pin 10, on the BUDDY header). Later, a new version of the main board with all of this built in.
+
+**The printed parts.** Malcolm's module, a RadioMaster Ranger Nano, sits in a new case back. The parts are in [`STL files/V2/ELRS`](STL%20files/V2/ELRS): the back with a longer, higher opening (the module's aerial goes up through the handle); the module and charger bay that is glued into it; a handle 10 mm taller, so your fingers pass above the aerial; and a jig that holds the module's pin strip while its glue sets. That folder's README says how to use them.
+
+<img src="STL%20files/V2/ELRS/elrs-case-parts.png" width="800" alt="The new case back seen from behind in two views, drawn from the design files: the module and charger bay glued into its longer, higher opening; the module in its pocket under two straps, its aerial going up through the taller handle; the charger's USB-C lead plugged in from the right.">
+
+<sub>The new back with the module and charger bay and the taller handle. Drawn from the design files.</sub>
 
 ### Teensy pins
 

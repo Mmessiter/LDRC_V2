@@ -16,4 +16,6 @@ Both fronts hold the screen, the gimbals, the switches and the trims; the screen
 Most slicers (PrusaSlicer, Bambu Studio, OrcaSlicer, Cura with its STEP plugin) open STEP files directly.
 The other parts (handle, supports, gimbal protector, antenna parts) are the Version 1 parts in the folders above.
 
+**For an ELRS module inside the case** (optional): a new back with a higher opening, the module and charger bay, a taller handle and a jig for gluing the module's pin strip are in the [`ELRS`](ELRS) folder.
+
 How to build the whole transmitter: https://messiter.com/ldrc/build.html
