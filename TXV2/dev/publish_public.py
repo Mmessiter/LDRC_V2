@@ -18,13 +18,14 @@ from release_v1b import private_values, refuse_private, SCREEN, ROOT
 PUBLIC = os.path.expanduser('~/Documents/GitHub/LDRC_V2_ALL')
 
 TX_INCLUDE = ['TransmitterCode', 'Help files for SD', 'Noises', 'Circuits', 'STL files', 'Images', 'dev', 'V1B-UPDATES.md']
-TX_EXCLUDE = ['.pio', '.git', '.DS_Store', '__pycache__', 'TransmitterCode/.vscode', 'dev/out', 'dev/notify.sh', 'HEX_Files/*_log.txt',
+TX_EXCLUDE = ['.pio', '.git', '.DS_Store', '__pycache__', 'TransmitterCode/.vscode', 'dev/out', 'dev/notify.sh', 'dev/tools/*.txt', 'dev/tools/*.bin', 'dev/tools/*.LOG', 'dev/tools/*.log', 'HEX_Files/*_log.txt',
               'TransmitterCode/include/ADC-master/docs', '*.HMI', 'TransmitterCode/SD Examples/Teensy SD Example/log',
               'TransmitterCode/SD Examples/Teensy SD Example/help', 'TransmitterCode/SD Examples/Nextion SD Example', '*.workspace']
 # (ADC-master/docs = 16 MB of the ADC library's generated web pages; *.HMI = the Version 1 screen's own files; the example
 #  card's log folder = Malcolm's flights, its help folder = replaced by "Help files for SD" below, the Nextion example = Version 1's
 #  screen; HEX_Files = Version 1's firmware (built Version 2 firmware is what messiter.com/txv1b/release serves); *.workspace =
-#  Proteus session files)
+#  Proteus session files; dev/tools/*.txt etc. = what the tools fetched from a transmitter (logs, a core dump): they were
+#  public from 8 to 19 Nov 2026 - the tools now save to dev/out/diag, and these lines are the second lock)
 # (left out on purpose: NewWebSite = the release staging; Nextion files = the Version 1 screen's HMI, in the Version 1
 #  repository; ReceiverCode, Tx_sd_read, Quadcopter = Version 1 leftovers; reviews = working notes; LICENSE etc. = the
 #  public repository has its own; README.md = replaced by TXV2/README.md, kept in the public repository itself)

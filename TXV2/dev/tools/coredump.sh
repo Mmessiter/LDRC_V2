@@ -1,7 +1,8 @@
 #!/bin/bash
 # Pull the screen's core dump through the door and decode it against the firmware's ELF.
 #   coredump.sh <last byte of the IP> <screen version, e.g. 1.11.179-full>
-ip=${1:?ip}; ver=${2:?version}; SC="$(dirname "$0")"
+# What it fetches goes to dev/out/diag (never published, never committed) - not beside this script (19 Nov 2026).
+ip=${1:?ip}; ver=${2:?version}; SC="$(cd "$(dirname "$0")/.." && pwd)/out/diag"; mkdir -p "$SC"
 ELF=~/Documents/GitHub/TXV1B/dev/out/elf/screen-$ver.elf
 [ -f "$ELF" ] || { echo "no ELF $ELF"; exit 2; }
 G=$(find ~/.platformio/packages -maxdepth 3 -name "xtensa-esp32s3-elf-gdb" | head -1); [ -n "$G" ] || { echo "no xtensa gdb"; exit 3; }

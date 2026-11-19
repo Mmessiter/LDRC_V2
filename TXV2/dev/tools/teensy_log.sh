@@ -5,7 +5,8 @@
 #   teensy_log.sh <last byte of the IP> [DD-MM-YY]     (default: today)
 ip=${1:?ip last byte}; day=${2:-$(date +%d-%m-%y)}
 base="http://192.168.1.$ip"; remote="/log/$day.LOG"; local="/teensy/fetched/$day.LOG"
-out="$(dirname "$0")/teensylog_${ip}_$day.txt"
+# The log goes to dev/out/diag (never published, never committed) - not beside this script (19 Nov 2026).
+OUTDIR="$(cd "$(dirname "$0")/.." && pwd)/out/diag"; mkdir -p "$OUTDIR"; out="$OUTDIR/teensylog_${ip}_$day.txt"
 say() { echo "$(date +%H:%M:%S) $*"; }
 st=$(curl -s -m 4 "$base/status" | LC_ALL=C tr -cd '\11\12\15\40-\176')
 [ -z "$st" ] && { say "no answer from .$ip"; exit 1; }

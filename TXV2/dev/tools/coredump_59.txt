@@ -1,2 +1,0 @@
-espcoredump.py v1.18.1
-ERROR: Failed to load core dump: Invalid application image for coredump: coredump SHA256(fd941f59a2c6155e) != app SHA256(fea3dc64ced08555).
