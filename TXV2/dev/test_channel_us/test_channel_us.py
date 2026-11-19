@@ -415,9 +415,22 @@ rme, sme = lift('include/SDcard.h', 'FLASHMEM void ReadModelExtension()'), lift(
 check('const int a = SDCardAddress;' in rme and 'const int a = SDCardAddress;' in sme and 'StartLocation + MODEL_EXT_OFFSET_B113' in rme and 'MODEL_EXT_OFFSET_B113' not in sme, "B114: the extension written right after the checksum (an append at most); B113's place read only as a fallback")
 check('ModelsFileNumber.size() >= b + 3' in rme, 'the fallback never reads beyond the file')
 check(re.search(r'RatesCurvesOk,\s*// 218[^\n]*\n\s*MaxRangeWideTapped,\s*// 219[^\n]*\n\s*MaxRangeNarrowTapped,\s*// 220[^\n]*\n\s*CurvePoints3Tapped,\s*// 221[^\n]*\n\s*CurvePoints5Tapped,\s*// 222[^\n]*\n\s*CurvePoints7Tapped,\s*// 223[^\n]*\n\s*CurvePoints9Tapped,\s*// 224[^\n]*\n\s*CurveResetTapped,\s*// 225[^\n]*\n\s*CurveFlatTapped,?\s*// 226', main) is not None and re.search(r'#define LASTFUNCTION1 (\d+)', main) is not None and int(re.search(r'#define LASTFUNCTION1 (\d+)', main).group(1)) >= 227, 'codes 219 and 220 are the two range choices, 221-224 the points (B118), 225-226 Reset and Flat (B135)')
-tb = main[main.index('void (*NumberedFunctions1[LASTFUNCTION1])(){'):]
+def as_release(text):
+    """main.cpp as a RELEASE's compiler sees it: the lines of '#ifdef ELRS_TEST ... #endif' (test builds only) taken out, and an
+    #else's lines - the transmitter as it was - kept. (14 Nov 2026: the ELRS test builds add eight entries at the function table's end.)"""
+    out, state = [], None
+    for l in text.split('\n'):
+        t = l.strip()
+        if state is None and t.startswith('#ifdef ELRS_TEST'): state = 'test'; continue
+        if state == 'test' and t.startswith('#else'): state = 'else'; continue
+        if state is not None and t.startswith('#endif'): state = None; continue
+        if state == 'test': continue
+        out.append(l)
+    return '\n'.join(out)
+main_rel = as_release(main)
+tb = main_rel[main_rel.index('void (*NumberedFunctions1[LASTFUNCTION1])(){'):]
 tb = re.sub(r'//[^\n]*', '', tb[tb.index('){') + 2:tb.index('};')])
-check(len([e for e in tb.split(',') if e.strip()]) == int(re.search(r'#define LASTFUNCTION1 (\d+)', main).group(1)), 'the table has exactly LASTFUNCTION1 entries (none missing: a missing one would be called as nothing)')
+check(len([e for e in tb.split(',') if e.strip()]) == int(re.search(r'#define LASTFUNCTION1 (\d+)', main_rel).group(1)), 'the table has exactly LASTFUNCTION1 entries (none missing: a missing one would be called as nothing)')
 ubl = lift('src/main.cpp', 'void UpdateButtonLabels()')
 blk = ubl[ubl.index('if (CurrentView == STICKSVIEW)'):ubl.index('if (CurrentView == FAILSAFE_VIEW)')]
 check(blk.count('MaxRangeShow();') == 1 and blk.index('MaxRangeShow();') > blk.index('SendText(ChannelLabels[i], LabelText);'), "the choice shown whenever the Channels page's labels are")

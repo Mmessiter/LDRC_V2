@@ -106,6 +106,9 @@ FLASHMEM void ChooseImageFromScreen(const char *text)
     while (n < sizeof(name) - 1 && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p >= '0' && *p <= '9') || *p == '_' || *p == '-'))
         name[n++] = *p++;
     name[n] = 0;
+    if (strchr(text, '\xFF'))
+        n = 0; // B211 (the twelfth review): a reply's end stands in the same read - a late answer glued behind the word ("LDRCIMG Yak" and "pMark 2":
+               // the name read "YakpMark"), and nothing says where the name ends: as "LDRCIMG" alone, the picture is kept (he chooses again)
     if (n > 0)
         strcpy(ModelImageFileName, name);
     EndChooseImage();

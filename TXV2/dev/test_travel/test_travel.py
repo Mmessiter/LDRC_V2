@@ -19,6 +19,20 @@ prog = r'''
 #include <map>
 #include <vector>
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+static int boxesLostTold = 0; static void NoteBoxesLost() { ++boxesLostTold; }   // (LogFiles.h: the sound and the log's line)
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 #define PROGMEM
 #define WHAHWHAHMSG 1
 #define BEEPCOMPLETE 2
@@ -37,6 +51,9 @@ static void SendCommand(char *c) { cmds.push_back(c); }
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendValue(char *n, int v) { vals[n] = v; }
 static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; }
+static bool RfHomeNotRead = false; static bool rfMayFlyNow = false; static int quietSaid = 0;   // (B211, the sixteenth review: PipeHttp.h RfMayFly / RfSayQuietly / RfBoxOrQuiet stood in for - no box that waits while the model may fly)
+static bool RfMayFly() { return rfMayFlyNow; } static void RfSayQuietly(const char *) { ++quietSaid; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { if (RfMayFly()) { RfSayQuietly(msg); return; } MsgBox((char *)page, (char *)msg); }
 static bool GetConfirmation(char *page, char *prompt) { ++asked; lastBox = prompt; return confirmAnswer; }
 static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; CurrentView = ROTORFLIGHTVIEW; }
@@ -44,9 +61,10 @@ static bool ModelSeemsArmed(char *why, size_t n) { if (!armed) return false; snp
 static bool RfPipeBlocked(char *, size_t) { return false; }
 static bool RfNeedsModel(char *, size_t) { return false; }
 static bool BakOffline() { return offline; }
-static void GetText(char *n, char *out, int len) { snprintf(out, len, "%s", fields[n].c_str()); }
+static std::string loseBox;   // (B211: this box has NO ANSWER - "" comes back, and it is counted, as Nextion.h GetText does it)
+static void GetText(char *n, char *out, int len) { if (!loseBox.empty() && loseBox == n) { ++BoxesLost; if (len > 0) out[0] = 0; return; } snprintf(out, len, "%s", fields[n].c_str()); }
 bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; return true; }   // (B152)
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static long FieldNumber(const char *name, long lo, long hi) { char t[24] = ""; GetText((char *)name, t, sizeof(t) - 1); long v = strtol(t, nullptr, 10); return v < lo ? lo : v > hi ? hi : v; }
 void EndTravelView(); void StartTravel3View(); void StartTravel4View(); void TravelWasEdited();
 // ---- the pipe and a fake flight controller
@@ -114,6 +132,10 @@ int main() {
     CHECK(!BenchHeld && fields["b2"] == "Hold swash" && fields["i0"] == "Motor off, blades clear: it moves the swash");
     // ---- 3. the angle typed and the axis changed while held: the swash goes over at once (pitch at -12 deg = -1000)
     fcLog.clear(); BenchHoldTapped(); run(); CHECK(BenchHeld && ov[1] == 667);
+    // (B211, the tenth review) ... the axis tapped while held, and the angle's box has NO ANSWER: the hold on the other axis is refused - the swash
+    // stays held on Roll, and Roll is what the page goes on showing (it showed "Pitch" while the swash was still held on Roll)
+    loseBox = "tn1"; fcLog.clear(); { const uint32_t l0 = BoxesLost; BenchAxisTapped(); run(); CHECK(BoxesLost != l0); } loseBox = ""; BoxesLostAtWork = BoxesLost;
+    CHECK(BenchHeld && BenchAxis == 1 && BenchHeldAxis == 1 && fields["tn0"] == "Roll (aileron)" && writes(191) == 0 && ov[1] == 667 && ov[2] == 0 && TravStep == TRV_IDLE);
     fields["tn1"] = "-12"; fcLog.clear(); BenchAxisTapped();
     CHECK(fields["tn0"] == "Pitch (elevator)" && TravStep == TRV_HOLD); run();
     { auto d = dataOf(191); CHECK(d.size() == 3 && d[0] == "010000" && d[1] == "0218FC" && d[2] == "040000"); }
@@ -157,6 +179,11 @@ int main() {
     StartTravelView(); run(); StartTravel4View(); BenchHoldTapped(); run(); CHECK(BenchHeld);
     late = true; boxes = 0; BenchHoldTapped(); run(); late = false;
     CHECK(boxes == 1 && lastBox.find("Could not release the swash") != std::string::npos && !BenchHeld && TravStep == TRV_IDLE);
+    // ... and WHILE THE MODEL MAY FLY: no box that waits (B211, the seventeenth review - the last box of these pages that did; the break-it round of
+    // 16 Nov 2026, mut19 QR14, found that nothing held it). A line for the log; the page goes on as on the bench.
+    StartTravelView(); run(); StartTravel4View(); BenchHoldTapped(); run(); CHECK(BenchHeld);
+    failFn = 191; failAfter = 1; boxes = 0; quietSaid = 0; rfMayFlyNow = true; BenchHoldTapped(); run(); rfMayFlyNow = false; failFn = 0;
+    CHECK(boxes == 0 && quietSaid == 1 && !BenchHeld && TravStep == TRV_IDLE && fields["b2"] == "Hold swash");
     // ---- 11. a hold that fails half way: said, Release offered (a part may be held)
     failFn = 191; failAfter = 1; boxes = 0; fcLog.clear(); BenchHoldTapped(); run();
     CHECK(boxes == 1 && lastBox.find("Could not hold the swash") != std::string::npos && BenchHeld && fields["b2"] == "Release" && TravStep == TRV_IDLE);
@@ -171,6 +198,138 @@ int main() {
     // back on page 4 the box shows the edit (the flag stays until a save or a read, as page 2's); a page 4 only looked at keeps it
     StartTravel3View(); StartTravel4View(); CHECK(fields["tn3"] == "90.0" && TravPage4Edited); StartTravel3View(); CHECK(TravInWant[1][0] == 900 && TravInWant[2][0] == 900);
     fcLog.clear(); StartTravelView(); run(); CHECK(!TravPage4Edited && !Trav_Was_Edited && TravInWant[1][0] == 1236);   // (a fresh read: the FC's 123.6 again, the unsaved 90 gone)
+    // ---- 14. B211 (the ninth review): A PAGE'S FIELDS ARE TAKEN WHOLE, OR NOT AT ALL. Each of the four pages' gathers, every field typed
+    //      anew and its LAST field with no answer: nothing of what the gather writes into is changed - the settings to send, the
+    //      inputs' rates and limits (also the signs the direction switches give them), the bench's two numbers. And with every box
+    //      answered the same gather takes them.
+    {
+        uint8_t cfg0[sizeof TravCfgWant]; int16_t in0[5][3]; long deg0, gauge0;
+        auto keep = [&] { memcpy(cfg0, TravCfgWant, sizeof cfg0); memcpy(in0, TravInWant, sizeof in0); deg0 = BenchDegTenths; gauge0 = BenchGaugeTenths; };
+        auto same = [&] { return !memcmp(cfg0, TravCfgWant, sizeof cfg0) && !memcmp(in0, TravInWant, sizeof in0) && deg0 == BenchDegTenths && gauge0 == BenchGaugeTenths; };
+        auto cfgSame = [&] { return !memcmp(cfg0, TravCfgWant, sizeof cfg0); }; auto inSame = [&] { return !memcmp(in0, TravInWant, sizeof in0); };
+        // page 1: the three trims, and the direction switches
+        fields["tn9"] = "1.5"; fields["tn10"] = "-2.5"; fields["tn11"] = "3.5"; TravRevAil = !TravRevAil; keep();
+        loseBox = "tn11"; TravGatherPage1(); CHECK(same() && BoxesLost != BoxesLostAtWork);
+        loseBox = ""; TravGatherPage1(); CHECK(!cfgSame() && !inSame());
+        // page 2: gains, geometry, limits, phase, tilts (its last field: tn8)
+        for (const char *f : { "tn0", "tn1" }) fields[f] = "77.0";
+        fields["tn2"] = "4.0"; fields["tn3"] = "11.0"; fields["tn4"] = "12.0"; fields["tn5"] = "13.0"; fields["tn6"] = "14.0"; fields["tn7"] = "5"; fields["tn8"] = "6"; TravPage2Edited = true; keep();
+        loseBox = "tn8"; TravGatherPage2(); CHECK(same());
+        loseBox = ""; TravGatherPage2(); CHECK(!cfgSame() && !inSame());
+        // page 3: the tail (its last field: tn2)
+        fields["tn1"] = "2.0"; fields["tn3"] = "21.0"; fields["tn4"] = "22.0"; fields["tn2"] = "55.0"; keep();
+        loseBox = "tn2"; TravGatherPage3(); CHECK(same());
+        loseBox = ""; TravGatherPage3(); CHECK(!cfgSame() || !inSame()); CHECK(!inSame());
+        // page 4: the bench's angle and reading, and the one calibration (its last field: tn3)
+        fields["tn1"] = "6.0"; fields["tn2"] = "7.5"; fields["tn3"] = "66.0"; TravPage4Edited = true; keep();
+        loseBox = "tn3"; TravGatherPage4(); CHECK(same());
+        loseBox = "tn2"; TravGatherPage4(); CHECK(same());                           // (... and with the reading lost, the angle read before it goes back too)
+        loseBox = ""; TravGatherPage4(); CHECK(!inSame() && BenchDegTenths == 60 && BenchGaugeTenths == 75);
+        BoxesLostAtWork = BoxesLost;
+    }
+    // (B211, the eleventh review, reviewer B's low 8) THE PAGE'S OWN WORK FROM THE MAIN LOOP COUNTS ITS LOST BOXES FROM THERE. OK (or < Previous) while
+    // the swash is held lets it go first - and the rest of OK's work runs from the main loop when it has: no button's work. It asked "was a box of
+    // THIS BUTTON'S work unanswered?" against the count of an EARLIER button's work:
+    //  (a) a box that an earlier button had lost (long since told) stopped the page being left - with nothing said;
+    {
+        StartTravelView(); run(); StartTravel4View(); run(); BenchHoldTapped(); run(); CHECK(BenchHeld && CurrentView == TRAVEL4VIEW);
+        ++BoxesLost;                                       // (an earlier button's work lost a box: BoxesLost stands one above "as that work began" from here)
+        CHECK(WorkLostABox());
+        TravelWasEdited(); saveNowAnswer = 0; fcLog.clear(); rfStarts = 0; boxesLostTold = 0;
+        EndTravelView(); CHECK(TravStep == TRV_RELEASE); run();
+        CHECK(!BenchHeld && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW && boxesLostTold == 0);   // the swash let go, "Save now?" answered Discard: the page is left
+    }
+    //  (b) ... and a box lost in THAT work (the gather the main loop runs) was told by nothing: it is said now, and the page stays
+    {
+        StartTravelView(); run(); StartTravel4View(); run(); BenchHoldTapped(); run(); CHECK(BenchHeld && CurrentView == TRAVEL4VIEW);
+        BoxesLostAtWork = BoxesLost; TravelWasEdited(); saveNowAnswer = 0; rfStarts = 0; boxesLostTold = 0;
+        EndTravelView(); CHECK(TravStep == TRV_RELEASE); loseBox = "tn1"; run(); loseBox = "";
+        CHECK(!BenchHeld && rfStarts == 0 && CurrentView == TRAVEL4VIEW && boxesLostTold == 1);
+        BoxesLostAtWork = BoxesLost; EndTravelView(); run(); CHECK(rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW);   // OK again: every box answers, and the page is left
+    }
+    // B211 (the twelfth review, reviewer B's experiment 3; released code had it): THE BENCH MEASURE - WHAT IS TYPED WHILE THE SWASH IS HELD STAYS AT THE
+    // RELEASE. The hold is there to read a pitch gauge and type its reading; Release (by the button, by itself after five minutes) drew page 4 from what
+    // is in hand, and the reading - and a calibration typed - were wiped; the suggestion row then worked from the OLD numbers
+    {
+        memset(cfg, 0, sizeof cfg); cfg[5] = 2; wrS16(cfg, 9, 1500);
+        for (int i = 1; i <= 4; ++i) { ins[i][0] = i == 4 ? 1000 : i == 3 ? 1000 : 865; ins[i][1] = -1000; ins[i][2] = 1000; ov[i] = 2501; }
+        BenchGaugeTenths = 0; BenchSuggestTenths = 0; BenchDegTenths = 80; BenchAxis = 1; BenchHeld = false; TravHave = false; Trav_Was_Edited = false;
+        StartTravelView(); run(); StartTravel2View(); StartTravel3View(); StartTravel4View(); run();
+        CHECK(CurrentView == TRAVEL4VIEW && fields["tn1"] == "8.0" && fields["tn2"] == "" && fields["tn3"] == "86.5");
+        // 1. held (roll at 8 degrees); the gauge reads 5.6 - typed; Release; then the suggestion row
+        BenchHoldTapped(); run(); CHECK(BenchHeld);
+        fields["tn2"] = "5.6"; BenchWasEdited();
+        BenchHoldTapped(); run(); CHECK(!BenchHeld);
+        CHECK(fields["tn2"] == "5.6");                               // what he typed is still there (it was: empty again)
+        CHECK(fields["b2"] == "Hold swash" && fields["i0"].find("HELD") == std::string::npos);   // ... and the told row and the button say the swash is free
+        boxes = 0; BenchSuggestTapped(); CHECK(boxes == 0 && fields["tn4"] == "123.6");
+        // 2. a second round with that reading in hand: held again, 7.0 read and typed, and a calibration of his own, 95.0; Release
+        BenchHoldTapped(); run(); CHECK(BenchHeld);
+        fields["tn2"] = "7.0"; BenchWasEdited(); fields["tn3"] = "95.0"; TravelWasEdited();
+        BenchHoldTapped(); run(); CHECK(!BenchHeld);
+        CHECK(fields["tn2"] == "7.0" && fields["tn3"] == "95.0");    // (it was: 5.6 and 123.6 again)
+        BenchSuggestTapped(); CHECK(fields["tn4"] != "123.6");
+        // 3. the hold lets go BY ITSELF after five minutes, a reading typed and not yet taken
+        StartTravelView(); run(); StartTravel4View(); run(); BenchHoldTapped(); run(); CHECK(BenchHeld);
+        fields["tn2"] = "6.5"; BenchWasEdited();
+        now += 5UL * 60 * 1000; run(); CHECK(!BenchHeld);
+        CHECK(fields["tn2"] == "6.5" && fields["b2"] == "Hold swash");
+    }
+    // (the break-it round: "a typed travel number is written over while typed fields are kept" passed every scene - the flows above draw page 4 alone)
+    // THE DRAW'S OWN PROMISE, page by page: while what was typed is to stay (RfKeepTyped), a page's draw leaves EVERY field its keypad opens (the page
+    // files' own lists) - and without it the same draw writes them from what is in hand
+    {
+        StartTravelView(); run();
+        struct { void (*start)(); std::vector<const char *> typed; } pages[] = {
+            { nullptr, { "tn9", "tn10", "tn11" } },
+            { StartTravel2View, { "tn0", "tn1", "tn2", "tn3", "tn4", "tn5", "tn6", "tn7", "tn8" } },
+            { StartTravel3View, { "tn1", "tn2", "tn3", "tn4", "tn5" } },
+            { StartTravel4View, { "tn1", "tn2", "tn3" } } };
+        for (auto &pg : pages)
+        {
+            if (pg.start) { pg.start(); run(); }
+            for (const char *f : pg.typed) fields[f] = "7.7";
+            RfKeepTyped = true; TravShow(); RfKeepTyped = false;
+            bool kept = true; for (const char *f : pg.typed) kept = kept && fields[f] == "7.7";
+            CHECK(kept);                                                             // every typed field as he left it
+            TravShow();
+            int written = 0; for (const char *f : pg.typed) written += fields[f] != "7.7";
+            CHECK(written >= (int) pg.typed.size() - 1);                             // (the scene is the one meant: this draw DOES write them - all but one that may hold 7.7 or stay empty)
+        }
+    }
+    // B10 (the sixteenth review): NOTHING IN HAND - nothing is an edit (OK asked "Save now?" for it, the save returned at once), and a Save refused
+    // for it does not leave "close when saved" standing for a later Save
+    { const bool h = TravHave, e = Trav_Was_Edited; TravHave = false; Trav_Was_Edited = false; TravelWasEdited(); CHECK(!Trav_Was_Edited);
+      RfLeaveAfterSave = true; SaveTravel(); CHECK(!RfLeaveAfterSave);
+      TravHave = true; TravelWasEdited(); CHECK(Trav_Was_Edited); TravHave = h; Trav_Was_Edited = e; }
+    // ---- (the sixteenth review, reviewer B's runs E7 and E8, taken into the suite)
+    {
+        auto e7run = [&](int n) { for (int i = 0; i < n; ++i) { TravelPoll(); now += 50; } };
+        auto e7writes = [&](int fn) { int k = 0; for (auto &r : fcLog) if (r.fn == fn) ++k; return k; };
+        auto e7fc = [&]() { memset(cfg, 0, sizeof cfg); cfg[5] = 2; wrS16(cfg, 9, 1500); ins[1][0] = 865; ins[1][1] = -1000; ins[1][2] = 1000; ins[2][0] = 865; ins[2][1] = -1000; ins[2][2] = 1000; ins[3][0] = 1000; ins[3][1] = -417; ins[3][2] = 417; ins[4][0] = 1000; ins[4][1] = -1000; ins[4][2] = 1000; };
+        // E7. A SAVE THAT FAILS AFTER A PART OF IT WAS WRITTEN (released code said "Not written (an input)" - with the mixer block and the first input in the
+        //     flight controller's memory, not stored): THE BOX SAYS WHAT STANDS THERE, the page keeps its edits, and Save again writes the whole
+        e7fc(); failFn = 0; Trav_Was_Edited = false; RfLeaveAfterSave = false; CurrentView = ROTORFLIGHTVIEW; StartTravelView(); e7run(40);
+        TravelAilTapped(); TravelEleTapped(); fields["tn9"] = "1.5"; TravelWasEdited();      // the aileron AND the elevator direction turned round, a swash trim typed
+        failFn = 171; failAfter = 1; boxes = 0; fcLog.clear(); confirmAnswer = true; SaveTravel(); e7run(40);   // Save: 43, 171 for input 1 - the 171 for input 2 is refused
+        CHECK(boxes == 1 && lastBox.find("PART WRITTEN, NOT STORED (an input failed) - try again, or switch the model off and on") == 0);
+        CHECK(e7writes(43) == 1 && e7writes(250) == 0 && ins[1][0] == -865 && ins[2][0] == 865 && Trav_Was_Edited && CurrentView == TRAVELVIEW);   // (part IS written - and now it is said)
+        failFn = 0; boxes = 0; fcLog.clear(); SaveTravel(); e7run(60);                          // "try again": the whole save, stored
+        CHECK(boxes == 0 && e7writes(250) == 1 && ins[1][0] == -865 && ins[2][0] == -865 && !Trav_Was_Edited);
+        // ... and the FIRST write refused is still "Not written": nothing of the save stands in the flight controller
+        e7fc(); Trav_Was_Edited = false; CurrentView = ROTORFLIGHTVIEW; StartTravelView(); e7run(40); TravelAilTapped();
+        failFn = 43; failAfter = 0; boxes = 0; fcLog.clear(); SaveTravel(); e7run(40);
+        CHECK(boxes == 1 && lastBox.find("Not written (travel extents)") == 0 && ins[1][0] == 865);
+        failFn = 0;
+        // E8. A DIRECTION TAPPED WHILE A SAVE RUNS, "Next >" before it ends, the save ending on page 2 (no switch there): at a save's end the directions in
+        //     hand are the block's, on whichever page - a calibration typed on page 2 and saved does not send the aileron reversed
+        e7fc(); CurrentView = ROTORFLIGHTVIEW; Trav_Was_Edited = false; StartTravelView(); e7run(40);
+        fields["tn9"] = "2.0"; TravelWasEdited(); fcLog.clear(); SaveTravel(); TravelPoll();
+        TravelAilTapped(); StartTravel2View(); e7run(40);
+        fields["tn1"] = "95.0"; TravelWasEdited(); fcLog.clear(); SaveTravel(); e7run(40);
+        CHECK(ins[1][0] > 0);                                                                     // (with that line out: page 2's save wrote the aileron REVERSED)
+        EndTravel2View(); CHECK(vals["tn6"] == 0);
+    }
     printf("test_travel: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

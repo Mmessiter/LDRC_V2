@@ -9,7 +9,7 @@ GetNumberReply, getvalue, GetSysValue, GetValue) and the real BackupFileTapped f
 answers as the real one does: a system variable by its bare name, a component's val by "<name>.val", 0 for a component it
 has not got, nothing at all for a name in `silent`.
    python3 dev/test_get_command/test_get_command.py"""
-import os, subprocess, sys, tempfile
+import re, os, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INC = os.path.join(ROOT, 'TransmitterCode', 'include')
 def src(name): return open(os.path.join(INC, name), encoding='utf-8', errors='replace').read()
@@ -19,7 +19,7 @@ def lift(text, head):
     """The function whose first line starts with `head` (column 0, Allman style): from there to the next line that is just '}'."""
     lines = text.split('\n')
     for i, l in enumerate(lines):
-        if l.startswith(head) and not l.split('//')[0].rstrip().endswith(';'):   # (not its prototype)
+        if (l.startswith(head) or l.startswith('FLASHMEM ' + head)) and not l.split('//')[0].rstrip().endswith(';'):   # (not its prototype)
             for j in range(i + 1, len(lines)):
                 if lines[j] == '}':
                     return '\n'.join(lines[i:j + 1]) + '\n'
@@ -59,12 +59,14 @@ struct FakeLink
     std::string tx; int ffs = 0; std::vector<uint8_t> rx; size_t rd = 0;
     int available() { return (int) (rx.size() - rd); }
     int read() { return rd < rx.size() ? rx[rd++] : -1; }
-    void print(const char *s) { tx += s; }
+    void print(const char *s) { for (; *s; ++s) write((uint8_t) *s); }   // (B211: a print may carry a command's end and the next command - "get x" FF FF FF "sendme")
     void write(uint8_t b)
     {
         if (b != 0xFF) { tx += (char) b; ffs = 0; return; }
         if (++ffs < 3) return;
-        ffs = 0; std::string cmd = tx; tx.clear(); sent.push_back(cmd); answer(cmd);
+        ffs = 0; std::string cmd = tx; tx.clear();
+        if (cmd == "sendme") return;   // (B211: "which page are you showing?", asked with every box - this screen does not say: the box's answer is used, as it always was)
+        sent.push_back(cmd); answer(cmd);
     }
     void reply(long v) { const uint8_t f[8] = { 'q', (uint8_t) v, (uint8_t) (v >> 8), (uint8_t) (v >> 16), (uint8_t) (v >> 24), 0xFF, 0xFF, 0xFF }; rx.insert(rx.end(), f, f + 8); }
     void answer(const std::string &cmd)
@@ -81,16 +83,23 @@ struct FakeLink
 // ---- the Teensy's globals the lifted code uses
 char TextIn[MAXTEXTIN + 2];
 bool NextionTextMissed = false;
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+uint32_t BoxesLost = 0; static void BoxWasLost(const char *) { ++BoxesLost; }   // (B211, Nextion.h: NO ANSWER IS NOT A NUMBER - the boxes with no answer, counted)
 uint32_t NextionReplyWaitMs = 100;
 static void DelayWithDog(uint32_t) {}   // (B188)
 #define NEXTION_GET_WAIT_MS 2000
 bool NextionGetPending = false;   // (B189)
+uint8_t ModalWaits = 0;           // (B211, Utilities.h: the questions waiting for an answer - no page box has an answer inside one)
 static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
 
-void StashFrame(const uint8_t *f, uint16_t n);
+void StashFrame(const uint8_t *f, uint16_t n, bool withEnd = false);
 static uint32_t micros() { static uint32_t us = 0; return us += 50; }   // B177
 static void LogGhostFrame(const char *, const uint8_t *, uint16_t) {}
+static void NoteStalePress(const uint8_t *, uint16_t) {}   // (B211: dev/test_stalepress is its test)
+static void SubTrimWordLetGo(const uint8_t *, uint16_t, bool) {}   // (B211: dev/test_wholepage/scene_subtrim_doors is its test)
+static void NoteNoScreenMark() {}
+static void NotePageChangedUnderGet(const char *) {}
+static void NoteBoxOffPage(const char *, bool) {}
 
 // ---- the Models page: the date box is recorded, not drawn
 static std::vector<uint32_t> boxes;
@@ -108,7 +117,11 @@ int main()
     CHECK(GetValue((char *) "MMems") == 2); CHECK(!NextionTextMissed);
     CHECK(GetValue((char *) "tch2") == 0); CHECK(sent.back() == "get tch2.val");         // B169's ask: the screen answers 0 for a component it has not got (the bug)
     silent.insert("tch3"); CHECK(GetSysValue("tch3") == 65535); CHECK(!NextionTextMissed);   // no reply = 65535, and no page's save is failed for it
+    CHECK(ScreenAnswerOwed && GetSysValue("tch2") == 65535); ScreenAnswerOwed = false;       // (B211, the eighth review: an answer not come in its time is OWED - nothing is asked, a system variable neither,
+                                                                                             //  until the screen has caught up: the main loop's doing, dev/test_noanswer has it - here, by hand)
     silent.insert("n9"); CHECK(GetValue((char *) "n9") == 65535); CHECK(NextionTextMissed); NextionTextMissed = false;   // (B156, unchanged)
+    CHECK(ScreenAnswerOwed); ScreenAnswerOwed = false;
+    CHECK(PageChangedUnderGet); PageChangedUnderGet = false;                               // (B211: after an answer that never came no box of the same press is asked; the loop's next look for a press ends that - here, by hand)
     CHECK(PendingEventLen == 0);                                                          // nothing stashed along the way
     // ---- the double tap, as BackupFileTapped sees it (the real function, over the fake screen)
     tap(100, 3, 1000); tap(100, 3, 1200); CHECK(boxes.empty());                            // the left list: never
@@ -120,6 +133,7 @@ int main()
     tap(600, 5, 9000); tap(100, 5, 9100); tap(600, 5, 9200); CHECK(boxes.size() == 2);     // a left-list tap between two clears the pair
     tap(600, 5, 9400); CHECK(boxes.size() == 3 && boxes[2] == 5);                          // (the two after it make one)
     silent.insert("tch2"); tap(600, 6, 11000); tap(600, 6, 11200); CHECK(boxes.size() == 3); silent.erase("tch2");   // the screen not answering tch2: never a box
+    CHECK(ScreenAnswerOwed); ScreenAnswerOwed = false;                                     // (B211: ... and its answer owed, until the screen has caught up - the main loop's doing; here, by hand)
     tap(600, 6, 13000); tap(600, 6, 13200); CHECK(boxes.size() == 4 && boxes[3] == 6);     // (and fine again once it answers)
     printf("test_get_command: %d checks, %d failures\n", checks, fails);
     if (fails == 0) printf("ALL GOOD\n");
@@ -130,10 +144,13 @@ int main()
 def main():
     decl_start = NEXTION.index('#define MAXPENDINGFRAME'); decl_end = NEXTION.index('void PendingPush(')   # B177: PendingEvent and the frame globals as they are
     decls = '\n'.join(l for l in NEXTION[decl_start:decl_end].split('\n') if not l.startswith('//'))
+    decls = (lambda u: u[u.index('static uint16_t ScreenCountSeed()'):u.index('static uint16_t NextPageMark()')])(open(os.path.join(INC, 'Utilities.h'), encoding='utf-8', errors='replace').read()) + decls   # (the counts of a page's markers and of the numbers said back: Utilities.h)
+    decls = ''.join('#define %s %s\n' % (d, re.search(r'#define ' + d + r' (\d+)', open(os.path.join(INC, '1Definitions.h'), encoding='utf-8', errors='replace').read()).group(1)) for d in ('SUBTRIM_WORD_BYTES', 'SUBTRIM_DONE_BYTES')) + decls   # (1Definitions.h: the Sub-trim page's two bursts - IsPageOwnWord knows the "done" by its length)
     body = (decls + lift(NEXTION, 'void PendingPush(') + lift(NEXTION, 'int ReadFramedRest(') + lift(NEXTION, 'void StashFramed(')
-            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)') + lift(NEXTION, 'static bool PipeLineDone(') + lift(NEXTION, 'static bool PipeLineOpen(') + lift(NEXTION, 'void StashPendingEventBytes()')
-            + lift(NEXTION, 'bool CollectReply(uint8_t expected, uint16_t &k)') + lift(NEXTION, 'void EndSend()')
-            + lift(NEXTION, 'static uint32_t GetNumberReply(const char *CB)') + lift(NEXTION, 'uint32_t getvalue(char *nbox)')
+            + (lambda s: '\n'.join(l for l in s[s.index('#define WORD_OPEN_MS'):s.index('// B186 (Malcolm, 5 Nov 2026, PID plus:', s.index('#define WORD_OPEN_MS'))].split('\n') if not l.startswith('//')) + '\n')(NEXTION)   # (B211, the ninth review: A WORD WITH NO END MAY NOT BE OVER - its few lines, as they are)
+            + lift(NEXTION, 'static bool PipeLineHead(') + lift(NEXTION, 'static bool PipeLineDone(') + lift(NEXTION, 'static bool PipeLineOpen(') + lift(NEXTION, 'static bool BareLineDone(') + lift(NEXTION, 'B211_RARE static void NoteBareRead(') + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n, bool withEnd)') + 'static void NotePipeLineTooLong() { if (PipeLinesTooLong < 65535) ++PipeLinesTooLong; }   // (Nextion.h: counted, and said in the log - dev/test_wholepage/scene_long_pipe runs the real one)\n' + lift(NEXTION, 'void StashPendingEventBytes()')
+            + lift(NEXTION, 'static bool GluedNumberOk(') + lift(NEXTION, 'bool CollectReply(uint8_t expected, uint16_t &k)') + lift(NEXTION, 'void EndSend()')
+            + lift(NEXTION, 'FLASHMEM static uint8_t BoxPageWrong()') + lift(NEXTION, 'static uint32_t GetNumberReply(const char *CB, bool ofPage = true)') + lift(NEXTION, 'uint32_t getvalue(char *nbox)')
             + lift(NEXTION, 'uint32_t GetSysValue(const char *name)') + lift(NEXTION, 'uint32_t GetValue(char *nbox)')
             + lift(MENU, 'static void BackupFileTapped(uint32_t at)'))
     if '.val' in lift(NEXTION, 'uint32_t GetSysValue(const char *name)'): sys.exit('GetSysValue must ask by the bare name (B171)')

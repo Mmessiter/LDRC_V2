@@ -530,6 +530,11 @@ void GetSpecialPacket()
 /************************************************************************************************************/
 void GetBuddyData() // For Master only
 {
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: no wireless buddy for a model set to ELRS yet. The pupil is asked by LDRC's radio, which is silent for such
+                 // a model: its channels would be nothing at all, for good. The master's own sticks keep the model (ElrsCrsf.h)
+    if (ElrsCarries())
+        return;
+#endif
     if (BuddyMasterOnWireless)
         GetSlaveChannelValuesWireless(); // Get buddy Wireless data and maybe use it.
 }

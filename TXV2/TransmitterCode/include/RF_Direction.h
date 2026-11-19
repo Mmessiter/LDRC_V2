@@ -164,7 +164,7 @@ FLASHMEM static void DirectionPoll()
             DrFixReq = MspAsk(250, nullptr, 0); DrState = DR_FIX_STORE;
             return;
         case DR_FIX_STORE:
-            if (!ok) { DrFixFail("Not stored"); return; }
+            if (!ok) { DrFixFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
             DrFixReq = MspAsk(38, nullptr, 0); DrState = DR_FIX_VERIFY;
             return;
         case DR_FIX_VERIFY:

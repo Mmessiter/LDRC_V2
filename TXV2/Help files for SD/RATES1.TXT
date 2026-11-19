@@ -18,6 +18,7 @@ To check a save, move the switch away and back.|
 The page reads the values again.|
 If the page says nothing came back, do the same,|
 or leave the page and open it again.|
+Until the values have all come, nothing can be saved.|
 'Save' writes only into the transmitter's rate.|
 'Rate 2 / FC 1' at the top left: the flight controller is on|
 rate 1. The page shows rate 1, but 'Save' writes nothing, and|

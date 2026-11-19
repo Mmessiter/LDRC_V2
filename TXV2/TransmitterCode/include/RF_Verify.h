@@ -36,6 +36,11 @@
 #include <Arduino.h>
 #include "1Definitions.h"
 
+static uint8_t  VfBank = 0, VfRate = 0;            // B211 (e99b): the bank and the rate the save was made on (RfVerifyArm)
+static uint32_t VfArmMs = 0;                       // B211 (e99e): when the save was sent - a save left behind is followed RF_VERIFY_WAIT_MS from here
+static uint32_t VfHoldMs = 0;                      // B211 (e101): THE SAVE'S OWN HOLD ON THE BANK SWITCH (RfSaveHoldsBank): when it was sent,
+static bool     VfHold = false, VfHoldLanded = false; // that it stands, and that what was sent has come back
+static uint8_t  VfAfresh = VK_NONE;                // B211 (e99e): the kind whose FRESH read saw whole blocks, none of them what the save left behind had sent
 static uint8_t  VfKind = VK_NONE;                  // the kind being read back (VK_NONE: none)
 static uint32_t VfReadStart = 0;                   // the read it belongs to (the kind's start time)
 static uint16_t VfSent[MAX_PIDS_ADVANCED_BYTES];   // what was sent (26: the biggest block; the PIDs are 17 words)
@@ -261,6 +266,7 @@ FLASHMEM static void VfSaved(uint8_t k) // the read-back matched: a page that ke
 FLASHMEM bool RfVerifyArm(uint8_t kind, void (*ask)())
 {
     VfKind = VK_NONE;
+    VfAfresh = VK_NONE;
     if (PipeState != 2 || !BoundFlag || !ModelMatched || BakOffline() || CurrentView != VfView(kind) || !ask)
         return false;
     const uint8_t n = VfCount(kind);
@@ -271,6 +277,15 @@ FLASHMEM bool RfVerifyArm(uint8_t kind, void (*ask)())
         return false;
     VfWindow(kind, kind == VK_GOV_CFG ? RF_VERIFY_GOVCFG_WAIT_MS : RF_VERIFY_WAIT_MS);   // the receiver writes first, then answers: longer than a read's own window (B165: and restarts the flight controller for the governor's global settings)
     VfReadStart = VfStart(kind);
+    VfBank = (uint8_t)Bank;                 // B211 (e99b): whose block was written
+    VfRate = (uint8_t)DualRateInUse;
+    VfArmMs = millis();
+    if (kind != VK_GOV_CFG)                 // B211 (e101): the save itself holds the bank switch. Not the Governor global page: nothing of it is a bank's -
+    {                                       // (e101b) and its save leaves an earlier bank page's hold standing (e101c: its matching answer too - RfVerifySet)
+        VfHoldMs = VfArmMs;
+        VfHold = true;
+        VfHoldLanded = false;
+    }
     VfSetSeen = false;
     VfAsks = 1;                             // B177
     VfAskFn = ask;
@@ -280,24 +295,122 @@ FLASHMEM bool RfVerifyArm(uint8_t kind, void (*ask)())
     BlockBankChanges = true;
     return true;
 }
-bool RfVerifyPending() { return VfKind != VK_NONE; }
+// B211 (the twentieth review, both reviewers: HIGH; e99 to e99e): A SAVE IS FOLLOWED WHEN ITS PAGE IS LEFT. The receiver answers every word of
+// a save with the block it has in hand - the OLD one, until the last write word has landed. On the page that set "differs" and the read-back
+// waits. But with the page left ("Save", then OK or Help at once) the read-back was dropped, the old block was taken for a plain read, and
+// its Hide routine freed the bank switch - with the write still one or two round trips away: the bank switch moved in that quarter second,
+// and the edit went into the OTHER bank with nothing said. So, while a save is being followed, a set that is not what was sent is NOT a set
+// - not marked, not shown, the bank switch stays held - and the set that is what was sent ends it (the write has landed).
+// HOW LONG, AND WHERE (e99e: the tests of e99b to e99d - each narrower rule let a slow write through, or held a page that had its answer):
+//   - off its page, its own read still the one open: to that read's window (the read-back's own: RF_VERIFY_WAIT_MS from the save);
+//   - its page asked AFRESH - "OK and the same page again", "Help and back", by way of another page (PID + lies behind the PIDs page) -
+//     while the save is younger than RF_VERIFY_WAIT_MS, and only on the bank and the rate it was made on (a read asked afresh because the
+//     bank has changed is another bank's block);
+//   - on ANOTHER page nothing is compared (that page's sets are that page's, and its own read holds the bank switch): the read-back is
+//     kept, for its page may be asked again, and let go when the save is RF_VERIFY_WAIT_MS old (it stood for half a minute: e99b's tests).
+//     (e99e's tests: THAT page's own read freed the bank switch when its block had come, and a write of the first page landing later went
+//     where the switch stood. Since e101 the save itself holds the bank switch there - RfSaveHoldsBank, below.)
+// NOT the Governor global page: nothing of it is a bank's, and its window is 8 s (its save restarts the flight controller) - the bank
+// switch must not be dead for seconds behind every save there.
+FLASHMEM static bool VfExpired() { return (uint32_t)(millis() - VfArmMs) >= RF_VERIFY_WAIT_MS; }                 // the save is older than a read-back's own window
+FLASHMEM static bool VfItsRead() { return VfReading(VfKind) && VfStart(VfKind) == VfReadStart; }                  // the read the read-back asked is still the one open
+// "A read-back whose read is open": what its callers mean (transceiver.h BlockItemSeen - a set to compare; main.cpp - a window to look at;
+// the Governor global page - one save at a time; Utilities.h - no blank screen over it). Asked every 50 ms on every view (main.cpp): here
+// the read-back that was left behind and has had its time is let go, and a fresh read's note whose read is over.
+bool RfVerifyPending()
+{
+    if (VfKind != VK_NONE && !VfItsRead() && VfExpired())
+        VfKind = VK_NONE;
+    if (VfAfresh != VK_NONE && !VfReading(VfAfresh))
+        VfAfresh = VK_NONE;
+    return VfKind != VK_NONE && VfReading(VfKind);
+}
+// Motor_sign.h asks, at the motor switch: is a save being followed (a bank page's) BY THE READ THE READ-BACK ITSELF ASKED? Then that read is
+// not stopped there: its window is the save's own time, and main.cpp looks at it on the front page until it ends. (e99g: e99f's tests) NOT
+// a fresh ask of the page behind the save - the pilot's, or the one more ask: its window ends after the save has been let go, nobody
+// looked at it on the front page, and its flag stood there for good. It is stopped at the motor switch as every read is (the released
+// firmware's six flags down; the five-second net frees the bank switch - and stands in front of a write still on its way).
+// B211 (e101; the twenty-first review, both reviewers): THE SAVE ITSELF HOLDS THE BANK SWITCH - not only a read's flag. Every hold above hangs
+// on a read: a fresh read that hears nothing (the receiver is SILENT while it writes) ends and frees the switch with the write still on its
+// way; another bank page's own read frees it; and a save of what the flight controller ALREADY HOLDS is "what was sent" in the answer to
+// its first write word - "landed" at 0.2 s, before its trigger word has gone (bank 1's whole block went into bank 2, nothing said).
+// So, wherever the pilot is: held RF_SAVE_HOLD_FLOOR_MS behind every bank page's save THAT IS READ BACK (RfVerifyArm; a save it refuses is not
+// held here: the queue, B19-B4), whatever has come back; after that until what was
+// sent has come back; RF_VERIFY_WAIT_MS at most (the save's own time). It adds to BlockBankChanges and frees nothing. Asked by Switches.h.
+// (e101b) the floor must clear the save's trigger word (it lands 0.3-0.75 s after Save, one lost round trip more: 0.4-0.6 s) and end before the save's own time
+static_assert(RF_SAVE_HOLD_FLOOR_MS >= 1500 && RF_SAVE_HOLD_FLOOR_MS < RF_VERIFY_WAIT_MS, "RF_SAVE_HOLD_FLOOR_MS: at least 1.5 s, less than the read-back's window");
+FLASHMEM bool RfSaveHoldsBank()
+{
+    if (!VfHold)
+        return false;
+    const uint32_t age = (uint32_t)(millis() - VfHoldMs);
+    if (age >= RF_VERIFY_WAIT_MS)
+    {
+        VfHold = false;
+        return false;
+    }
+    return age < RF_SAVE_HOLD_FLOOR_MS || !VfHoldLanded;
+}
+bool RfVerifyFollows() { return RfVerifyPending() && VfKind != VK_GOV_CFG && VfStart(VfKind) == VfReadStart; }
 FLASHMEM static bool VfStillThisRead() // the read-back's read is the one open, on its page
 {
     if (VfKind == VK_NONE)
         return false;
     if (CurrentView != VfView(VfKind) || VfStart(VfKind) != VfReadStart)
-    { // the page left, or a bank change read afresh: nothing to compare, nothing said
-        VfKind = VK_NONE;
+    { // the page left, or asked afresh: nothing to compare HERE, nothing said. Let go when it cannot be followed any more (VfSaveLeftBehind):
+      // its time over, the Governor global page's, or another bank or rate by now. Else kept: its page may be asked again within its time.
+        if (VfExpired() || VfKind == VK_GOV_CFG || (uint8_t)Bank != VfBank || (uint8_t)DualRateInUse != VfRate)
+            VfKind = VK_NONE;
         return false;
     }
     return true;
 }
-// transceiver.h BlockItemSeen, a whole set come: 0 = not a read-back (as ever); 1 = the same as sent (done, and said);
-// 2 = different (the window runs on, another set may follow)
+FLASHMEM static bool VfSaveLeftBehind()
+{
+    if (VfKind == VK_NONE || VfKind == VK_GOV_CFG || !VfReading(VfKind))
+        return false;
+    const bool itsRead = VfStart(VfKind) == VfReadStart;
+    if (CurrentView == VfView(VfKind) && itsRead)
+        return false;                       // on its page, its own read: the read-back itself (RfVerifySet's second half)
+    if (itsRead)
+        return true;                        // off its page, its own read still the one open: to that read's window
+    return (uint8_t)Bank == VfBank && (uint8_t)DualRateInUse == VfRate && !VfExpired();   // asked afresh: the same bank and rate, the save not yet RF_VERIFY_WAIT_MS old
+}
+// WHAT THIS HOLDS, THIS ENDS: the reads' windows were looked at only on the Rotorflight pages, and a save followed onto Help kept the bank
+// switch held for as long as Help stood (e99's own tests: about 50 of 52 a page) - main.cpp looks at them while a read-back is pending
+// (RfVerifyPending), on every view but the blank screen.
+// transceiver.h BlockItemSeen, a whole set come: 0 = not a read-back (as ever); 1 = the same as sent (done, and said - or, off its page,
+// done and nothing said); 2 = different (the window runs on, another set may follow)
 FLASHMEM int RfVerifySet()
 {
+    if (VfSaveLeftBehind())
+    {
+        const uint8_t k = VfKind, n = VfCount(k);
+        const bool onItsPage = CurrentView == VfView(k);
+        for (uint8_t i = 0; i < n; ++i)
+            if (VfWritten(k, i) && VfLive(k, i) != VfSent[i])
+            {
+                if (onItsPage)
+                    VfAfresh = k;           // (e99e) this fresh read HAS been answered whole - with other values: at its window's end it asks once more, plain (RfVerifyEnd)
+                return 2;                   // (the block as it was before the write: counted afresh, the bank switch held)
+            }
+        VfKind = VK_NONE;                   // what was sent: the write has landed
+        VfHoldLanded = true;                // (e101: ... or the block was that already - the save's own hold stands its 1.5 s all the same)
+        VfAfresh = VK_NONE;
+        if (!onItsPage)
+        { // (e99d) OFF ITS PAGE THE READ IS OVER HERE: its flag down and its Hide routine called (it frees the bank switch wherever it is called;
+          // what it writes it writes on its own page only). No flag is left up on the menu, on Help, or on the front page behind the motor switch.
+            VfReadDone(k);
+            VfHide(k);
+            return 1;
+        }
+        return 0;                           // on its page, asked afresh: a plain set from here (shown, marked, the bank switch freed)
+    }
     if (!VfStillThisRead())
+    {
+        VfAfresh = VK_NONE;                 // (a plain set: the page shows it)
         return 0;
+    }
     const uint8_t k = VfKind, n = VfCount(k);
     for (uint8_t i = 0; i < n; ++i)
         if (VfWritten(k, i) && VfLive(k, i) != VfSent[i])
@@ -306,6 +419,8 @@ FLASHMEM int RfVerifySet()
             return 2;
         }
     VfKind = VK_NONE;
+    if (k != VK_GOV_CFG)                    // (e101c; review 23, B) not the Governor global page's own answer: an earlier bank page's hold stands until ITS time ends
+        VfHoldLanded = true;                // (e101)
     VfReadDone(k);                          // (the window closes here: nothing more to parse)
     VfHide(k);
     VfSaved(k);
@@ -323,6 +438,23 @@ FLASHMEM int RfVerifySet()
 // transceiver.h Hide_msg_if_needed, the read's window ended: true = a read-back's verdict (the page's message hidden here)
 FLASHMEM bool RfVerifyEnd(uint8_t kind)
 {
+    if (VfAfresh == kind)
+    { // (e99e; e99b's tests, G3) A SAVE WAS FOLLOWED BEHIND THIS FRESH READ, the flight controller answered whole - never with what was sent - and
+      // the read's window is over: the write did not land (lost on its way, refused). Every one of those sets was "not a set", so the page
+      // stood not whole, every edit refused, and "only PART came back" was said over blocks that had come whole. The page's own read once
+      // more, plain: what the flight controller holds is shown, whole - the truth. (Once: the note is taken away here.)
+        VfAfresh = VK_NONE;
+        if (VfKind == kind && VfExpired())
+            VfKind = VK_NONE;               // (e99f: e99e's own tests) only when the save has had its time: younger, it is followed through this ask too -
+                                            // a write that lands 3-4 s after the save found the plain ask's old block "whole" and the bank switch free
+        if (!BlockShown && CurrentView == VfView(kind) && VfAskFn)
+        {
+            VfAskFn();
+            if (VfReading(kind))
+                return true;
+        }
+        return false;
+    }
     if (VfKind != kind || !VfStillThisRead())
         return false;
     const uint8_t k = VfKind, n = VfCount(k);

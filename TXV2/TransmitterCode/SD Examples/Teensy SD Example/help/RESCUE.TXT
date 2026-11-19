@@ -21,7 +21,9 @@ reads them back, so the page shows what it now holds.|
 BANKS:|
 The values are those of the bank shown at the top left.|
 Move the bank switch and the page reads that bank. Save|
-first: changes not saved are lost (a message says so).||
+first: changes not saved are lost (a message says so).|
+While a save runs, the bank switch waits: the save goes|
+into the bank the page shows.||
 BEFORE YOU RELY ON IT:|
 Rescue also needs a switch: set one with 'Switches & knobs ...'|
 on the 'Rotorflight' page (Rescue - the safety net).|

@@ -21,6 +21,7 @@ def lift(head):
 
 PRE = r'''
 #define RFGOVERNORVIEW_GLOBAL 60
+#define KEPT_BANKS_ON_CARD 4
 static int CurrentView = 60;
 #include <cstdio>
 #include <cstring>
@@ -29,6 +30,19 @@ static int CurrentView = 60;
 #include <map>
 #include <vector>
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 #define GOV_CONFIG_PAYLOAD_SIZE 42
 #define GOV_ACK_PAYLOAD_SIZE 59
 #define SEND_GOV_WRITE_CONFIG1 31
@@ -44,7 +58,7 @@ static uint32_t GetValue(char *n) { return values.count(n) ? (uint32_t) values[n
 static bool bigScreen = false; static bool ScreenIsBig() { return bigScreen; }   // B195: start-up + the filters on a 16 MB screen only
 static bool UndoPreBusy() { return false; } static void UndoPreSave(uint8_t, int, void (*then)(), const char *) { then(); }   // (B196: a 4 MB screen's path: the words at once)
 static bool NextionTextMissed = false;   // (B156: a box the screen never answered - here every box answers; dev/test_missed_reply has the misses)
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static bool AllGlobalConfigBytesReceived() { return true; }   // (B156: the whole set is in, here)
 static bool RfFieldsMissed(const char *) { const bool m = NextionTextMissed; NextionTextMissed = false; return m; }
 static void SendValue(char *n, int v) { values[n] = v; }

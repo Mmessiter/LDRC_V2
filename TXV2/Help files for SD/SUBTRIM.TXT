@@ -4,8 +4,15 @@ Subtrim sets the exact centre of each servo for this model.||
 The servo moves as you go.|
 'Zero' puts the chosen channel back to 0.|
 'OK' keeps the changes and goes back to 'Model setup'.||
+If 'OK' only sounds and the page stays: the page has|
+just put a number right. Look at the numbers, then|
+press 'OK' again.||
 Subtrim is the same in every bank.||
 Very large subtrims should not be needed. If one is,|
-change the linkage so that a small amount is enough.||
+change the linkage so that a small amount is enough.|
+The most is 117 either way.||
+If the title says 'run Check for update first', the screen's|
+files are older than the transmitter's program: nothing is|
+changed here until 'Check for update' has brought them.||
 Subtrim always uses a multiplier of 5.|
 So changing the 'Trim multiplier' does not change any subtrim.|

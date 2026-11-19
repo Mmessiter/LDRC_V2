@@ -28,7 +28,7 @@
 // B140: this engine's rows are shown on the one page of RF_Jobs.h (Switches and knobs), after the switch jobs of
 // RF_Switches.h; the page keeps the head and the title, opens, saves and closes; AdjustPoll runs the MSP state machine
 // and JobsPoll sequences it with the switches' and ticks the live marker.
-static void JobsTitle(); static void JobsHead(); static void JobsShow();
+static void JobsTitle(); static void JobsHead(); static void JobsShow(); static void JobsBarOwn();
 static bool AdjMissing = false;   // the adjustments could not be read (no USB cable: Rotorflight will not send them over the receiver's lead) - the page shows the switch jobs only
 
 static const int ADJ_MAX = 42;
@@ -413,6 +413,12 @@ FLASHMEM static int AdjFnScale(uint8_t fn) { return (fn >= 8 && fn <= 10) ? AdjS
 // ---------------------------------------------------------------- the page
 DMAMEM static AdjRow AdjRows[ADJ_MAX];   // what the pilot sees and edits, values in page units (the Rate settings x5)
 static int AdjN = 0, AdjAt = 0;
+// B211 (the tenth review, 15 Nov 2026; released code had the fault): THE ROW WHOSE BOXES ARE ON THE SCREEN (-1: none - a switch job
+// shows, or nothing yet). The page gathered "the row at the cursor" whatever job was showing. With a switch job on the screen the
+// keypad's boxes had not been written for that row on this visit - they held the card's "0", or the last knob shown on an earlier
+// visit (another model's) - and the row took them: a knob read from the flight controller as 60 to 120 became 15 to 25, the page
+// not marked edited, and the next Save (of anything) wrote it. Only a row that IS on the screen is gathered (AdjShow, AdjGather).
+static int AdjShownAt = -1;
 DMAMEM static AdjLine AdjWritten[ADJ_MAX]; // the lines of the last save, to read back against
 DMAMEM static AdjLine AdjAsRead[ADJ_MAX];  // the lines as the flight controller had them: a save writes only the lines that differ (each write holds the receiver up for most of a second)
 static bool AdjHave = false, Adj_Was_Edited = false;
@@ -738,6 +744,7 @@ FLASHMEM static void AdjShow()
 {
     AdjBankRegions(AdjRows, AdjN, AdjBk);   // (the bank line may just have been edited)
     if (!AdjN) { JobsShow(); return; }      // (B140: no adjustments left - the page shows what there is)
+    AdjShownAt = AdjAt;                     // (B211: this row's boxes are on the screen from here)
     AdjTitle();
     const AdjRow &r = AdjRows[AdjAt];
     char b[48];
@@ -777,6 +784,7 @@ FLASHMEM static void AdjShow()
         AdjNum("ts0", r.stp); AdjNum("ts1", r.v[0]); AdjNum("ts2", r.v[1]);
     }
     AdjText("bar", labels);
+    JobsBarOwn();   // (B211: the bar is this board's from here - RF_Jobs.h)
     // the hint under the bar, for the kind (B83)
     if (bankRow) AdjText("hint", AdjBankFitted[AdjAt] ? "Every bank of this transmitter has its own zone: nothing to drag." : "No travel gives every bank its own zone: tap the kind box for why.");
     else if (r.kind == AK_SWITCH) AdjText("hint", "Tap the first or last zone to type its value. Drag the round ends.");
@@ -793,6 +801,7 @@ FLASHMEM void AdjustBarMoved()
 {
     if (!AdjN || AdjStep_ != ADJ_IDLE) return;
     AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     AdjRow &r = AdjRows[AdjAt];
     const int tap = GetOtherValue((char *)"bar.tap");
     if (tap >= ADJ_RMIN && tap <= ADJ_RMAX)
@@ -812,6 +821,7 @@ FLASHMEM void AdjustBarMoved()
     }
     int d[2];
     for (int k = 0; k < 2; ++k) { char n[10]; snprintf(n, sizeof(n), "bar.d%d", k); const int v = GetOtherValue((char *)n); d[k] = (v >= ADJ_RMIN && v <= ADJ_RMAX) ? v : -1; }
+    if (WorkLostABox()) return; // B211 (the eleventh review): a divider with no answer - neither is taken (RF_Jobs.h JobsBarMoved draws the bar again as it is in hand)
     AdjBanks before; AdjBankRegions(AdjRows, AdjN, before);
     bool changed = false;
     for (int k = 0; k < 2; ++k)
@@ -827,8 +837,9 @@ FLASHMEM void AdjustBarMoved()
 }
 FLASHMEM static void AdjGather() // the typed values of the row showing
 {
-    if (!AdjN || CurrentView != ADJUSTVIEW) return;
+    if (!AdjN || CurrentView != ADJUSTVIEW || AdjShownAt != AdjAt) return;   // (B211, the tenth review: only the row that IS on the screen - AdjShownAt, above)
     AdjRow &r = AdjRows[AdjAt];
+    KEEP_WHOLE(row, r); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     if (r.kind == AK_KNOB) { r.v[0] = FieldNumber("tk0", 0, 65535); r.v[1] = FieldNumber("tk1", 0, 65535); }
     else if (r.kind == AK_SWITCH)
     { // the first and last positions as typed, the rest evenly between
@@ -988,7 +999,7 @@ FLASHMEM void AdjustPoll()
         if (!PipeReplyLate()) return;
         if (AdjStep_ == ADJ_NOW_STATUS || AdjStep_ == ADJ_NOW_READ) { AdjStep_ = ADJ_IDLE; return; }   // (the present value: a nicety, not a failure)
         if (AdjStep_ == ADJ_READ || AdjStep_ == ADJ_READ_RATES) { AdjStep_ = ADJ_IDLE; AdjHave = false; AdjMissing = true; AdjBusy(""); return; }   // (B140: the switch jobs stand; the page says so)
-        AdjFail("No answer", false);
+        AdjFail(RfNoAnswerWords(AdjStep_ == ADJ_WRITE || AdjStep_ == ADJ_STORE), false);
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -1018,14 +1029,14 @@ FLASHMEM void AdjustPoll()
     }
     case ADJ_WRITE:
         if (again) { ++AdjTries; AdjWriteLine(); return; }
-        if (!ok) { char w[40]; snprintf(w, sizeof(w), "Line %d was not written", AdjLineAt + 1); AdjFail(w, false); return; }
+        if (!ok) { char w[110]; snprintf(w, sizeof(w), AdjLineAt > 0 ? "Line %d was not written - THE LINES BEFORE IT ARE, not stored: try again, or switch the model off and on" : "Line %d was not written", AdjLineAt + 1); AdjFail(w, false); return; }   // (the seventeenth review: what stands in the flight controller)
         AdjTries = 0;
         ++AdjLineAt;
         AdjWriteLine();   // (the next line that differs, or the store)
         return;
     case ADJ_STORE:
         if (again) { ++AdjTries; AdjReq = MspAsk(250, nullptr, 0); return; }
-        if (!ok) { AdjFail("Not stored", false); return; }
+        if (!ok) { AdjFail("Written, but NOT STORED - try again, or switch the model off and on", false); return; }
         AdjTries = 0;
         AdjReq = MspAsk(52, nullptr, 0); AdjStep_ = ADJ_VERIFY;
         return;
@@ -1089,7 +1100,7 @@ FLASHMEM void AdjustPoll()
 FLASHMEM static void AdjReset() // B140: the page opens (StartJobsView): nothing read yet
 {
     AdjModelRevert();   // (B141: a channel spaced on a visit the page did not leave by OK: back as the card has it)
-    Adj_Was_Edited = false; AdjHave = false; AdjMissing = false; AdjN = 0; AdjAt = 0; AdjNowKnown = false; AdjNowRow = -1; AdjStep_ = ADJ_IDLE;
+    Adj_Was_Edited = false; AdjHave = false; AdjMissing = false; AdjN = 0; AdjAt = 0; AdjShownAt = -1; AdjNowKnown = false; AdjNowRow = -1; AdjStep_ = ADJ_IDLE;
     AdjSeenClear(); memset(AdjBankFitted, 0, sizeof(AdjBankFitted)); memset(AdjSpacedOnce, 0, sizeof(AdjSpacedOnce)); AdjBankWhy[0] = 0; AdjTakeNote[0] = 0; AdjMemoN = 0;
 }
 void SaveAdjustments();
@@ -1125,6 +1136,7 @@ FLASHMEM static void AdjChannel(int dir)
 {
     if (!AdjN) return;
     AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     int ch = AdjRows[AdjAt].ch + dir;            // AUX1..AUX11 = channels 6..16 on this transmitter
     if (ch < 0) ch = CHANNELSUSED - 6;
     if (ch > CHANNELSUSED - 6) ch = 0;
@@ -1139,6 +1151,7 @@ FLASHMEM void AdjustKindTapped() // Knob -> Switch 2 -> Switch 3 -> Switch 4 -> 
 {
     if (!AdjN) return;
     AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     AdjRow &r = AdjRows[AdjAt];
     if (r.fn == 1 || r.fn == 2)
     { // a bank switch: matched to this transmitter's banks again (B133: the channel spaced if it has to be - said); what could not be matched is said
@@ -1167,6 +1180,7 @@ FLASHMEM void AdjustBankTapped() // Any -> 1 -> 2 ... -> Any, among the banks th
 {
     if (!AdjN) return;
     AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     AdjRow &r = AdjRows[AdjAt];
     if (!AdjBk.have)
     {
@@ -1191,6 +1205,7 @@ FLASHMEM static bool AdjAddWith(uint8_t fn, int chAux)
 {
     if (!AdjHave || fn < 1 || fn >= ADJ_NAMES) return false;
     AdjGather();
+    if (WorkLostABox()) return false; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     if (AdjN >= ADJ_MAX || AdjLinesUsed(-1) >= ADJ_MAX) { MsgBox((char *)"page AdjustView", (char *)"No room: Rotorflight holds 42 adjustments."); JobsHead(); JobsShow(); return false; }
     const int at = AdjN ? AdjAt + 1 : 0;
     for (int i = AdjN; i > at; --i) { AdjRows[i] = AdjRows[i - 1]; AdjBankFitted[i] = AdjBankFitted[i - 1]; AdjSpacedOnce[i] = AdjSpacedOnce[i - 1]; }
@@ -1215,6 +1230,7 @@ FLASHMEM void AdjustRemove()
 {
     if (!AdjN) return;
     AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     if (!GetConfirmation((char *)"page AdjustView", (char *)"Remove this adjustment?")) { AdjHead(); AdjShow(); return; }
     AdjDropAt(AdjAt);   // (B140: the page shows what is left - JobsRemove)
 }

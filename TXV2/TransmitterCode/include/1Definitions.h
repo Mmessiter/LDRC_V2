@@ -28,7 +28,7 @@
 #define TXVERSION_MAJOR 2                  // first three *must* match RX but _EXTRA can be different
 #define TXVERSION_MINOR 5
 #define TXVERSION_MINIMUS 6
-#define TXVERSION_EXTRA "B210 11/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
+#define TXVERSION_EXTRA "B211 19/11/26" // V1B (the 5-inch screen): B1 = the first build that can be updated through the screen
 
 // *************************************************************************************
 //          DEBUG OPTIONS (Uncomment any of these for that bit of debug info)          *
@@ -69,6 +69,7 @@
 #define BANKSWITCH 4                          // Default BANK switch
 #define AUTOSWITCH 1                          // Default AUTO switch
 #define BANKS_USED 6                          // Flight modes (AKA Banks): B130 - six (banks 5 and 6 only when the model's 'Six banks' is on)
+#define KEPT_BANKS_ON_CARD 4 // B211: the model's record holds the kept Rotorflight copies (PIDs, rates ... the governor's profile) for banks 1 to 4 only - RF_Kept.h, SDcard.h
 #define BANKS_IN_FILE 4                       // B130: the banks the record's checked sequence holds (NEVER widen: the file's layout and the fingerprint); 5 and 6 are in the model's banks block
 #define BANK_NAMES_N 38                       // B130: BankNames / BankSounds (32 of old + 'Flight mode 5' .. 'Profile 6')
 #define LOWBATTERY 42                         // Default percent for warning (User definable)
@@ -910,6 +911,24 @@ FLASHMEM bool ScreenDyingWords(const char *t);                        // B198: L
 void Close_TX_Down();
 FLASHMEM void SendWhoWord();                                          // B199: LinkMode.h - who this board is, in a word, for the screen's quiet look at power-up (no file link)
 void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n); // B177: LogFiles.h - a frame of the screen's that was not obeyed
+void NoteStalePress(const uint8_t *f, uint16_t n);                   // B211: LogFiles.h - a press (a code, or a page button's word) not obeyed: its page had gone (Nextion.h)
+void NoteNoScreenMark();                                              // B211: LogFiles.h - a page command's marker never came
+void NoteTextDoubted(const char *cmd);                                // B211: LogFiles.h - a text answer that came behind a word with no end was not believed (Nextion.h)
+void NotePageChangedUnderGet(const char *cmd);                        // B211: LogFiles.h - a page command went out while a box's answer was awaited
+void NoteBoxOffPage(const char *cmd, bool unsaid);                    // B211: LogFiles.h - the screen was showing another page when it answered for a box (unsaid: it did not say which)
+void NoteBoxesLost();                                                 // B211: LogFiles.h - a button's work asked for a box that had no answer: said (a sound, a line)
+void NoteQuestionClosed(uint8_t why);                                 // B211: LogFiles.h - a question box closed as "No": another page was put up over it (0), the screen had started again (1), the screen had stopped answering (2)
+extern bool QuestionClosedItself, QuestionOvertaken;                  // B211: Utilities.h - the last question was closed by this board, not answered; ... by another page put up over it
+extern bool ScreenSaysPage;                                           // B211: Nextion.h - this screen answers "sendme" (every V2 screen does)
+extern uint16_t ScreenPageSaidCount;                                  // B211: Nextion.h - the "sendme" answers read so far
+void ScreenAskPage();                                                 // B211: Nextion.h - "sendme", and nothing waits for the answer
+void ScreenOwesAnswer();                                              // B211: Nextion.h - an answer of the screen's did not come in its time: nothing is asked until it has caught up
+void ScreenOwedStep();                                                // B211: Nextion.h - ... and has it caught up? (pass after pass; it never waits)
+extern bool ScreenRestartSeen;                                        // B211: Nextion.h - the screen has started again and this board has not yet drawn its page afresh
+extern bool ScreenAnswerOwed;                                         // B211: Nextion.h - an answer of the screen's never came in its time: nothing is asked until it has caught up
+extern uint16_t ScreenMarkCount;                                      // B211: Nextion.h - the count in the last page command's markers: a page command has gone when it has changed
+extern bool InsideDelayWithDog;                                       // B211: Utilities.h - DelayWithDog is flying the model: what runs now runs INSIDE a wait of some button's work
+void ScreenHasRestarted();                                            // B211: main.cpp - the front page, afresh, after the screen's own restart
 void LogSoundsLine(const char *what);                               // B177: LogFiles.h - what the Sounds page's OK did
 void LogLinkRefused(const char *why);                               // B179: LogFiles.h - a knock for the file link answered with the link kept shut
 bool LinkPageAllows();                                              // B179: FlightGuard.h - the pilot is on the front page or Transmitter setup: the link may open
@@ -969,7 +988,7 @@ void BenchAxisTapped();                      // B98: Roll <-> Pitch
 void BenchWasEdited();                       // B98: the angle or the gauge's reading tapped (the keypad follows)
 void BenchHoldTapped();                      // B98: Hold swash / Release
 void BenchSuggestTapped();                   // B98: the suggested calibration, worked out and put in the box
-void RFSettingsGather();                     // B99: the Rotorflight settings page's fields read back and the model saved (its OK, and the way to Model basics)
+bool RFSettingsGather();                     // B99: the Rotorflight settings page's fields read back and the model saved (its OK, and the way to Model basics); false: a box had no answer, nothing taken
 void StartBasicsView();                      // B99: Model basics (RF_Basics.h), from the settings page
 void EndBasicsView();
 void SaveBasics();
@@ -1016,6 +1035,10 @@ void EasyCyclicMoved();
 void EasyTailMoved();
 void EasySpoolTapped();
 void EasyBankChanged();                       // B104: the bank or the rates bank changed on the Easy tuning page
+bool RfHomeNotRead = false;                   // B211: RF_SaveNow.h RfLeaveNotRead - the page going back to the guide could not be read: its step is not ticked (RF_Tools.h)
+bool RfPageJobRuns();                         // B211: main.cpp - the Rotorflight page showing is reading or saving: Help and the screen saver wait
+bool RfPageWatchRuns();                       // B211 (the nineteenth review): main.cpp - ... or is WATCHING a job of the flight controller's own (an erase): the screen saver waits, Help does not
+bool RescueHoldsBanks();                      // B211: RF_Rescue.h - the Rescue page's save runs: the bank switch held (Switches.h)
 bool EasyHoldsBanks();                        // B104: its banks are being read, written or walked: the bank switch held
 void StartFilterView();
 void EndFilterView();
@@ -1121,7 +1144,7 @@ void ArmingWhy();
 void StartModelSetup();
 bool GetConfirmation(char *goback, char *Prompt);
 void GotoModelsView();
-void SaveCurrentModel();
+void GotoModelsViewAsked(); // B211: the screen's Models button - refused while the model may fly (MenuOptions.h)
 bool CheckModelName();
 int AnalogueReed(uint8_t InputChannel);
 void DelayWithDog(uint32_t HowLong);
@@ -1199,6 +1222,17 @@ bool MayBeAddZero(uint8_t nn);
 void SendText1(char *tbox, char *NewWord);
 void ForceDataRedisplay();
 void TrimsToSubtrim();
+#define SUBTRIM_WORD_BYTES 22 // B211: the Sub-trim page's word of a touch - "StEDIT", the channel, the number as it stood, what the touch made of it, and that again
+#define SUBTRIM_DONE_BYTES 14 //        ... and its "done": "StEDIT" and the number of this board's click of the page's part "rs", twice (Nextion.h knows it for no press)
+void SubTrimWord(const uint8_t *w, uint16_t n, bool framed); // B211: Trims.h - the Sub-trim page's "StEDIT" has been served: its burst, its bytes, how it came
+void SubTrimPoll();                                          //        ... the main loop: a word of the page's was not kept for want of room - the page written out again
+void BankListenPoll();                       // B211: main.cpp - "Listen" on the Bank names page, from the main loop
+void SubTrimPageOut(bool fresh = true);      //        ... main.cpp UpdateButtonLabels: the page as the model has it - the sixteen boxes, then the page's own part "rs" clicked (its slider).
+                                             //        fresh: the page was put up, or ANOTHER MODEL read under it - nothing is taken from it until it has said this writing-out done
+void SubTrimPageBack();                      //        ... this board has put the page up again without its Start (Help's way back, the screen saver's)
+void SubTrimWordLetGo(const uint8_t *f, uint16_t n, bool framed); // B211: Trims.h - a frame this board lets go unserved (Nextion.h): a touch of the Sub-trim page's owes that page its writing-out
+bool TextMustBeNumber(const char *box, char *text);                  // B211: Nextion.h - A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER
+static bool BoxesHaveNoPage();                                       // B211: Nextion.h - the screen cannot be asked (it owes an answer, it has started again, a question waits ...)
 void LogBuddyChange();
 void SetUpTargetForBuddy();
 FASTRUN uint16_t ReadThreePositionSwitch(uint8_t l); // This returns the input only
@@ -1210,12 +1244,11 @@ void CheckDualRatesValues();
 void ReadDualRatesValues();
 void DisplayDualRateValues();
 void PopulateMacrosView();
-void LoadModelForRenaming();
 bool GetBackupFilename(char *goback, char *tt1, char *MMname, char *heading, char *pprompt);
 void FixFileName();
 bool WriteBackup(); // B21: true when the file was written
-void RestoreCurrentModel();
-void GetYesOrNo();
+void ShowFileErrorMsg(); // (main.cpp: the page's "file error" sign flashed three times)
+void GetYesOrNo(uint16_t asked = 0);
 uint16_t GetText(char *TextBoxName, char *TheText, uint16_t maxlen);  // ClaudeFix-2-7-2026
 void StoreModelID();
 void ResetMotorTimer();
@@ -1230,7 +1263,8 @@ void ClearFilesList();
 FASTRUN void LogModelMatched();
 FASTRUN void LogModelFound();
 FASTRUN void LogModelNotFound();
-void LogFrontPageReason(const char *why); // B172: the front page came up by itself - which way, and the page it left (LogFiles.h)
+void LogFrontPageReason(const char *why, const char *brief, const char *more = nullptr); // B172: the front page came up by itself - which way, and the page it left (LogFiles.h; brief: 17 letters for the kept line)
+FLASHMEM void KeepScreenNote(const char *line, bool reason);                              // B211: LogFiles.h - a line about the screen kept for a quiet moment, within its budget
 void LogRestartCause();                   // B172: this board restarted by the watchdog or a fault - said at the next start (FlightGuard.h)
 void SendHelp();
 bool HelpNameFrom(char *name);        // B160: Nextion.h - the help text's name after the Help button's word, completed if the word was cut
@@ -1290,9 +1324,27 @@ void SafetyOffAtConnect();
 void SafetyOffWarningTick();
 extern bool SafetyHold; // B194: a Rotorflight model with its safety off is not connected (SendData sends nothing)
 void SafetyHoldUpdate();
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY (ElrsCrsf.h has it all; these are the names the other files use, each inside its own #ifdef ELRS_TEST)
+bool ElrsModel = false; // this model's receiver is an ExpressLRS one, flown through the module (Model options; kept in the model's record: SDcard.h)
+#define ELRS_MODEL_FLAG 2 // ... as bit 1 of its six-banks header's flags byte (bit 0 is "six banks")
+bool ElrsCarries();     // the module is this model's link just now, and LDRC's radio says nothing
+bool ElrsFlies();       // ... and a wait may fly the model through it (not before setup() is over)
+void ElrsSetupOver();   // setup()'s last line
+void ElrsPowerEarly();  // setup(), once the model in memory is known: the module's power for a model set to ELRS
+bool ElrsModuleCarries(); // the ELRS module has said the switch mode that carries channel 5 (for the stamp of a model that is flying, FlightGuard.h)
+extern bool FlightRestartElrsCarried; // FlightGuard.h: this start is a restart in flight, and the stamp says so
+bool ElrsLink();        // SendData's part for such a model (true: the module has the link)
+uint16_t ElrsQuality(); // the front page's quality bar for it: the module's own figure
+void ElrsOptionShow();  // Model options: its switch shown and set ...
+void ElrsOptionSet(uint32_t v);  // ... and taken (its box's answer)
+#define ELRSVIEW 90     // the page "ELRS settings" (the module's own settings: ElrsCrsf.h) ...
+#define ELRSPICKVIEW 91 // ... and its picker of one setting's choices
+void StartElrsView(); void EndElrsView(); void ElrsRow0Tapped(); void ElrsRow1Tapped(); void ElrsRow2Tapped(); void ElrsRow3Tapped(); void ElrsPickOk(); void ElrsPickCancel();   // codes 261-268
+#endif
 bool ReceiverUpdateBusy(); // RxUpdate.h
 void NoteConnectionLost();
 bool RadiosMustBeOff();                       // FlightGuard.h: safety off (or, with no safety, motor on)
+bool LogMustWait();                           // B211: FlightGuard.h - ... or, with no safety switch, a model connected: a line for the log is kept for a quiet moment
 bool ModelSeemsArmed(char *why, size_t n);    // B45: Parameters.h - the Rotorflight pages' refusal, with its reason
 void ShowPipeState();                         // B42: "By Bluetooth" / "By radio link" on the Rotorflight menu
 FASTRUN void LogAverageGap();
@@ -1315,6 +1367,7 @@ void StartPIDView();
 void ShowPIDBank();
 void Display2PIDValues(uint8_t i);
 void HidePIDMsg();
+void ShowRatesLocalBank(); // B211: RF_Rates.h - the page as the kept copy has it (its keep routine, above it in the file, puts the page back so when it refuses)
 void HideRATESMsg();
 void SendColour(char *but, int Colour);
 void SendEditedPIDs();
@@ -1372,13 +1425,16 @@ void StartPIDAdvancedView();
 void SendForegroundColour(const char *label, uint16_t colour);
 // B153: a save read back and compared with what was sent (RF_Verify.h)
 enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV, VK_GOV_CFG };   // (B165: VK_GOV_CFG = the governor's global page, bytes 18-41)
+#define RF_SAVE_HOLD_FLOOR_MS 1500 // B211 (e101): the bank switch is held this long behind every bank page's save that is read back, whatever came back (the trigger word lands 0.3-0.75 s after Save)
 #define RF_VERIFY_WAIT_MS 4000 // the read-back's window: the receiver writes first (its read, write, check, save), then answers
 #define RF_VERIFY_GOVCFG_WAIT_MS 8000 // B165: the governor's global settings - the receiver writes, saves and RESTARTS the flight controller, then answers from its verified copy
 void ShowGOVConfigMsg(const char *msg, uint16_t Colour);
 void HideGOVConfigMsgQuiet();
 void GovCfgAskValues();
 bool RfVerifyArm(uint8_t kind, void (*ask)());
-bool RfVerifyPending();
+bool RfVerifyPending();    // a read-back whose read is open (B211, e99e: asked every 50 ms - a save left behind that has had its time is let go there)
+bool RfSaveHoldsBank();    // B211 (e101): a bank page's save holds the bank switch itself (Switches.h): 1.5 s always, then until what was sent has come back, 4 s at most
+bool RfVerifyFollows();    // B211 (e99e): ... and it is a bank page's: the motor switch does not stop that read (Motor_sign.h)
 int RfVerifySet();
 bool RfVerifyEnd(uint8_t kind);
 void RfVerifyTick();
@@ -1443,7 +1499,7 @@ uint32_t GetBuildDaysSince2020();
 void ShowSafetyIsOn();
 void ShowSafetyIsOff();
 FASTRUN void DisplayCurveAndServoPos();
-void ReadSpeedsScreen(uint8_t bk, bool FromPage = false); // B37: FromPage = the list of edited boxes is fetched from the page (a bank switch before OK)
+bool ReadSpeedsScreen(uint8_t bk, bool FromPage = false); // B37: FromPage = the list of edited boxes is fetched from the page (a bank switch before OK). B211: false - a box had no answer, nothing taken
 void ShowRatesAdvancedBank();
 void ShowPIDAdvancedBank();
 void LinkRatesToBanksChanged();
@@ -1680,7 +1736,6 @@ uint32_t PausedSecs = 0;
 uint32_t Mins = 0;
 uint32_t Hours = 0;
 uint32_t ModelNumber = 1;
-uint32_t SavedModelNumber = 1;
 uint32_t PreviousModelNumber = 1;
 uint8_t ModelDefined = 0;
 uint16_t MemoryForTransmtter = 0;                                                                          // SD space for transmitter
@@ -1955,6 +2010,19 @@ union uMacStored
 } ModelsMacUnionSaved;
 bool MotorEnabled = false;
 bool SendNoData = false;
+// B211 (the eleventh review, 15 Nov 2026; released code had it): THE MODEL IN THIS BOARD'S MEMORY IS NOT THE PILOT'S JUST NOW - one is being read from
+// the card (SDcard.h ReadOneModel holds this for as long as it reads). A wait that flies the model (Utilities.h DelayWithDog: the sticks read, the
+// channels worked out from the model in memory, a packet sent) flies nothing while this is set: ReadOneModel itself waits when the models file is
+// not open - 100 ms behind each opening (SDFiles.h OpenModelsFile), and 300 ms between the two tries when the first one failed: half a second at
+// most - with the model before it still in memory (another slot's, where a list of all the models is being made), its mixes already set aside.
+// The receiver holds what it had for that time. Counted, not set: a hold inside a hold ends with the outer one.
+// (The twelfth review: and THE POWER BUTTON IS NOT LOOKED AT while this is set - its first press saves "the model": main.cpp CheckPowerOffButton.)
+uint8_t ModelMemoryBusy = 0;
+struct ModelMemoryHold
+{
+    ModelMemoryHold() { ++ModelMemoryBusy; }
+    ~ModelMemoryHold() { --ModelMemoryBusy; }
+};
 bool ReceiverUpdateQuiet = false; // V1B: the transmitter is silent on purpose while the receiver updates itself (RxUpdate.h)
 uint8_t RxUpdWantMaj = 0, RxUpdWantMin = 0; // V1B: the receiver release ordered (parameter 35, RxUpdate.h)
 uint16_t RxUpdWantMinimus = 0;
@@ -2070,7 +2138,8 @@ uint32_t FrameRateCounter = 0;
 char TextFileName[40];
 char MOD[10];
 char Mfiles[10];
-int LastTrim[5][17];
+int LastTrim[BANKS_USED + 1][CHANNELSUSED + 1]; // (B211, the thirteenth review: it was [5][17], from the days of four banks - and is indexed by the bank. In bank 5 or 6
+                                                //  UpdateTrimView and BankHasChanged wrote past its end: over the moment the link came up, and into the screen's receive buffer)
 char RXOptionsView[] = "page RXOptionsView";
 char pFhssView[] = "page FhssView";
 char pDataView[] = "page DataView";
@@ -2187,6 +2256,7 @@ void (*RfLeaveFn)() = nullptr;
 bool GetSaveOrDiscard(char *goback, char *Prompt);
 void RfSavedThenLeave(int view);
 bool RfSaveFirst(const char *page, const char *what, void (*save)(), void (*leave)(), bool *edited);
+bool RfLeaveNotRead(char *msg); // B211: RF_SaveNow.h - a page whose READ failed is left (its box first)
 void BankCheck(bool rates, int want, void (*then)(), const char *page); // B102: PipeHttp.h
 uint8_t BackGroundSelection = 1;
 char SearchFile[80]; // used for searching files on SD card after adding path to filename
@@ -2278,14 +2348,32 @@ bool Reading_RATES_Now = false;
 bool Reading_RATES_Advanced_Now = false;
 bool Reading_GOV_Now = false;
 bool Reading_GOV_Config_Now = false;
+// B211 (the eighteenth and nineteenth reviews): A PAGE'S READ IS OVER WHEN ANOTHER PAGE'S READ BEGINS. Each of the six pages keeps its flag up for
+// its whole window (2.5 s; Governor global 4 s) so that a second telling of its block still lands, and transceiver.h BlockItemSeen gives a set to
+// the FIRST flag in its chain (PIDs, PID +, Governor global, Governor, then Rates and Dynamics): a flag left up took the NEXT page's set -
+// Governor global, OK, Rates inside four seconds: the Rates numbers came, right, and every edit was refused, for good on that visit (and so the
+// Governor page behind Governor global, in the released firmware). EACH PAGE, AS IT ASKS FOR ITS OWN BLOCK, PUTS THE OTHERS' FLAGS DOWN - there,
+// and nowhere else: the bank switch's block that a read holds (BlockBankChanges) is freed by the END of a flag that is UP (its set come, its
+// window over: the page's Hide routine), so a flag may only be put down where another read takes the block over. (The nineteenth review: put
+// down at the MENU, nothing freed the block - the bank switch dead for five seconds and more.)
+inline void RfOtherReadsOver() { Reading_PIDS_Now = Reading_PIDS_Advanced_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false; }
 bool PIDS_Loaded = false;    // B40: the PIDs page's set came whole (or the model file's copy shows): edits may be saved
 bool GOV_Loaded = false;     // B41: the same for the Governor (bank) page
+bool RATES_Loaded = false, RATES_ADV_Loaded = false, PIDS_ADV_Loaded = false; // B211 (released code had it): the same for the Rates, Advanced rates and Advanced PIDs
+                             // pages. They had no such rule: a read that ended with nothing, or a part, left Save open on the numbers of the set BEFORE - another
+                             // rate's, another bank's - under the new one's name; one edit and Save sent those into the flight controller.
 bool RfValueWasCut = false;  // B07: a typed Rotorflight value was too big for its byte and was cut (RF_Rates.h RfByteOf)
 char NextionMissedBox[12] = {0};   // B187: the first box a save gathering found unanswered
+bool NextionMissedNoNumber = false; // B211: ... and it DID answer - with a text that is no number (Nextion.h TextMustBeNumber): what is said of it says so
 bool NextionSettledOk = false;     // B187: RfGatherStart heard the screen answer "sendme"
 bool NextionTextMissed = false;     // B152: a GetText the screen never answered - a page gathering its boxes for a save must stop (RfFieldsMissed)
+uint32_t BoxesLost = 0;             // B211: the page boxes asked for that had NO ANSWER - counted, never cleared (Nextion.h, NO ANSWER IS NOT A NUMBER)
+uint32_t BoxesLostAtWork = 0;       // ... and that count as the button's work now in hand began (Utilities.h CheckForNextionButtonPress; Nextion.h WorkLostABox)
+extern uint8_t ModalWaits;          // (Utilities.h: the questions that wait for an answer)
+char BoxLostName[24] = {0};         // ... and the last of them
+bool BoxLostNoNumber = false;       // ... which answered with a text that is no number (Nextion.h TextMustBeNumber; LogFiles.h NoteBoxesLost says so)
 uint32_t NextionReplyWaitMs = 100;  // B152: how long CollectReply waits for the screen - 400 ms round a get (GetText, getvalue), 100 otherwise
-bool HelpTookRead = false;   // B19: Help was tapped while a Rotorflight page was still reading: read again on return
+bool HelpTookRead = false;   // B19: Help was tapped while a Rotorflight page was still reading - or (B211, e101b) while a bank page's save held the bank switch: read again on return
 uint16_t BlockSeen = 0;   // B79: the items of the block being read that have come (transceiver.h BlockItemSeen); cleared when a block is asked for
 bool BlockShown = false;  // B81: the set came whole and the Loading message went (once per ask)
 uint32_t FcBankAskAt = 0, FcBankAskAt2 = 0;   // B82: when to ask the flight controller which bank it is on (PipeHttp.h FcBankTick)

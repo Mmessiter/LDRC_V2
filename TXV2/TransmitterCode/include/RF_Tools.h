@@ -57,7 +57,7 @@ FLASHMEM bool RfHomeBack() // RotorFlightStart's first look: true = a page opene
     if (RfOpening) return true;   // (a page refusing as it opens: its opener puts itself back - RfOpenFrom - nothing ticked)
     if (!RfHomeN) return false;
     if (CurrentView == RXSETUPVIEW || CurrentView == FRONTVIEW || CurrentView == ROTORFLIGHTVIEW || CurrentView == TOOLSVIEW) { RfHomeN = 0; return false; }   // (a fresh way in: the menu)
-    RfShowHome(RfHome[--RfHomeN], true);
+    RfShowHome(RfHome[--RfHomeN], !RfHomeNotRead); // (the sixteenth review: a page that could not be READ did not "come back" - the guide ticked its step, and wrote the card)
     return true;
 }
 FLASHMEM void RfBackHome() // the tools' own pages' OK: where they were opened from (the guide, the check), else Guide & checks

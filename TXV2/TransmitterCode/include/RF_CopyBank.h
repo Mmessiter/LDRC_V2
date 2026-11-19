@@ -247,7 +247,7 @@ FLASHMEM void CopyBankPoll()
         CbAsk(250, nullptr, 0, CB_STORE);
         return;
     case CB_STORE:
-        if (!ok) { CbFail("Not stored"); return; }
+        if (!ok) { CbFail("Written, but NOT STORED"); /* (the seventeenth review: this box has closing words of its own - "... or part copied: check bank N" - which the longer words cut off) */ return; }
         CbBusy("Reading the target back ...");
         CbBad[0] = 0;
         CbSelect(CbTo, false, CB_V_SEL);

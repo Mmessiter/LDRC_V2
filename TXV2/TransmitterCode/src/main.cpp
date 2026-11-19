@@ -186,7 +186,7 @@
 #include "RF_Verify.h" // B153: a save read back from the flight controller (after the pages: their arrays and box names)
 #include "RF_Easy.h" // B104: Easy tuning, the phone app's sliders, over the pipe (after RF_Backup.h: the backup is the sliders' centre)
 #ifdef ELRS_TEST
-#include "ElrsCrsf.h" // TEST BUILDS ONLY (-DELRS_TEST, 11 Nov 2026): the channels also to an ExpressLRS module on pin 24 - the bench test
+#include "ElrsCrsf.h" // TEST BUILDS ONLY (-DELRS_TEST, 11 Nov 2026): an ExpressLRS module on pin 24 as the link of a model set to ELRS
 #endif
 #include "RF_Undo.h"      // B196: Undo the last save - what a save replaced, kept (sees MspAsk; after RF_Backup.h: its engine writes it back)
 #include "RF_Check.h"     // B196: Check my setup (16 MB screens)
@@ -245,7 +245,7 @@ void ClearMostParameters()
     }
 }
 // *********************************************************************************************************************************/
-void EnsureMotorIsOff()
+FLASHMEM void EnsureMotorIsOff() // (B211: in flash - nothing in here is in a hurry, and the fast memory has under a kilobyte left before its next 32 kB block)
 {
     if (!UseMotorKill)
         return;
@@ -255,22 +255,65 @@ void EnsureMotorIsOff()
         return; // (11 Nov 2026) a restart in flight: the motor switch is taken as it stands (FlightGuard.h)
     CheckMotorOff();
     CRUMB(CRUMB_MOTORWAIT);
+    bool boxed = false;
     while (MotorEnabled) // disconnected now so stay here until motor switch really is off!
     {
-        SendCommand(WarnNow);
-        SendText(Warning, err_MotorOn);
+        const uint32_t round = millis();
         SendNoData = true;
-        PlaySound(MOTORON);
-        Force_Early_Sound = true; // Force sound to play
-        DelayWithDog(1200);
-        Force_Early_Sound = true; // Force sound to play
-        PlaySound(PLSTURNOFF);
-        MsgBox(pFrontView, (char *)"The motor switch is ON.\r\nSwitch it off, then press OK.");
-        DelayWithDog(500); // allow time for sound to play and for pilot to react
+        if (ScreenRestartSeen)
+        { // B211 (the eighth review, 15 Nov 2026): THE SCREEN HAS STARTED AGAIN. It shows nothing of this board's, and a box put up
+          // now is closed at once (GetYesOrNo) - so this went round and round with nothing in it that waits (DelayWithDog does
+          // not, when this runs inside a wait that flies the model): the dog unfed until it bit, the screen sent a thousand
+          // commands a second. Now nothing is put up until the screen has caught up and its front page is drawn afresh - as the
+          // main loop does it, which this loop keeps away until the motor switch is off (ScreenCaughtUp never waits; what the
+          // screen says is read in for it here, and no press among it is obeyed while the restart is noted).
+            {   // (also when this runs INSIDE a get's wait: that get has no answer any more - the screen has started again - and
+                //  left unread, the screen's number never came back: Nextion.h GetButtonPress does the same for a question's loop)
+                const bool pending = NextionGetPending;
+                NextionGetPending = false;
+                StashPendingEventBytes();
+                NextionGetPending = pending;
+            }
+            CheckPowerOffButton(); // (the power button is looked at, as a question's own wait looks at it)
+            if (ScreenCaughtUp())
+            {
+                ScreenAnswerOwed = false;
+                ScreenHasRestarted();
+            }
+        }
+        else
+        {
+            SendCommand(WarnNow);
+            SendText(Warning, err_MotorOn);
+            PlaySound(MOTORON);
+            Force_Early_Sound = true; // Force sound to play
+            DelayWithDog(1200);
+            Force_Early_Sound = true; // Force sound to play
+            PlaySound(PLSTURNOFF);
+            MsgBox(pFrontView, (char *)"The motor switch is ON.\r\nSwitch it off, then press OK.");
+            boxed = true;
+            DelayWithDog(500); // allow time for sound to play and for pilot to react
+        }
+        while ((millis() - round) < 200)
+        { // B211: no round is shorter than a fifth of a second, whatever in it did not wait - and the dog is fed through it
+            KickTheDog();
+            delayMicroseconds(250);
+        }
         CheckMotorOff();
     }
     SendCommand(WarnOff);
     SendNoData = false;
+    if (boxed)
+    { // B211 (the ninth review, 15 Nov 2026; released code had it): THE BOX WENT BACK WITH A BARE "page FrontView", AND THIS BOARD
+      // WENT ON BELIEVING THE PAGE IT HAD BEEN ON. On the Models page that page's own look at its list was then answered by the
+      // front page - 0 - and MODEL 1 WAS LOADED BY ITSELF (the screen said "the front page", which was the last page command:
+      // the box's-page check passed); on the Dual-rates page all eight channels became 0. Now the front page is this board's
+      // page too, drawn as it should be (as the box about the build's age does, transceiver.h)
+        LogFrontPageReason("the box 'The motor switch is ON' is over", "motor box is over"); // (the tenth review: the log said "from page 254" - the page left, and why, were lost. The
+                                                                        //  eleventh: "was answered" was said of a box that had closed itself, too)
+        CurrentView = 254;
+        GotoFrontView();
+    }
 }
 /*********************************************************************************************************************************/
 
@@ -974,7 +1017,6 @@ void UpdateButtonLabels()
 {
     char InputStick_Labels[16][4] = {"c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "c10", "c11", "c12", "c13", "c14", "c15", "c16"};
     char OutputStick_Labels[16][4] = {"n4", "n5", "n6", "n7", "n8", "n9", "n10", "n11", "n12", "n13", "n14", "n15", "n16", "n17", "n18", "n19"};
-    char Subtrim_Labels[16][4] = {"n00", "n1", "n2", "n3", "n4", "n5", "n6", "n7", "n8", "n9", "n10", "n11", "n12", "n13", "n14", "n15"};
     char fsch_labels[16][5] = {"ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9", "ch10", "ch11", "ch12", "ch13", "ch14", "ch15", "ch16"};
     char fs[16][5] = {"fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", "fs8", "fs9", "fs10", "fs11", "fs12", "fs13", "fs14", "fs15", "fs16"};
     char ChannelLabels[16][6] = {"Sch1", "Sch2", "Sch3", "Sch4", "Sch5", "Sch6", "Sch7", "Sch8", "Sch9", "Sch10", "Sch11", "Sch12", "Sch13", "Sch14", "Sch15", "Sch16"};
@@ -1028,11 +1070,9 @@ void UpdateButtonLabels()
     }
     if (CurrentView == SUBTRIMVIEW)
     {
+        SubTrimPageOut(); // B211: the sixteen boxes as the model has them, then the page's part "rs" clicked (it sets its own slider, and says when it has) - Trims.h
         for (int i = 0; i < 16; ++i)
-        {
             SendText(fsch_labels[i], ChannelNames[i]);
-            SendValue(Subtrim_Labels[i], SubTrims[i] - 127);
-        }
     }
 }
 
@@ -1344,6 +1384,9 @@ FLASHMEM void setup()
         ina219.begin();
     InitSwitchesAndTrims();
     InitRadio(DefaultPipe);
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: the module's power for a model set to ELRS, now - it starts while setup goes on (ElrsCrsf.h ElrsPowerEarly)
+    ElrsPowerEarly();
+#endif
     delay(WARMUPDELAY); // Allow Nextion time to warm up
     BackGroundColour = Black;
     ForeGroundColour = White;
@@ -1420,6 +1463,11 @@ FLASHMEM void setup()
     TXBuildAge = GetBuildDaysSince2020(); // days since 1st Jan 2020 for this build
     Look(BUILD_ID_STR);
     Look(TXBuildAge);
+    StashPendingEventBytes(); // B211: what the screen said while this board started is read in (its power-on bytes among it) ...
+    ScreenStartupOver = true; // ... and from here its power-on bytes mean that THE SCREEN has started again (Nextion.h)
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: from here the module may have a model set to ELRS, and waits may fly it (ElrsCrsf.h: not before the switches are read)
+    ElrsSetupOver();
+#endif
 }
 // **************************************************************************************************************************************************************
 void RationaliseBuddy()
@@ -2140,6 +2188,9 @@ FLASHMEM void SetDefaultValues(bool Calibrating) // B16: the calibration branch 
         BanksInUse[i] = i < 4 ? i + 4 : 30 + i; // "Bank 1" .. "Bank 4"; B130: "Bank 5", "Bank 6" (34, 35)
     }
     SixBanks = false; // B130: four banks until Model options says six
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a new model's receiver is LDRC until Model options says ELRS
+    ElrsModel = false;
+#endif
     for (int j = 0; j <= BANKS_USED; ++j)
     {
         for (int i = 0; i < 16; ++i)
@@ -2162,7 +2213,7 @@ FLASHMEM void SetDefaultValues(bool Calibrating) // B16: the calibration branch 
     RfSessionModel = 0xFFFFFFFF; // B209: and the defaults end the model's session, so a save cannot write the old flag back
     LinkRatesToBanks = false; // B06
     GearRatio = 10.3;  // for helicopters with swash plates. This is the ratio between servo movement and blade pitch change. 10.3 is a typical value for a 700 size heli
-    for (j = 0; j < 4; ++j)
+    for (j = 0; j < BANKS_USED; ++j) // (B211, the fourteenth review: all six banks - banks 5 and 6 kept the last model's numbers in memory)
     {
         for (i = 0; i < MAX_PID_WORDS + 5; ++i)
             Saved_PID_Values[i][j] = 0;
@@ -2762,7 +2813,7 @@ void BindNow()
     }
     else
     {
-        LogFrontPageReason("the model connected"); // B172
+        LogFrontPageReason("the model connected", "model connected"); // B172
         GotoFrontView();
     }
 #ifdef DB_BIND
@@ -2978,6 +3029,21 @@ void ZeroDataScreen()
 }
 /***************************************************** ReadNewSwitchFunction ****************************************************************************/
 
+// One of the One switch page's choices, into the job it stands for: chosen = this switch has the job; not chosen = it has it no
+// longer (if it had); NO ANSWER from the screen (65535) = AS IT WAS. (B211, 14 Nov 2026: no answer was taken for "chosen" - one
+// missed reply would have made the switch being edited the bank switch, the auto switch or THE SAFETY SWITCH. And a second tap on
+// this page's OK, obeyed on the Switches page where every box answers 0, took every job away from it: that is cured in Nextion.h -
+// a press belongs to the page it was made on.)
+FLASHMEM static void SwitchJobFromPage(const char *box, uint8_t &job)
+{
+    const uint32_t v = GetValue((char *)box);
+    if (v == 65535)
+        return;
+    if (v)
+        job = SwitchEditNumber;
+    else if (job == SwitchEditNumber)
+        job = 0;
+}
 FLASHMEM void ReadNewSwitchFunction()
 {
     char OneSwitchView_r0[] = "r0"; // Not used (B38: a real choice for a front switch)
@@ -2994,36 +3060,27 @@ FLASHMEM void ReadNewSwitchFunction()
 
     SendCommand(ProgressStart);
     SendValue(Progress, 10);
+    { // B211 (the ninth review): THE SWITCH'S JOBS AND ITS DIRECTION ARE TAKEN TOGETHER, OR NOT AT ALL (Nextion.h KEEP_WHOLE). "Reversed" is
+      // the last box read: with no answer for it the switch took its new job - the safety switch, say - and kept the old direction
+    KEEP_WHOLE(bank, BankSwitch);
+    KEEP_WHOLE(aut, Autoswitch);
+    KEEP_WHOLE(safety, SafetySwitch);
+    KEEP_WHOLE(rates, DualRatesSwitch);
+    KEEP_WHOLE(buddy, BuddySwitch);
+    KEEP_WHOLE(top, TopChannelSwitch);
+    KEEP_WHOLE(unused, FrontSwitchUnused);
+    KEEP_WHOLE(rev, SwitchReversed);
 
-    if (GetValue(OneSwitchView_r1))
-    {
-        BankSwitch = SwitchEditNumber;
-    }
-    else
-    {
-        if (BankSwitch == SwitchEditNumber)
-            BankSwitch = 0;
-    }
+    SwitchJobFromPage(OneSwitchView_r1, BankSwitch);
 
     SendValue(Progress, 15);
-    if (GetValue(OneSwitchView_r2))
-    {
-        Autoswitch = SwitchEditNumber;
-    }
-    else
-    {
-        if (Autoswitch == SwitchEditNumber)
-            Autoswitch = 0;
-    }
+    SwitchJobFromPage(OneSwitchView_r2, Autoswitch);
     SendValue(Progress, 25);
     { // B33: the twelve channel jobs (5-16), each its own radio on the page
         static const char *chRadio[SWITCH_INPUTS] = {"r10", "r11", "r12", "r13", "r3", "r4", "r5", "r6", "r14", "r15", "r16", "r17"};
         for (uint8_t d = 0; d < SWITCH_INPUTS; ++d)
         {
-            if (GetValue((char *)chRadio[d]))
-                TopChannelSwitch[d] = SwitchEditNumber;
-            else if (TopChannelSwitch[d] == SwitchEditNumber)
-                TopChannelSwitch[d] = 0;
+            SwitchJobFromPage(chRadio[d], TopChannelSwitch[d]);
             if (d == 3 || d == 7)
                 SendValue(Progress, d == 3 ? 40 : 50);
         }
@@ -3033,41 +3090,21 @@ FLASHMEM void ReadNewSwitchFunction()
         const uint8_t bit = (uint8_t)(1 << (SwitchEditNumber - 5));
         if (TopChannelSwitch[SwitchEditNumber - 5] == SwitchEditNumber)
             TopChannelSwitch[SwitchEditNumber - 5] = 0; // its own channel: the default, not a job
-        if (GetValue(OneSwitchView_r0))
-            FrontSwitchUnused |= bit; // Not used, chosen on purpose: the channel's input sits at its centre
-        else
-            FrontSwitchUnused &= (uint8_t)~bit;
+        const uint32_t unused = GetValue(OneSwitchView_r0);
+        if (unused != 65535) // (no answer: as it was)
+        {
+            if (unused)
+                FrontSwitchUnused |= bit; // Not used, chosen on purpose: the channel's input sits at its centre
+            else
+                FrontSwitchUnused &= (uint8_t)~bit;
+        }
     }
     SendValue(Progress, 60);
-    if (GetValue(OneSwitchView_r7))
-    {
-        SafetySwitch = SwitchEditNumber;
-    }
-    else
-    {
-        if (SafetySwitch == SwitchEditNumber)
-            SafetySwitch = 0;
-    }
+    SwitchJobFromPage(OneSwitchView_r7, SafetySwitch);
     SendValue(Progress, 70);
-    if (GetValue(OneSwitchView_r8))
-    {
-        DualRatesSwitch = SwitchEditNumber;
-    }
-    else
-    {
-        if (DualRatesSwitch == SwitchEditNumber)
-            DualRatesSwitch = 0;
-    }
+    SwitchJobFromPage(OneSwitchView_r8, DualRatesSwitch);
     SendValue(Progress, 80);
-    if (GetValue(OneSwitchView_r9))
-    {
-        BuddySwitch = SwitchEditNumber;
-    }
-    else
-    {
-        if (BuddySwitch == SwitchEditNumber)
-            BuddySwitch = 0;
-    }
+    SwitchJobFromPage(OneSwitchView_r9, BuddySwitch);
 
     SendValue(Progress, 90);
 
@@ -3081,6 +3118,7 @@ FLASHMEM void ReadNewSwitchFunction()
         if (SwitchEditNumber == 2)
             SendValue(Progress, 95);
     }
+    } // (the keeps end here: what is saved below is whole)
 
     SendValue(Progress, 100);
     SaveOneModel(ModelNumber);
@@ -3298,30 +3336,71 @@ FLASHMEM static uint8_t BankNameFromPage(int i) // B130: box i's choice, kept in
     const int v = GetValue(BKS[i]);
     return (v >= 0 && v < BANK_NAMES_N) ? (uint8_t)v : BanksInUse[i];
 }
+// B211 (the twelfth review): THE BANKS' NAMES ARE TAKEN WHOLE, OR NOT AT ALL (they were taken box by box through BankNameFromPage, where no check saw it).
+FLASHMEM static bool BankNamesFromPage() // false: a box had no answer - nothing was taken
+{
+    KEEP_WHOLE(banks, BanksInUse);
+    for (int i = 0; i < BanksCount(); ++i)
+        BanksInUse[i] = BankNameFromPage(i);
+    return !WorkLostABox();
+}
 void EndBankNames()
 {
-    for (int i = 0; i < BanksCount(); ++i)
-    {
-        BanksInUse[i] = BankNameFromPage(i);
-    }
+    if (!BankNamesFromPage())
+        return; // (nothing taken, nothing saved, the page not left: he is told, and presses again)
     SaveOneModel(ModelNumber);
     StartModelSetup();
 }
 
 /******************************************************************************************************************************/
-
+// B211 (the twelfth review; the released code had it): "LISTEN" SAYS THE BANKS' NAMES FROM THE MAIN LOOP. It said them inside the button's work, a wait of
+// 1.2 s behind each: seven seconds for six banks in which the model was flown and NO SWITCH WAS READ - not the motor switch, not the safety, not the bank
+// switch. The names are taken from the page first (whole, or not at all), and then said one at a time as the main loop comes by: nothing waits.
+static uint8_t BankListenCount = 0; // how many names are being said (0: none)
+static uint8_t BankListenNext = 0;  // the next one
+static uint32_t BankListenMs = 0;   // when it is due
 void ListenToBanks()
 {
-    for (int i = 0; i < BanksCount(); ++i)
-    {
-        BanksInUse[i] = BankNameFromPage(i);
-        PlaySound(BankSounds[BanksInUse[i]]);
-        DelayWithDog(1200);
+    if (!BankNamesFromPage())
+        return;
+    BankListenCount = BanksCount();
+    BankListenNext = 0;
+    BankListenMs = millis();
+}
+FLASHMEM void BankListenPoll() // from the main loop
+{
+    if (!BankListenCount)
+        return;
+    if (CurrentView != BANKSNAMESVIEW || BankListenNext >= BankListenCount || BankListenNext >= BANKS_USED)
+    { // the page was left, or the last name has been said
+        BankListenCount = 0;
+        return;
     }
+    if ((int32_t)(millis() - BankListenMs) < 0)
+        return;
+    PlaySound(BankSounds[BanksInUse[BankListenNext]]);
+    ++BankListenNext;
+    BankListenMs = millis() + 1200;
 }
 // ******************************************************************************************************************************/
-void SaveFailSafeChannels()
+// B211 (the twelfth review): THE FAILSAFE SET IS TAKEN WHOLE, OR NOT AT ALL - AND NOTHING IS SENT THEN ("FailSAVE", ButtonWasPressed). The sixteen were taken
+// one by one, "no answer keeps the one in hand", and the MIXTURE went to the receiver as the failsafe set, the bar at 100.
+FLASHMEM static bool FailSafeSetFromPage() // false: a box had no answer - nothing was taken
 {
+    char fs[16][5] = {"fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", "fs8", "fs9", "fs10", "fs11", "fs12", "fs13", "fs14", "fs15", "fs16"};
+    char Progress[] = "Progress";
+    KEEP_WHOLE(failsafe, FailSafeChannel);
+    for (int i = 0; i < 16; ++i)
+    {
+        const uint32_t gv = GetValue(fs[i]);
+        if (gv != 65535) // B156: a reply that never came is not a failsafe setting
+            FailSafeChannel[i] = gv;
+        SendValue(Progress, i * 100 / 16);
+    }
+    return !WorkLostABox();
+}
+bool SaveFailSafeChannels() // B211 (the twelfth review): THE FAILSAFE SET IS TAKEN WHOLE, OR NOT AT ALL. false: a box had no answer - nothing was taken, and the
+{                           // page's list of what was changed is left as it is (it was cleared: that change was then never read)
     char fs[16][5] = {"fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", "fs8", "fs9", "fs10", "fs11", "fs12", "fs13", "fs14", "fs15", "fs16"};
     char ProgressStart[] = "vis Progress,1";
     char ProgressEnd[] = "vis Progress,0";
@@ -3335,20 +3414,27 @@ void SaveFailSafeChannels()
         chgs[i + 1] = 0;
     }
     SendCommand(ProgressStart);
-    for (int i = 0; i < 16; ++i)
     {
-        if (InStrng(fs[i], chgs)) // if this channel has been changed
+        KEEP_WHOLE(failsafe, FailSafeChannel);
+        for (int i = 0; i < 16; ++i)
         {
+            if (InStrng(fs[i], chgs)) // if this channel has been changed
             {
                 const uint32_t gv = GetValue(fs[i]);
-                if (gv != 65535)   // B156: a reply that never came is not a failsafe setting
+                if (gv != 65535) // B156: a reply that never came is not a failsafe setting
                     FailSafeChannel[i] = gv;
             }
+            SendValue(Progress, i * (100 / 16));
         }
-        SendValue(Progress, i * (100 / 16));
+        if (WorkLostABox())
+        {
+            SendCommand(ProgressEnd);
+            return false;
+        }
     }
     SendText(change, cleared);
     SendCommand(ProgressEnd);
+    return true;
 }
 
 /******************************************************************************************************************************/
@@ -3357,7 +3443,8 @@ void StartModelSetup()
 
     if (CurrentView == FAILSAFE_VIEW)
     { //  read failsafe blobs
-        SaveFailSafeChannels();
+        if (!SaveFailSafeChannels())
+            return; // B211: a box had no answer - nothing taken, nothing saved, the page not left (he is told, and presses again)
     }
 
     if (CurrentView == MIXESVIEW)
@@ -3403,10 +3490,15 @@ void StartSlowView()
 }
 
 /******************************************************************************************************************************/
-void ReadSpeedsScreen(uint8_t bk, bool FromPage)
+// B211 (the twelfth review): THE SLOW-SERVO PAGE'S SPEEDS ARE TAKEN WHOLE, OR NOT AT ALL - and this routine counts for itself. It took them box by box
+// ("no answer keeps the one in hand"), and asked "did this BUTTON's work lose a box?" - while one of its two callers is no button: the bank switch,
+// from the main loop, where that count is some earlier button's. False: a box had no answer - nothing was taken.
+bool ReadSpeedsScreen(uint8_t bk, bool FromPage)
 {
-    if (bk > 3)
-        return; // ClaudeFix-2-7-2026 ServoSpeed is [5][17]; the motor-switch "force bank change" sentinel (254) used to arrive here and write 4 KB past it
+    if (bk >= BANKS_USED)
+        return true; // ClaudeFix-2-7-2026: the motor switch's "force bank change" sentinel (254) used to arrive here and write 4 KB past the table.
+                     // (B211: this said "bk > 3", from the days of four banks - on a model with SIX the speeds edited in banks 5 and 6 were never
+                     //  taken: OK saved them as they had been, without a word.)
 
     char ns[16][4] = {{"n0"}, {"n1"}, {"n2"}, {"n3"}, {"n4"}, {"n5"}, {"n6"}, {"n7"}, {"n8"}, {"n9"}, {"n10"}, {"n11"}, {"n12"}, {"n13"}, {"n14"}, {"n15"}};
     char Progress[] = "Progress";
@@ -3415,36 +3507,43 @@ void ReadSpeedsScreen(uint8_t bk, bool FromPage)
     char chgs[512];
     char change[] = "change";
     char cleared[] = "XX:";
-    if (FromPage)
-        GetText(change, chgs, sizeof(chgs)); // B37: the bank switch moved before OK - the list of edited boxes is still on the page
-    else
-        for (uint16_t i = 0; i < 500; ++i)
-        { // get copy of any changes
-            chgs[i] = TextIn[i + 4];
-            chgs[i + 1] = 0;
-        }
-    SendCommand(ProgressStart);
-    for (int i = 0; i < 16; ++i)
+    const uint32_t lost = BoxesLost; // (its own count: see above)
     {
-        if (InStrng(ns[i], chgs)) // if this channel has been changed
+        KEEP_WHOLE(speeds, ServoSpeed[bk]);
+        if (FromPage)
+            GetText(change, chgs, sizeof(chgs)); // B37: the bank switch moved before OK - the list of edited boxes is still on the page
+        else
+            for (uint16_t i = 0; i < 500; ++i)
+            { // get copy of any changes
+                chgs[i] = TextIn[i + 4];
+                chgs[i + 1] = 0;
+            }
+        SendCommand(ProgressStart);
+        for (int i = 0; i < 16; ++i)
         {
+            if (InStrng(ns[i], chgs)) // if this channel has been changed
             {
                 const uint32_t gv = GetValue(ns[i]);
-                if (gv != 65535)   // B156: a reply that never came is not a servo speed
+                if (gv != 65535) // B156: a reply that never came is not a servo speed
                     ServoSpeed[bk][i] = gv;
             }
+            SendValue(Progress, i * (100 / 16));
         }
-        SendValue(Progress, i * (100 / 16));
     }
-    SendText(change, cleared);
+    const bool whole = BoxesLost == lost;
+    if (whole || FromPage)
+        SendText(change, cleared); // (OK, a box unanswered: the list of edited boxes STAYS on the page - he is told, and his next OK reads them. The bank
+                                   //  switch: the page is drawn for the new bank behind this, and the list begins again - whole or not; he is told)
     SendValue(Progress, 100);
     SendCommand(ProgressEnd);
+    return whole;
 }
 
 /******************************************************************************************************************************/
 void EndSpeedsScreen()
 {
-    ReadSpeedsScreen(Bank - 1);
+    if (!ReadSpeedsScreen(Bank - 1))
+        return; // B211 (the twelfth review): a box had no answer - nothing taken, nothing saved, the page not left (he is told, and presses OK again)
     CheckServoSpeeds();
     SaveOneModel(ModelNumber);
     StartModelSetup();
@@ -3455,7 +3554,7 @@ void WriteNewCurve()
     char CopyToAllBanks[] = "callfm";
     char pSticksView[] = "page SticksView";
 
-    if (GetValue(CopyToAllBanks))
+    if (GetValue(CopyToAllBanks) == 1) // B211 (the eighth review): ticked is 1 - no answer from the screen (65535) counted as ticked, and the curve went into every bank
     {
         for (int p = 1; p <= BanksCount(); ++p) // (B131: banks 5 and 6 too when the model uses them - Malcolm, 19 Oct: "Copy to all banks omitted 5, 6")
         {
@@ -3578,28 +3677,17 @@ void EndRenameModel()
 }
 
 /******************************************************************************************************************************/
-
-void LoadModelForRenaming()
-{
-    CloseModelsFile();
-    SingleModelFlag = true;
-    ReadOneModel(1);
-}
-/******************************************************************************************************************************/
-
-void RestoreCurrentModel()
-{
-    CloseModelsFile();
-    ModelNumber = SavedModelNumber;
-    SingleModelFlag = false;
-    ReadOneModel(ModelNumber);
-    SaveAllParameters();
-}
+// (B211, the eleventh review: LoadModelForRenaming and RestoreCurrentModel stood here - a backup file read into memory in place of the
+//  pilot's model, for a rename. SDFiles.h RenameFile renames on the card now.)
 
 // ******************************** Global Array1 of numbered function pointers OK up the **********************************
 
 // This new list can be huge - up to 24 BITS unsigned!  ( Use "NUMBER<<8" )
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: eight more, for the page "ELRS settings" (261-268, at the list's end). The #else is the transmitter as it was
+#define LASTFUNCTION1 269 // One more than final one
+#else
 #define LASTFUNCTION1 261 // One more than final one
+#endif
 
 void (*NumberedFunctions1[LASTFUNCTION1])(){
     Blank,                   // 0 Cannot be used
@@ -3863,6 +3951,16 @@ void (*NumberedFunctions1[LASTFUNCTION1])(){
     GuidePageTapped,             // 258 B196: Steps 9 - 16 > / < Steps 1 - 8
     GuideRestart,                // 259 B196: Start again
     EndGuideView,                // 260 B196: its OK
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY (ElrsCrsf.h): the page "ELRS settings"
+    StartElrsView,               // 261 Model options' "ELRS settings ..."
+    EndElrsView,                 // 262 its OK
+    ElrsRow0Tapped,              // 263 a row tapped: stick updates a second (packet rate) ...
+    ElrsRow1Tapped,              // 264 ... telemetry share (telemetry ratio)
+    ElrsRow2Tapped,              // 265 ... channel detail (switch mode)
+    ElrsRow3Tapped,              // 266 ... most power
+    ElrsPickOk,                  // 267 the picker's OK
+    ElrsPickCancel,              // 268 the picker's Cancel
+#endif
 };
 
 // This list migth become MUCH longer as it limit is 24 bits big
@@ -3878,7 +3976,7 @@ void (*NumberedFunctions[LASTFUNCTION])(){
     DoMFName,                 // 1
     ModelViewEnd,             // 2
     DoLastTimeRead,           // 3
-    GotoModelsView,           // 4
+    GotoModelsViewAsked,      // 4  (B211: the Models button - not while the model may fly, MenuOptions.h)
     GotoMacrosView,           // 5
     PopulateMacrosView,       // 6
     ExitMacrosView,           // 7
@@ -3990,11 +4088,79 @@ void HandleChannelNameEvents()
     }
 }
 
+// B211 (the sixteenth review; released code): THE ROTORFLIGHT PAGE THAT IS SHOWING IS READING OR SAVING. Each of these pages' polls ends its job when
+// its page goes - so Help (and the screen saver) over a running save cut it in its middle: part written, nothing stored, nothing said; and over a
+// read they left the page dead on the way back - the last visit's numbers, Save and the arrows dead. Neither comes while the job runs: a second or
+// two as a rule - at the worst nine seconds for each step that gets no answer (PipeHttp.h PipeReplyLate), and about a minute when a save has restarted
+// a flight controller that does not come back. Help's button sounds and is pressed again; the screen saver comes a moment on.
+// B211 (the nineteenth review): ... AND A JOB THAT IS ONLY WATCHED - an erase of the black box: the flight controller does it by itself, nothing
+// of it is cut when its page goes, so Help may come (the eighteenth review: it was dead for the erase's two minutes). But the page's poll ends
+// its watch with its page, and the SCREEN SAVER puts another page up with no press: "Erased in N s" and "Still not erased after 2 minutes"
+// were never said. The screen saver waits for it (Utilities.h HideScreenAgain); Help does not ask this.
+bool RfPageWatchRuns()
+{
+    return CurrentView == BLACKBOXVIEW && BbStep >= BB_ERASE;
+}
+bool RfPageJobRuns()
+{
+    switch (CurrentView)
+    {
+    case BASICSVIEW: case BASICS2VIEW: case PORTSVIEW: return BasStep != BAS_IDLE;
+    case FILTERVIEW: case FILTER2VIEW: return FltStep != FLT_IDLE;
+    case TRAVELVIEW: case TRAVEL2VIEW: case TRAVEL3VIEW: case TRAVEL4VIEW: return TravStep != TRV_IDLE;
+    case RESCUEVIEW: case RESCUE2VIEW: return RescueStep != RSC_IDLE;
+    case SERVOVIEW: return ServoStep != SRV_IDLE;
+    // (the seventeenth review) ... and the SAVES of every other page whose poll ends its job with its page (their reads and live readings are not held:
+    //  Level's attitude, the knobs' present values):
+    case BATTERYVIEW: case BATSENSORSVIEW: return BatStep >= BAT_WRITE;
+    case BLACKBOXVIEW: return BbStep >= BB_WRITE && BbStep <= BB_VERIFY;   // (the save's steps. NOT an erase - the eighteenth review: nothing of an erase is cut when its page goes, and Help was refused for its two minutes)
+    case LEVELVIEW: return CalStep >= CAL_CAL;                    // (a calibration, and its store)
+    case BEEPERVIEW: return BpStep >= BP_WRITE_NAME;
+    case ADJUSTVIEW: return (SwStep >= SW_WRITE && SwStep <= SW_VERIFY) || (AdjStep_ >= ADJ_WRITE && AdjStep_ <= ADJ_VERIFY);
+    case EASYVIEW: return EzStep >= EZ_S_STATUS;
+    }
+    return false;
+}
+// A Help button's word has come ("HelpView:" and the text's name, in TextIn): the help page, over the page that asked.
+FLASHMEM void HelpWordCame()
+{
+    if (RfPageJobRuns())
+    { // B211: (above) not over a page's read or save - a sound, and the page goes on as it was
+        PlaySound(WHAHWHAHMSG);
+        return;
+    }
+    if (CurrentView == RXSETUPVIEW1)
+    { // B23: what was typed on Model options is kept (the page is drawn afresh on the way back).
+      // B211 (the sixth review, 14 Nov 2026: "Help on Model options opens nothing", since B160): reading the page's boxes puts
+      // their answers into TextIn, and the help's name - which SendHelp takes from TextIn - was gone. The name is taken FIRST
+      // (whole, or nothing opens and the page stays as it is), then the page is read, and the word put back for SendHelp.
+        char helpName[16];
+        if (!HelpNameFrom(helpName))
+            return;
+        ReadRXOptionsView();
+        snprintf(TextIn, 40, "HelpView:%s", helpName);
+    }
+    SavedCurrentView = CurrentView;
+    HelpTookRead = Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now || Reading_GOV_Config_Now; // B19
+    if (RfSaveHoldsBank())   // B211 (e101b; the twenty-second review, B): a bank page's save holds the bank switch and no read is open - a switch moved
+        HelpTookRead = true; // now changes the bank UNDER HELP (at the hold's end): the page came back with the old bank's block, whole. Read again.
+    CurrentView = HELP_VIEW;
+    SendHelp();
+}
+
 FASTRUN void ButtonWasPressed()
 {
     CRUMB(CRUMB_BUTTON);
     if (!TextInIsGenuine())
     { // B177: an unframed code from a screen that frames its bursts is a split tail or a late reply, not a press (Nextion.h)
+        ClearText();
+        return;
+    }
+    if (TextInFramed && TextInLen == SUBTRIM_DONE_BYTES && !memcmp(TextIn, "StEDIT", 6))
+    { // B211 (the fourteenth review): THE SUB-TRIM PAGE'S "DONE" IS NO PRESS - it is said behind this board's own click of the page's part "rs" (Trims.h).
+      // Served here, in front of everything a press does: it began the screen saver's time and the idle time afresh, as a finger does
+        if (CurrentView == SUBTRIMVIEW)
+            SubTrimWord((const uint8_t *)TextIn, TextInLen, TextInFramed);
         ClearText();
         return;
     }
@@ -4067,66 +4233,100 @@ FASTRUN void ButtonWasPressed()
             return;
         }
         // By here, TextIn[0] must be start of a character based command
+        if (!TextInFramed && ScreenFramesBursts)
+            OwnWordCut(TextIn); // B211 (the eleventh review): a bare word of the screen's own ends where its own text ends - Nextion.h
 
-        if (InStrng((char *)"LDRCLOG ", TextIn) > 0)
-        { // B198 (Malcolm, 8 Nov 2026: the screen's interrupt watchdog twice on the way back to the front page, no core dump, and its
-          // own record of the moment lost at power-off): a line from the screen for this log (LogFiles.h LogScreenLine) - FIRST, before
-          // any word in it ("page FrontView") is read as a command
-            LogScreenLine(TextIn);
+        // B211 (the fourteenth review): THE SCREEN'S OWN WORDS ARE LOOKED FOR IN WHAT THE SCREEN ITSELF SAID. They were looked for ANYWHERE in ANY text:
+        // "DelFile LDRCOFF.MOD" - a page's word with a file's name in it - switched the transmitter off; a receiver's reply that held the word did too;
+        // "LDRCIMG LDRCOFF" (a picture of that name chosen) did too. Now: a line of the Bluetooth pipe is answered FIRST, whatever its body holds; a
+        // FRAMED text is a page's word and is not looked at here at all; and the words that ACT - power off, the file link, a receiver's update, a
+        // picture chosen - count only at the HEAD of the text. (The line for the log, the screen's dying words, "who are you" and "someone is
+        // watching" are still found wherever they stand in what the screen said: two words read as one.)
+        if (!strncmp(TextIn, "ldrctel ", 8))
+        { // B211 (the thirteenth review; the released code had it): A LINE OF THE BLUETOOTH PIPE IS ANSWERED IN FRONT OF THE PAGES' WORDS. Its body was
+          // searched for every one of them first ("Mark", "Clear", "DelFile", "GOTO:" ... stand above the pipe's own answer, further down): today's
+          // bodies are numbers and fixed texts that hold none - a new one that did would have been obeyed as a button. (A line that does not BEGIN the
+          // text is still answered where it always was.)
+            TelemetryFromPipe(TextIn + 8);
             ClearText();
             return;
         }
-        if (ScreenDyingWords(TextIn))
-        { // B198: the screen's panic handler's words come down this wire ("Guru Meditation ...", "Backtrace: ..."): kept (LogFiles.h), not obeyed
+        if (!strncmp(TextIn, "ldrcrep ", 8))
+        { // (... and the receiver's answer to one of this board's own requests - PipeHttp.h - the same)
+            PipeReplyFromScreen(TextIn + 8);
             ClearText();
             return;
         }
-        if (InStrng((char *)"LDRCOFF", TextIn) > 0)
-        { // B198 (Malcolm, 8 Nov 2026, leaving a transmitter on for the bench: "Perhaps you can turn it off when you have finished the
-          // work!?"): the screen's workshop door asks for the power off (screen 1.11.188, POST /poweroff) - never while a model is connected
-            ClearText();
-            if (BoundFlag && ModelMatched)
-            {
-                char r[] = "Power off asked by the workshop door: refused, a model is connected B198";
-                LogText(r, strlen(r), true);
+        if (!TextInFramed)
+        {
+            if (InStrng((char *)"LDRCLOG ", TextIn) > 0)
+            { // B198 (Malcolm, 8 Nov 2026: the screen's interrupt watchdog twice on the way back to the front page, no core dump, and its
+              // own record of the moment lost at power-off): a line from the screen for this log (LogFiles.h LogScreenLine) - FIRST, before
+              // any word in it ("page FrontView") is read as a command
+                LogScreenLine(TextIn);
+                ClearText();
                 return;
             }
-            char m[] = "Powered off by the workshop door B198";
-            LogText(m, strlen(m), true);
-            Close_TX_Down();
-            return;
+            if (ScreenDyingWords(TextIn))
+            { // B198: the screen's panic handler's words come down this wire ("Guru Meditation ...", "Backtrace: ..."): kept (LogFiles.h), not obeyed
+                ClearText();
+                return;
+            }
+            if (!strncmp(TextIn, "LDRCOFF", 7))
+            { // B198 (Malcolm, 8 Nov 2026, leaving a transmitter on for the bench: "Perhaps you can turn it off when you have finished the
+              // work!?"): the screen's workshop door asks for the power off (screen 1.11.188, POST /poweroff) - never while a model is connected
+                ClearText();
+                if (BoundFlag && ModelMatched)
+                {
+                    char r[] = "Power off asked by the workshop door: refused, a model is connected B198";
+                    LogText(r, strlen(r), true);
+                    return;
+                }
+                char m[] = "Powered off by the workshop door B198";
+                LogText(m, strlen(m), true);
+                Close_TX_Down();
+                return;
+            }
+            if (!strncmp(TextIn, LDRC_LINK_KNOCK, sizeof(LDRC_LINK_KNOCK) - 1))
+            { // V1B: the screen asks for the file link
+                ClearText();
+                LinkMode();
+                return;
+            }
+            if (!strncmp(TextIn, LDRC_RX_UPDATE_WORD, sizeof(LDRC_RX_UPDATE_WORD) - 1))
+            { // V1B: the screen asks for the connected receiver to update itself (RxUpdate.h)
+                OrderReceiverUpdateFromText(TextIn);
+                ClearText();
+                return;
+            }
+            if (!strncmp(TextIn, LDRC_IMAGE_WORD, sizeof(LDRC_IMAGE_WORD) - 1))
+            { // V1B: the screen's own picture chooser answers for the "Choose image" page (ChooseImage.h, B21)
+                ChooseImageFromScreen(TextIn);
+                ClearText();
+                return;
+            }
+            if (InStrng((char *)"LDRCWHO", TextIn) > 0)
+            { // B199 (Malcolm, 8 Nov 2026: "the LED went blue for a second or so and then red" twice, just after the front page): the screen's
+              // quiet look at power-up asks who this board is - answered with a word (LinkMode.h SendWhoWord), where screen 1.11.188 and before
+              // opened the file link for it (blue LED, a save to the card, the front page drawn afresh - the 5 Nov "jump" too)
+                ClearText();
+                SendWhoWord();
+                return;
+            }
+            if (InStrng((char *)"LDRCAWAKE", TextIn) > 0)
+            { // B123 (Malcolm, 17 Oct 2026: "the screen timeout should be disabled while we play these videos because it went black
+              // in the middle of one!"): the screen's films (screen 1.11.88) say this every 15 s while one plays or the films menu
+              // is up - its touches are the screen's own, so nothing else would tell this board that someone is watching
+                ScreenTimeTimer = millis();
+                ClearText();
+                return;
+            }
         }
-        if (InStrng((char *)"LDRCWHO", TextIn) > 0)
-        { // B199 (Malcolm, 8 Nov 2026: "the LED went blue for a second or so and then red" twice, just after the front page): the screen's
-          // quiet look at power-up asks who this board is - answered with a word (LinkMode.h SendWhoWord), where screen 1.11.188 and before
-          // opened the file link for it (blue LED, a save to the card, the front page drawn afresh - the 5 Nov "jump" too)
-            ClearText();
-            SendWhoWord();
-            return;
-        }
-        if (InStrng((char *)"LDRCAWAKE", TextIn) > 0)
-        { // B123 (Malcolm, 17 Oct 2026: "the screen timeout should be disabled while we play these videos because it went black
-          // in the middle of one!"): the screen's films (screen 1.11.88) say this every 15 s while one plays or the films menu
-          // is up - its touches are the screen's own, so nothing else would tell this board that someone is watching
-            ScreenTimeTimer = millis();
-            ClearText();
-            return;
-        }
-        if (InStrng((char *)LDRC_LINK_KNOCK, TextIn) > 0)
-        { // V1B: the screen asks for the file link
-            ClearText();
-            LinkMode();
-            return;
-        }
-        if (InStrng((char *)LDRC_RX_UPDATE_WORD, TextIn) > 0)
-        { // V1B: the screen asks for the connected receiver to update itself (RxUpdate.h)
-            OrderReceiverUpdateFromText(TextIn);
-            ClearText();
-            return;
-        }
-        if (InStrng((char *)LDRC_IMAGE_WORD, TextIn) > 0)
-        { // V1B: the screen's own picture chooser answers for the "Choose image" page (ChooseImage.h, B21)
-            ChooseImageFromScreen(TextIn);
+        if (!strncmp(TextIn, "LDRC", 4))
+        { // B211 (the thirteenth review): A TEXT THAT BEGINS "LDRC" AND IS NONE OF THE WORDS ABOVE GOES NO FURTHER. Its first four letters make it "the
+          // screen's own" (Nextion.h IsScreensOwnWord) - and a line cut after four to seven of them ("LDRC" ... "LDRCLOG", no blank yet), with a text
+          // reply that came late glued behind it, is none of the whole words: it fell through to the pages' words below, which are looked for ANYWHERE
+          // in a text - "LDRCLOGpMark 2" marked the GPS position (by a run). No page's button prints a word that begins so.
             ClearText();
             return;
         }
@@ -4187,7 +4387,6 @@ FASTRUN void ButtonWasPressed()
         char ModExt[] = ".MOD";
         char FailSAVE[] = "FailSAVE";
         char FailSafe[] = "FailSafe";
-        char fs[16][5] = {"fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", "fs8", "fs9", "fs10", "fs11", "fs12", "fs13", "fs14", "fs15", "fs16"};
         char CH1NAME[] = "CH1NAME=";
         char CH2NAME[] = "CH2NAME=";
         char CH3NAME[] = "CH3NAME=";
@@ -4231,11 +4430,8 @@ FASTRUN void ButtonWasPressed()
         char FrontView_ForeGround[] = "FrontView.ForeGround";
         char FrontView_Special[] = "FrontView.Special";
         char FrontView_Highlight[] = "FrontView.Highlight";
-        char n0[] = "n0";
         char Expo[] = "Expo";
-        char h0[] = "h0";
         char StCH[] = "StCH";
-        char s0[] = "s0";
         char StEDIT[] = "StEDIT";
         char Prompt[60];
         char overwr[] = "Overwrite ";
@@ -4258,19 +4454,17 @@ FASTRUN void ButtonWasPressed()
         // ************************* test many input words from Nextion *****************
 
         if (InStrng(StCH, TextIn))
-        { // select sub trim channel
-            SubTrimToEdit = GetValue(s0) - 1;
-            if (SubTrimToEdit > 15)
-                SubTrimToEdit = 0; // ClaudeFix-2-7-2026 0 or comms-error 65535 indexed SubTrims[254]
-            SendValue(n0, SubTrims[SubTrimToEdit] - 127);
-            SendValue(h0, SubTrims[SubTrimToEdit]);
+        { // a channel of the Sub-trim page was tapped (and the page says so as it comes up). B211 (the thirteenth review): THIS WORD TELLS THIS BOARD
+          // NOTHING ANY MORE - the page puts the tapped channel's own number into its slider by itself, and its "StEDIT" says which channel it was made
+          // on (Trims.h). Nothing is asked, nothing written.
             ClearText();
             return;
         }
 
         if (InStrng(StEDIT, TextIn))
-        {                                                 // edit sub trim value
-            SubTrims[SubTrimToEdit] = GetValue(n0) + 127; // 127 is mid point in 8 bit value 0 - 254
+        { // the Sub-trim page's slider, Zero, "+" or "-": the word, the channel, the number as it stood, the number it made (Trims.h SubTrimWord)
+            if (CurrentView == SUBTRIMVIEW)
+                SubTrimWord((const uint8_t *)TextIn, TextInLen, TextInFramed);
             ClearText();
             return;
         }
@@ -4340,12 +4534,7 @@ FASTRUN void ButtonWasPressed()
 
         if (InStrng(HelpView, TextIn) > 0)
         { // Display Help screen(s)
-            if (CurrentView == RXSETUPVIEW1)
-                ReadRXOptionsView(); // B23: what was typed on Model options is kept (the page is drawn afresh on the way back)
-            SavedCurrentView = CurrentView;
-            HelpTookRead = Reading_PIDS_Now || Reading_RATES_Now || Reading_RATES_Advanced_Now || Reading_PIDS_Advanced_Now || Reading_GOV_Now || Reading_GOV_Config_Now; // B19
-            CurrentView = HELP_VIEW;
-            SendHelp();
+            HelpWordCame();
             ClearText();
             return;
         }
@@ -4444,6 +4633,8 @@ FASTRUN void ButtonWasPressed()
                 strcpy(TextFileName, ""); // B56: the help text is closed - the viewer must not keep its name (OK on the Files page brought the help back)
             if (CurrentView == RXSETUPVIEW1)
                 RXOptionsViewStart(); // B23: Model options drawn afresh, with the values read before Help
+            if (CurrentView == SUBTRIMVIEW)
+                SubTrimPageBack(); // B211 (the fourteenth review): the page as the model has it (a writing-out owed when Help was pressed had been forgotten)
 
             if (CurrentView == GRAPHVIEW)
             {
@@ -4509,6 +4700,8 @@ FASTRUN void ButtonWasPressed()
             if (HelpTookRead)
             { // B19: a Rotorflight page was still reading when Help was tapped: what came went to a page not showing, and the
               // screen brought the old numbers back as if they were fresh (Save would have written them). Read again.
+              // (B211, e101b: or a bank page's save held the bank switch at the tap - the bank may have changed under Help.
+              //  The six pages below only: the Rescue and Easy tuning pages are not read again here - the queue, review 23 B's A-4.)
                 HelpTookRead = false;
                 if (CurrentView == PIDVIEW)
                     ShowPIDBank();
@@ -4602,14 +4795,11 @@ FASTRUN void ButtonWasPressed()
             }
 
             SendCommand(ProgressStart);
-            for (int i = 0; i < 16; ++i)
-            {
-                {
-                    const uint32_t gv = GetValue(fs[i]);
-                    if (gv != 65535)   // B156: a reply that never came is not a failsafe setting
-                        FailSafeChannel[i] = gv;
-                }
-                SendValue(Progress, i * 100 / 16);
+            if (!FailSafeSetFromPage())
+            { // B211 (the twelfth review): a box had no answer - the set stays as it was and NOTHING IS SENT to the receiver (he is told, and presses again)
+                ClearText();
+                SendCommand(ProgressEnd);
+                return;
             }
             SendValue(Progress, 100);
             AddParameterstoQueue(FAILSAFE_SETTINGS); // 1 is the ID for the FAILSAFE parameters
@@ -4825,13 +5015,17 @@ FASTRUN void ButtonWasPressed()
         }
         if (InStrng((char *)"ldrcadj", TextIn) > 0)
         { // B75: the adjustments page is on the screen again (from the keypad, a question, or just opened): its bar drawn afresh
-            JobsPageBack();   // (B140)
+            if (!ModalWaits)
+                JobsPageBack(); // (B140) (B211, the tenth review: NOT WHILE A QUESTION WAITS - the word was said as the page came up, and was served
+                                //  inside a box put up right behind it: the row was gathered from the box's page. The box's way back puts the page
+                                //  up again, and the page says the word again: Nextion.h, at BoxesHaveNoPage - "... AND WHILE A QUESTION BOX WAITS")
             ClearText();
             return;
         }
         if (InStrng((char *)"ldrcrcv", TextIn) > 0)
         { // B107: the rates curves page is on the screen (opened, back from Help or the screen saver): its curves drawn afresh
-            RatesCurvesPageBack();
+            if (!ModalWaits)
+                RatesCurvesPageBack(); // (B211: not while a question waits - as "ldrcadj", above)
             ClearText();
             return;
         }
@@ -4963,10 +5157,18 @@ FASTRUN void ButtonWasPressed()
 
         if (InStrng(SetupCol, TextIn) > 0)
         { // This is  return fr Colours setup
-            HighlightColour = GetOtherValue((char *)"High.pco");
-            ForeGroundColour = GetOtherValue((char *)"Example.pco");
-            BackGroundColour = GetOtherValue((char *)"Fm.bco");
-            SpecialColour = GetOtherValue(Fm_pco);
+            { // B211 (the eighth review): all four colours, or none - a colour with no answer from the screen read as 0, black: every
+              // colour black, and saved. (A colour may be any number, 65535 is white: it is the count of unanswered boxes that tells)
+                const uint32_t lost = BoxesLost;
+                const int hi = GetOtherValue((char *)"High.pco"), fg = GetOtherValue((char *)"Example.pco"), bg = GetOtherValue((char *)"Fm.bco"), sp = GetOtherValue(Fm_pco);
+                if (BoxesLost == lost)
+                {
+                    HighlightColour = hi;
+                    ForeGroundColour = fg;
+                    BackGroundColour = bg;
+                    SpecialColour = sp;
+                }
+            }
             SendValue(FrontView_BackGround, BackGroundColour);
             SendValue(FrontView_ForeGround, ForeGroundColour);
             SendValue(FrontView_Special, SpecialColour);
@@ -5015,22 +5217,31 @@ FASTRUN void ButtonWasPressed()
 
         if (InStrng(RXBAT, TextIn) > 0)
         { // UPdate RX batt cell count
-            if (GetValue(r2s) == 1)
-                RXCellCount = 2;
-            if (GetValue(r3s) == 1)
-                RXCellCount = 3;
-            if (GetValue(r4s) == 1)
-                RXCellCount = 4;
-            if (GetValue(r5s) == 1)
-                RXCellCount = 5;
-            if (GetValue(r6s) == 1)
-                RXCellCount = 6;
-            if (GetValue(r12s) == 1)
-                RXCellCount = 12;
-            if (GetValue(r0) == 1)
-                TXLiPo = false; // TX LIFE
-            if (GetValue(r1) == 1)
-                TXLiPo = true; // TX LIPO
+            { // B211 (the twelfth review): the eight boxes are TWO CHOICES (the cells; the transmitter's own battery) - all asked before either is taken;
+              // one with no answer, and neither is (he is told, and presses again)
+                const uint32_t c2 = GetValue(r2s), c3 = GetValue(r3s), c4 = GetValue(r4s), c5 = GetValue(r5s), c6 = GetValue(r6s), c12 = GetValue(r12s), life = GetValue(r0), lipo = GetValue(r1);
+                if (WorkLostABox())
+                {
+                    ClearText();
+                    return;
+                }
+                if (c2 == 1)
+                    RXCellCount = 2;
+                if (c3 == 1)
+                    RXCellCount = 3;
+                if (c4 == 1)
+                    RXCellCount = 4;
+                if (c5 == 1)
+                    RXCellCount = 5;
+                if (c6 == 1)
+                    RXCellCount = 6;
+                if (c12 == 1)
+                    RXCellCount = 12;
+                if (life == 1)
+                    TXLiPo = false; // TX LIFE
+                if (lipo == 1)
+                    TXLiPo = true; // TX LIPO
+            }
             SaveAllParameters();
             ClearText();
             return;
@@ -5050,7 +5261,7 @@ FASTRUN void ButtonWasPressed()
             }
             if (CopyTrimsToAll)
             {
-                for (i = 0; i < 15; ++i)
+                for (i = 0; i < 16; ++i) // (B211: it was < 15, as the line above once was: channel 16's trim stayed in the other banks)
                 {
                     for (int fm = 1; fm <= BanksCount(); ++fm) // (B131: six when the model uses them)
                     {
@@ -5076,27 +5287,12 @@ FASTRUN void ButtonWasPressed()
         }
 
         if (InStrng(Front_View, TextIn))
-        {
-            // B92 (Malcolm, 10 Oct, after an update: "it returned to the front screen but without the image of the model"):
-            // no page says "FrontView" - the screen does, after its own restart (an update with new card files restarts it),
-            // having put its last page back from its card. That page has none of what this board wrote on it, and the front
-            // page's own preinitialize hides the picture (vis exp0,0). So: the whole front page, as GotoFrontView makes it -
-            // the picture, the trims, the bank, the names - and the page itself, should the screen have put back another.
-            PreviousBank = 250; // sure to be different
-            BankSoundHeld = true; // B147: the redraw must not SAY the bank - nothing changed (Malcolm, 27 Oct: "Bank 4!" after every update)
-            ScreenFramesBursts = false;               // B177: a restarted screen frames nothing until told again (Nextion.h)
-            SendCommand((char *)"ldrcframe=1");
-            ScreenWarmup(); // B184 (Malcolm, 5 Nov 2026, after the screen's watchdog restart: "returned to the front screen but without the image"):
-                            // the background picture, the colours and the volume are this board's to tell, as at power-on
-            { // B185: the screen says why it restarted ("FrontView rst=N", screen 1.11.180): the log keeps it - the one record a power-off does not lose
-                const char *r = strstr(TextIn, "rst=");
-                const int rst = r ? atoi(r + 4) : -1;
-                const char *why = rst == 3 ? "its own restart (an update, a fresh start for memory)" : rst == 4 ? "a PANIC (a core dump should be on it)" : rst == 5 ? "its interrupt watchdog" : rst == 6 ? "its task watchdog (the main loop hung)" : rst == 7 ? "another watchdog" : rst == 9 ? "a BROWN-OUT (its supply dipped)" : rst < 0 ? "an older screen that gives no reason" : "an unexpected reason";
-                char line[160];
-                snprintf(line, sizeof(line), "the screen restarted (rst=%d: %s) and said FrontView", rst, why);
-                LogFrontPageReason(line); // B172
-            }
-            GotoFrontView();
+        { // B211: the screen's word after its restart is taken where it is read (Nextion.h, THE SCREEN'S OWN RESTART), and does not
+          // come here. Should a text with the word in it ever do: the same - it is noted, and the main loop draws the front page
+          // afresh (ScreenHasRestarted, below). No page says "FrontView".
+            const char *r = strstr(TextIn, "rst=");
+            NoteScreenRestart(r ? (int8_t)atoi(r + 4) : -1);
+            ClearText();
             return;
         }
 
@@ -5403,13 +5599,17 @@ void GetBank() // ... and the other three switches
         SafetySwitchChanged();
     if (SafetyON)
         MotorEnabled = false;
+    bool showBankAgain = false;
     if ((MotorEnabled != MotorWasEnabled) && (UseMotorKill))
     {
         MotorEnabledHasChanged();
-        PreviousBank = 254; // Force bank change to make sure it redisplays
+        showBankAgain = true; // the bank is shown again (the motor switch may have brought the front page up). B211 (the thirteenth review): this was
+                              // "PreviousBank = 254; // Force bank change" - and BankHasChanged then treated every page as LEFT FOR ANOTHER BANK: the Slow-servo
+                              // page lost what was typed, the Rotorflight pages read the flight controller again over their edits. And when this switch
+                              // moved the bank too (its far position is bank 4, 5 or 6), the bank really left was forgotten. PreviousBank stays what it is.
     }
     ReadChannelSwitches9to12();
-    if (Bank != PreviousBank) /// BANK HAS CHANGED ******************************************************************
+    if (Bank != PreviousBank || showBankAgain) /// BANK HAS CHANGED (or is to be shown again) ***************************************
         BankHasChanged();
     MotorWasEnabled = MotorEnabled; // Remember motor state
     PreviousBank = Bank;            // Remember BANK
@@ -5513,11 +5713,23 @@ bool CheckModelName()
 
     if (NEXTION.available())
         return false; // ClaudeFix-14-7-2026 a button press is waiting -- let it be handled before polling
+    if (ScreenPageId != 0xFF && ScreenPageId != SCREEN_MODELS_PAGE)
+        return false; // B211 (the ninth review): the page the screen last put up FOR THIS BOARD is not the Models page (a box that went back
+                      // to another page while this board believed its own): its list is not there to be looked at
+    if (ScreenMarkAwaited)
+        return false; // (the eleventh review: nor while a page's marker is still awaited - the page is not known to be up)
 
     {
         const uint32_t mm = GetValue(MMems), mf = GetValue(Mfiles);
         if (mm == 65535 || mf == 65535)   // B156: a reply that never came is not a model number
             return false;
+        if (ScreenPageId != 0xFF && ScreenPageId != SCREEN_MODELS_PAGE)
+            return false; // B211 (the eleventh review): ... and the page's number is looked at AGAIN - it may have been learned only with these answers (the
+                          // opening work overtaken by the front page: asked above while the number was not yet known, answered by the front page)
+        if (mm + 1 != LastModelLoaded && ScreenSessionCheck() != 0)
+            return false; // B211 (the eighth review): ANOTHER ROW, and no button was pressed. Before another model is loaded for it, the screen must be the
+                          // one this page was drawn on (Nextion.h ScreenSessionCheck): one that has started again unnoticed shows the page as the card
+                          // has it - row 0 - and model 1 was loaded by itself
         ModelNumber = mm + 1;
         FileNumberInView = mf;
     }
@@ -5574,6 +5786,9 @@ void Close_TX_Down()
         SaveAllParameters();     // Save the model if it's not 'Not in use'
         DelayWithDog(500);       // Wait for 0.5 seconds to allow the message to be displayed
     }
+    FlushDeferredLog(); // B211 (the thirteenth review): THE LINES KEPT FOR A QUIET MOMENT ARE WRITTEN AT EVERY POWER-OFF. They were written only inside "a model
+                        // is still connected", below - and this work keeps lines with no model connected too (a note about the screen with the safety off on
+                        // the bench; a number box that holds no number): switched off so, they never reached the card
     if (UseLog && LedWasGreen)
     { // Powering off with the receiver STILL CONNECTED (the warning countdown
       // path): the log's end-of-session summary would otherwise never be
@@ -5658,6 +5873,11 @@ void CheckPowerOffButton()
 
     if (CheckingPowerButton) // already checking power button
         return;
+    if (ModelMemoryBusy)
+        return; // B211 (the twelfth review; the released code had it): NOT WHILE A MODEL IS BEING READ INTO THIS BOARD'S MEMORY. SDcard.h ReadOneModel's own
+                // waits come by here, and the button's first press SAVES "the model" (below; switching off saves too): where a list of all the models
+                // is being made that was the model BEFORE, written over the slot being read - and in Restore, over the backup file. The hold stopped
+                // the flying from that memory, not the saving of it. The button is looked at again at the next wait: the read is over in a moment.
     if (digitalRead(BUTTON_SENSE_PIN))
         ButtonUpSinceBoot = true; // B95: let go at least once since switch-on - only then can a press switch off
     if (digitalRead(BUTTON_SENSE_PIN) && !PowerOffTimer && !PowerWarningVisible)
@@ -5668,9 +5888,16 @@ void CheckPowerOffButton()
 
     if ((!digitalRead(BUTTON_SENSE_PIN)) && (millis() > POWERONOFFDELAY2) && ButtonUpSinceBoot) // no power off in the first seconds, nor while the button has been held since switch-on (B95: that hold enables binding, however long - it used to switch off at 4 s, often before 'Binding enabled' had been heard)
     {                                                                      // power button is pressed!
-        if (BoundFlag && ModelMatched && CurrentView != FRONTVIEW)
-        {
-            LogFrontPageReason("the power button was pressed while connected"); // B172
+        if (BoundFlag && ModelMatched && CurrentView != FRONTVIEW && !NextionGetPending && !ModalWaits)
+        {   // B211 (the fourth review, 14 Nov 2026): NOT while a page's box is being asked for. This runs inside every wait
+            // (DelayWithDog), a get's own 55 ms among them: the front page came up UNDER an OK that was reading its boxes, and the
+            // rest of them were read from the front page - 0, every one - and saved. The button is looked at again at the next
+            // wait that is no get's.
+            // (The eighth review: "the page's reading is over by then", this said - it is not, where a button's work waits
+            //  BETWEEN its boxes: the front page then comes up from inside that wait, and every box read afterwards has no
+            //  answer - Nextion.h BeforePageCommand. And NOT while a question waits for its answer: the front page came up
+            //  over the question, which waited on unseen with the switches unread.)
+            LogFrontPageReason("the power button was pressed while connected", "power button"); // B172
             GotoFrontView();
         }
 
@@ -5779,12 +6006,100 @@ void CheckMaxCurrent() // heer
 }
 
 /************************************************************************************************************/
+// THE SCREEN HAS STARTED AGAIN (its watchdog, a panic, an update, its supply): the main loop's answer, once the screen has
+// caught up - it has said back the number it was told (Nextion.h, THE SCREEN'S OWN RESTART: ScreenCaughtUp, which never waits).
+// B92 (Malcolm, 10 Oct, after an update: "it returned to the front screen but without the image of the model"): the screen
+// has put its last page back from its card. That page has none of what this board wrote on it, and the front page's own
+// preinitialize hides the picture (vis exp0,0). So: the whole front page, as GotoFrontView makes it - the picture, the
+// trims, the bank, the names - and the page itself, should the screen have put back another.
+// B211: this was the answer to the WORD "FrontView" alone, wherever the word happened to be read - and the word was lost
+// when it came inside a wait for a box's answer (the sixth review, 14 Nov 2026).
+FLASHMEM void ScreenHasRestarted()
+{
+    const int rst = ScreenRestartReason;
+    ScreenRestartSeen = false;  // from here this board draws its page afresh: its boxes have a page again
+    ScreenAnswerOwed = false;   // (... and whatever the screen owed went with its restart)
+    ScreenRestartReason = -1;
+    PreviousBank = 250;         // sure to be different
+    BankSoundHeld = true;       // B147: the redraw must not SAY the bank - nothing changed (Malcolm, 27 Oct: "Bank 4!" after every update)
+    SendCommand((char *)"ldrcframe=1"); // B177: a restarted screen frames nothing until told again. (B211: this board no longer forgets that the screen
+                                        // frames - what a restarted screen says unframed until it reads this was pressed on a page of the card: not obeyed)
+    ScreenWarmup(); // B184 (Malcolm, 5 Nov 2026, after the screen's watchdog restart: "returned to the front screen but without the image"):
+                    // the background picture, the colours and the volume are this board's to tell, as at power-on
+    { // B185: the screen says why it restarted ("FrontView rst=N", screen 1.11.180): the log keeps it - the one record a power-off does not lose
+        const char *why = rst == 3 ? "its own restart (an update, a fresh start for memory)" : rst == 4 ? "a PANIC (a core dump should be on it)" : rst == 5 ? "its interrupt watchdog" : rst == 6 ? "its task watchdog (the main loop hung)" : rst == 7 ? "another watchdog" : rst == 9 ? "a BROWN-OUT (its supply dipped)"
+                        : rst == -1 ? "an older screen that gives no reason" : rst == -2 ? "it started with no word: its power came on (a dip in its supply, or it was the slower to start)"
+                        : rst == -3 ? "found by asking: it no longer knew its session's number - every sign of its restart had been lost"
+                        : rst == -4 ? "taken to have restarted: asked for half a minute, it never said its session's number" : "an unexpected reason";
+        // (the thirteenth review) ... and for the line that is KEPT while the model may fly (36 places): which restart of this run it is - two of the same
+        // cause are two lines -, its code, and the cause in a word
+        const char *word = rst == 3 ? "its own" : rst == 4 ? "PANIC" : rst == 5 ? "int wdog" : rst == 6 ? "task wdog" : rst == 7 ? "wdog" : rst == 9 ? "BROWN-OUT"
+                         : rst == -1 ? "no reason" : rst == -2 ? "power on" : rst == -3 ? "by asking" : rst == -4 ? "silent" : "?";
+        static uint16_t restarts = 0;
+        if (restarts < 999)
+            ++restarts;
+        char line[160], kept[40];
+        snprintf(line, sizeof(line), "the screen restarted (rst=%d: %s)", rst, why);
+        snprintf(kept, sizeof(kept), "Screen restart %u: rst=%d %s", (unsigned)restarts, rst, word);
+        LogFrontPageReason(line, "screen restart", kept); // B172
+    }
+    if (CurrentView == CALIBRATEVIEW)
+    { // B211 (the eighth review; as B17 does for an OK part way through, in ButtonWasPressed): the screen went while the sticks were
+      // being calibrated. The model was cleared for it and comes back from the card; and nothing half-swept is kept - the limits
+      // and the switch directions come back too, normal mode again (the front page left the half-swept limits in memory, and
+      // the model "Not in use", for the next save to write)
+        if (CurrentMode == CALIBRATELIMITS || CurrentMode == CENTRESTICKS)
+        {
+            CurrentMode = NORMAL;
+            LoadAllParameters();
+            RedLedOn();
+        }
+        ReadOneModel(ModelNumber);
+    }
+    GotoFrontView();
+}
+// B211: THE MAIN LOOP'S LOOK AT THE SCREEN'S STATE, pass after pass - it never waits (Nextion.h).
+//  - The screen has STARTED AGAIN: has it caught up (it is told its session's number, and asked for it back)? Then the front
+//    page, afresh.
+//  - It OWES AN ANSWER (one that never came in its time; a page's marker that is late): has it caught up? Then it is asked
+//    again from here - and should it no longer know its session's number, it has started again unnoticed: noted.
+//  - It SHOWS THE FRONT PAGE while this board believes another page (the number it says behind a page command): the front page,
+//    afresh (Nextion.h, at SCREEN_FRONT_PAGE).
+//  - Else, until the screen has said its session's number once: it is told it (at this board's start).
+FLASHMEM void ScreenKeepUp()
+{
+    if (ScreenRestartSeen)
+    {
+        if (ScreenCaughtUp())
+            ScreenHasRestarted();
+        return;
+    }
+    if (ScreenAnswerOwed)
+    {
+        ScreenOwedStep();
+        return;
+    }
+    if (CurrentView != FRONTVIEW && ScreenPageId == SCREEN_FRONT_PAGE)
+    { // THE SCREEN SHOWS THE FRONT PAGE AND THIS BOARD BELIEVES ANOTHER PAGE (Nextion.h, at SCREEN_FRONT_PAGE): the front page, afresh - and
+      // the page believed is left as GotoFrontView leaves it (a scan ended, the mode back to normal, the pipe let go)
+        LogFrontPageReason("the screen showed the front page under another page's work, or has not got that page", "screen showed it"); // (the model connected, the power button or the
+                                                                                                                    //  motor box in that moment; or a page its card has not got)
+        GotoFrontView();
+        return;
+    }
+    ScreenSessionAtStart();
+}
+
+/************************************************************************************************************/
 void FASTRUN ManageTransmitter()
 {
     static uint32_t TransmitterLastManaged = 0;
     uint32_t RightNow = millis();
     int32_t TXPacketElapsed = RightNow - LastPacketSentTime;
     CheckForNextionButtonPress(); // must be done very frequently to avoid missing button presses. It updates the TextIn string which is used for button press processing.
+    if (ScreenRestartSeen || ScreenAnswerOwed || (CurrentView != FRONTVIEW && ScreenPageId == SCREEN_FRONT_PAGE) || (!ScreenSaidSession && (int32_t)(RightNow - ScreenSessionNextMs) >= 0))
+        ScreenKeepUp(); // B211: the screen has started again, or owes an answer, or shows the front page while this board believes another, or has not
+                        // yet said its session's number: looked at pass after pass - nothing in there waits for the screen (above)
     KickTheDog();                 // Watchdog ... ALWAYS!
 
     if ((FHSS_data::PaceMaker - TXPacketElapsed < TIMEFORTXMANAGMENT) && ModelMatched && (RightNow - LastTimeRead) < 3000)
@@ -5818,6 +6133,8 @@ void FASTRUN ManageTransmitter()
     CalibratePoll();   // B88: the calibrate page
     EasyPoll();        // B104: the Easy tuning page
     RatesCurvePoll();  // B107: the rates curves, a few lines a pass
+    SubTrimPoll();     // B211: the Sub-trim page - a word not kept for want of room: the page written out again (Trims.h; no question, no wait)
+    BankListenPoll();  // B211: "Listen" on the Bank names page - the names said one at a time, nothing waits
 
     if (RightNow - LastTimeRead >= 1000)
     { // Only once a second for these..
@@ -5831,6 +6148,14 @@ void FASTRUN ManageTransmitter()
             LogRestartCause();
         }
         FlightStampTick(); // (11 Nov 2026) while flying, the stamp a restart in flight is known by (FlightGuard.h)
+#ifdef ELRS_TEST
+        if (!(BoundFlag && ModelMatched) && !RadiosMustBeOff() && !(!SafetyIsDefined() && ElrsFlies())) // (the seventeenth review: FlightGuard.h LogMustWait's own rule)
+#else
+        if (!(BoundFlag && ModelMatched) && !RadiosMustBeOff())
+#endif
+            FlushDeferredLog(); // B211 (the thirteenth review): ... and once a second while NO MODEL IS CONNECTED and nothing may fly (the safety on; with no
+                                // safety switch, the motor off) - there is no link to hold up. (With a model connected they wait as they always did: a card
+                                // write is a gap in the link, and a gap is a line: B48)
         if (VersionMismatch)
         { // (10 Nov 2026) once per mismatch found (once a connection), and never a box while the model may fly
             VersionMismatch = false;
@@ -5895,12 +6220,15 @@ void FASTRUN ManageTransmitter()
         PipeModelGoneTick(); // B90: the model gone, a page's read of the receiver left unanswered: the backup file answers it
         BankSyncTick();      // B143: the bank count told to the receiver, and the warning when the flight controller's selector differs
 
+        const bool savePending = RfVerifyPending(); // B211 (e99d): asked on EVERY view - a read-back whose read is over is let go there (RF_Verify.h)
         if (CurrentView >= PIDVIEW && CurrentView <= RFGOVERNORVIEW_GLOBAL)
         {
             Hide_msg_if_needed(); // Hide any message in rotoflight config area
             FcBankTick();         // B82: which bank the flight controller is really on
             ArmTick();            // B88: why it will not arm, on the Rotorflight menu
         }
+        else if (savePending && CurrentView != BLANKVIEW)
+            Hide_msg_if_needed(); // B211 (e99b, e99c): a save's read-back still pending on a view that is no Rotorflight page (Help; the front page behind the motor switch): its read's window ends here too - the bank switch is not held for as long as Help stands. (e99d: not on the blank screen - a read-back's verdict waits for the page, as released)
         TransmitterLastManaged = millis();
     }
 }
@@ -5946,9 +6274,16 @@ FASTRUN void loop()
     FwTrialTick();         // V1B: firmware on trial is accepted once it has run for 30 seconds
 #ifdef LDRC_TEST_FALL_OVER
     if (millis() > 8000)   // TEST BUILDS ONLY (-DLDRC_TEST_FALL_OVER): a firmware that falls over, to prove that the previous one comes back
+    {
+        static const char mark[] = "LDRC TEST BUILD: falls over"; // B211 (the fourteenth review): the words dev/release_v1b.py knows this build by, and refuses
+                                                                  // to publish (TEST_BUILD_MARKS) - it had none, and a package of it left in dev/out was "the release"
+        volatile const char *keep = mark;                         // (read below, so that the words are in the image)
         for (;;)
         {
+            if (!*keep)
+                break;
         }
+    }
 #endif
     ManageTransmitter();   // Do the needed chores ... (if there's time)
     GetNewChannelValues(); // Load SendBuffer with new servo positions very frequently
@@ -5966,10 +6301,6 @@ FASTRUN void loop()
         if (BindingEnabled && !BoundFlag)
             SendBindingPipe(); // Only if binding and not bound yet - override low throttle setting
     }
-#ifdef ELRS_TEST
-    if (CurrentMode == NORMAL)
-        ElrsTestTick(); // TEST BUILDS ONLY: the same channels (SendBuffer, final for this pass) as CRSF to the module (ElrsCrsf.h)
-#endif
 
     switch (CurrentMode)
     {

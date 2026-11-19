@@ -47,7 +47,7 @@ static const uint8_t BasProtoCodes[6] PROGMEM = {0, 1, 5, 6, 7, 10};   // Rotorf
 static const char *const BasProtoWords[6] PROGMEM = {"Normal PWM (most heli ESCs)", "OneShot125", "DShot150", "DShot300", "DShot600", "Off (disabled)"};   // (the phone app's words)
 static const char *const BasEscWords[14] PROGMEM = {"None", "BLHeli32", "Hobbywing V4", "Hobbywing V5", "Scorpion", "Kontronik", "OMP Hobby", "ZTW", "APD", "OpenYGE", "FLYROTOR", "Graupner", "XDFly", "Record"};   // esc_sensor_protocol 0-13
 
-FLASHMEM static const char *BasPageWord() { return CurrentView == PORTSVIEW ? "page PortsView" : CurrentView == BASICS2VIEW ? "page Basics2View" : "page BasicsView"; }
+FLASHMEM static const char *BasPageWord() { return CurrentView == PORTSVIEW ? "page PortsView" : CurrentView == BASICS2VIEW ? "page Basics2View" : CurrentView == ESCCALVIEW ? "page EscCalView" : "page BasicsView"; }   // (B211, the sixteenth review: a box's way back from the fourth page is the fourth page)
 FLASHMEM static void BasBusy(const char *msg)
 {
     SendCommand((char *)(msg && *msg ? "vis busy,1" : "vis busy,0"));
@@ -57,8 +57,10 @@ FLASHMEM static void BasBusy(const char *msg)
 FLASHMEM static unsigned BasU16(const uint8_t *b, int o) { return (unsigned)(b[o] | (b[o + 1] << 8)); }
 FLASHMEM static void BasPutU16(uint8_t *b, int o, long v) { if (v < 0) v = 0; if (v > 65535) v = 65535; b[o] = (uint8_t)(v & 0xFF); b[o + 1] = (uint8_t)(v >> 8); }
 FLASHMEM static int BasProtoIndex(uint8_t code) { for (int i = 0; i < 6; ++i) if (BasProtoCodes[i] == code) return i; return -1; }
-FLASHMEM static void BasNum(const char *name, long v)
+FLASHMEM static void BasNum(const char *name, long v) // (a typed field: left as the screen has it while RfKeepTyped is set - Nextion.h, WHAT THE PILOT TYPED STAYS ON THE PAGE)
 {
+    if (RfKeepTyped)
+        return;
     char b[16];
     snprintf(b, sizeof(b), "%ld", v);
     SendText((char *)name, b);
@@ -67,6 +69,7 @@ FLASHMEM static long BasFieldTenths(const char *name, long lo, long hi) // "10.2
 {
     char t[24] = "";
     GetText((char *)name, t, sizeof(t) - 1);
+    TextMustBeNumber(name, t); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     const float f = (float)atof(t);
     long v = (long)(f * 10.0f + (f >= 0 ? 0.5f : -0.5f));
     return v < lo ? lo : v > hi ? hi : v;
@@ -166,6 +169,7 @@ FLASHMEM static void BasPageHead()
 }
 FLASHMEM static void BasGatherPage1()
 {
+    KEEP_WHOLE(want, BasMotWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     long p = FieldNumber("tn5", 2, 64);
     if (p & 1) --p;   // magnets come in pairs
     BasMotWant[13] = (uint8_t)p;
@@ -179,7 +183,12 @@ FLASHMEM static void BasPair(const char *na, const char *nb, int off) // two rat
     BasPutU16(BasMotWant, off, a);
     BasPutU16(BasMotWant, off + 2, b);
 }
-FLASHMEM static void BasGatherPage2() { BasPair("tn0", "tn1", 21); BasPair("tn2", "tn3", 25); }
+FLASHMEM static void BasGatherPage2()
+{
+    KEEP_WHOLE(want, BasMotWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    BasPair("tn0", "tn1", 21);
+    BasPair("tn2", "tn3", 25);
+}
 FLASHMEM static void BasGather()
 {
     if (CurrentView == BASICSVIEW) BasGatherPage1();
@@ -206,12 +215,31 @@ FLASHMEM static void BasFail(const char *what)
     BasStep = BAS_IDLE;
     BasBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)BasPageWord(), msg);
+    if (!BasHave)
+    { // B211 (the fifteenth review; released code): THE READ FAILED - THE PAGE IS LEFT (RF_SaveNow.h RfLeaveNotRead says why)
+        if (!RfLeaveNotRead(msg))
+        {
+            SendCommand((char *)BasPageWord());
+            BasPageHead();
+            BasBusy(RF_NOT_READ_LINE); // (a standing line: whatever the screen still shows there is not in hand)
+        }
+        return;
+    }
+    const bool quiet = RfMayFly(); // (the seventeenth review: on the quiet road the page itself says that the save failed - below)
+    RfBoxOrQuiet(BasPageWord(), msg); // (the sixteenth review: no box that waits while the model may fly - PipeHttp.h; then a line in the log)
+    RfKeepTyped = true; // B211 (the fourteenth review): a save runs for seconds and he types meanwhile - what was typed stays (the told rows are in hand as tapped)
     BasPageHead();
     BasShow();
+    RfKeepTyped = false;
+    if (quiet)
+    {
+        BasBusy(RF_NOT_SAVED_LINE);
+        BasMsgUntil = millis() + 6000;
+    }
 }
 FLASHMEM static void BasRead()
 {
+    BasHave = false; // B211 (the fifteenth review; released code): NOTHING IS IN HAND UNTIL THIS READ HAS IT (RF_SaveNow.h RfLeaveNotRead)
     BasBusy("Reading from the flight controller ...");
     BasReq = MspAsk(42, nullptr, 0);
     BasStep = BAS_READ_MIX;
@@ -248,7 +276,7 @@ FLASHMEM static void BasAskAgain() // after the restart: the flight controller i
 FLASHMEM void BasicsPoll()
 {
     if (CurrentView != BASICSVIEW && CurrentView != BASICS2VIEW && CurrentView != PORTSVIEW) { BasStep = BAS_IDLE; BasMsgUntil = 0; return; }
-    if (BasMsgUntil && (int32_t)(millis() - BasMsgUntil) >= 0) { BasMsgUntil = 0; BasBusy(""); BasShow(); }
+    if (BasMsgUntil && (int32_t)(millis() - BasMsgUntil) >= 0) { BasMsgUntil = 0; BasBusy(""); }   // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     if (BasStep == BAS_IDLE) return;
     if (BasStep == BAS_WAIT)
     {
@@ -260,7 +288,7 @@ FLASHMEM void BasicsPoll()
     {
         if (!PipeReplyLate()) return;
         if (BasStep == BAS_VERIFY_MIX && BasTries) { if (BasTries < 5) { BasAskAgain(); return; } BasFail("The flight controller has not come back"); return; }
-        BasFail("No answer");
+        BasFail(RfNoAnswerWords(BasStep >= BAS_WRITE_MIX && BasStep <= BAS_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -309,24 +337,24 @@ FLASHMEM void BasicsPoll()
         return;
     }
     case BAS_WRITE_MOT:
-        if (!ok) { BasFail("Not written (motor & ESC)"); return; }
+        if (!ok) { BasFail("PART WRITTEN, NOT STORED (motor & ESC failed) - try again, or switch the model off and on"); return; }
         if (BasEscHave) { BasReq = MspAsk(216, BasEscWant, BAS_ESC_BYTES); BasStep = BAS_WRITE_ESC; return; }
         if (BasPortsEdited) { BasReq = MspAsk(55, BasPortsWant, BasPortsN * BAS_PORT_BYTES); BasStep = BAS_WRITE_PORTS; return; }
         BasReq = MspAsk(250, nullptr, 0); BasStep = BAS_STORE;
         return;
     case BAS_WRITE_ESC:
-        if (!ok) { BasFail("Not written (ESC telemetry)"); return; }
+        if (!ok) { BasFail("PART WRITTEN, NOT STORED (ESC telemetry failed) - try again, or switch the model off and on"); return; }
         if (BasPortsEdited) { BasReq = MspAsk(55, BasPortsWant, BasPortsN * BAS_PORT_BYTES); BasStep = BAS_WRITE_PORTS; return; }
         BasReq = MspAsk(250, nullptr, 0); BasStep = BAS_STORE;
         return;
     case BAS_WRITE_PORTS: // B100: then the features the functions need
-        if (!ok) { BasFail("Not written (ports)"); return; }
+        if (!ok) { BasFail("PART WRITTEN, NOT STORED (ports failed) - try again, or switch the model off and on"); return; }
         BasReq = MspAsk(36, nullptr, 0); BasStep = BAS_READ_FEAT;
         return;
     case BAS_READ_FEAT:
     {
         uint8_t b[8];
-        if (!ok || PipeReplyBytes(b, sizeof(b)) < 4) { BasFail("Could not read the features"); return; }
+        if (!ok || PipeReplyBytes(b, sizeof(b)) < 4) { BasFail("PART WRITTEN, NOT STORED (the features could not be read) - try again, or switch the model off and on"); return; }   // (the seventeenth review: this read stands in the MIDDLE of the save)
         BasFeat = (uint32_t)b[0] | ((uint32_t)b[1] << 8) | ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
         const uint32_t want = BasFeatWanted();
         BasFeatWritten = want != BasFeat; BasFeatWant = want;   // (B165: read back after the restart when written)
@@ -335,11 +363,11 @@ FLASHMEM void BasicsPoll()
         return;
     }
     case BAS_WRITE_FEAT:
-        if (!ok) { BasFail("Not written (features)"); return; }
+        if (!ok) { BasFail("PART WRITTEN, NOT STORED (features failed) - try again, or switch the model off and on"); return; }
         BasReq = MspAsk(250, nullptr, 0); BasStep = BAS_STORE;
         return;
     case BAS_STORE:
-        if (!ok) { BasFail("Not stored"); return; }
+        if (!ok) { BasFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         BasTries = 0;
         if (BakOffline()) { BasReq = MspAsk(42, nullptr, 0); BasStep = BAS_VERIFY_MIX; return; }   // (the backup on the card: nothing to restart)
         BasBusy("Restarting the flight controller to apply them ...");
@@ -403,7 +431,7 @@ FLASHMEM void StartBasicsView() // the settings page's "Model basics ..."
         MsgBox((char *)"page RFSetupView", why);
         return;
     }
-    if (CurrentView == RFSETUPVIEW) RFSettingsGather();   // the settings page's own edits kept, as its OK keeps them
+    if (CurrentView == RFSETUPVIEW && !RFSettingsGather()) return;   // the settings page's own edits kept, as its OK keeps them (B211: a box with no answer - the page stays)
     SendCommand((char *)"page BasicsView");
     CurrentView = BASICSVIEW;
     Bas_Was_Edited = false;
@@ -412,9 +440,24 @@ FLASHMEM void StartBasicsView() // the settings page's "Model basics ..."
 }
 void SaveBasics();
 FLASHMEM static void BasSaveNow() { BasPageHead(); BasShow(); SaveBasics(); }   // B102: OK's "Save now?" (the edits shown again, then saved)
+static bool BasPortsNeedModel(char *why, size_t n);
+void StartBasics3View(); void EndBasics3View(); // (below; 1Definitions.h has them too)
 FLASHMEM void EndBasicsView() // OK on any of the four pages: back to the menu
 {
     EscCalStop();   // (B100: a throttle hold on page 4 let go first)
+    if (CurrentView == ESCCALVIEW && Bas_Was_Edited)
+    { // B211 (the sixteenth review; released code): OK ON THE THROTTLE-CALIBRATION PAGE WITH EDITS OF THE PAGES BEFORE NOT YET SAVED. The question's way
+      // back, the save and its poll know three pages: the screen went to BasicsView while this board believed in this page, the first write went
+      // out and the poll dropped the save - nothing stored, nothing said, "Writing ..." for ever. THE PAGE BEFORE IS PUT UP FIRST - the ports, as
+      // "< Previous" does; without the model (no ports page) the gear ratios - and OK is taken from there.
+        char why[120];
+        if (BasPortsNeedModel(why, sizeof(why)))
+            EndBasics3View();
+        else
+            StartBasics3View();
+        if (CurrentView == ESCCALVIEW)
+            return; // (neither came: this page stays, nothing is asked)
+    }
     if (Bas_Was_Edited)
     {
         RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
@@ -424,7 +467,7 @@ FLASHMEM void EndBasicsView() // OK on any of the four pages: back to the menu
     }
     BasStep = BAS_IDLE;
     Bas_Was_Edited = false;
-    RotorFlightStart();
+    RfMenuFromPage(BasHave);
 }
 FLASHMEM void StartBasics2View() // Next > on page 1: the gear ratios
 {
@@ -446,7 +489,7 @@ FLASHMEM void EndBasics2View() // < Previous on page 2
     BasPageHead();
     if (BasHave) BasShowPage1(); else BasRead();
 }
-FLASHMEM void BasicsWasEdited() { SendCommand((char *)"vis b3,1"); Bas_Was_Edited = true; }
+FLASHMEM void BasicsWasEdited() { if (!BasHave) return; SendCommand((char *)"vis b3,1"); Bas_Was_Edited = true; }  // B211 (the sixteenth review): with nothing in hand nothing is an edit - OK asked "Save now?" for it, the save returned at once, and "close when saved" stood
 // ---- B100: the ports page
 FLASHMEM static bool BasPortsNeedModel(char *why, size_t n)
 {
@@ -505,7 +548,11 @@ FLASHMEM void BasicsEscTapped() { if (!BasHave || !BasEscHave) return; BasEscWan
 FLASHMEM void SaveBasics()
 {
     if (!BasHave || BasStep != BAS_IDLE)   // (a Save while a read or a save runs is ignored)
+    {
+        if (!BasHave)
+            RfLeaveAfterSave = false; // (the sixteenth review: ... and OK's "close when saved" does not stand on for a later Save - RF_SaveNow.h)
         return;
+    }
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {

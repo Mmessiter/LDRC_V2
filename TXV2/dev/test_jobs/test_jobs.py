@@ -20,12 +20,26 @@ prog = r'''
 #include <cmath>
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include <algorithm>
 #define DMAMEM
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 static bool NextionTextMissed = false;   // (B156: every box answers here; dev/test_missed_reply has the misses)
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static bool RfFieldsMissed(const char *) { const bool m = NextionTextMissed; NextionTextMissed = false; return m; }
 #define PROGMEM
 #define WHAHWHAHMSG 1
@@ -83,9 +97,17 @@ static uint16_t stubInterp(uint16_t, uint16_t, uint16_t ch) { return Bank <= BAN
 uint16_t (*Interpolate[3])(uint16_t InputValue, uint16_t InputChannel, uint16_t OutputChannel) = {stubInterp, stubInterp, stubInterp};
 // ---- the fake screen
 static std::map<std::string, std::string> fields; static std::vector<std::string> cmds; static int boxes = 0; static std::string lastBox; static bool confirmAnswer = true; static int sounds = 0, rfStarts = 0;
-static void SendCommand(char *c) { cmds.push_back(c); }
+static std::map<std::string, int> attrs;
+static void SendCommand(char *c) { cmds.push_back(c); if (!strncmp(c, "bar.own=", 8)) attrs["bar.own"] = atoi(c + 8); }   // (the screen keeps the bar's token: any attribute written to its bar)
+// (B211, the eleventh review: what RF_Jobs.h now uses of Nextion.h / Utilities.h)
+static uint16_t ScreenMarkCount = 1; static uint16_t ScreenCountAfter(uint16_t c) { if (!c) return 4711; ++c; return c ? c : 1; }
+static bool noPage = false; static bool BoxesHaveNoPage() { return noPage; }
+static int boxesLostTold = 0; static void NoteBoxesLost() { ++boxesLostTold; }
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; }
+static bool RfHomeNotRead = false; static bool rfMayFlyNow = false; static int quietSaid = 0;   // (B211, the sixteenth review: PipeHttp.h RfMayFly / RfSayQuietly / RfBoxOrQuiet stood in for - no box that waits while the model may fly)
+static bool RfMayFly() { return rfMayFlyNow; } static void RfSayQuietly(const char *) { ++quietSaid; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { if (RfMayFly()) { RfSayQuietly(msg); return; } MsgBox((char *)page, (char *)msg); }
 static bool GetConfirmation(char *page, char *prompt) { lastBox = prompt; return confirmAnswer; }
 static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; CurrentView = 47; }
@@ -93,8 +115,10 @@ static bool ModelSeemsArmed(char *, int) { return false; }
 static bool RfPipeBlocked(char *, int) { return false; }
 static bool needModel = false; static bool RfNeedsModel(char *why, int n) { if (needModel) snprintf(why, n, "Switches and knobs need the model connected, or a backup on the card."); return needModel; }
 static bool BakOffline() { return false; }
-static long FieldNumber(const char *name, long lo, long hi) { long v = atol(fields[name].c_str()); return v < lo ? lo : v > hi ? hi : v; }
-static std::map<std::string, int> attrs; static int GetOtherValue(char *n) { return attrs.count(n) ? attrs[n] : 0; }
+static std::set<std::string> fieldsLost;   // (the fields that have no answer just now: counted, as the real FieldNumber's GetText counts them)
+static long FieldNumber(const char *name, long lo, long hi) { if (fieldsLost.count(name)) { ++BoxesLost; return lo; } long v = atol(fields[name].c_str()); return v < lo ? lo : v > hi ? hi : v; }
+static std::set<std::string> attrsLost;   // (the bar's attributes that have no answer just now: 0 and counted, as the real GetOtherValue)
+static int GetOtherValue(char *n) { if (attrsLost.count(n)) { ++BoxesLost; return 0; } return attrs.count(n) ? attrs[n] : 0; }
 static std::map<std::string, int> vals; static void SendValue(char *n, int v) { vals[n] = v; } static uint32_t GetValue(char *n) { return (uint32_t) (vals.count(n) ? vals[n] : 0); }
 static int cmdValue(const char *attr) { for (int i = (int) cmds.size() - 1; i >= 0; --i) { const std::string pre = std::string(attr) + "="; if (cmds[i].rfind(pre, 0) == 0) return atoi(cmds[i].c_str() + pre.size()); } return -9999; }
 static bool cmdSeen(const char *c) { return std::find(cmds.begin(), cmds.end(), std::string(c)) != cmds.end(); }
@@ -125,8 +149,8 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
 }
 // B102: OK's "Save now?" - the real RfSaveFirst / RfSavedThenLeave over a fake question: Discard unless saveNowAnswer is 1
 static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
-static int saveNowAnswer = 0, saveNowAsked = 0;
-static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; return saveNowAnswer == 1; }
+static int saveNowAnswer = 0, saveNowAsked = 0; static bool loseAtQuestion = false;   // (loseAtQuestion: from the question on, the knob's two fields have no answer)
+static bool GetSaveOrDiscard(char *, char *prompt) { ++saveNowAsked; lastBox = prompt; if (loseAtQuestion) { fieldsLost.insert("tk0"); fieldsLost.insert("tk1"); } return saveNowAnswer == 1; }
 static inline void BankCheck(bool, int, void (*then)(), const char *) { then(); }
 ''' + hdr('RF_SaveNow.h') + r'''
 ''' + hdr('RF_Adjust.h') + r'''
@@ -138,6 +162,7 @@ static int checks = 0, fails = 0;
 static int liveCh = -1;   // a channel whose output follows its curve in the bank in use (reversed if the channel is), as CalculateAllOutputs makes it
 static void live() { if (liveCh < 0) return; uint16_t v = usOf(Bank, liveCh); if (ReversedChannelBITS & (1 << liveCh)) v = (uint16_t)(MAXMICROS - (v - MINMICROS)); SendBuffer[liveCh] = v; }
 static void run(int n = 20) { for (int i = 0; i < n; ++i) { live(); AdjustPoll(); SwitchPoll(); JobsPoll(); now += 50; } }
+static void line0(size_t from, int &mn, int &mx);
 static int writes(int fn) { int k = 0; for (auto &r : fcLog) if (r.fn == fn) ++k; return k; }
 static uint8_t stp(int us) { int st = (int) floorf((us - 1500) / 5.0f + 0.5f); return (uint8_t) (st < 0 ? st + 256 : st); }
 static void putLine(int i, int fn, int ena, int enaLo, int enaHi, int ch, int a1Lo, int a1Hi, int a2Lo, int a2Hi, int mn, int mx, int st) {
@@ -148,6 +173,12 @@ static void blankAdj() { memset(adj, 0, sizeof adj); for (int i = 0; i < 42; ++i
 static void blankModes() { for (int i = 0; i < 20; ++i) slot(i, 0, 0, 1500, 1500); }
 static int pickFn(int fn) { return JobsPickIdxOfFn((uint8_t)fn); }
 static int pickMode(int perm) { return JobsPickIdxOfMode((uint8_t)perm); }
+static void line0(size_t from, int &mn, int &mx)   // (the first adjustment's line as written to the flight controller from fcLog[from] on: its two values; -1: not written)
+{
+    mn = mx = -1;
+    for (size_t i = from; i < fcLog.size(); ++i) if (fcLog[i].fn == 53 && fcLog[i].data.size() >= 28 && fcLog[i].data.substr(0, 2) == "00")
+    { const std::string &d = fcLog[i].data; mn = (int) strtol(d.substr(20, 2).c_str(), nullptr, 16) | ((int) strtol(d.substr(22, 2).c_str(), nullptr, 16) << 8); mx = (int) strtol(d.substr(24, 2).c_str(), nullptr, 16) | ((int) strtol(d.substr(26, 2).c_str(), nullptr, 16) << 8); }
+}
 int main() {
     memset(curveDeg, -1, sizeof curveDeg);
     blankAdj(); blankModes();
@@ -292,8 +323,15 @@ int main() {
     // 11. Remove the black box one, Save: both tables - two slots (the new one, the emptied one) and nothing of the adjustments
     JobsNext(); JobsNext(); JobsNext(); run(2); CHECK(fields["tn0"] == "Black box recording (BLACKBOX)" && JobAt == 3);
     confirmAnswer = true; JobsRemove(); CHECK(SwN == 3 && !SwUsed(SwNow[3]) && JobAt == 3 && fields["ltn0"] == "Changes");   // (the row after it: the first setting)
-    fcLog.clear(); SaveJobs(); run(40);
-    CHECK(writes(35) == 2 && writes(250) == 1 && writes(53) == 0 && modes[2 * 4] == 47 && modes[2 * 4 + 1] == 2 && modes[3 * 4 + 3] == stp(1500) && SwN == 3 && !Sw_Was_Edited);
+    // (B211, the tenth review: THIS SAVE WAS REFUSED IN HERE, UNSEEN, until 15 Nov 2026 - the Yaw P knob's row (60 to 130) had taken the
+    //  keypad's boxes while a switch job was showing: "55" and "55", another row's, and Save said "2. Yaw P gain: ..." after the switches
+    //  had gone. Only the row that is on the screen is gathered now (RF_Adjust.h AdjShownAt): the knob is as it was, the save runs
+    //  through - the switches' two slots, stored; then the adjustments, which the job that became a knob and back had marked edited:
+    //  no line of them differs, so none is written; stored, read back the same.)
+    CHECK(AdjRows[1].kind == AK_KNOB && AdjRows[1].fn == 22 && AdjRows[1].v[0] == 60 && AdjRows[1].v[1] == 130);
+    boxes = 0; fcLog.clear(); SaveJobs(); run(40);
+    CHECK(writes(35) == 2 && writes(250) == 2 && writes(53) == 0 && writes(52) == 1 && modes[2 * 4] == 47 && modes[2 * 4 + 1] == 2 && modes[3 * 4 + 3] == stp(1500) && SwN == 3 && !Sw_Was_Edited);
+    CHECK(boxes == 0 && !Adj_Was_Edited && fields["busy"] == "Saved, and read back the same." && AdjRows[1].v[0] == 60 && AdjRows[1].v[1] == 130);
     // 12. both tables edited, one Save: the switches first, then the adjustments, said once at the end
     attrs["bar.d0"] = 1650; attrs["bar.d1"] = 2125; JobAt = 1; JobsShow(); JobsBarMoved(); CHECK(Sw_Was_Edited);
     JobAt = SwN + 1; JobsShow(); run(6); CHECK(fields["tn0"] == "Yaw P gain"); fields["tk1"] = "140"; JobsWasEdited(); JobsPageBack(); CHECK(Adj_Was_Edited);
@@ -307,6 +345,18 @@ int main() {
     CurrentView = ADJUSTVIEW; JobAt = 1; JobsShow(); attrs["bar.d0"] = 1620; JobsBarMoved(); CHECK(Sw_Was_Edited);
     saveNowAnswer = 1; saveNowAsked = 0; rfStarts = 0; fcLog.clear(); EndJobsView(); CHECK(saveNowAsked == 1 && rfStarts == 0 && JobsStep == JOBS_SAVE_SW);
     run(60); CHECK(writes(35) == 1 && writes(250) == 1 && !Sw_Was_Edited && rfStarts == 1 && CurrentView == 47);   // (saved, then left)
+    // 13b (the twelfth review, reviewer B's finding 11). OK, "Save now?", Save - and the save STOPS on a box with no answer, putting up no box of its own:
+    //     nothing is written, the page stays - and "close when saved" is not left standing: a LATER Save, by its own button, saves and does NOT close
+    //     the page under him (it did)
+    CurrentView = ADJUSTVIEW; fields["tk1"] = "160"; JobAt = SwN + 1; JobsShow(); JobsWasEdited(); JobsPageBack(); CHECK(Adj_Was_Edited);
+    fields["tk1"] = "170"; BoxesLostAtWork = BoxesLost; loseAtQuestion = true;                    // (OK's own gather is answered; the SAVE's, behind the question, is not)
+    saveNowAnswer = 1; saveNowAsked = 0; rfStarts = 0; fcLog.clear(); EndJobsView(); loseAtQuestion = false;
+    CHECK(saveNowAsked == 1 && BoxesLost != BoxesLostAtWork);                                    // (the scene is the one meant: asked, Save, a box of the save's gather lost)
+    CHECK(rfStarts == 0 && CurrentView == ADJUSTVIEW && JobsStep == JOBS_IDLE && Adj_Was_Edited && fcLog.empty());
+    CHECK(!RfLeaveAfterSave);                                                                    // "close when saved" does not stand
+    fieldsLost.clear(); BoxesLostAtWork = BoxesLost; SaveJobs(); run(60);
+    CHECK(!Adj_Was_Edited && JobsStep == JOBS_IDLE && rfStarts == 0 && CurrentView == ADJUSTVIEW);   // saved by its own button: the page is still open
+    saveNowAnswer = 0;
     // 14. no USB cable: the switches read, the adjustments refused - the switch jobs stand, the page says so; a setting cannot be added, a switch job can
     usb = false; StartJobsView(); run(8);
     CHECK(CurrentView == ADJUSTVIEW && SwHave && !AdjHave && AdjMissing && JobsN() == SwN && SwN == 3 && fields["t0"] == "Job 1 of 3" && fields["t9"] == "Bluetooth" && fields["busy"].find("need the USB cable") != std::string::npos && JobsStep == JOBS_IDLE);
@@ -420,6 +470,150 @@ int main() {
     CHECK(saveNowAsked == 1 && CurrentView == 47 && !AdjModelDirty && modelSaves == 0);
     for (int b = 1; b <= 6; ++b) for (int k = 0; k < CURVE_POINTS_MAX; ++k) CHECK(CurvePoint[b][6][k] == hand[b]);
     MaxRangeNarrow = 0; banksN = 4; liveCh = -1;
+    // 19. B211 (the tenth review, reviewer B's experiment; released code had the fault): ONLY THE ROW THAT IS ON THE SCREEN IS GATHERED.
+    // THE FLIGHT CONTROLLER: the ARM switch job on AUX1 and a RESCUE job on AUX3 - and its adjustments: the first of the list a knob on
+    // AUX2 that sets the Yaw P gain between 60 and 120, the second a knob on AUX4 for the Pitch P gain, 40 to 70. (No bank or rates
+    // selector in front.) THE SCREEN keeps every box of a page as it was last written - also across visits: the keypad's boxes tk0/tk1
+    // hold what the LAST knob shown on an earlier visit left there (another model's, say: 15 and 25); a screen just started has the
+    // page file's "0" and "0". The page opens on the arm switch's job; Next > shows the second SWITCH job: the cursor of the knobs is
+    // at their first row, whose boxes were never written on this visit - it took them (15 to 25, or 0 to 0), the page not marked
+    // edited, and the next Save (of anything) wrote that to the flight controller.
+    for (int stale = 0; stale < 2; ++stale)
+    {
+        Bank = 2; for (int b = 0; b <= BANKS_USED; ++b) for (int c = 0; c <= CHANNELSUSED; ++c) setDeg(b, c, 90);
+        memset(curveDeg, -1, sizeof curveDeg); AdjSeenClear(); usb = true; needModel = false; busyOnce = 0; saveNowAnswer = 0;
+        blankAdj(); blankModes();
+        slot(0, 0, 0, 1500, 2125); slot(1, 53, 2, 1700, 2125);
+        putLine(0, 22, 0, 875, 2125, 1, 1000, 2000, 1500, 1500, 60, 120, 0);
+        putLine(1, 14, 0, 875, 2125, 3, 1000, 2000, 1500, 1500, 40, 70, 0);
+        fields["tk0"] = stale ? "15" : "0"; fields["tk1"] = stale ? "25" : "0";
+        fcLog.clear(); cmds.clear(); boxes = 0;
+        StartJobsView(); run(8);
+        CHECK(SwHave && AdjHave && SwN == 2 && AdjN == 2 && JobAt == 0 && AdjRows[0].kind == AK_KNOB && AdjRows[0].v[0] == 60 && AdjRows[0].v[1] == 120 && !Adj_Was_Edited);
+        CHECK(AdjShownAt == -1);                                  // (a switch job shows: no knob's row is on the screen)
+        JobsNext(); run(2);     // Next >: the rescue job - still a switch job on the screen
+        CHECK(AdjRows[0].v[0] == 60 && AdjRows[0].v[1] == 120 && !Adj_Was_Edited && AdjShownAt == -1);   // a row that has not been on the screen is not gathered
+        JobsNext(); run(8);     // Next >: the Yaw P knob's own row - its boxes written from what is in hand
+        CHECK(AdjShownAt == 0 && AdjAt == 0 && fields["tk0"] == "60" && fields["tk1"] == "120");
+        JobsNext(); run(8);     // Next >: the Pitch P knob: the pilot types 75 for its high end (the keypad), and saves
+        CHECK(AdjShownAt == 1 && AdjAt == 1 && fields["tk0"] == "40" && fields["tk1"] == "70" && AdjRows[0].v[0] == 60 && AdjRows[0].v[1] == 120);
+        fields["tk1"] = "75"; JobsWasEdited(); JobsPageBack(); run(2);
+        CHECK(AdjRows[1].v[0] == 40 && AdjRows[1].v[1] == 75 && Adj_Was_Edited);
+        const size_t w0 = fcLog.size(); SaveJobs(); run(400);
+        int mn, mx; line0(w0, mn, mx);
+        CHECK(mn == 60 && mx == 120);                             // line 0 (the Yaw P knob, never touched) goes as it was read: 60 to 120 (it went as 15 to 25, or 0 to 0)
+        CHECK(writes(53) == 2 && boxes == 0 && !Adj_Was_Edited && fields["busy"] == "Saved, and read back the same.");   // (both lines are written: the page's own form of a line differs from this flight controller's)
+        CHECK((adj[9] | (adj[10] << 8)) == 60 && (adj[11] | (adj[12] << 8)) == 120 && (adj[14 + 9] | (adj[14 + 10] << 8)) == 40 && (adj[14 + 11] | (adj[14 + 12] << 8)) == 75);
+        // ... and back to a switch job with the knob's boxes now holding the Pitch P's "40" and "75": the cursor's row is not gathered from them either
+        JobAt = 0; JobsShow(); run(2);
+        CHECK(AdjShownAt == -1); JobsWasEdited(); JobsPageBack(); run(2);
+        CHECK(AdjRows[0].v[0] == 60 && AdjRows[0].v[1] == 120 && AdjRows[1].v[0] == 40 && AdjRows[1].v[1] == 75);
+        saveNowAnswer = 0; EndJobsView(); run(2);
+    }
+    // 20. B211 (the eleventh review, reviewer B's experiments 1 and 7): THE PAGE IS BACK ON THE SCREEN AND THIS BOARD HAS NOT DRAWN IT - AND THE BAR
+    // IS THE CARD'S. Whenever the page is loaded the screen shows it as its card has it: the typed boxes keep their texts, the BAR is the card's
+    // (kind 0, its dividers at 1500 and 1700 - and none of this board's attributes on it). The page says "ldrcadj" and JobsPageBack draws the
+    // row and its bar again - but it went back with nothing done when a box of its gather had no answer (a page slow in coming up is served
+    // its word while the screen owes an answer), and on a field screen the word itself can be lost. A touch on the card's bar was then read as
+    // the row's own: 1500 and 1700 became the knob's ends.
+    {
+        auto setup = [&]() {
+            Bank = 2; for (int b = 0; b <= BANKS_USED; ++b) for (int c = 0; c <= CHANNELSUSED; ++c) setDeg(b, c, 90);
+            memset(curveDeg, -1, sizeof curveDeg); AdjSeenClear(); usb = true; needModel = false; busyOnce = 0; saveNowAnswer = 0;
+            blankAdj(); blankModes();
+            slot(0, 0, 0, 1500, 2125); slot(1, 53, 2, 1700, 2125);
+            putLine(0, 22, 0, 875, 2125, 1, 1000, 2000, 1500, 1500, 60, 120, 0);
+            putLine(1, 14, 0, 875, 2125, 3, 1000, 2000, 1500, 1500, 40, 70, 0);
+            fcLog.clear(); cmds.clear(); boxes = 0; attrs.clear(); attrsLost.clear(); fieldsLost.clear(); noPage = false; boxesLostTold = 0; BoxesLostAtWork = BoxesLost;
+            StartJobsView(); run(8);
+            JobsNext(); run(2); JobsNext(); run(8);                // the Yaw P knob's row: 60 to 120, its ends at 1000 and 2000
+            CHECK(AdjShownAt == 0 && AdjAt == 0 && AdjRows[0].lo == 1000 && AdjRows[0].hi == 2000 && AdjRows[0].v[0] == 60 && AdjRows[0].v[1] == 120 && !Adj_Was_Edited && !JobsIsDue());
+            CHECK(attrs["bar.own"] != 0 && attrs["bar.own"] == (int) JobsBarToken);          // the bar carries the token of the last draw
+        };
+        auto reload = [&]() { ++ScreenMarkCount; attrs.clear(); attrs["bar.d0"] = 1500; attrs["bar.d1"] = 1700; attrs["bar.tap"] = -1; };   // a page command of this board's: the page as the card has it (the typed boxes keep their texts)
+        auto asRead = [&]() { return AdjRows[0].lo == 1000 && AdjRows[0].hi == 2000 && AdjRows[0].v[0] == 60 && AdjRows[0].v[1] == 120; };
+        // (a) every draw gives the bar a NEW token
+        setup(); { const int t1 = attrs["bar.own"]; JobsShow(); CHECK(attrs["bar.own"] != t1 && attrs["bar.own"] == (int) JobsBarToken); }
+        // (b) the page loaded again and its word NEVER COMES (lost); the pilot touches the card's bar at once: NOTHING of it is taken - the page is
+        //     drawn instead, the row's own bar again - and his next touch is the row's
+        setup(); reload(); cmds.clear(); BoxesLostAtWork = BoxesLost;
+        JobsBarMoved();
+        CHECK(asRead() && !Adj_Was_Edited);                                                 // (it was: ends 1500 and 1700, the page marked edited)
+        CHECK(cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && attrs["bar.own"] == (int) JobsBarToken && !JobsIsDue());   // ... the page drawn, the bar this board's again
+        attrs["bar.d0"] = 1100; attrs["bar.d1"] = 2000; attrs["bar.tap"] = -1; BoxesLostAtWork = BoxesLost; JobsBarMoved();
+        CHECK(AdjRows[0].lo == 1100 && AdjRows[0].hi == 2000 && Adj_Was_Edited);            // ... and a drag of the row's own bar is taken
+        // (b2) ... loaded again BY THE SCREEN (its keypad closing: no page command of this board's - the count of them tells nothing), the word lost,
+        //      the card's bar touched: the TOKEN alone says the bar is not ours - nothing taken, the page drawn
+        setup(); attrs.clear(); attrs["bar.d0"] = 1500; attrs["bar.d1"] = 1700; attrs["bar.tap"] = -1; cmds.clear(); BoxesLostAtWork = BoxesLost;
+        CHECK(!JobsIsDue());
+        JobsBarMoved();
+        CHECK(asRead() && !Adj_Was_Edited && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && attrs["bar.own"] == (int) JobsBarToken && !JobsIsDue());
+        // (c) ... the same, and nobody touches anything: the main loop draws the page a second after it was put up
+        setup(); reload(); cmds.clear();
+        run(10); CHECK(JobsIsDue() && cmdValue("bar.d0") == -9999);                         // (half a second: its own word may yet come)
+        run(15); CHECK(!JobsIsDue() && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000 && attrs["bar.own"] == (int) JobsBarToken && asRead() && boxesLostTold == 0);
+        // (d) the page's word comes - and a box of its gather has NO ANSWER (the screen owes one: nothing can be asked): nothing is taken, nothing drawn,
+        //     no live marker is ticked onto the page - and when the screen can be asked again the main loop draws it, the value he TYPED taken first
+        setup(); reload(); fields["tk1"] = "130"; cmds.clear(); noPage = true; fieldsLost.insert("tk0"); BoxesLostAtWork = BoxesLost;
+        JobsPageBack();
+        CHECK(asRead() && JobsIsDue() && cmdValue("bar.d0") == -9999);
+        uint16_t sent0[17]; memcpy(sent0, SendBuffer, sizeof sent0);
+        for (int c = 4; c < 12; ++c) SendBuffer[c] = 1600;                                  // (the knob's channel moves meanwhile: a live marker would be ticked)
+        { const uint32_t lost0 = BoxesLost; run(90);                                        // four and a half seconds - longer than the three tries would take:
+          CHECK(asRead() && JobsIsDue() && cmdValue("bar.d0") == -9999 && boxesLostTold == 0);   //  nothing drawn, nothing said,
+          CHECK(BoxesLost == lost0);                                                        //  nothing ASKED (no try is used up while the screen cannot be asked),
+          CHECK(cmdValue("bar.mk") == -9999); }                                             //  and no live marker onto a page that is not drawn
+        noPage = false; fieldsLost.clear(); run(25);
+        CHECK(!JobsIsDue() && AdjRows[0].v[1] == 130 && AdjRows[0].v[0] == 60 && cmdValue("bar.d0") == 1000 && fields["bar"] == "|60 to 130|" && boxesLostTold == 0);
+        CHECK(cmdValue("bar.mk") != -9999);                                                 // (... and the marker again, once the page is this board's)
+        memcpy(SendBuffer, sent0, sizeof sent0);
+        // (d2) ... loaded again BY THE SCREEN (its keypad closing - no page command of this board's: the count of them tells nothing), its word comes,
+        //      and a box of its gather has no answer: THE WORD ITSELF makes the page due, and the main loop draws it when the screen can be asked
+        setup(); attrs.clear(); attrs["bar.d0"] = 1500; attrs["bar.d1"] = 1700; attrs["bar.tap"] = -1; fields["tk1"] = "130"; cmds.clear(); noPage = true; fieldsLost.insert("tk0"); BoxesLostAtWork = BoxesLost;
+        CHECK(!JobsIsDue());
+        JobsPageBack();
+        CHECK(asRead() && JobsIsDue() && cmdValue("bar.d0") == -9999);
+        run(30); noPage = false; fieldsLost.clear(); run(25);
+        CHECK(!JobsIsDue() && AdjRows[0].v[1] == 130 && cmdValue("bar.d0") == 1000 && attrs["bar.own"] == (int) JobsBarToken && boxesLostTold == 0);
+        // (e) ... the screen CAN be asked and a box goes on having no answer: three tries, a second apart, the last one said - and then no more
+        //     (the next touch of the page draws it)
+        setup(); reload(); cmds.clear(); fieldsLost.insert("tk1"); BoxesLostAtWork = BoxesLost;
+        { const uint32_t lost0 = BoxesLost; run(200);
+          CHECK(JobsIsDue() && asRead() && BoxesLost - lost0 == 3 && boxesLostTold == 1 && cmdValue("bar.d0") == -9999); }
+        fieldsLost.clear(); attrs["bar.tap"] = -1; BoxesLostAtWork = BoxesLost; JobsBarMoved();
+        CHECK(!JobsIsDue() && asRead() && cmdValue("bar.d0") == 1000);
+        // (f) the token itself has no answer: nothing of the bar is taken, the page is due, and the main loop draws it
+        setup(); attrs["bar.d0"] = 1500; attrs["bar.d1"] = 1700; attrs["bar.tap"] = -1; attrsLost.insert("bar.own"); cmds.clear(); BoxesLostAtWork = BoxesLost;
+        JobsBarMoved();
+        CHECK(asRead() && !Adj_Was_Edited && JobsIsDue() && cmdValue("bar.d0") == -9999);
+        attrsLost.clear(); run(25); CHECK(!JobsIsDue() && cmdValue("bar.d0") == 1000 && asRead());
+        // (g) the bar is this board's and ONE OF ITS DIVIDERS has no answer: neither is taken (it was: the one that answered), and the bar is drawn
+        //     again as it is in hand
+        setup(); attrs["bar.d0"] = 1100; attrs["bar.d1"] = 1900; attrs["bar.tap"] = -1; attrsLost.insert("bar.d1"); cmds.clear(); BoxesLostAtWork = BoxesLost;
+        JobsBarMoved();
+        CHECK(asRead() && !Adj_Was_Edited && JobsIsDue());
+        attrsLost.clear(); run(25); CHECK(!JobsIsDue() && cmdValue("bar.d0") == 1000 && cmdValue("bar.d1") == 2000);
+        // (h) a SWITCH job's bar, the page loaded again and its word lost: the card's 1500 to 1700 is not made the switch's ON zone
+        setup(); JobAt = 1; JobsShow(); run(2); CHECK(SwNow[SwShown[1]].lo == 1700 && SwNow[SwShown[1]].hi == 2125 && !JobsIsDue());
+        reload(); cmds.clear(); BoxesLostAtWork = BoxesLost; JobsBarMoved();
+        CHECK(SwNow[SwShown[1]].lo == 1700 && SwNow[SwShown[1]].hi == 2125 && !Sw_Was_Edited && cmdValue("bar.d0") == 1700 && !JobsIsDue());
+        // (i) nothing is due on another page, and the count of this board's page commands does not make the page due while it is being read
+        setup(); CurrentView = 47; ++ScreenMarkCount; cmds.clear(); run(60); CHECK(cmdValue("bar.d0") == -9999);
+        CurrentView = ADJUSTVIEW; saveNowAnswer = 0;
+        // (j) NOTHING HAS BEEN READ (the read failed - its box leaves the page; should this board still believe the page): the main loop draws nothing
+        //     for a page that is "due" - there is nothing of this board's to draw (it would have drawn the rows of the visit before)
+        setup(); SwHave = false; ++ScreenMarkCount; cmds.clear(); fields["tn0"] = "as it stood"; run(80);
+        CHECK(JobsIsDue() && cmdValue("bar.d0") == -9999 && fields["tn0"] == "as it stood");
+        SwHave = true;
+        // (k) (the twelfth review; the author's own, found by a scene of the Sub-trim page) THE SECOND IS COUNTED WITH A SIGN. The moment the page was
+        //     first seen due is kept as "now | 1" (0 means "not seen") - in an EVEN millisecond that is one millisecond AHEAD, and counted unsigned
+        //     the next pass of the main loop in that same millisecond read "49 days gone": the first try came at once - on top of the page's own word
+        setup(); now = (now | 1) + 1; ++ScreenMarkCount; cmds.clear();                      // (an even millisecond; the page put up again)
+        JobsPoll(); CHECK(JobsIsDue() && JobsDueMs == now + 1 && JobsDueTries == 0);
+        JobsPoll(); JobsPoll(); CHECK(JobsIsDue() && JobsDueTries == 0 && cmdValue("bar.d0") == -9999);   // the same millisecond: no try, nothing drawn
+        now += 900; JobsPoll(); CHECK(JobsDueTries == 0 && cmdValue("bar.d0") == -9999);
+        now += 110; JobsPoll(); CHECK(!JobsIsDue() && cmdValue("bar.d0") == 1000);          // a second on: drawn
+    }
     printf("test_jobs: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

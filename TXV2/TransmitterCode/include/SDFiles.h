@@ -253,40 +253,59 @@ FLASHMEM void ShowFreeSpaceEtc()
 
 /******************************************************************************************************************************/
 
-// This implements the impossible "TINYCARD card rename file" ... by reading, re-saveing under new name, then deleting old file.
-
-void RenameFile()
+// B211 (the eleventh review, 15 Nov 2026; released code had it): THE BACKUP FILE IS RENAMED ON THE CARD. This was "the impossible rename": the file
+// was read into this board's memory IN PLACE OF THE PILOT'S MODEL, kept there through the question "New file name" (and "Overwrite ...?"), written
+// out under the new name, the old file removed - and only then was the pilot's model read back. A connected model (the Models page is opened with one
+// only after "Open Models anyway?") was flown from the FILE's settings for as long as the question stood, and through the writing. The card's library
+// renames a file (ModelExchange.h and LinkMode.h use it): the model in memory is not touched, nothing is read and nothing written. (A file that could
+// not be read as a model was written out as it lay in memory, under the new name; it now keeps what it holds. Nothing here asks for the model's
+// number either: SaveCurrentModel and the two routines that swapped the models have gone with it.)
+FLASHMEM void RenameFile()
 {
     char ModelsView_filename[] = "filename";
     char Head[] = "Rename backup file";
     char model[] = "Only the file name changes";
     char prompt[] = "New file name";
-    char Prompt[50];
-    char overwr[] = "Overwrite ";
-    char ques[] = "?";
+    char ModExt[] = ".MOD";
+    char Prompt[60];
     char Deleteable[42];
+    char from[sizeof(SearchFile)];
 
-    SaveCurrentModel();
-    GetText(ModelsView_filename, SingleModelFile, 40);  // ClaudeFix-2-7-2026
+    {
+        const uint32_t lost = BoxesLost;
+        GetText(ModelsView_filename, SingleModelFile, 40); // ClaudeFix-2-7-2026
+        if (BoxesLost != lost || !SingleModelFile[0])
+            return; // B211 (the eighth review): no answer from the screen is not a file's name
+    }
     strcpy(Deleteable, SingleModelFile);
-    LoadModelForRenaming();
     if (GetBackupFilename(pModelsView, SingleModelFile, model, Head, prompt))
     {
         FixFileName();
-        if (strcmp(Deleteable, SingleModelFile) != 0) // B21: the same name = nothing to do, but the live model still comes back (below)
-        {
+        if (strcasecmp(Deleteable, SingleModelFile) != 0) // B21: the same name = nothing to do. (B211: ... also when only its letters' case differs - the card
+        {                                                 // knows no case: it is the same file, and "Overwrite ...?" - Yes took away the file itself)
             bool go = true;
             if (CheckFileExists(SingleModelFile))
             {
-                strcpy(Prompt, overwr);
-                strcat(Prompt, SingleModelFile);
-                strcat(Prompt, ques);
+                snprintf(Prompt, sizeof(Prompt), "Overwrite %s?", SingleModelFile);
                 go = GetConfirmation(pModelsView, Prompt);
             }
-            if (go && WriteBackup()) // B21: the old file goes only once the new one has been written (a refused name used to delete it all the same)
+            if (go)
             {
+                CloseModelsFile();
                 AddPath(Deleteable);
-                TINYCARD.remove(SearchFile); // ClaudeFix-2-7-2026 backups live in /mod/ -- a bare name removed nothing, leaving both files
+                strcpy(from, SearchFile);
+                AddPath(SingleModelFile); // (SearchFile: the new name, in its folder)
+                bool done = (strlen(SingleModelFile) <= 12) && (InStrng(ModExt, SingleModelFile) > 0); // (as WriteBackup: a name too long, or with no .MOD, is refused)
+                if (done && TINYCARD.exists(SearchFile))
+                    done = TINYCARD.remove(SearchFile); // ("Overwrite ...?" was answered Yes)
+                if (done)
+                    done = TINYCARD.rename(from, SearchFile); // (B21's rule holds by itself: the old name goes only as the new one comes)
+                if (!done)
+                {
+                    FileError = true;
+                    ShowFileErrorMsg();
+                }
+                LastFileInView = 120; // (as WriteBackup: the file in view is looked up afresh)
             }
         }
     }
@@ -294,7 +313,6 @@ void RenameFile()
     BuildDirectory();
     strcpy(Mfiles, "Mfiles");
     LoadFileSelector();
-    RestoreCurrentModel();
 }
 
 /*********************************************************************************************************************************/

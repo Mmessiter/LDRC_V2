@@ -135,7 +135,11 @@ void LoadFileSelector()
         strcat(buf, crlf);
     }
     SendOtherText(Mfilesp, buf);
-    FileNumberInView = GetValue(Mfiles);
+    {
+        const uint32_t gv = GetValue(Mfiles);
+        if (gv != 65535) // B211: no answer from the screen is not a row
+            FileNumberInView = gv;
+    }
     LastFileInView = 120;
     if (strcmp(MOD, ".MOD"))
         ShowFreeSpaceEtc(); // show free space etc if log files are being viewed

@@ -232,6 +232,7 @@ void CheckInactivityTimeout()
     if (SecondsRemaining <= 0)
     {
         NoteWhyOff(OFF_IDLE);              // V1B: said at the next start (FlightGuard.h)
+        FlushDeferredLog();                // B211 (the seventeenth review): "the kept lines are written at every power-off" - at this one too
         PerfWriteReport(true);             // V1B B19: this session's timing survives the power-off
         CrumbClear();                      // V1B B20: a clean power-off
         digitalWrite(POWER_OFF_PIN, HIGH); // INACTIVITY POWER OFF HERE!!
@@ -285,6 +286,10 @@ FASTRUN void TryOtherPipe()
 // This function sends a simple ping packet to the receiver. It is used to reassure the receiver that the transmitter is still present
 void SimplePing()
 {
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: LDRC's radio says nothing for a model set to ELRS (a stray answer would be taken for this model's)
+    if (ElrsCarries())
+        return;
+#endif
     if (BuddyPupilOnWireless || BuddyMasterOnWireless || LedWasRed)
         return;
     uint16_t Ping = 0;
@@ -446,6 +451,10 @@ FASTRUN uint8_t EncodeTheChangedChannels()
 FASTRUN void SendData()
 {
     CRUMB(CRUMB_SENDDATA);
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a model set to ELRS flies on the module alone (ElrsCrsf.h); LDRC's radio says nothing for it
+    if (ElrsLink())
+        return;
+#endif
 
     if ((millis() - LastPacketSentTime) < FHSS_data::PaceMaker)
         return;
@@ -1198,6 +1207,7 @@ static void BlockSilence(const char *what)
 {
     char b[120];
     if (BlockShown) return;  // the set came whole: the page shows it
+    if (CurrentView < PIDVIEW || CurrentView > RFGOVERNORVIEW_GLOBAL) return;   // B211 (e99b): a window that ends on a page that is no Rotorflight page (a save followed onto Help) has no line to write on
     // B154: a set that came in PART (an item lost on the way: the page would show its old numbers, or zeros, with nothing
     // said - Malcolm's photo of 28 Oct 2026: a Rates page of zeros and a blank type, "Couldn't read rates") is said too
     if (BlockSeen) snprintf(b, sizeof(b), "%s: only PART came back in %u s (Bluetooth %u). Bank switch again, or leave and return.", what, (unsigned)(MSP_WAIT_TIME / 1000), (unsigned)PipeState);
@@ -1278,7 +1288,8 @@ void Hide_msg_if_needed()
             Reading_GOV_Config_Now = false;
             if (RfVerifyEnd(VK_GOV_CFG)) return;   // B165: a read-back that never matched, or never came: its verdict
             HideGOVConfigMsg();
-            BlockSilence("Governor global");
+            if (!AllGlobalConfigBytesReceived())   // B211 (the twentieth review, both reviewers: MEDIUM): this page ends its read with ITS OWN 24th byte - by radio the first whole pass, which
+                BlockSilence("Governor global");   // the rules above only note: "only PART came back" stood six seconds over a good read, nine visits of ten. Whole by its own count: nothing to say
             return;
         }
     }
@@ -1380,12 +1391,42 @@ static void BlockMaskTick()
     if (reading && !BlockWasReading) { BlockSeen = 0; BlockShown = false; }
     BlockWasReading = reading;
 }
+// B211 (the nineteenth review): WHOSE BLOCK IS IT? An item says its number and nothing more: every page's block is items 25 upward (the PIDs'
+// 25-30 and 32-34; PID +'s 25-30 and 32; the Governor global's 25-30; the Governor's 25-29; the Rates' and the Dynamics' 25-28 each). The
+// receiver tells the block it was last asked for, while that read's window is open - in every radio acknowledgement one item, in rotation
+// (some 500 a second), and whole to the screen's Bluetooth poll (TelemetryFromPipe, below). A page's request takes a tenth of a second or so
+// to reach it: UNTIL THEN IT GOES ON TELLING THE BLOCK OF THE PAGE BEFORE, and the items of it that this page's block has too are counted as
+// this page's. While the page before kept its "reading" flag up, the set went to it (the first flag of the chain: B210, and the Governor page
+// behind the PIDs page refused every edit); with ONE read at a time (1Definitions.h RfOtherReadsOver) it would be this page's - the Governor
+// page "whole" on the PIDs' bytes, and saved from there "confirmed" when nothing fresh followed. THREE THINGS SAY WHOSE IT IS:
+//   1. AN ITEM THIS PAGE'S BLOCK HAS NOT GOT is another page's block: what was counted is that block's (BlockNotMine: counted afresh, a mark
+//      given on it taken back).
+//   2. BY RADIO THE SET MUST COME WHOLE TWICE. The other page's rotation can be cut off right behind this page's items - the request arrives,
+//      the receiver empties its block - and the item that would have given it away never comes. A second whole pass can only be a block the
+//      receiver is telling NOW (the first pass is noted in BlockSeen's top bit: every place that clears the count clears it with it).
+//   3. A TELLING IS ONE WHOLE BLOCK: taken only when it holds exactly this page's items, counted by itself - whole in it is whole.
+// (The Rates' and the Dynamics' blocks have the same four items and are not told apart here: B212, the block's name from the screen.)
+#define BLOCK_ONCE 0x8000
+static bool BlockTelling = false;   // TelemetryFromPipe is handing over a telling it has looked through
+static uint16_t BlockWant() { return Reading_PIDS_Now ? 0x3BF : Reading_PIDS_Advanced_Now ? 0xBF : Reading_GOV_Config_Now ? 0x3F : Reading_GOV_Now ? 0x1F : (Reading_RATES_Now || Reading_RATES_Advanced_Now) ? 0x0F : 0; }
+static void BlockNotMine()
+{
+    BlockSeen = 0;
+    if (!BlockShown) return;   // (a read-back's verdict ends its read: no mark of a save is ever taken back here)
+    BlockShown = false;
+    if (Reading_PIDS_Advanced_Now) PIDS_ADV_Loaded = false;
+    else if (Reading_GOV_Now) GOV_Loaded = false;
+    else if (Reading_RATES_Now) RATES_Loaded = false;
+    else if (Reading_RATES_Advanced_Now) RATES_ADV_Loaded = false;   // (the PIDs' block has every item; the Governor global page keeps no mark here: it counts its own 24 bytes, as it always did)
+}
 static void BlockItemSeen(uint8_t item)
 {
     if (item < 25 || item > 34) return;
+    const uint16_t want = BlockWant();
+    if (want && item != 31 && !(want & (uint16_t)(1 << (item - 25)))) { BlockNotMine(); return; }   // (1. above; item 31 is the flight controller's version, no block's)
     BlockSeen |= (uint16_t)(1 << (item - 25));
-    const uint16_t want = Reading_PIDS_Now ? 0x3BF : Reading_PIDS_Advanced_Now ? 0xBF : Reading_GOV_Config_Now ? 0x3F : Reading_GOV_Now ? 0x1F : (Reading_RATES_Now || Reading_RATES_Advanced_Now) ? 0x0F : 0;
     if (!want || (BlockSeen & want) != want || BlockShown) return;
+    if (!BlockTelling && !(BlockSeen & BLOCK_ONCE)) { BlockSeen = BLOCK_ONCE; return; }   // (2. above: by radio, once more)
     if (RfVerifyPending())
     { // B153: a read-back after a save: the set is compared with what was sent (RF_Verify.h) - the same ends it there and says so; a different one waits for the window's end, another set may follow
         const int v = RfVerifySet();
@@ -1394,11 +1435,11 @@ static void BlockItemSeen(uint8_t item)
     }
     BlockShown = true;   // (the set is shown; a fresh read that follows updates the numbers without another hide)
     if (Reading_PIDS_Now) { HidePIDMsg(); PIDS_Loaded = true; }   // B40: the set came whole: edits may be saved
-    else if (Reading_PIDS_Advanced_Now) HidePID_Advanced_Msg();
+    else if (Reading_PIDS_Advanced_Now) { HidePID_Advanced_Msg(); PIDS_ADV_Loaded = true; }   // B211: (as B40, B41 - 1Definitions.h)
     else if (Reading_GOV_Config_Now) HideGOVConfigMsg();
     else if (Reading_GOV_Now) { HideGOVMsg(); GOV_Loaded = true; }   // B41
-    else if (Reading_RATES_Now) HideRATESMsg();
-    else if (Reading_RATES_Advanced_Now) Hide_Advanced_Rates_Msg();
+    else if (Reading_RATES_Now) { HideRATESMsg(); RATES_Loaded = true; }   // B211
+    else if (Reading_RATES_Advanced_Now) { Hide_Advanced_Rates_Msg(); RATES_ADV_Loaded = true; }   // B211
 }
 FASTRUN void ParseTelemetryItem()
 {
@@ -1811,6 +1852,40 @@ FASTRUN void ParseTelemetryItem()
 // would carry: "ldrctel 25:AABBCCDD 26:EEFF0011 ..." (item, four bytes as hex). Each is handed to the same parser as an ack.
 void TelemetryFromPipe(const char *list)
 {
+    // B211 (the nineteenth review): A TELLING IS ONE BLOCK, WHOLE, AS THE RECEIVER HELD IT (or as the backup file holds it) - IT IS THE READING
+    // PAGE'S WHEN IT HOLDS EXACTLY THAT PAGE'S ITEMS, AND ONLY THEN IS IT TAKEN (BlockItemSeen, above: whose block is it). The screen may still
+    // be telling the block of the page before as this page's request goes out (its poll of the old window; a line may wait behind a page that
+    // loads): one with an item more is that page's (BlockNotMine); one with an item fewer is another, smaller block - not a byte of either.
+    // (Before: every line was taken. A smaller block's line, come behind the page's own, put its bytes over the numbers of a page marked whole.)
+    const uint16_t want = BlockWant();
+    if (want)
+    {
+        uint16_t told = 0;
+        for (const char *q = list; *q;)
+        {
+            while (*q == ' ')
+                ++q;
+            char *e = nullptr;
+            const long it = strtol(q, &e, 10);
+            if (e == q || *e != ':')
+                break;
+            if (it >= 25 && it <= 34 && it != 31)
+                told |= (uint16_t)(1 << (it - 25));
+            q = e + 1;
+            while (*q && *q != ' ')
+                ++q;
+        }
+        if (told && told != want)
+        {
+            if (told & ~want)
+                BlockNotMine();
+            return;
+        }
+        if (told && !BlockShown)
+            BlockSeen = 0;   // (counted by itself: whole in this one line)
+    }
+    const bool tellingWas = BlockTelling;
+    BlockTelling = true;
     const char *p = list;
     while (*p)
     {
@@ -1839,6 +1914,7 @@ void TelemetryFromPipe(const char *list)
         AckPayload.Ack_Payload_byte[4] = b[3];
         ParseTelemetryItem();
     }
+    BlockTelling = tellingWas;
 }
 
 #endif

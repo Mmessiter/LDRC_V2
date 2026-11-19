@@ -279,12 +279,15 @@ FLASHMEM static void EzLive(int k)
 FLASHMEM static void EzShowSliders()
 {
     char nm[8], c[16];
-    for (int k = 0; k < 5; ++k)
-    {
-        snprintf(nm, sizeof(nm), "s%d", k);
-        SendValue(nm, k < 3 ? EzPos[k] / 5 : (EzPos[k] + 30) / 5);
+    if (!RfKeepTyped)
+    { // (B211, the fourteenth review: the sliders and the switch are the pilot's - left as the screen has them while RfKeepTyped is set: Nextion.h)
+        for (int k = 0; k < 5; ++k)
+        {
+            snprintf(nm, sizeof(nm), "s%d", k);
+            SendValue(nm, k < 3 ? EzPos[k] / 5 : (EzPos[k] + 30) / 5);
+        }
+        SendValue((char *)"sw", EzSpool ? 1 : 0);
     }
-    SendValue((char *)"sw", EzSpool ? 1 : 0);
     static const char *const agile[8] = {"lA", "lE", "s1", "s2", "e1L", "e1R", "e2L", "e2R"};   // (rates types the sliders do not cover: their rows go)
     for (const char *n : agile) { snprintf(c, sizeof(c), "vis %s,%d", n, EzRatesFeel ? 1 : 0); SendCommand(c); }
 }
@@ -395,7 +398,9 @@ FLASHMEM static void EzFinish(const char *box) // the end of a save: a box when 
     {
         PlaySound(WHAHWHAHMSG);
         MsgBox((char *)"page EasyView", (char *)box);
-        EzShowAll();
+        RfKeepTyped = true; // B211 (the fourteenth review): a save runs for seconds - a slider moved meanwhile is not taken while it runs (EzSlider), and was put
+        EzShowAll();        // back here; it stays where he left it, and the next Save - or OK, the fifteenth review - asks every slider (EzSyncSliders)
+        RfKeepTyped = false;
         if (EzRereadWanted) EzRead();   // (the bank switch moved meanwhile)
         return;
     }
@@ -650,10 +655,16 @@ FLASHMEM void StartEasyView() // the menu's Easy tuning ...
     EzRead();
 }
 void SaveEasy();
+static bool EzSyncSliders();
 FLASHMEM static void EzSaveNow() { EzShowAll(); SaveEasy(); }   // B102: OK's "Save now?" (the page shown again, then saved)
 FLASHMEM void EndEasyView() // OK
 {
     if (EzStep != EZ_IDLE) return;   // (a read or a save runs: wait for it)
+    // B211 (the fifteenth review): EVERY SLIDER AND THE SWITCH ARE ASKED HERE TOO, before the question. A slider moved while a save ran is not taken
+    // (EzSlider) and, the save having failed, stays where he left it (EzFinish): the Save button asks them all - but OK's "Save now?" drew the page from
+    // what was in hand first (EzSaveNow), which put that slider back, and saved its EARLIER place as the page closed. One unanswered: the page stays.
+    // (Only while edits wait: a save that worked has drawn the sliders from what is in hand - and its "close the page now" comes here from the main loop.)
+    if (Ez_Was_Edited && EzHave && !EzSyncSliders()) return;
     if (Ez_Was_Edited && EzHave && EzAnything())
         if (!RfSaveFirst("page EasyView", PSTR("The slider changes are"), EzSaveNow, EndEasyView, &Ez_Was_Edited)) return;   // B102
     Ez_Was_Edited = false; EzHave = false; EzMsgUntil = 0;
@@ -688,32 +699,47 @@ FLASHMEM void EasySpoolTapped() // the switch: PID spool-up in every bank
 {
     if (CurrentView != EASYVIEW || !EzHave || EzStep != EZ_IDLE) { SendValue((char *)"sw", EzSpool ? 1 : 0); return; }
     const uint32_t v = GetValue((char *)"sw");
-    if (v > 1) return;
+    if (v == 65535 || v > 1)
+    { // (B211, the eleventh review: no answer - nothing is taken, and the screen's own switch, which turned under the finger, is put back as it is in hand)
+        SendValue((char *)"sw", EzSpool ? 1 : 0);
+        return;
+    }
     EzSpool = v == 1;
     EzSpoolTouched = true;
     EzEdited();
 }
 // B105: before a save, every slider's place and the switch asked of the screen, so what it shows is what is saved even if a
 // word on the way was lost (the Teensy busy: two words that arrive together are read as one).
-FLASHMEM static void EzSyncSliders()
+// B211 (the eleventh review's check of every routine that asks for more than one box): EVERY SLIDER AND THE SWITCH, OR NOTHING. A slider
+// with no answer stayed "as the words had it" and the save went on - with a mixture of what the page shows and what a lost word had left.
+// All are asked first; with one unanswered nothing is taken and the save does not go on (false: he is told, and presses Save again - the
+// sliders stand as he left them).
+FLASHMEM static bool EzSyncSliders()
 {
     char nm[8];
+    uint32_t v[5] = {0, 0, 0, 0, 0};
     for (int k = 0; k < 5; ++k)
     {
         if ((k == 1 || k == 2) && !EzRatesFeel) continue;
         snprintf(nm, sizeof(nm), "s%d", k);
-        const uint32_t v = GetValue(nm);
-        if (v > (k < 3 ? 20u : 12u)) continue;   // (no answer: as the words had it)
-        const int pos = k < 3 ? (int)v * 5 : (int)v * 5 - 30;
-        if (pos != EzPos[k]) { EzPos[k] = pos; EzMoved[k] = true; EzEdited(); }
+        v[k] = GetValue(nm);
     }
     const uint32_t sw = GetValue((char *)"sw");
+    if (WorkLostABox()) return false;
+    for (int k = 0; k < 5; ++k)
+    {
+        if ((k == 1 || k == 2) && !EzRatesFeel) continue;
+        if (v[k] > (k < 3 ? 20u : 12u)) continue;   // (no slider's place: as the words had it)
+        const int pos = k < 3 ? (int)v[k] * 5 : (int)v[k] * 5 - 30;
+        if (pos != EzPos[k]) { EzPos[k] = pos; EzMoved[k] = true; EzEdited(); }
+    }
     if (sw <= 1 && (sw == 1) != EzSpool) { EzSpool = sw == 1; EzSpoolTouched = true; EzEdited(); }
+    return true;
 }
 FLASHMEM void SaveEasy()
 {
     if (CurrentView != EASYVIEW || !EzHave || EzStep != EZ_IDLE) return;
-    EzSyncSliders();
+    if (!EzSyncSliders()) return;
     char why[180];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {

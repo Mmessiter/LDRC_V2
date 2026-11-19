@@ -54,6 +54,16 @@ int main() {
     cmds.clear(); safetyOn = true; secs(1); CHECK(!SafetyHold); CHECK(has("Warning.bco=4426")); CHECK(has("vis Warning,0") == false || true);
     // connected with safety on, then switched off IN FLIGHT: never held (connected)
     LedWasGreen = true; SafetyOffAtConnect(); safetyOn = false; secs(2); CHECK(!SafetyHold); CHECK(!SafetyOffWarning);
+    // (B211, the twelfth review; the author's own - THE RELEASED CODE HAD IT) THE MINUTE IS COUNTED WITH A SIGN. The moment of the loss is kept as
+    // "now | 1" (0 means "never lost") - in an EVEN millisecond that is one millisecond AHEAD, and counted unsigned the main loop's next pass in that
+    // same millisecond read "49 days ago": for that pass a Rotorflight model lost IN THE AIR, its safety off as it flies, was "a fresh connection" -
+    // HELD, "NOT CONNECTING" written to the card (tens of milliseconds, in the moment the link is being looked for). Never held, nothing written
+    { const int logs0 = logs; now = (now | 1) + 1;                                           // an even millisecond; connected, the safety off: flying
+      LedWasGreen = false; NoteConnectionLost(); SafetyHoldUpdate(); CHECK(!SafetyHold && logs == logs0);   // the same millisecond
+      SafetyHoldUpdate(); now += 1; SafetyHoldUpdate(); CHECK(!SafetyHold && logs == logs0);
+      LedWasGreen = true; SafetyOffAtConnect(); CHECK(!SafetyOffWarning && logs == logs0);  // back at once: not "a fresh connection" either
+      now = (now | 1) + 1; LedWasGreen = false; NoteConnectionLost(); LedWasGreen = true; SafetyOffAtConnect(); CHECK(!SafetyOffWarning && logs == logs0);   // lost and back in the same even millisecond
+    }
     // the link lost in the air: back within the minute, never held
     LedWasGreen = false; NoteConnectionLost(); secs(30); CHECK(!SafetyHold);
     secs(31); CHECK(SafetyHold);                                     // a minute on: a fresh connection - held

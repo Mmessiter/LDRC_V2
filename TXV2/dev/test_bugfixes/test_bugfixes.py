@@ -13,6 +13,7 @@ def src(rel):
     return SRC[rel]
 MOTOROFF = '\n'.join(l for l in open(os.path.join(TC, 'include', 'Utilities.h'), encoding='utf-8', errors='replace').read().split('\n') if l.startswith('uint16_t MotorOffMicros()') or l.startswith('uint8_t MotorOffFromMicros(int32_t us)')) + '\n'
 assert MOTOROFF.count('\n') == 2, MOTOROFF
+SUBTRIM_MOST_LINE = __import__('re').search(r'^#define SUBTRIM_MOST[ \t]+\d+', src('include/Trims.h'), __import__('re').M).group(0)   # (the most a sub trim may be, as Trims.h has it)
 def lift(rel, head):
     """The function whose first line starts with `head` (column 0, Allman style): from there to the next line that is just '}'."""
     lines = src(rel).split('\n')
@@ -36,9 +37,22 @@ COMMON = r'''
 #include <vector>
 #define FASTRUN
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+extern uint32_t BoxesLost;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 #define PROGMEM
 #define DMAMEM
-static void LogFrontPageReason(const char *) {}   // (B172) the front page's log line: nothing on the host
+static void LogFrontPageReason(const char *, const char *, const char * = nullptr) {}   // (B172) the front page's log line: nothing on the host
 #define constrain(a, l, h) ((a) < (l) ? (l) : ((a) > (h) ? (h) : (a)))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
@@ -54,15 +68,19 @@ static int boxes = 0; static std::string lastBox; static bool confirmAnswer = tr
 static void SendText(char *n, char *t) { texts[n] = t; }
 static void SendText(const char *n, const char *t) { texts[n] = t; }
 static void SendValue(char *n, int v) { values[n] = v; }
-static uint32_t GetValue(char *n) { return values.count(n) ? (uint32_t) values[n] : 0; }
+static bool lossCounts = false;   // (the macros page's scenes: a box that says 65535 had NO ANSWER, counted as the real GetValue counts it)
+static uint32_t GetValue(char *n) { if (lossCounts && values.count(n) && values[n] == 65535) ++BoxesLost; return values.count(n) ? (uint32_t) values[n] : 0; }
 static bool NextionTextMissed = false;   // (10 Nov 2026) as Nextion.h: a box the fake screen does not answer for is missed
-static uint16_t GetText(char *n, char *out, uint16_t maxlen) { if (!texts.count(n)) NextionTextMissed = true; const std::string s = texts.count(n) ? texts[n] : ""; strncpy(out, s.c_str(), maxlen - 1); out[maxlen - 1] = 0; return (uint16_t) strlen(out); }
+uint32_t BoxesLost = 0;   // (B211, Nextion.h: the boxes that had no answer, counted)
+static uint16_t GetText(char *n, char *out, uint16_t maxlen) { if (!texts.count(n)) { NextionTextMissed = true; ++BoxesLost; } const std::string s = texts.count(n) ? texts[n] : ""; strncpy(out, s.c_str(), maxlen - 1); out[maxlen - 1] = 0; return (uint16_t) strlen(out); }
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void PlaySound(int s) { sounds.push_back(s); }
-static void MsgBox(char *, char *m) { ++boxes; lastBox = m; }
+static int savesAtBox = -1; static int boxSaves();
+static void MsgBox(char *, char *m) { ++boxes; lastBox = m; savesAtBox = boxSaves(); }
 static bool GetConfirmation(char *, char *p) { lastBox = p; return confirmAnswer; }
 #ifndef OWN_SAVE_ONE_MODEL
 static void SaveOneModel(uint32_t) { ++saves; }
+static int boxSaves() { return saves; }
 #endif
 static int countCmd(const char *c) { int n = 0; for (auto &s : cmds) if (s == c) ++n; return n; }
 static int countSound(int s) { int n = 0; for (int x : sounds) if (x == s) ++n; return n; }
@@ -75,6 +93,7 @@ A_DEFS = r'''
 #define BANKS_USED 4
 #define MAXMIXES 32
 #define MAXMACROS 8
+#define MACROS_VIEW 11
 #define BYTESPERMACRO 6
 #define MAXDUALRATE 200
 #define MINMICROS 500
@@ -115,6 +134,7 @@ A_DEFS = r'''
 #define TENMINUTES 11
 #define BEEPCOMPLETE 17
 #define WHAHWHAHMSG 25
+''' + SUBTRIM_MOST_LINE + r'''
 #define MOTORON 31
 #define MOTOROFF 32
 #define STORAGECHARGE 33
@@ -180,6 +200,8 @@ static bool LostContactFlag = false, BoundFlag = false, ModelMatched = false, Sw
 static bool FlightRestart = false;   // (11 Nov 2026: FlightGuard.h's - a restart in flight takes the motor switch as it stands)
 static uint8_t Autoswitch = 0, SafetySwitch = 0, DualRatesSwitch = 0, FrontSwitchPos[4], InPutStick[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, ChannelOutPut[17] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, InputTrim[4] = {0, 1, 2, 3};
 static uint16_t FrontSwitchRaw[4], TrimMultiplier = 5, ReversedChannelBITS = 0, ServoCentrePulse[11], ServoFrequency[11], SFV = 0, TimerStartTime = 300, ScreenData[50], Max_Safe_Amps = 0;
+static bool RfSaveHoldsBank() { return false; }   // (B211, e101: RF_Verify.h - a bank page's save holds the bank switch itself; dev/test_bankblock and dev/test_savehold run the real one)
+static bool RescueHoldsBanks() { return false; }   // (B211: RF_Rescue.h - the Rescue page's save holds both switches that move the bank; dev/test_rescueswitch runs the real one)
 static bool FailSafeChannel[17], UseLog = false, TrimClicks = false, SpeakingClock = true, ClockSpoken = false, ClockSpoken1 = false, AnnounceBanks = false, CopyTrimsToAll = false, UseMotorKill = true, MotorEnabled = false, SendNoData = false, MotorWasEnabled = false, SafetyON = false, SafetyWasOn = false, TimerDownwards = false, TimesUp = false, UseMacros = false, BlockBankChanges = false, LinkRatesToBanks = false, Armed = false, BindingEnabled = false;
 static short int RxVoltageCorrection = 0;
 static float StopFlyingVoltsPerCell = 0;
@@ -187,12 +209,15 @@ static uint8_t MotorChannel = 2, MotorChannelZero = 30, Drate1 = 100, Drate2 = 7
 static uint16_t IntoHigherRes(uint8_t LowRes) { return map(LowRes, 0, 180, MINMICROS, MAXMICROS); }
 ''' + MOTOROFF + r'''   // (B129: the motor-off value's microseconds, lifted from Utilities.h)
 static bool Reading_PIDS_Now = false, Reading_PIDS_Advanced_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;
+''' + re.search(r'^#define MODELSVIEW[ \t]+\S+', src('include/1Definitions.h'), re.M).group(0) + r'''
+static uint32_t PreviousModelNumber = 1; static int modelReads = 0; static bool ReadOneModel(uint32_t) { ++modelReads; return true; }   // (e100b, 18 Nov 2026: Motor_sign.h MotorEnabledHasChanged puts the Models page's earlier model back - dev/test_modelsarmed runs it)
+static uint8_t ParametersToBeSentPointer = 0; static bool RfVerifyPending() { return false; } static bool RfVerifyFollows() { return false; } static bool CopyBankRunning() { return false; } static bool EasyHoldsBanks() { return false; }   // (e99c, 17 Nov 2026: Motor_sign.h MotorEnabledHasChanged asks them - dev/test_bankblock parts n and v run them)
 static char WarnNow[] = "vis Warning,1", WarnOff[] = "vis Warning,0", pTrimView[] = "page TrimView", pRXSetupView[] = "page RXSetupView", pTXSetupView[] = "page TXSetupView", pFhssView[] = "page FhssView";
 static uint32_t now = 0; static uint32_t millis() { return now; }
 static int motorChanges = 0, safetyChanges = 0, frontViews = 0, delays = 0;
 static void ReadTheSwitchesAndTrims() {}
 static void LogNewRateInUse() {} static void ShowRatesBank() {} static void ShowRatesAdvancedBank() {} static void ShowRFRate() {} static void EasyBankChanged() {}
-static void ReadBuddySwitch() {} static void ReadBankSwitch() {} static void ReadChannelSwitches9to12() {} static void BankHasChanged() {}
+static void ReadBuddySwitch() {} static void ReadBankSwitch() {} static void ReadChannelSwitches9to12() {} static int bankCalls = 0; static uint8_t bankCallWas = 0, bankCallIs = 0; static void BankHasChanged() { ++bankCalls; bankCallWas = PreviousBank; bankCallIs = Bank; }
 static void SafetySwitchChanged() { ++safetyChanges; }
 static void SafetyHoldUpdate() {} // B194: Motor_sign.h (its own test: test_safetyhold)
 static void LogTimer(int) {} static void LogRPM(uint32_t) {} static void LogMotor(int) {}
@@ -205,11 +230,13 @@ static bool SafetyIsOff() { return safetyOff; } static bool SafetyIsDefined() { 
 // prototypes of what is lifted
 void RerouteOutputs(); uint8_t SourceOfOutput(uint8_t out); int CheckRange(int v, int min, int max); void UpdateButtonLabels(); void CheckMotorOff(); void GetBank();
 static void MaxRangeShow() {} // (B113: the Channels page's max range, tested in dev/test_channel_us)
+static void SubTrimPageOut() {} // (B211: the Sub-trim page's slider and boxes, Trims.h - tested in dev/test_wholepage scene_subtrim)
 uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber); void ReadAutoAndMotorSwitch(); void ReadSafetySwitch(); void ReadDualRateSwitch();
 static bool SixBanks = false; static uint8_t UpperBank() { return 4; } static void SixBanksSet(bool on) { SixBanks = on; }   // (B130: four banks here; the six-bank mapping is test_banks')
 void ShowMotorTimer(); void ShowMotor(); void MotorEnabledHasChanged(); void TrimsToSubtrim(); int GetTrimAmount(uint8_t InputChannel); void ResetAllTrims();
 void MixInputs(); void ReadDualRatesValues(); void CheckServoSpeeds(); void CheckServoType(); void ReadMixValues(); void ReceiveLotsofData();
-void ExitMacrosView(); void ReadRXOptionsView(); void StartWifiScan(); uint8_t ScreenStatusNow(); void swap(uint8_t *a, uint8_t *b);
+static uint8_t PreviousMacroNumber = 200; static int channelNames = 0; static void ShowChannelName() { ++channelNames; }
+void ExitMacrosView(); void PopulateMacrosView(); void ReadRXOptionsView(); void StartWifiScan(); uint8_t ScreenStatusNow(); void swap(uint8_t *a, uint8_t *b);
 '''
 A_LIFT = [
     ('src/main.cpp', 'void RerouteOutputs()'), ('src/main.cpp', 'uint8_t SourceOfOutput(uint8_t out)'), ('src/main.cpp', 'int CheckRange(int v, int min, int max)'),
@@ -217,11 +244,11 @@ A_LIFT = [
     ('include/Utilities.h', 'void swap(uint8_t *a, uint8_t *b)'),
     ('include/Switches.h', 'uint8_t GetSwitchPosition(uint8_t ThisSwitchNumber)'), ('include/Switches.h', 'void ReadAutoAndMotorSwitch()'), ('include/Switches.h', 'void ReadSafetySwitch()'), ('include/Switches.h', 'void ReadDualRateSwitch()'),
     ('include/Motor_sign.h', 'FASTRUN void ShowMotorTimer()'), ('include/Motor_sign.h', 'void ShowMotor()'), ('include/Motor_sign.h', 'void MotorEnabledHasChanged()'),
-    ('include/Trims.h', 'void TrimsToSubtrim()'), ('include/Trims.h', 'int GetTrimAmount(uint8_t InputChannel)'), ('include/Trims.h', 'void ResetAllTrims()'),
+    ('include/Trims.h', 'FLASHMEM static uint8_t TrimSlotOfChannel(uint8_t c)'), ('include/Trims.h', 'FLASHMEM static bool TrimsIntoSubtrims(int *over)'), ('include/Trims.h', 'void TrimsToSubtrim()'), ('include/Trims.h', 'int GetTrimAmount(uint8_t InputChannel)'), ('include/Trims.h', 'void ResetAllTrims()'),
     ('include/Mixes.h', 'FASTRUN void MixInputs()'), ('include/DualRates.h', 'void ReadDualRatesValues()'),
     ('include/SDcard.h', 'void CheckServoSpeeds()'), ('include/SDcard.h', 'void CheckServoType()'),
     ('include/MenuOptions.h', 'void ReadMixValues()'), ('include/MenuOptions.h', 'void ReceiveLotsofData()'), ('include/MenuOptions.h', 'static uint8_t MacroValue('),
-    ('include/MenuOptions.h', 'void ExitMacrosView()'), ('include/MenuOptions.h', 'void ReadRXOptionsView()'), ('include/MenuOptions.h', 'void StartWifiScan()'),
+    ('include/MenuOptions.h', 'FLASHMEM void ExitMacrosView()'), ('include/MenuOptions.h', 'FLASHMEM void PopulateMacrosView()'), ('include/MenuOptions.h', 'FLASHMEM void ReadRXOptionsView()'), ('include/MenuOptions.h', 'void StartWifiScan()'),
     ('include/FlightGuard.h', 'uint8_t ScreenStatusNow()'),
 ]
 A_MAIN = r'''
@@ -311,6 +338,111 @@ int main() {
     SticksMode = 1; for (int c = 0; c < 17; ++c) SubTrims[c] = 127; Trims[1][1] = 90; Trims[1][2] = 70;
     TrimsToSubtrim(); CHECK(SubTrims[1] == 137 && SubTrims[2] == 117);   // mode 1: straight across
     confirmAnswer = false; Trims[1][1] = 90; TrimsToSubtrim(); CHECK(SubTrims[1] == 137 && Trims[1][1] == 90);   // cancelled: nothing moves
+    // B211 (the thirteenth review, B2): MORE THAN THE CARD KEEPS (10..244: 117 either way) IS NOT TAKEN - WHOLE, OR NOT AT ALL. It held the sum to
+    // 0..255: flown until the next switch-on, then centred by the card's reader with the trims already at centre.
+    {
+        struct Case { int sub, trim, mult; bool taken; int made; } cases[] = {
+            { 127 + 100, 80 + 17, 5, true, 244 },      // +100 and +17: 117, the most
+            { 127 + 100, 80 + 18, 5, false, 0 },       // +118: one too many
+            { 127 + 100, 80 + 30, 5, false, 0 },       // the review's: +100 and +30 made the byte 255
+            { 127 - 100, 80 - 17, 5, true, 10 },       // -117, the most the other way
+            { 127 - 100, 80 - 18, 5, false, 0 },
+            { 127, 80 + 24, 25, false, 0 },            // the review's: trim step 25 - 24 clicks are 120
+            { 127, 80 + 23, 25, true, 127 + 115 },     // ... and 23 are 115
+            { 127 - 120, 80 + 10, 5, true, 17 },       // a sub trim that stood beyond (an older firmware's page let it): a trim that brings it INSIDE is taken
+        };
+        for (const Case &k : cases)
+        {
+            resetAll(); confirmAnswer = true; SticksMode = 1; Bank = 2; TrimMultiplier = k.mult;
+            for (int b = 0; b < 5; ++b) for (int c = 0; c < 17; ++c) Trims[b][c] = 80;
+            for (int c = 0; c < 17; ++c) SubTrims[c] = 127;
+            SubTrims[1] = (uint8_t) k.sub; Trims[2][1] = k.trim; Trims[2][0] = 85; Trims[3][0] = 70; Trims[1][3] = 99;   // (channel 1 has a trim that fits; other banks have their own)
+            int tBefore[5][17]; uint8_t sBefore[17]; memcpy(tBefore, Trims, sizeof tBefore); memcpy(sBefore, SubTrims, sizeof sBefore);
+            TrimsToSubtrim();
+            if (k.taken)
+            {
+                bool centred = true; for (int b = 1; b < 5; ++b) for (int c = 0; c < 4; ++c) if (Trims[b][c] != 80) centred = false;
+                CHECK(SubTrims[1] == k.made && SubTrims[0] == 127 + k.mult && centred && saves == 1 && boxes == 1 && strstr(lastBox.c_str(), "Done.") && countSound(WHAHWHAHMSG) == 0);
+            }
+            else
+            {   // NOTHING changed: not the channel that fits either, no trim of any bank, nothing saved - and the channel is named
+                CHECK(!memcmp(tBefore, Trims, sizeof tBefore) && !memcmp(sBefore, SubTrims, sizeof sBefore) && saves == 0);
+                CHECK(boxes == 1 && strstr(lastBox.c_str(), "Channel 2 cannot take") && strstr(lastBox.c_str(), "(117 is the most)") && strstr(lastBox.c_str(), "NOTHING was changed") && countSound(WHAHWHAHMSG) == 1 && countSound(BEEPCOMPLETE) == 0);
+            }
+        }
+        // a trim AT CENTRE moves nothing: that channel's sub trim is left exactly as it is - one that stands beyond (250) is no reason to refuse the others
+        resetAll(); confirmAnswer = true; SticksMode = 1; Bank = 1; TrimMultiplier = 5;
+        for (int b = 0; b < 5; ++b) for (int c = 0; c < 17; ++c) Trims[b][c] = 80;
+        for (int c = 0; c < 17; ++c) SubTrims[c] = 127;
+        SubTrims[3] = 250; Trims[1][0] = 90; Trims[2][3] = 95;   // (the rudder's trim is at centre in THIS bank; bank 2 has one)
+        TrimsToSubtrim();
+        CHECK(SubTrims[3] == 250 && SubTrims[0] == 137 && Trims[2][3] == 80 && saves == 1 && strstr(lastBox.c_str(), "Done."));
+        // B211 (the fourteenth review): A TRIM GOES INTO THE CHANNELS IT MOVES - every channel whose INPUT is the trim's slot (in mode 2 the slots of inputs
+        // 2 and 3 change places), not "the channel of the Trim out's number". EVERY SERVO STAYS WHERE IT IS: what each channel is flown with - its trim
+        // and its sub trim - is the same before and after, whatever the inputs, the Trim outs and the sticks mode.
+        auto flown = [](int c) { return GetTrimAmount(InPutStick[c]) + (SubTrims[c] - 127) * 5; };
+        auto fresh = [&](int mode, int bank) { resetAll(); confirmAnswer = true; SticksMode = mode; Bank = bank; TrimMultiplier = 5; savesAtBox = -1;
+                                               for (int b = 0; b < 5; ++b) for (int c = 0; c < 17; ++c) Trims[b][c] = 80;
+                                               for (int c = 0; c < 17; ++c) SubTrims[c] = 127; };
+        // (1) his own: channel 1 the throttle stick (In 3), channel 2 the aileron stick (In 1), channel 3 the elevator stick (In 2); Trim out 1 2 3 4;
+        //     the aileron trim 10 clicks up. It went into channel 1 - the THROTTLE - and channel 2 lost its trim
+        fresh(1, 2); InPutStick[0] = 2; InPutStick[1] = 0; InPutStick[2] = 1; Trims[2][0] = 90;
+        { int was[16]; for (int c = 0; c < 16; ++c) was[c] = flown(c);
+          TrimsToSubtrim();
+          bool same = true; for (int c = 0; c < 16; ++c) same &= flown(c) == was[c];
+          CHECK(same && SubTrims[1] == 137 && SubTrims[0] == 127 && SubTrims[2] == 127 && Trims[2][0] == 80 && saves == 1 && strstr(lastBox.c_str(), "Done."));
+          CHECK(savesAtBox == 1); }                                                          // the model is saved BEFORE the box waits (it was saved behind it)
+        //     ... and what cannot take it is THAT channel: the aileron's - channel 2
+        fresh(1, 2); InPutStick[0] = 2; InPutStick[1] = 0; InPutStick[2] = 1; Trims[2][0] = 90; SubTrims[1] = 127 + 110;
+        TrimsToSubtrim(); CHECK(saves == 0 && SubTrims[1] == 237 && Trims[2][0] == 90 && strstr(lastBox.c_str(), "Channel 2 cannot take") && savesAtBox == 0);
+        // (2) two servos on one stick (channels 1 and 5 both on the aileron stick): BOTH take the trim (the second one lost it)
+        fresh(1, 3); InPutStick[4] = 0; Trims[3][0] = 72;
+        { const int f0 = flown(0), f4 = flown(4); TrimsToSubtrim(); CHECK(flown(0) == f0 && flown(4) == f4 && SubTrims[0] == 119 && SubTrims[4] == 119 && Trims[3][0] == 80); }
+        // (3) mode 2, one vertical lever's Trim out set to 14: the OTHER vertical lever's trim (slot 2 - the lever writes its Trim out's own slot) is moved
+        //     and centred (it was neither: the move looked at slot 1, and centred that)
+        fresh(2, 1); InputTrim[2] = 13; Trims[1][1] = 91; Trims[1][13] = 75; Trims[1][0] = 84; Trims[4][1] = 99; Trims[1][2] = 66;   // (slots 0, 1, 13, 3 are the levers'; slot 2 is nobody's now)
+        { int was[16]; for (int c = 0; c < 16; ++c) was[c] = flown(c);
+          TrimsToSubtrim();
+          bool same = true; for (int c = 0; c < 16; ++c) same &= flown(c) == was[c];
+          bool centred = true; for (int b = 1; b < 5; ++b) for (int s : { 0, 1, 13, 3 }) centred &= Trims[b][s] == 80;
+          CHECK(same && centred && Trims[1][2] == 66 && saves == 1);                         // (the slot no lever writes: not moved, not centred - it acts as it did)
+          CHECK(SubTrims[2] == 138 && SubTrims[13] == 122 && SubTrims[0] == 131 && SubTrims[1] == 127); }   // (in mode 2 slot 1 acts on the channel of input 3, slot 2 on that of input 2)
+        // (4) two levers set to move the same slot: that one trim is moved once
+        for (int mode = 1; mode <= 2; ++mode)
+        {
+            fresh(mode, 2); InputTrim[0] = 3; InputTrim[1] = 3; InputTrim[2] = 2; InputTrim[3] = 2; Trims[2][3] = 92; Trims[2][2] = 71;
+            int was[16]; for (int c = 0; c < 16; ++c) was[c] = flown(c);
+            TrimsToSubtrim();
+            bool same = true; for (int c = 0; c < 16; ++c) same &= flown(c) == was[c];
+            CHECK(same && SubTrims[3] == 139 && SubTrims[mode == 1 ? 2 : 1] == 118 && Trims[2][3] == 80 && Trims[2][2] == 80 && saves == 1);
+        }
+        // (5) ANY inputs, ANY Trim outs, either mode, any bank: every servo stays where it is; the levers' slots are at centre in every bank; a slot no
+        //     lever writes is as it was; or - one channel cannot take it - NOTHING is changed at all
+        { uint32_t s = 20261116u; auto rnd = [&](uint32_t n) { s = s * 1664525u + 1013904223u; return (s >> 8) % n; };
+          int moved = 0, refused = 0, bad = 0;
+          for (int trial = 0; trial < 4000; ++trial)
+          {
+              fresh(1 + (int) rnd(2), 1 + (int) rnd(4));
+              for (int c = 0; c < 16; ++c) InPutStick[c] = (uint8_t) (rnd(4) ? c : rnd(16));                   // most channels on their own input, some anywhere
+              if (rnd(3) == 0) { const int a = (int) rnd(4), b = (int) rnd(4); const uint8_t x = InPutStick[a]; InPutStick[a] = InPutStick[b]; InPutStick[b] = x; }
+              for (int k = 0; k < 4; ++k) InputTrim[k] = (uint8_t) (rnd(4) ? k : rnd(16));
+              for (int b = 1; b < 5; ++b) for (int c = 0; c < 16; ++c) Trims[b][c] = rnd(3) ? 80 : 40 + (int) rnd(81);
+              for (int c = 0; c < 16; ++c) SubTrims[c] = (uint8_t) (rnd(5) ? 127 : 10 + rnd(235));
+              int was[16], tWas[5][17]; uint8_t sWas[17]; for (int c = 0; c < 16; ++c) was[c] = flown(c);
+              memcpy(tWas, Trims, sizeof tWas); memcpy(sWas, SubTrims, sizeof sWas);
+              int over = -1; const bool ok = TrimsIntoSubtrims(&over);
+              if (!ok) { ++refused; if (over < 1 || over > 16 || memcmp(tWas, Trims, sizeof tWas) || memcmp(sWas, SubTrims, sizeof sWas)) ++bad; continue; }
+              ++moved;
+              for (int c = 0; c < 16; ++c) if (flown(c) != was[c]) { ++bad; break; }
+              for (int b = 1; b < 5; ++b) for (int sl = 0; sl < 16; ++sl)
+              { bool lever = false; for (int k = 0; k < 4; ++k) lever |= InputTrim[k] == sl;
+                if (Trims[b][sl] != (lever ? 80 : tWas[b][sl])) { ++bad; b = 5; break; } }
+              for (int c = 0; c < 16; ++c) if (SubTrims[c] != sWas[c] && (SubTrims[c] < 10 || SubTrims[c] > 244)) { ++bad; break; }
+          }
+          printf("  move trims into subtrim, 4000 random maps of inputs, Trim outs, modes and banks: moved %d, refused %d, wrong %d\n", moved, refused, bad);
+          CHECK(bad == 0 && moved > 1000 && refused > 40); }
+        for (int c = 0; c < 17; ++c) InPutStick[c] = (uint8_t) c; for (int i = 0; i < 4; ++i) InputTrim[i] = i;
+    }
     // B38: the trim lever map follows the stick mode
     SticksMode = 2; ResetAllTrims(); CHECK(TrimNumber[2] == TRIM3A && TrimNumber[4] == TRIM2A);
     SticksMode = 1; ResetAllTrims(); CHECK(TrimNumber[2] == TRIM2A && TrimNumber[4] == TRIM3A);
@@ -334,10 +466,58 @@ int main() {
     Mixes[1][M_SlaveChannel] = 0; MixInputs(); CHECK(InputsBuffer[0] == 2000);  // slave 0 (index -1): nothing written
     Mixes[1][M_SlaveChannel] = 2; MixInputs(); CHECK(InputsBuffer[1] == 2000);  // a real mix still mixes (100 % of a full stick)
     // ---------------------------------------------------------------- B33: macro values kept within their ranges
-    resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer);
-    values["Mno"] = 1; values["Tch"] = 20; values["Mch"] = 3; values["Pos"] = 250; values["Del"] = 65535; values["Dur"] = 300;
-    ExitMacrosView(); CHECK(MacrosBuffer[0][MACROTRIGGERCHANNEL] == 16 && MacrosBuffer[0][MACROMOVECHANNEL] == 3 && MacrosBuffer[0][MACROMOVETOPOSITION] == 180 && MacrosBuffer[0][MACROSTARTTIME] == 7 && MacrosBuffer[0][MACRODURATION] == 255 && saves == 1 && UseMacros);
-    values["Mno"] = 0; saves = 0; ExitMacrosView(); CHECK(saves == 0);   // no macro number: nothing written
+    resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer); PreviousMacroNumber = 0; lossCounts = true; BoxesLostAtWork = BoxesLost;   // (macro 1 is the one whose values this board put into the page's boxes)
+    values["Mno"] = 1; values["Tch"] = 20; values["Mch"] = 3; values["Pos"] = 250; values["Del"] = 9; values["Dur"] = 300;
+    ExitMacrosView(); CHECK(MacrosBuffer[0][MACROTRIGGERCHANNEL] == 16 && MacrosBuffer[0][MACROMOVECHANNEL] == 3 && MacrosBuffer[0][MACROMOVETOPOSITION] == 180 && MacrosBuffer[0][MACROSTARTTIME] == 9 && MacrosBuffer[0][MACRODURATION] == 255 && saves == 1 && UseMacros);
+    CHECK(CurrentView == RXSETUPVIEW && countCmd(pRXSetupView) == 1);
+    // (B211, the eleventh review's check of every routine that asks for more than one box) A MACRO IS TAKEN WHOLE, OR NOT AT ALL: one of its five boxes with
+    // no answer - each in turn - and NOTHING is taken (it was: the boxes that answered, the others as they were - a new channel with the old position),
+    // nothing saved, the page not left
+    for (const char *lost : { "Tch", "Mch", "Pos", "Del", "Dur", "Mno" })
+    {
+        resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer); PreviousMacroNumber = 0; UseMacros = false; CurrentView = MACROS_VIEW; BoxesLostAtWork = BoxesLost;
+        values["Mno"] = 1; values["Tch"] = 2; values["Mch"] = 3; values["Pos"] = 100; values["Del"] = 4; values["Dur"] = 5; values[lost] = 65535;
+        ExitMacrosView();
+        bool untouched = true; for (int a = 0; a < MAXMACROS; ++a) for (int c = 0; c < BYTESPERMACRO; ++c) if (MacrosBuffer[a][c] != 7) untouched = false;
+        CHECK(untouched && saves == 0 && !UseMacros && CurrentView == MACROS_VIEW && countCmd(pRXSetupView) == 0);
+    }
+    // ... AND ITS BOXES ARE TAKEN ONLY INTO THE MACRO WHOSE VALUES THIS BOARD PUT INTO THEM. The page's number moved by itself to 3 and its word never
+    // came: the boxes are still macro 1's. OK took them into macro 3. Now nothing is taken: a sound, the page's number put back, its boxes written again
+    // from what is in hand, the page not left
+    resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer); MacrosBuffer[0][MACROMOVECHANNEL] = 5; MacrosBuffer[0][MACROMOVETOPOSITION] = 90; PreviousMacroNumber = 0; CurrentView = MACROS_VIEW; BoxesLostAtWork = BoxesLost;
+    values["Mno"] = 3; values["Tch"] = 2; values["Mch"] = 3; values["Pos"] = 100; values["Del"] = 4; values["Dur"] = 5;
+    ExitMacrosView();
+    CHECK(MacrosBuffer[2][MACROMOVECHANNEL] == 7 && MacrosBuffer[2][MACROMOVETOPOSITION] == 7 && MacrosBuffer[0][MACROMOVECHANNEL] == 5 && MacrosBuffer[0][MACROMOVETOPOSITION] == 90 && saves == 0);
+    CHECK(values["Mno"] == 1 && values["Mch"] == 5 && values["Pos"] == 90 && countSound(WHAHWHAHMSG) == 1 && CurrentView == MACROS_VIEW && channelNames == 1);
+    // ... the page never filled (its first question had no answer: the boxes are the card's): OK takes nothing, and fills it now
+    resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer); MacrosBuffer[1][MACROMOVECHANNEL] = 6; PreviousMacroNumber = 200; CurrentView = MACROS_VIEW; BoxesLostAtWork = BoxesLost; channelNames = 0;
+    values["Mno"] = 2; values["Tch"] = 0; values["Mch"] = 0; values["Pos"] = 0; values["Del"] = 0; values["Dur"] = 0;
+    ExitMacrosView();
+    CHECK(MacrosBuffer[1][MACROMOVECHANNEL] == 6 && MacrosBuffer[1][MACROTRIGGERCHANNEL] == 7 && saves == 0 && CurrentView == MACROS_VIEW && values["Mch"] == 6 && values["Tch"] == 7 && PreviousMacroNumber == 1);
+    // PopulateMacrosView (the page's number moved: the boxes into the macro before, the new macro's values into the boxes)
+    resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer); MacrosBuffer[3][MACROMOVECHANNEL] = 9; PreviousMacroNumber = 0; BoxesLostAtWork = BoxesLost;
+    values["Mno"] = 4; values["Tch"] = 2; values["Mch"] = 3; values["Pos"] = 100; values["Del"] = 4; values["Dur"] = 5;
+    PopulateMacrosView();
+    CHECK(MacrosBuffer[0][MACROTRIGGERCHANNEL] == 2 && MacrosBuffer[0][MACROMOVECHANNEL] == 3 && MacrosBuffer[0][MACROMOVETOPOSITION] == 100 && PreviousMacroNumber == 3 && values["Mch"] == 9 && values["Tch"] == 7);
+    // ... a box with no answer (each in turn, the number's too): nothing taken, the boxes left as they are - and THE PAGE'S NUMBER PUT BACK to the macro
+    // they belong to (left on the new number, OK took macro 1's boxes into macro 4)
+    for (const char *lost : { "Tch", "Mch", "Pos", "Del", "Dur", "Mno" })
+    {
+        resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer); PreviousMacroNumber = 0; BoxesLostAtWork = BoxesLost;
+        values["Mno"] = 4; values["Tch"] = 2; values["Mch"] = 3; values["Pos"] = 100; values["Del"] = 4; values["Dur"] = 5; values[lost] = 65535;
+        PopulateMacrosView();
+        bool untouched = true; for (int a = 0; a < MAXMACROS; ++a) for (int c = 0; c < BYTESPERMACRO; ++c) if (MacrosBuffer[a][c] != 7) untouched = false;
+        CHECK(untouched && PreviousMacroNumber == 0 && values["Mno"] == 1);
+        CHECK(strcmp(lost, "Mch") == 0 ? values["Mch"] == 65535 : values["Mch"] == 3);   // (the boxes are not written over: what he typed for macro 1 stays for the next try)
+    }
+    // ... a number the page cannot show (0, 9): nothing is written from, or into, a macro that is not there; the number goes back
+    for (int badNo : { 0, 9 })
+    {
+        resetAll(); memset(MacrosBuffer, 7, sizeof MacrosBuffer); PreviousMacroNumber = 2; BoxesLostAtWork = BoxesLost;
+        values["Mno"] = badNo; values["Tch"] = 2; values["Mch"] = 3; values["Pos"] = 100; values["Del"] = 4; values["Dur"] = 5;
+        PopulateMacrosView(); CHECK(PreviousMacroNumber == 2 && values["Mno"] == 3 && MacrosBuffer[2][MACROMOVECHANNEL] == 3);   // (macro 3's edits were answered: taken)
+    }
+    lossCounts = false;
     // ---------------------------------------------------------------- B35 / B51: servo speeds and types
     for (int b = 0; b < 5; ++b) for (int c = 0; c < 17; ++c) ServoSpeed[b][c] = 60;
     ServoSpeed[1][3] = 0; ServoSpeed[2][5] = 150; CheckServoSpeeds();
@@ -381,6 +561,17 @@ int main() {
     switchAt(1, 3); GetBank(); CHECK(!SendNoData && !MotorEnabled);                                                          // off: the silence ends
     GetBank(); CHECK(!SendNoData);
     switchAt(1, 1); LedWasRed = false; LedWasGreen = true; GetBank(); CHECK(MotorEnabled && !SendNoData);                    // connected: the motor may be on
+    // ---------------------------------------------------------------- B211 (the thirteenth review, B3): THE MOTOR SWITCH IS NO BANK CHANGE
+    // GetBank forced "PreviousBank = 254" behind the motor switch, so that the bank would be shown again: BankHasChanged then knew no bank that was
+    // left - every page was treated as left for another bank, and when the switch moved the bank too, the bank really left was forgotten.
+    Bank = 1; PreviousBank = 1; bankCalls = 0; GetBank(); CHECK(bankCalls == 0 && PreviousBank == 1 && Bank == 1);                                          // nothing moved: not called
+    switchAt(1, 2); GetBank(); CHECK(bankCalls == 1 && bankCallWas == 1 && bankCallIs == 4 && MotorEnabled && PreviousBank == 4);   // its middle: bank 4, the motor still on - a bank change, as ever
+    switchAt(1, 3); GetBank(); CHECK(bankCalls == 2 && bankCallWas == 4 && bankCallIs == 4 && !MotorEnabled && PreviousBank == 4);  // its far end: the motor off, the bank the same - SHOWN AGAIN, the bank that was is 4 (it was 254)
+    GetBank(); CHECK(bankCalls == 2);
+    switchAt(1, 1); Bank = 2; GetBank(); CHECK(bankCalls == 3 && bankCallWas == 4 && bankCallIs == 2 && MotorEnabled && PreviousBank == 2);   // back to its near end in one pass (the bank switch says 2): the motor on AND bank 4 left for 2 (it was: 254 left)
+    switchAt(1, 3); GetBank(); CHECK(bankCalls == 4 && bankCallWas == 2 && bankCallIs == 4 && !MotorEnabled && PreviousBank == 4);            // ... and to its far end in one pass: the motor off AND bank 2 left for 4 (it was: 254 left)
+    UseMotorKill = false; switchAt(1, 1); Bank = 4; GetBank(); CHECK(bankCalls == 4);                                                         // no motor switch in use: it asks for nothing
+    UseMotorKill = true;
     printf("test_bugfixes A (flight): %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -395,11 +586,15 @@ B_DEFS = r'''
 #define CLICKZERO 0
 #define BEEPCOMPLETE 17
 #define WHAHWHAHMSG 25
+''' + SUBTRIM_MOST_LINE + r'''
 #define BINDINGENABLED 98
 static uint8_t PowerOffWarningSeconds = 2, AudioVolume = 50, RotorFlight_V = 0;
 static uint32_t PreviousPowerOffTimer = 0, PowerCountdownShownAt = 0, ModelNumber = 1, VolumeRestoreAt = 0, CurrentWarningShownAt = 0;
 static bool ButtonUpSinceBoot = false, BuddyMasterOnWireless = false, BuddyPupilOnWireless = false, SD_Card_Exists = true, BoundFlag = false, ModelMatched = false, LedWasGreen = false, TrimClicks = false, BindingEnabled = false, Force_Early_Sound = false, BatteryWarningShown = false;
 static int CurrentView = FRONTVIEW;
+static bool NextionGetPending = false;   // (B211: Nextion.h - a get waits for its answer)
+static uint8_t ModalWaits = 0;           // (B211: Utilities.h - a question waits for its answer)
+static uint8_t ModelMemoryBusy = 0;      // (B211: 1Definitions.h - a model is being read into this board's memory)
 static float Battery_Amps = 0; static uint16_t Max_Safe_Amps = 0;
 static char WarnNow[] = "vis Warning,1", WarnOff[] = "vis Warning,0", Warning[] = "Warning", pFrontView[] = "page FrontView";
 static uint32_t now = 0; static uint32_t millis() { return now; }
@@ -436,6 +631,26 @@ int main() {
     at(22000, true);  CHECK(texts["StillConnected"] == "TURN OFF?! 0" && closeDowns == 1);   // held through: off
     // not connected: a press switches off at once (after the first seconds)
     closeDowns = 0; LedWasGreen = false; at(30000, false); at(30100, true); CHECK(closeDowns == 1 && countCmd("vis StillConnected,1") == 2);
+    // ---------------------------------------------------------------- B211: connected, on another page: the front page comes - but NOT under a
+    // get that waits for its answer (this runs inside every wait, a get's own among them: the front page came up under an OK that was reading
+    // its boxes, and the rest were read from the front page as 0 and saved); when the asking is over, it comes
+    cmds.clear(); texts.clear(); closeDowns = 0; frontViews = 0; LedWasGreen = true; BoundFlag = true; ModelMatched = true; CurrentView = RXSETUPVIEW;
+    at(200000, false); NextionGetPending = true;
+    at(200100, true); CHECK(frontViews == 0 && CurrentView == RXSETUPVIEW && countCmd("vis StillConnected,1") == 1 && closeDowns == 0);   // (the countdown begins all the same)
+    at(200150, true); CHECK(frontViews == 0 && CurrentView == RXSETUPVIEW);
+    NextionGetPending = false; ModalWaits = 1; at(200170, true); CHECK(frontViews == 0 && CurrentView == RXSETUPVIEW);   // (nor over a question that waits: the eighth review)
+    ModalWaits = 0; at(200200, true); CHECK(frontViews == 1 && CurrentView == FRONTVIEW && closeDowns == 0);
+    at(200300, false); CHECK(countCmd("vis StillConnected,0") == 1);
+    // ---------------------------------------------------------------- B211 (the twelfth review; the released code had it): NOT WHILE A MODEL IS BEING
+    // READ INTO MEMORY. ReadOneModel's own waits come by this routine, and the button's first press SAVES "the model" - the one before, over the
+    // slot being read (a list of all the models), or over the backup file (Restore). Nothing at all is done then: no save, no box, no front page,
+    // no switching off; when the read is over the button is looked at again
+    cmds.clear(); texts.clear(); closeDowns = 0; frontViews = 0; saves = 0; LedWasGreen = true; BoundFlag = true; ModelMatched = true; CurrentView = RXSETUPVIEW;
+    at(300000, false); ModelMemoryBusy = 1;
+    at(300100, true); at(300200, true); CHECK(saves == 0 && countCmd("vis StillConnected,1") == 0 && frontViews == 0 && CurrentView == RXSETUPVIEW && closeDowns == 0);
+    LedWasGreen = false; at(300300, true); CHECK(saves == 0 && closeDowns == 0);                          // (not connected: no switching off either - that saves too)
+    LedWasGreen = true; ModelMemoryBusy = 0; at(300400, true); CHECK(saves == 1 && countCmd("vis StillConnected,1") == 1 && frontViews == 1 && closeDowns == 0);
+    at(300500, false); CHECK(countCmd("vis StillConnected,0") == 1);
     // ---------------------------------------------------------------- B95: a hold from switch-on enables binding, however long, and never switches off
     cmds.clear(); sounds.clear(); texts.clear(); closeDowns = 0; ButtonUpSinceBoot = false; BindingEnabled = false; AudioVolume = 10; VolumeRestoreAt = 0; volumeSets = 0; LedWasGreen = false; BoundFlag = false; ModelMatched = false;
     at(500, true);  CHECK(!BindingEnabled && closeDowns == 0);
@@ -479,9 +694,11 @@ int main() {
 C_DEFS = r'''
 #define FILE_READ 0
 #define FILE_WRITE 1
-static std::map<std::string, std::string> card; static int removes = 0;
+static std::map<std::string, std::string> card; static int removes = 0, renames = 0;
 struct File { std::string name; bool ok = false; File() {} File(const std::string &n, bool o) : name(n), ok(o) {} size_t write(const char *d, size_t n) { if (!ok) return 0; card[name].append(d, n); return n; } int read(char *, int) { return 0; } void seek(long) {} void close() { ok = false; } operator bool() const { return ok; } };
-struct Card { File open(const char *n, int mode) { if (mode == FILE_WRITE) { if (strstr(n, "NOROOM")) return File(n, false); if (!card.count(n)) card[n] = ""; return File(n, true); } return File(n, card.count(n) > 0); } bool remove(const char *n) { ++removes; return card.erase(n) > 0; } } TINYCARD;
+struct Card { File open(const char *n, int mode) { if (mode == FILE_WRITE) { if (strstr(n, "NOROOM")) return File(n, false); if (!card.count(n)) card[n] = ""; return File(n, true); } return File(n, card.count(n) > 0); } bool remove(const char *n) { ++removes; return card.erase(n) > 0; }
+              bool exists(const char *n) { return card.count(n) > 0; }
+              bool rename(const char *a, const char *b) { ++renames; if (strstr(b, "NOROOM") || !card.count(a) || card.count(b)) return false; card[b] = card[a]; card.erase(a); return true; } } TINYCARD;
 struct tmElements_t { int Day, Month, Year; } tm;
 static bool clockOk = true; struct Rtc { bool read(tmElements_t &) { return clockOk; } } RTC;
 static uint8_t GmonthDay = 13, Gmonth = 10, Gyear = 26; static int rtcDay = 13, rtcMonth = 10, rtcYear = 26;
@@ -495,7 +712,7 @@ static int delays = 0; static void DelayWithDog(uint32_t) { ++delays; }
 static void CloseModelsFile() {}
 static int modelsSaved = 0; static void SaveOneModel(uint32_t) { ++modelsSaved; if (SingleModelFlag) { if (strstr(SingleModelFile, "NOROOM")) { FileError = true; return; } card[std::string("/mod/") + SingleModelFile] = "model"; } }
 static char toUpperCase(char c) { return (char) toupper((unsigned char) c); }
-static int restores = 0, saveCurrents = 0, loadsForRenaming = 0, selectors = 0; static void SaveCurrentModel() { ++saveCurrents; } static void LoadModelForRenaming() { ++loadsForRenaming; } static void RestoreCurrentModel() { ++restores; } static void BuildDirectory() {} static void LoadFileSelector() { ++selectors; }
+static int selectors = 0; static void BuildDirectory() {} static void LoadFileSelector() { ++selectors; }   // (B211, the eleventh review: no model is read or written for a rename - nothing here stands in for that any more)
 static char pModelsView[] = "page ModelsView";
 static std::string typedName; static bool nameGiven = true;
 static bool GetBackupFilename(char *, char *tt1, char *, char *, char *) { if (!nameGiven) return false; strcpy(tt1, typedName.c_str()); return true; }
@@ -509,7 +726,7 @@ C_LIFT = [('src/main.cpp', 'int InStrng(char *text1, char *text2)'), ('include/U
           ('include/LogFiles.h', 'FASTRUN void CheckLogFileIsOpen()'), ('include/LogFiles.h', 'FASTRUN void CloseLogFile()'), ('include/LogFiles.h', 'FASTRUN void CloseLogWriteFile()'),
           ('include/LogFiles.h', 'FASTRUN void WriteToLogFile(char *SomeData, uint16_t len)'), ('include/LogFiles.h', 'FASTRUN bool LogFilePreamble()'), ('include/LogFiles.h', 'FASTRUN void LogText(char *TheText, uint16_t len, bool TimeStamp)'),
           ('include/SDFiles.h', 'FASTRUN void OpenLogFileW()'), ('include/SDFiles.h', 'FASTRUN void DeleteLogFile()'), ('include/Nextion.h', 'FLASHMEM int ChosenFileRow(const char *box)'), ('include/SDFiles.h', 'void DeleteThisLogFile()'),
-          ('src/main.cpp', 'bool WriteBackup()'), ('src/main.cpp', 'void FixFileName()'), ('src/main.cpp', 'void ShowFileErrorMsg()'), ('include/SDFiles.h', 'void RenameFile()')]
+          ('src/main.cpp', 'bool WriteBackup()'), ('src/main.cpp', 'void FixFileName()'), ('src/main.cpp', 'void ShowFileErrorMsg()'), ('include/SDFiles.h', 'FLASHMEM void RenameFile()')]
 C_MAIN = r'''
 static void logIt(const char *s) { char b[100]; strcpy(b, s); LogText(b, (uint16_t) strlen(b), true); }
 int main() {
@@ -549,22 +766,46 @@ int main() {
     strcpy(SingleModelFile, "newname"); CHECK(WriteBackup() && card.count("/mod/NEWNAME.MOD") == 1 && !FileError && !SingleModelFlag);
     strcpy(SingleModelFile, "VERYLONGNAME1"); CHECK(!WriteBackup() && card.size() == 1 && !FileError && countCmd("vis error,1") == 3);   // refused: too long for the card, said, nothing written
     strcpy(SingleModelFile, "NOROOM"); cmds.clear(); CHECK(!WriteBackup() && card.count("/mod/NOROOM.MOD") == 0 && countCmd("vis error,1") == 3);   // the card would not take it
-    // RenameFile: OLD.MOD renamed to NEW
-    card.clear(); card["/mod/OLD.MOD"] = "model"; texts["filename"] = "OLD.MOD"; typedName = "new"; nameGiven = true; confirmAnswer = true; restores = 0; removes = 0;
-    RenameFile(); CHECK(card.count("/mod/NEW.MOD") == 1 && card.count("/mod/OLD.MOD") == 0 && restores == 1 && saveCurrents == 1);
-    // a refused name: the old file stays, the live model still comes back
-    card.clear(); card["/mod/OLD.MOD"] = "model"; typedName = "VERYLONGNAME1"; restores = 0;
-    RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && card.size() == 1 && restores == 1);
-    // the same name: nothing to do, nothing deleted, the live model back
-    typedName = "OLD.MOD"; restores = 0; removes = 0; RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && removes == 0 && restores == 1);
-    // the new name exists and the overwrite is declined: both stay
-    card["/mod/NEW.MOD"] = "other"; typedName = "NEW"; confirmAnswer = false; restores = 0;
-    RenameFile(); CHECK(card["/mod/NEW.MOD"] == "other" && card.count("/mod/OLD.MOD") == 1 && restores == 1 && lastBox.find("Overwrite NEW.MOD?") == 0);
-    confirmAnswer = true; RenameFile(); CHECK(card["/mod/NEW.MOD"] == "model" && card.count("/mod/OLD.MOD") == 0);   // agreed: written over, the old one gone
-    // the card would not take the new file: the old one stays
-    card.clear(); card["/mod/OLD.MOD"] = "model"; typedName = "NOROOM"; restores = 0; RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && card.count("/mod/NOROOM.MOD") == 0 && restores == 1);
-    // no name given: nothing changes, the live model back
-    nameGiven = false; restores = 0; RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && card.size() == 1 && restores == 1);
+    // RenameFile (B211, the eleventh review: THE FILE IS RENAMED ON THE CARD - it was read into this board's memory in place of the pilot's model, kept
+    // there through the questions, written out under the new name and the old file removed): OLD.MOD renamed to NEW - the same bytes under the new
+    // name, the old name gone, NO model read into memory and none written from it
+    card.clear(); card["/mod/OLD.MOD"] = "the file's own bytes"; texts["filename"] = "OLD.MOD"; typedName = "new"; nameGiven = true; confirmAnswer = true; removes = 0; renames = 0; modelsSaved = 0; cmds.clear(); selectors = 0;
+    RenameFile(); CHECK(card.count("/mod/NEW.MOD") == 1 && card["/mod/NEW.MOD"] == "the file's own bytes" && card.count("/mod/OLD.MOD") == 0 && card.size() == 1);
+    CHECK(modelsSaved == 0 && renames == 1 && removes == 0 && !SingleModelFlag && !FileError && countCmd("vis error,1") == 0 && selectors == 1 && LastFileInView == 120);
+    // (B211, the eighth review) the screen does not answer for the file's name: nothing is asked, nothing renamed or removed
+    card.clear(); card["/mod/OLD.MOD"] = "model"; texts.erase("filename"); typedName = "new"; renames = 0; selectors = 0;
+    RenameFile(); CHECK(card.size() == 1 && card.count("/mod/OLD.MOD") == 1 && renames == 0 && selectors == 0); texts["filename"] = "OLD.MOD";
+    // a refused name (too long for the card): the old file stays, and the page says so
+    card.clear(); card["/mod/OLD.MOD"] = "model"; typedName = "VERYLONGNAME1"; cmds.clear(); renames = 0;
+    RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && card.size() == 1 && renames == 0 && countCmd("vis error,1") == 3 && !FileError);
+    // (the twelfth review: no test held it) ... a refused name whose file EXISTS on the card (put there by a computer), "Overwrite ...?" answered Yes:
+    // THAT file is not removed, nothing is renamed, and the page says so (the refusal stood in front of the rename only: the removal went ahead,
+    // and its "done" let the rename through)
+    // (a name too long WITH its ".MOD" stands in the models' folder; one with no ".MOD" in the card's root - AddPath: both are refused, and both files stay.
+    //  The break-it round: this scene's first form put the file where no such name is looked for, and passed with the rule taken out)
+    for (int which = 0; which < 2; ++which)
+    {
+        const char *name = which ? "VERYLONGNAME1" : "LONGERNAME.MOD", *path = which ? "/VERYLONGNAME1" : "/mod/LONGERNAME.MOD";
+        card.clear(); card["/mod/OLD.MOD"] = "model"; card[path] = "another file"; typedName = name; confirmAnswer = true; cmds.clear(); renames = 0; removes = 0; lastBox.clear();
+        RenameFile();
+        CHECK(lastBox.find(std::string("Overwrite ") + name + "?") == 0);                    // (the scene is the one meant: the file was FOUND, and the overwrite agreed)
+        CHECK(card.count("/mod/OLD.MOD") == 1 && card["/mod/OLD.MOD"] == "model" && card.count(path) == 1 && card[path] == "another file" && card.size() == 2 && renames == 0 && removes == 0 && countCmd("vis error,1") == 3);
+    }
+    card.clear(); card["/mod/OLD.MOD"] = "model";
+    // the same name: nothing to do, nothing removed
+    typedName = "OLD.MOD"; removes = 0; renames = 0; cmds.clear(); RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && removes == 0 && renames == 0 && countCmd("vis error,1") == 0);
+    // (B211) a new name that differs only in its letters' case is the same file on the card: nothing to do - no question, nothing removed, nothing renamed
+    card.clear(); card["/mod/Goblin.MOD"] = "model"; texts["filename"] = "Goblin.MOD"; typedName = "goblin"; removes = 0; renames = 0; boxes = 0;
+    RenameFile(); CHECK(card.count("/mod/Goblin.MOD") == 1 && card.size() == 1 && removes == 0 && renames == 0 && boxes == 0);
+    card.clear(); card["/mod/OLD.MOD"] = "model"; texts["filename"] = "OLD.MOD";
+    // the new name exists and the overwrite is declined: both stay as they are
+    card["/mod/NEW.MOD"] = "other"; typedName = "NEW"; confirmAnswer = false; renames = 0; removes = 0;
+    RenameFile(); CHECK(card["/mod/NEW.MOD"] == "other" && card["/mod/OLD.MOD"] == "model" && renames == 0 && removes == 0 && lastBox.find("Overwrite NEW.MOD?") == 0);
+    confirmAnswer = true; RenameFile(); CHECK(card["/mod/NEW.MOD"] == "model" && card.count("/mod/OLD.MOD") == 0 && card.size() == 1);   // agreed: written over, the old name gone
+    // the card would not rename: the old file stays, and the page says so
+    card.clear(); card["/mod/OLD.MOD"] = "model"; typedName = "NOROOM"; cmds.clear(); RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && card.count("/mod/NOROOM.MOD") == 0 && countCmd("vis error,1") == 3);
+    // no name given: nothing changes
+    nameGiven = false; renames = 0; RenameFile(); CHECK(card.count("/mod/OLD.MOD") == 1 && card.size() == 1 && renames == 0);
     printf("test_bugfixes C (logs and files): %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -597,9 +838,12 @@ def source_checks():
     i = m.find('if (CurrentView == CALIBRATEVIEW)\n            {\n                if (CurrentMode == CALIBRATELIMITS || CurrentMode == CENTRESTICKS)')
     chk(i > 0 and 'LoadAllParameters();' in m[i:i + 500] and 'CurrentMode = NORMAL;' in m[i:i + 500], 'B17 OK part way puts the card\'s values back')
     # B23: Model options' values go with Help, Model picture and Servos
-    chk('if (CurrentView == RXSETUPVIEW1)\n                ReadRXOptionsView();' in m and 'if (CurrentView == RXSETUPVIEW1)\n                RXOptionsViewStart();' in m, 'B23 Help from Model options reads first and redraws after')
+    hw = m[m.index('FLASHMEM void HelpWordCame()'):]; hw = hw[:hw.index('\n}\n')]
+    chk('if (CurrentView == RXSETUPVIEW1)' in hw and 0 < hw.find('if (!HelpNameFrom(helpName))\n            return;') < hw.find('ReadRXOptionsView();') < hw.find('snprintf(TextIn, 40, "HelpView:%s", helpName);') < hw.find('SendHelp();')
+        and 'if (CurrentView == RXSETUPVIEW1)\n                RXOptionsViewStart();' in m and 'HelpWordCame();\n            ClearText();' in m,
+        'B23 Help from Model options reads first and redraws after (B211: the help\'s name taken before the page is read - the boxes\' answers took it out of TextIn, and nothing opened)')
     chk('ReadRXOptionsView();\n        SaveOneModel(ModelNumber);' in ci and 'ReadRXOptionsView();\n        SaveOneModel(ModelNumber);' in mo, 'B23 Model picture and Servos read the page first')
-    chk(mo.count('void ReadRXOptionsView()') == 1 and 'void RXOptionsViewEnd()\n{' in mo and 'ReadRXOptionsView();\n    SendValue(Progress, 100);' in mo, 'B23 RXOptionsViewEnd reads through ReadRXOptionsView')
+    chk(mo.count('FLASHMEM void ReadRXOptionsView()') == 1 and 'void RXOptionsViewEnd()\n{' in mo and 'ReadRXOptionsView();\n    SendValue(Progress, 100);' in mo, 'B23 RXOptionsViewEnd reads through ReadRXOptionsView')
     # B26
     chk('#define LOSTCONTACTTHRESHOLD 100 ' in src('include/BuddyWireless.h'), 'B26 the buddy threshold is 100')
     # B36 / B04 on a load
@@ -653,7 +897,8 @@ def source_checks():
     ut = src('include/Utilities.h')
     chk('CurrentView == MODELSVIEW && id != CLICKONE' not in ut and 'snprintf(cmd, sizeof(cmd), "play 0,%u,0", id)' in ut, 'B161 PlaySound plays on every page, the Models page included')
     # B162 (31 Oct 2026): the screen's codes and words carry no terminator - a press glued to a get's reply is split from it, a press during a send is kept, a help text that will not open says so
-    chk("if (expected == 'q' && k >= 9 && TextIn[k - 8] == 'q')" in nx and 'memmove(TextIn, TextIn + k - 8, 8);' in nx, 'B162 the reply collector splits a glued press from a value reply')
+    chk("if (expected == 'q' && TextIn[0] != 'p' && k >= 9 && TextIn[k - 8] == 'q' && GluedNumberOk((const uint8_t *)TextIn + k - 8))" in nx and 'memmove(TextIn, TextIn + k - 8, 8);' in nx
+        and 'return IsMarkKind(v) || v < 0x00100000UL;' in nx, 'B162 the reply collector splits a glued press from a value reply (B211: not out of a text reply come late, and only a number a box can hold)')
     chk('void GetReturnCode(char *tbox)\n{\n    CRUMB(CRUMB_RETURNCODE);' in nx and 'StashPendingEventBytes();\n}' in nx and "first == 'p' || (first == 'q' && n == 5)" in nx, 'B162 GetReturnCode keeps a press instead of draining it; a late reply is debris')
     ld = src('include/LogFilesDisplay.h')
     chk('Help text not on the card: ' in ld and 'WrapCopyRefused = true;' in ld and 'DelayWithDog(20);\n        ViewingWrappedCopy = MakeWrappedCopy();' in ld, 'B162 a help text that will not open says so (not "No log yet today"), after one more try')
@@ -691,12 +936,15 @@ def source_checks():
     chk('    if (CurrentView == MODELSVIEW)\n        BackupFileTapped(at);' in mo and 'const uint32_t at = millis();' in mo, 'B169 only on the Models page; B171 the tap\'s time is when its code arrived')
     # B171 (2 Nov 2026): tch2 is a SYSTEM variable - "get tch2", not "get tch2.val" (which named a component the screen has not got, answered 0: no tap ever counted)
     nx = src('include/Nextion.h')
-    chk('uint32_t GetSysValue(const char *name)' in nx and 'static uint32_t GetNumberReply(const char *CB)' in nx and nx.count('return GetNumberReply(CB);') == 2 and 'GetValue((char *)SCREEN_' not in mo, 'B171 a system variable is asked for by its bare name through GetSysValue; nothing asks GetValue for one')
+    chk('uint32_t GetSysValue(const char *name)' in nx and 'static uint32_t GetNumberReply(const char *CB, bool ofPage = true)' in nx and nx.count('return GetNumberReply(CB);') == 1 and nx.count('return GetNumberReply(CB, false);') == 1 and 'GetValue((char *)SCREEN_' not in mo, 'B171 a system variable is asked for by its bare name through GetSysValue (B211: as no page\'s box - GetNumberReply(CB, false)); nothing asks GetValue for one')
     chk('tap it so it is highlighted,|\nthen tap it again at once.|' in open(os.path.join(ROOT, 'Help files for SD', 'MODELS.TXT'), encoding='utf-8', errors='replace').read(), 'B171 the Models help says the second tap is on the highlighted band (the list is a wheel)')
+    _help = lambda n: open(os.path.join(ROOT, 'Help files for SD', n), encoding='utf-8', errors='replace').read()
+    chk('In Mode 2, do not use it' not in _help('TRIMS.TXT') and 'pass its limit (117)' in _help('TRIMS.TXT'), 'B211 the Trims help: "Move to subtrim" is right in Mode 2 since B09 (the caution described that fault), and the help says what happens at the limit')
+    chk('The most is 117 either way.' in _help('SUBTRIM.TXT') and 'Check for update' in _help('SUBTRIM.TXT'), 'B211 the Subtrim help says the most a subtrim may be, and what the title\'s "run Check for update first" means')
     # B172 (2 Nov 2026): every way the front page comes up by itself is logged with the page it left; a restart by the watchdog or a fault is logged at the next start
     fg = src('include/FlightGuard.h'); lf = src('include/LogFiles.h'); ms = src('include/Motor_sign.h')
-    chk('void LogFrontPageReason(const char *why)' in lf and 'Front page by itself: %s (it was on page %u) B172' in lf, 'B172 the front-page-by-itself log line names the way and the page')
-    chk(mc.count('LogFrontPageReason(') == 3 and 'LogFrontPageReason("the model connected")' in mc and ('LogFrontPageReason("the screen restarted and said FrontView")' in mc or 'the screen restarted (rst=%d: %s) and said FrontView' in mc) and 'LogFrontPageReason("the power button was pressed while connected")' in mc and 'LogFrontPageReason("the motor switch went on")' in ms, 'B172 the four ways are logged: connected, screen restart, power button, motor switch')
+    chk('void LogFrontPageReason(const char *why, const char *brief, const char *more)' in lf and 'Front page by itself: %s (it was on page %u) B172' in lf, 'B172 the front-page-by-itself log line names the way and the page')
+    chk(mc.count('LogFrontPageReason(') == 5 and 'LogFrontPageReason("the box \'The motor switch is ON\' is over", "motor box is over")' in mc and 'LogFrontPageReason("the screen showed the front page under another page\'s work, or has not got that page", "screen showed it")' in mc and 'LogFrontPageReason("the model connected", "model connected")' in mc and 'the screen restarted (rst=%d: %s)' in mc and 'LogFrontPageReason(line, "screen restart", kept)' in mc and 'LogFrontPageReason("the power button was pressed while connected", "power button")' in mc and 'LogFrontPageReason("the motor switch went on", "motor switch on")' in ms, 'B172 the six ways are logged: connected, screen restart, power button, motor switch, the motor box over, the front page under another page\'s work (B211)')
     chk('void LogRestartCause()' in fg and '(LastResetCause & 0x80) != 0' in fg and 'LastOffReason == OFF_NONE' in fg and 'LogRestartCause();' in mc and 'RightNow > 8000' in mc, 'B172 a watchdog or fault restart is logged at the next start with the breadcrumb, once the clock has been read')
     # B173 (2 Nov 2026): every start is logged with its cause - a power-on with nothing having switched it off is named as the power itself going
     # B175 (3 Nov 2026): the band scan tells the screen (status bit 128) so its own WiFi and Bluetooth are off while it counts; the counting waits for them

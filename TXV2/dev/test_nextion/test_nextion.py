@@ -14,9 +14,13 @@ def fn(sig):
     return m.group(0)
 decl_start = src.index('#define MAXPENDINGFRAME'); decl_end = src.index('void PendingPush(')   # B177: PendingEvent and the frame globals as they are
 decls = '\n'.join(l for l in src[decl_start:decl_end].split('\n') if not l.startswith('//')) + '\n'
+decls = (lambda u: u[u.index('static uint16_t ScreenCountSeed()'):u.index('static uint16_t NextPageMark()')])(open(os.path.join(os.path.join(ROOT, 'TransmitterCode', 'include'), 'Utilities.h'), encoding='utf-8', errors='replace').read()) + decls   # (the counts of a page's markers and of the numbers said back: Utilities.h)
+decls = ''.join('#define %s %s\n' % (d, re.search(r'#define ' + d + r' (\d+)', open(os.path.join(os.path.join(ROOT, 'TransmitterCode', 'include'), '1Definitions.h'), encoding='utf-8', errors='replace').read()).group(1)) for d in ('SUBTRIM_WORD_BYTES', 'SUBTRIM_DONE_BYTES')) + decls   # (1Definitions.h: the Sub-trim page's two bursts - IsPageOwnWord knows the "done" by its length)
 parts = [decls, fn('void PendingPush(const uint8_t *f, uint16_t n, bool framed)'), fn('int ReadFramedRest(uint8_t *dst, uint16_t cap, uint16_t &len)'), fn('void StashFramed(const uint8_t *p, uint16_t len)'), fn('void PendingShrinkFirst()'),
-         fn('void StashFrame(const uint8_t *f, uint16_t n)'), fn('static bool PipeLineDone('), fn('static bool PipeLineOpen('), fn('void StashPendingEventBytes()'), fn('bool CollectReply(uint8_t expected, uint16_t &k)'),
-         fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('static uint32_t GetNumberReply(const char *CB)'), fn('uint32_t getvalue(char *nbox)'),   # (B171: getvalue's exchange lives in GetNumberReply)
+         (lambda s: '\n'.join(l for l in s[s.index('#define WORD_OPEN_MS'):s.index('// B186 (Malcolm, 5 Nov 2026, PID plus:', s.index('#define WORD_OPEN_MS'))].split('\n') if not l.startswith('//')) + '\n')(src),   # (B211, the ninth review: A WORD WITH NO END MAY NOT BE OVER - its few lines, as they are)
+         fn('static bool PipeLineHead('), fn('static bool PipeLineDone('), fn('static bool PipeLineOpen('), fn('static bool BareLineDone('), fn('B211_RARE static void NoteBareRead('), fn('void StashFrame(const uint8_t *f, uint16_t n, bool withEnd)'), 'static void NotePipeLineTooLong() { if (PipeLinesTooLong < 65535) ++PipeLinesTooLong; }   // (Nextion.h: counted, and said in the log - dev/test_wholepage/scene_long_pipe runs the real one)\n' + fn('void StashPendingEventBytes()'),
+         fn('static bool GluedNumberOk('), fn('bool CollectReply(uint8_t expected, uint16_t &k)'),
+         fn('void GetTextIn()'), fn('bool GetButtonPress()'), fn('FLASHMEM static uint8_t BoxPageWrong()'), fn('static uint32_t GetNumberReply(const char *CB, bool ofPage = true)'), fn('uint32_t getvalue(char *nbox)'),   # (B171: getvalue's exchange lives in GetNumberReply)
          fn('bool HelpNameWhole(const char *name)'), fn('bool HelpNameFrom(char *name)'),   # (B160)
          fn('void GetReturnCode(char *tbox)')]   # (B162: keeps a press that arrives during a send)
 prog = r'''
@@ -27,18 +31,25 @@ prog = r'''
 #include <deque>
 #include <string>
 #define MAXTEXTIN 4096
+#define FLASHMEM
 #define CRUMB(x)
 #define CRUMB_GETVALUE 0
 #define CRUMB_GETTEXT 0
 char TextIn[MAXTEXTIN + 2];
 static void LogGhostFrame(const char *, const uint8_t *, uint16_t) {}   // (B177: PendingEvent and its companions come with the lifted code)
+static void NoteStalePress(const uint8_t *, uint16_t) {}   // (B211: dev/test_stalepress is its test)
+static void SubTrimWordLetGo(const uint8_t *, uint16_t, bool) {}   // (B211: dev/test_wholepage/scene_subtrim_doors is its test)
+static void NoteNoScreenMark() {}
+static void NotePageChangedUnderGet(const char *) {}
+static void NoteBoxOffPage(const char *, bool) {}
 uint32_t NextionReplyWaitMs = 100; bool NextionTextMissed = false;   // (B152)
 static void DelayWithDog(uint32_t) {}   // (B188)
 #define NEXTION_GET_WAIT_MS 2000
 bool NextionGetPending = false;   // (B189)
+uint8_t ModalWaits = 0; bool InsideDelayWithDog = false;   // (B211, Utilities.h: a question waits; DelayWithDog is flying the model)
 static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
 
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static uint32_t fakeMs = 1000, fakeUs = 0;
 static uint32_t millis() { return fakeMs; }
 static uint32_t micros() { return fakeUs; }
@@ -69,7 +80,7 @@ struct FakeSerial {
 static void EndSend() { NEXTION.write(0xFF); NEXTION.write(0xFF); NEXTION.write(0xFF); }
 static void LinkStrayFrame() {}
 static void StashPrintableBytes(const char *, uint16_t) {}
-void StashFrame(const uint8_t *f, uint16_t n);
+void StashFrame(const uint8_t *f, uint16_t n, bool withEnd = false);
 ''' + '\n'.join(parts) + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -96,6 +107,13 @@ int main() {
     NEXTION.feedQ(5); CHECK(getvalue(nbox) == 5); CHECK(pendingCode7() == 65);
     // 7. no reply at all: the error value, nothing invented
     CHECK(getvalue(nbox) == 65535 && TextIn[0] == 0);
+    //    (B211: ... and after an answer that never came NO box of the same press's work is asked - not two seconds for each of them -
+    //     until the loop's next look for a press)
+    { const size_t out0 = NEXTION.out.size(); CHECK(PageChangedUnderGet && getvalue(nbox) == 65535 && NEXTION.out.size() == out0); }
+    CHECK(!GetButtonPress() && !PageChangedUnderGet);
+    //    (B211, the eighth review: ... and an answer not come in its time is OWED - it may come yet, and would be the next question's:
+    //     nothing at all is asked until the screen has caught up. That is the main loop's doing - dev/test_noanswer has it; here, by hand)
+    { const size_t out0 = NEXTION.out.size(); CHECK(ScreenAnswerOwed && getvalue(nbox) == 65535 && NEXTION.out.size() == out0); ScreenAnswerOwed = false; PageChangedUnderGet = false; }
     // 8. a code AFTER the reply stays in the port for the next GetButtonPress (not swallowed)
     NEXTION.feedQ(1); NEXTION.feedCode7(65);
     CHECK(getvalue(nbox) == 1); CHECK(pendingCode7() == 65);

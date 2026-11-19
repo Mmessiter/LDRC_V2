@@ -12,9 +12,9 @@ void ForceDataRedisplay()
 {
     LastShowTime = 0; //
     ForceVoltDisplay = true;
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i <= BANKS_USED; ++i) // (B211: every bank the table has - it was "5" and "17")
     {
-        for (int j = 0; j < 17; ++j)
+        for (int j = 0; j <= CHANNELSUSED; ++j)
         {
             LastTrim[i][j] = 0;
         }
@@ -68,7 +68,11 @@ void SaveOrRestoreScreen(bool Restore)
         // the Rotorflight pages of B50-B61, with their edits, as the screen kept them
         {RESCUEVIEW, "RescueView"}, {RESCUE2VIEW, "Rescue2View"}, {SERVOVIEW, "ServoView"}, {RFSETUPVIEW, "RFSetupView"},
         {TRAVELVIEW, "TravelView"}, {TRAVEL2VIEW, "Travel2View"}, {TRAVEL3VIEW, "Travel3View"}, {TRAVEL4VIEW, "Travel4View"}, {BASICSVIEW, "BasicsView"}, {BASICS2VIEW, "Basics2View"}, {PORTSVIEW, "PortsView"}, {ESCCALVIEW, "EscCalView"}, {EASYVIEW, "EasyView"}, {RATESTYPEVIEW, "RatesTypeView"}, {RATESCURVEVIEW, "RatesCurveView"}, {FILTERVIEW, "FilterView"}, {FILTER2VIEW, "Filter2View"}, {ADJUSTVIEW, "AdjustView"}, {ADJPICKVIEW, "AdjPickView"}, {SWITCHVIEW, "SwitchView"}, {SWITCHPICKVIEW, "SwitchPickView"}, {COPYBANKVIEW, "CopyBankView"}, {BATTERYVIEW, "BatteryView"}, {BATSENSORSVIEW, "BatSensorsView"}, {BLACKBOXVIEW, "BlackboxView"}, {LEVELVIEW, "LevelView"},
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: the page "ELRS settings" and its picker too (the screen remembers each as it was). The #else is the transmitter as it was
+        {BEEPERVIEW, "BeeperView"}, {TOOLSVIEW, "RFToolsView"}, {CHECKVIEW, "RFCheckView"}, {DIRVIEW, "RFDirView"}, {CHANGESVIEW, "RFChangesView"}, {GUIDEVIEW, "RFGuideView"}, {ELRSVIEW, "ElrsView"}, {ELRSPICKVIEW, "ElrsPickView"}};
+#else
         {BEEPERVIEW, "BeeperView"}, {TOOLSVIEW, "RFToolsView"}, {CHECKVIEW, "RFCheckView"}, {DIRVIEW, "RFDirView"}, {CHANGESVIEW, "RFChangesView"}, {GUIDEVIEW, "RFGuideView"}};   // (B196: Beeper & name, and Guide & checks' pages)
+#endif
     for (const auto &p : Pages)
     {
         if (p.view != LastScreen)
@@ -88,6 +92,9 @@ void SaveOrRestoreScreen(bool Restore)
             break;
         case GRAPHVIEW:
             DisplayCurveAndServoPos(); // the curve is drawn with lines: the screen does not remember those
+            break;
+        case SUBTRIMVIEW:
+            SubTrimPageBack(); // B211 (the fourteenth review): the page as the model has it - a writing-out owed when the screen went blank had been forgotten (Trims.h)
             break;
         default:
             break;
@@ -141,6 +148,8 @@ void HideScreenAgain()
         return;
     if (CurrentView == CALIBRATEVIEW)
         return;
+    if (RfPageJobRuns() || RfPageWatchRuns() || RfVerifyPending()) // (e99e: ... nor over a save's read-back: the write landed under the blank and the page came back stuck in "Sent: reading back ..."; tried again a second later)
+        return; // B211 (the sixteenth review): not over a Rotorflight page's read or save - its poll would end the job with the page (main.cpp)
 
     SaveOrRestoreScreen(false);
     SendCommand(ScreenOff);    // move to blank screen
@@ -169,7 +178,14 @@ void CheckScreenTime() // turn off screen after a timeout
 void CheckForNextionButtonPress()
 {
     if (GetButtonPress())
+    {
+        const uint32_t lost = BoxesLost;
+        if (!ModalWaits)
+            BoxesLostAtWork = BoxesLost; // (a button's work begins here - a question's own buttons belong to the work that asked the question)
         ButtonWasPressed();
+        if (BoxesLost != lost)
+            NoteBoxesLost(); // B211 (the eighth review): a box this button's work asked for had no answer - what the page held there was not taken, and the pilot is told
+    }
 }
 
 // **********************************************************************************************************************************
@@ -1213,6 +1229,10 @@ void DelaySimple(uint32_t ms)
 /*********************************************************************************************************************************/
 uint16_t GetSuccessRate()
 {
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a model set to ELRS shows the module's own figure (ElrsCrsf.h)
+    if (ElrsCarries())
+        return ElrsQuality();
+#endif
     uint32_t Total = 0; // Accumulates number of successful packets
     uint16_t SuccessRate;
     for (uint16_t i = 0; i < PACKET_HISTORY_WINDOW; ++i)
@@ -1263,26 +1283,31 @@ FASTRUN void ServoReverse()
 }
 
 /************************************************************************************************************/
+bool InsideDelayWithDog = false; // (B211: was a static in the routine. Nextion.h BeforePageCommand looks at it: a page command sent from in here was sent from
+                                 //  INSIDE a wait of some button's work - the power button's way to the front page, a box put up when the link is lost)
 void DelayWithDog(uint32_t HowLong)
 { // Implements delay() while kicking the dog (very cruelly) and checking for power-off button and sending data to RX.
     CRUMB(CRUMB_DELAY);
     uint32_t ThisMoment = millis();
-    static bool AlreadyKicking = false;
-    if (AlreadyKicking)
+    if (InsideDelayWithDog)
         return; // Guard against possible recursivity which would be disastrous
-    AlreadyKicking = true;
+    InsideDelayWithDog = true;
     while ((millis() - ThisMoment) < HowLong)
     {
         KickTheDog();
         CheckPowerOffButton();
-        if (ModelMatched && BoundFlag)
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a model set to ELRS is sent its sticks through every wait, heard or not (ElrsCrsf.h: nothing sent depends on what is heard)
+        if (((ModelMatched && BoundFlag) || ElrsFlies()) && !ModelMemoryBusy)
+#else
+        if (ModelMatched && BoundFlag && !ModelMemoryBusy) // (B211: not from a memory that is being read into - 1Definitions.h, at ModelMemoryBusy)
+#endif
         {
             GetNewChannelValues(); // these might have changed while we were waiting
             FixMotorChannel();     // ensure motor channel is off if that's needed
             SendData();            // send new data to RX
         }
     }
-    AlreadyKicking = false;
+    InsideDelayWithDog = false;
 }
 
 // ********************************************************************************************************************
@@ -1327,16 +1352,63 @@ void SpeedTest()
 // Prompt is the prompt
 // goback is the command needed to return to calling page
 
-bool GetConfirmation(char *goback, char *Prompt)
+// B211 (the tenth review, 15 Nov 2026): THE COUNT OF THE PAGE COMMAND THAT PUTS A QUESTION UP, taken before that command goes. The question
+// took "the last page command sent" for its own when its wait BEGAN - behind the box's page command and that command's own 20 ms wait,
+// which flies the model: the power button's front page (or the motor box) put up in THAT wait was taken for the question's page, and
+// the question waited on, unseen, with the switches unread, until some press came.
+// (the tenth review) THE COUNTS BEGIN WHERE THE CLOCK STANDS, not at 1 with every start of this board - a page's markers, the session's
+// number, the number said back when an answer is owed. A screen that still owed an answer to this board's LAST life (this board started
+// again while the screen stood still) could say the very number the new life's first page command waits for.
+static uint16_t ScreenCountSeed()
+{
+    static uint16_t seed = 0;
+    if (!seed)
+    {
+        const uint32_t us = micros();
+        seed = (uint16_t)(us ^ (us >> 16));
+        if (!seed)
+            seed = 1;
+    }
+    return seed;
+}
+static uint16_t ScreenCountAfter(uint16_t c) // the count that follows c (0: none yet - the first, from the clock); never 0
+{
+    if (!c)
+        return ScreenCountSeed();
+    ++c;
+    return c ? c : 1;
+}
+static uint16_t NextPageMark()
+{
+    return ScreenCountAfter(ScreenMarkCount); // (as Nextion.h BeforePageCommand counts)
+}
+// ... AND A QUESTION'S OWN TEXTS GO ONTO ITS OWN PAGE ONLY (15 Nov 2026, the author's, after the tenth review). The page that came over a question
+// in that first wait - the front page - has parts of the same names as the question's page (b0, b1, t0, t1, t3): "vis b1,0" hid one of the
+// front page's buttons, "Save" and "Discard" were written onto two others, the backup's file name into its text boxes - until that page was
+// next drawn. Each of a question's writes is made only while the question's page command is still the last one sent.
+static bool QuestionIsUp(uint16_t mine)
+{
+    return ScreenMarkCount == mine;
+}
+FLASHMEM bool GetConfirmation(char *goback, char *Prompt) // (B211: the questions wait for a person - in flash, the fast memory's last kilobytes are not for them)
 {
     char GoPopupView[] = "page PopupView";
     char Dialog[] = "Dialog";
+    const uint16_t mine = NextPageMark();
     SendCommand(GoPopupView);
-    SendText(Dialog, Prompt);
-    GetYesOrNo();
-    SendCommand(goback);
+    if (QuestionIsUp(mine))
+        SendText(Dialog, Prompt);
+    GetYesOrNo(mine);
+    const bool yes = Confirmed[0] == 'Y', over = QuestionOvertaken, closed = QuestionClosedItself;
+                                                                    // B211 (the ninth review): THE ANSWER IS TAKEN HERE, before the way back - which waits
+                                                                    // (flying the model), and a box put up in that wait (the link lost with the motor
+                                                                    // switch on) wrote ITS answer over this one: "No" came back as Yes
+    if (!over)
+        SendCommand(goback); // (not over a page that took this question's place: that page is the one this board now believes in)
+    QuestionOvertaken = over; // (the tenth review: ... and how THIS question ended is what its asker is told - a box in the way back's wait had said its own)
+    QuestionClosedItself = closed;
     LastFileInView = 120;
-    if (Confirmed[0] == 'Y')
+    if (yes)
         return true; // tell caller OK to continue
     RfLeaveAfterSave = false; // B102: a No to a save's own question keeps the page open
     return false;    // tell caller STOP!
@@ -1348,18 +1420,26 @@ bool GetConfirmation(char *goback, char *Prompt)
 // now?" on the message box's two buttons, Save (right) and Discard (left). Save saves, and the page closes once the save
 // has worked (RfSavedThenLeave, from each page's save); Discard leaves without saving, as before. A refusal or a failure
 // (any message box), or a No to the save's own question, keeps the page open with the edits.
-bool GetSaveOrDiscard(char *goback, char *Prompt) // true: Save
+FLASHMEM bool GetSaveOrDiscard(char *goback, char *Prompt) // true: Save
 {
     char GoPopupView[] = "page PopupView";
     char Dialog[] = "Dialog";
+    const uint16_t mine = NextPageMark();
     SendCommand(GoPopupView);
-    SendText((char *)"b0", (char *)"Save");
-    SendText((char *)"b1", (char *)"Discard");
-    SendText(Dialog, Prompt);
-    GetYesOrNo();
-    SendCommand(goback);
+    if (QuestionIsUp(mine))
+        SendText((char *)"b0", (char *)"Save");
+    if (QuestionIsUp(mine))
+        SendText((char *)"b1", (char *)"Discard");
+    if (QuestionIsUp(mine))
+        SendText(Dialog, Prompt);
+    GetYesOrNo(mine);
+    const bool yes = Confirmed[0] == 'Y', over = QuestionOvertaken, closed = QuestionClosedItself; // B211: (as GetConfirmation: the answer first, then the way back)
+    if (!over)
+        SendCommand(goback);
+    QuestionOvertaken = over; // (the tenth review: this question's own - RfSaveFirst asks "did it close itself?" behind the way back, in whose wait a box had said "no" of itself: Discard)
+    QuestionClosedItself = closed;
     LastFileInView = 120;
-    return Confirmed[0] == 'Y';
+    return yes;
 }
 #include "RF_SaveNow.h" // B102: RfSavedThenLeave, RfSaveFirst (a file of their own, so the host tests run the real ones)
 
@@ -1369,17 +1449,24 @@ bool GetSaveOrDiscard(char *goback, char *Prompt) // true: Save
 // Prompt is the prompt
 // goback is the command needed to return to calling page
 
-void MsgBox(char *goback, char *Prompt)
+FLASHMEM void MsgBox(char *goback, char *Prompt)
 {
     RfLeaveAfterSave = false; // B102: a refusal or a failure keeps the page open (OK's "Save now?")
     char GoPopupView[] = "page PopupView";
     char Dialog[] = "Dialog";
     char NoCancel[] = "vis b1,0"; // hide cancel button
+    const uint16_t mine = NextPageMark();
     SendCommand(GoPopupView);
-    SendCommand(NoCancel);
-    SendText(Dialog, Prompt);
-    GetYesOrNo();
-    SendCommand(goback);
+    if (QuestionIsUp(mine))
+        SendCommand(NoCancel);
+    if (QuestionIsUp(mine))
+        SendText(Dialog, Prompt);
+    GetYesOrNo(mine);
+    const bool over = QuestionOvertaken, closed = QuestionClosedItself;
+    if (!over) // B211: (as GetConfirmation: no way back over a page that took this box's place)
+        SendCommand(goback);
+    QuestionOvertaken = over; // (this box's own, as GetConfirmation's)
+    QuestionClosedItself = closed;
     LastFileInView = 120;
     return;
 }
@@ -1393,17 +1480,69 @@ void NoPressed() { Confirmed[0] = 'N'; }
 /******************************************************************************************************************************/
 
 uint8_t ModalWaits = 0; // V1B: how many questions are waiting for an answer (the file link is refused meanwhile)
-void GetYesOrNo()
+#define QUESTION_ASK_MS 1000    // B211: while a question waits, the screen is asked which page it shows so often ...
+#define QUESTION_SILENT_MS 3500 // ... and a screen that has left such a question unanswered for so long is not waited for any longer
+bool QuestionClosedItself = false; // B211: the last question was closed as "No" by this board, not answered by the pilot (the screen restarted, stopped answering, another page over it)
+bool QuestionOvertaken = false;    // ... because another page was put up over it: whoever asked does not send its own way back over that page
+FLASHMEM void GetYesOrNo(uint16_t asked) // asked: the count of the page command that put THIS question up (NextPageMark, taken before it went; 0: the last one sent)
 { // on return from here, Confirmed[0] will be Y or N
+    if (!asked)
+        asked = ScreenMarkCount;
+    uint32_t askedAt = millis(), unanswered = 0; // (unanswered: when the oldest "which page?" still without an answer went out; 0: none)
+    uint16_t said = ScreenPageSaidCount;
+    bool closed = false, overtaken = false;
     Confirmed[0] = '?';
+    if (ScreenMarkCount != asked)
+        Confirmed[0] = 'N'; // B211 (the tenth review): another page was put up between this question's own page command and here (from inside that command's
+                            // wait): the question is not on the screen - it is closed below, without one look for a press
     ++ModalWaits;
     CRUMB(CRUMB_QUESTION);
     while (Confirmed[0] == '?')
     { // await user response
+        KickTheDog(); // (B211, the eighth review: FIRST. It came last, and the round that closed the question at once never reached it - see EnsureMotorIsOff)
         CheckForNextionButtonPress();
+        if (ScreenAnswerOwed)
+            ScreenOwedStep(); // (the ninth review: an answer owed - this question's own page marker, come late - is caught up with from in here too, as the
+                              //  main loop does it: left owed, every box of the work that follows a "Yes" had no answer. It never waits.)
+        if (ScreenPageSaidCount != said)
+        {
+            said = ScreenPageSaidCount;
+            unanswered = 0;
+        }
+        if ((millis() - askedAt) >= QUESTION_ASK_MS)
+        {
+            askedAt = millis();
+            ScreenAskPage(); // (nothing waits for the answer: it is noted when the look for a press reads it)
+            if (!unanswered)
+                unanswered = askedAt ? askedAt : 1;
+        }
+        // (the ninth review: the silence is counted from a "which page?" the screen was really asked and has not answered - it was
+        //  counted from the question's own beginning, a second before the first was asked: a screen still for 2.6 s lost the question)
+        const bool silent = ScreenSaysPage && unanswered && (millis() - unanswered) > QUESTION_SILENT_MS;
+        if (ScreenRestartSeen || ScreenMarkCount != asked || silent)
+        { // B211: THE QUESTION IS NO LONGER ON THE SCREEN - or nobody can answer it - so it is closed as "No".
+          // - The screen has STARTED AGAIN while it waited (Nextion.h): it shows its last page as the card has it, and the main
+          //   loop draws the front page afresh. (It waited on: a tap on whatever the screen then showed was obeyed in here.)
+          // - Or ANOTHER PAGE WAS PUT UP OVER IT from inside this wait (the eighth review, 15 Nov 2026; released code had it):
+          //   the link lost with the motor switch on puts up "The motor switch is ON" from in here, and the OK pressed on
+          //   THAT box was taken for the answer to this question - "Delete every model and all settings?": Yes, by itself.
+          // - Or THE SCREEN HAS STOPPED ANSWERING (the eighth review): it is asked "which page?" once a second while a question
+          //   waits, and has said nothing for three and a half. In here the model is flown but THE SWITCHES ARE NOT READ: a
+          //   screen that died under a box held them until its first word came back - 1.2 to 18 seconds on, or never.
+            Confirmed[0] = 'N';
+            closed = true;
+            overtaken = ScreenMarkCount != asked;
+            NoteQuestionClosed(ScreenRestartSeen ? 1 : silent ? 2 : 0);
+            if (silent && !ScreenRestartSeen)
+                ScreenOwesAnswer(); // (what it was asked may come yet: nothing more is asked until it has caught up)
+            break;
+        }
         CheckPowerOffButton();
-        KickTheDog();
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a model set to ELRS is sent its sticks through every box on the screen, heard or not (as in DelayWithDog; ElrsCrsf.h)
+        if ((BoundFlag && ModelMatched) || ElrsFlies())
+#else
         if (BoundFlag && ModelMatched)
+#endif
         {
             GetNewChannelValues();
             FixMotorChannel();
@@ -1411,9 +1550,20 @@ void GetYesOrNo()
         }
     }
     --ModalWaits;
+    if (ScreenMarkCount != asked)
+    { // B211: ... and an answer given while another page stood over this question (a box from inside its wait: that box's own
+      // answer is what is in Confirmed now) was not given to THIS question
+        if (!closed)
+            NoteQuestionClosed(0);
+        Confirmed[0] = 'N';
+        closed = true;
+        overtaken = true;
+    }
+    QuestionClosedItself = closed; // (set here, at the very end: a box inside this question has set them for itself meanwhile)
+    QuestionOvertaken = overtaken;
 }
 /******************************************************************************************************************************/
-bool GetBackupFilename(char *goback, char *tt1, char *MMname, char *heading, char *pprompt)
+FLASHMEM bool GetBackupFilename(char *goback, char *tt1, char *MMname, char *heading, char *pprompt)
 { // HERE THE USER CAN REPLACE DEFAULT FILENAME IF HE WANTS TO
 
     char GoBackupView[] = "page BackupView";
@@ -1421,22 +1571,30 @@ bool GetBackupFilename(char *goback, char *tt1, char *MMname, char *heading, cha
     char t1[] = "t1";           // default filename
     char t3[] = "t3";           // heading
     char Mname[] = "Modelname"; // model name
+    const uint16_t mine = NextPageMark();
     SendCommand(GoBackupView);
-    SendText(t0, pprompt);   // prompt
-    SendText(t1, tt1);       // filename
-    SendText(Mname, MMname); // Model name
-    SendText(t3, heading);   // heading
-    GetYesOrNo();
-    GetText(t1, SingleModelFile, 40); // ClaudeFix-2-7-2026
-    SendCommand(goback);
-    if (Confirmed[0] == 'Y')
+    if (QuestionIsUp(mine))
+        SendText(t0, pprompt);   // prompt
+    if (QuestionIsUp(mine))
+        SendText(t1, tt1);       // filename
+    if (QuestionIsUp(mine))
+        SendText(Mname, MMname); // Model name
+    if (QuestionIsUp(mine))
+        SendText(t3, heading);   // heading
+    GetYesOrNo(mine);
+    const bool yes = Confirmed[0] == 'Y', over = QuestionOvertaken, closed = QuestionClosedItself; // B211: (as GetConfirmation: the answer first, then the way back)
+    const uint32_t lost = BoxesLost;
+    if (!over)
+        GetText(t1, SingleModelFile, 40); // ClaudeFix-2-7-2026 (B211: not from a page that came over this one - its t1 is another box)
+    const bool gone = !over && !QuestionIsUp(mine); // B211 (the eleventh review): another page was put up from inside THAT wait (the front page: the power button,
+                                                    // the link) - this question's way back would put its caller's page over it. (The name has no answer then.)
+    if (!over && !gone)
+        SendCommand(goback);
+    QuestionOvertaken = over || gone; // (this question's own, as GetConfirmation's)
+    QuestionClosedItself = closed;
+    if (yes && BoxesLost == lost) // (B211: ... and the name was read: no answer from the screen is not a file's name)
         return true;
     return false;
-}
-/******************************************************************************************************************************/
-void SaveCurrentModel()
-{
-    SavedModelNumber = ModelNumber;
 }
 
 // ************************************************************************
@@ -1518,7 +1676,11 @@ void ChooseBackGround()
 // ************************************************************************************************************/
 void Save_BackGround()
 {
-    BackGroundSelection = GetValue((char *)"n0");
+    {
+        const uint32_t gv = GetValue((char *)"n0");
+        if (gv != 65535) // B211: no answer from the screen is not a background (it was saved as picture 255)
+            BackGroundSelection = gv;
+    }
     SaveTransmitterParameters();
     StartTXSetupView();
 }

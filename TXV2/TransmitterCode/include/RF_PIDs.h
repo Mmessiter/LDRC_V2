@@ -43,19 +43,32 @@ FLASHMEM void ForegroundColourPIDLabels(uint16_t Colour)
 // ********************************************************************************************************
 FLASHMEM void ReadEditedPIDs()
 {
+    // B211 (the eighth review): no answer from the screen (65535) keeps the value in hand. It went into the page's numbers here -
+    // never sent (RfFieldsMissed refuses the save), but there to be sent by the next Save that did not read that box afresh.
+    // (The eleventh review: and whole, or not at all - as every gather.)
+    KEEP_WHOLE(pids, PID_Values);
+    KEEP_WHOLE(boost, PID_Boost_Values);
+    KEEP_WHOLE(hsi, PID_HSI_Offset_Values);
+    uint32_t gv;
     for (int i = 0; i < MAX_PID_WORDS; ++i)
     {
-        PID_Values[i] = GetValue(PID_Labels[i]);
+        gv = GetValue(PID_Labels[i]);
+        if (gv != 65535)
+            PID_Values[i] = gv;
     }
     uint8_t p = MAX_PID_WORDS;
 
     for (int i = 0; i < 3; ++i)
     {
-        PID_Boost_Values[i] = GetValue(PID_Labels[i + p]);
+        gv = GetValue(PID_Labels[i + p]);
+        if (gv != 65535)
+            PID_Boost_Values[i] = gv;
     }
     for (int i = 0; i < 2; ++i)
     {
-        PID_HSI_Offset_Values[i] = GetValue(PID_Labels[i + p + 3]);
+        gv = GetValue(PID_Labels[i + p + 3]);
+        if (gv != 65535)
+            PID_HSI_Offset_Values[i] = gv;
     }
     return;
 }
@@ -141,6 +154,7 @@ FLASHMEM static void PidAskValues()
 {
     if (CurrentView != PIDVIEW) { BlockBankChanges = false; return; }
     PID_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await PID values
+    RfOtherReadsOver();                    // B211: a page's read is over when another page's begins (1Definitions.h) - the block on the bank switch is this read's now
     Reading_PIDS_Now = true;               // This tells the Ack payload parser to get PID values
     AddParameterstoQueue(SEND_PID_VALUES); // Request PID values from RX
     PID_Start_Time = millis(); // record start time as it's not long
@@ -200,6 +214,18 @@ FLASHMEM void PIDs_Were_edited()
 //************************************************************************************************************/
 FLASHMEM void SaveToLocalBank()
 {
+    if (!KeptHasPlace(Bank))
+    { // B211 (the fourteenth review): the record has no place for a copy of banks 5 and 6 (RF_Kept.h) - "kept" was said, and marked, and nothing was.
+      // The fifteenth review: THE PAGE GOES BACK TO WHAT IT SHOWED (this is the save WITHOUT the model: no values, greyed, under its standing line
+      // "The card keeps copies of banks 1 to 4 only"). The refusal had a line of its own, which took the grey and that line away: six seconds on the
+      // bank stood there as 0 0 0 in black. What was typed over the zeros is let go - nothing can keep it - and the sound says so.
+        PlaySound(WHAHWHAHMSG);
+        RfLeaveAfterSave = false; // (as a box does: OK's "Save now?" does not close the page after a save that was not made)
+        PIDS_Were_Edited = false;
+        ShowLocalBank();
+        SendCommand((char *)"vis b3,0");
+        return;
+    }
     PIDMsg((char *)"Saving edited PIDs ...", Gray); // Show sending message
     RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     ReadEditedPIDs();                               // read the edited PIDs from the screen;

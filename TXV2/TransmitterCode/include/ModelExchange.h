@@ -647,7 +647,7 @@ FLASHMEM void ReceiveModelFile()
 
     if (SavedSticksMode != SticksMode)
     { // swap over trims (elevator -  Throttle)
-        for (int ba = 1; ba < 5; ++ba)
+        for (int ba = 1; ba <= BANKS_USED; ++ba) // (B211: every bank - it was "< 5": banks 5 and 6 of a six-bank model kept their elevator trim on the throttle)
         {
             uint8_t temp = Trims[ba][1];
             Trims[ba][1] = Trims[ba][2];

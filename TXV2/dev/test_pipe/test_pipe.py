@@ -7,6 +7,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 src = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'transceiver.h')).read()
 m = re.search(r'void TelemetryFromPipe\(const char \*list\)\n\{.*?\n\}\n', src, re.S)
 assert m, 'TelemetryFromPipe not found'
+# B211 (the nineteenth review): "whose block is it" - the REAL helpers the telling's rule stands on (transceiver.h: BLOCK_ONCE, BlockTelling, BlockWant, BlockNotMine)
+mh = re.search(r'#define BLOCK_ONCE 0x8000\n.*?\nstatic void BlockNotMine\(\)\n\{.*?\n\}\n', src, re.S)
+assert mh, 'BlockWant / BlockNotMine not found'
 # B71: the words wait on a stack and go out last in first out (the trigger part of a write LAST): PipeFlush and
 # AddParameterstoQueue as they are in include/Parameters.h
 psrc = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'Parameters.h')).read()
@@ -24,7 +27,9 @@ prog = r'''
 #include <vector>
 struct Payload { uint8_t Ack_Payload_byte[32]; } AckPayload;
 static int seen = 0; static uint8_t last[5];
-void ParseTelemetryItem() { ++seen; for (int i = 0; i < 5; ++i) last[i] = AckPayload.Ack_Payload_byte[i]; }
+static bool tellingAtParse = false; static int seenAtFirstParse = -1; static const char *nested = nullptr;   // (B211) what the parser finds while a telling is handed over
+void TelemetryFromPipe(const char *list); extern bool BlockTellingNow();
+void ParseTelemetryItem();
 #define FASTRUN
 static bool LedWasGreen = false, ModelMatched = true, BoundFlag = true, BakOfflineNow = false;
 #define SEND_PID_VALUES 9
@@ -47,6 +52,11 @@ bool RfParamOverPipe(uint8_t id) { return (id >= 9 && id <= 21) || (id >= 27 && 
 void SendParameterByPipe(uint8_t id) { if (sentN < 16) sentOrder[sentN++] = id; }
 bool BakOffline() { return BakOfflineNow; }
 bool BakOfflineWords(uint8_t id) { if (fileN < 16) fileOrder[fileN++] = id; return true; }
+static bool RATES_Loaded = false, RATES_ADV_Loaded = false, PIDS_ADV_Loaded = false, GOV_Loaded = false;
+''' + mh.group(0) + r'''
+bool BlockTellingNow() { return BlockTelling; }
+void ParseTelemetryItem() { ++seen; for (int i = 0; i < 5; ++i) last[i] = AckPayload.Ack_Payload_byte[i]; tellingAtParse = BlockTelling; if (seenAtFirstParse < 0) seenAtFirstParse = BlockSeen;
+    if (nested) { const char *n = nested; nested = nullptr; const int was = seen; TelemetryFromPipe(n); seen = was; } }
 ''' + m.group(0) + mq.group(0) + ma.group(0) + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
@@ -60,6 +70,55 @@ int main() {
     seen = 0; TelemetryFromPipe("25:AABBCCDD 999:00000000"); CHECK(seen == 1);                     // (an item out of range stops it)
     seen = 0; TelemetryFromPipe("25:A"); CHECK(seen == 0);                                          // (half a byte: nothing)
     seen = 0; TelemetryFromPipe("25:AABBCCDD 26:EEFF0011x"); CHECK(seen == 2);
+    // B211 (the nineteenth review): WHOSE BLOCK IS IT - A TELLING IS TAKEN WHEN IT HOLDS EXACTLY THE READING PAGE'S ITEMS (no page reading: every line, as above)
+    {
+        const char *GOV = "25:01020304 26:05060708 27:090A0B0C 28:0D0E0F10 29:11120000", *GLOBAL = "25:01020304 26:05060708 27:090A0B0C 28:0D0E0F10 29:11121314 30:15161718", *RATES = "25:01020304 26:05060700 27:08090A0B 28:0C0D0000";
+        const char *PIDADV = "25:01020304 26:05060708 27:090A0B0C 28:0D0E0F10 29:11121314 30:15161718 32:191A0000", *PIDS = "25:01020304 26:05060708 27:090A0B0C 28:0D0E0F10 29:11121314 30:15161718 32:191A1B1C 33:1D1E0000 34:1F202122";
+        struct Page { bool *flag; const char *own; int items; const char *name; };
+        const Page pages[] = { {&Reading_PIDS_Now, PIDS, 9, "PIDs"}, {&Reading_PIDS_Advanced_Now, PIDADV, 7, "PID +"}, {&Reading_GOV_Config_Now, GLOBAL, 6, "Governor global"}, {&Reading_GOV_Now, GOV, 5, "Governor"},
+                               {&Reading_RATES_Now, RATES, 4, "Rates"}, {&Reading_RATES_Advanced_Now, RATES, 4, "Dynamics"} };
+        const char *all[5] = {PIDS, PIDADV, GLOBAL, GOV, RATES}; const int n[5] = {9, 7, 6, 5, 4};
+        CHECK(!BlockTellingNow());
+        for (const Page &p : pages)
+        {
+            for (int b = 0; b < 5; ++b)
+            {   // every block told to every page: taken whole when it is the page's own list of items, else not an item of it
+                *p.flag = true; BlockSeen = 0x15; BlockShown = false; seen = 0; seenAtFirstParse = -1; tellingAtParse = false;
+                TelemetryFromPipe(all[b]);
+                const bool own = n[b] == p.items;
+                if ((seen != (own ? p.items : 0))) fprintf(stderr, "%s page, a block of %d items: %d taken\n", p.name, n[b], seen);
+                CHECK(seen == (own ? p.items : 0));
+                if (own) CHECK(tellingAtParse && seenAtFirstParse == 0);             // handed over as a telling, counted from nothing
+                else if (n[b] > p.items) CHECK(BlockSeen == 0);                      // a bigger block: another page's - what was counted is not this page's
+                else CHECK(BlockSeen == 0x15);                                       // a smaller block: not taken, and nothing else touched
+                CHECK(!BlockTellingNow());
+                *p.flag = false;
+            }
+        }
+        // a mark given on a count that turns out another page's is taken back (the Governor page; a telling with one item more)
+        Reading_GOV_Now = true; GOV_Loaded = true; BlockShown = true; BlockSeen = 0x1F; seen = 0; TelemetryFromPipe(GLOBAL); CHECK(seen == 0 && !GOV_Loaded && !BlockShown && BlockSeen == 0);
+        GOV_Loaded = true; BlockShown = false; BlockSeen = 0x1F; TelemetryFromPipe(GLOBAL); CHECK(GOV_Loaded && BlockSeen == 0);   // (no mark of this read: none taken back - a read-back's page keeps what was whole)
+        GOV_Loaded = false; Reading_GOV_Now = false;
+        Reading_PIDS_Advanced_Now = true; PIDS_ADV_Loaded = true; BlockShown = true; TelemetryFromPipe(PIDS); CHECK(!PIDS_ADV_Loaded); Reading_PIDS_Advanced_Now = false;
+        Reading_RATES_Now = true; RATES_Loaded = true; BlockShown = true; TelemetryFromPipe(GOV); CHECK(!RATES_Loaded); Reading_RATES_Now = false;
+        Reading_RATES_Advanced_Now = true; RATES_ADV_Loaded = true; BlockShown = true; TelemetryFromPipe(GOV); CHECK(!RATES_ADV_Loaded); Reading_RATES_Advanced_Now = false;
+        // a line with no item of a block (another telemetry item) is taken whatever page reads; item 31 (the flight controller's version) is no block's
+        Reading_GOV_Now = true; BlockSeen = 0x03; BlockShown = false; seen = 0; TelemetryFromPipe("10:01020304 31:02000000"); CHECK(seen == 2 && BlockSeen == 0x03);
+        seen = 0; TelemetryFromPipe("31:02000000 25:01020304 26:05060708 27:090A0B0C 28:0D0E0F10 29:11120000"); CHECK(seen == 6);
+        // a page marked whole: a later telling of its own block is taken (the numbers follow), its count left alone
+        BlockShown = true; BlockSeen = 0x1F; seen = 0; seenAtFirstParse = -1; TelemetryFromPipe(GOV); CHECK(seen == 5 && seenAtFirstParse == 0x1F);
+        // a telling inside a telling (a box that waits inside the parser reads the screen): the outer one goes on as a telling
+        BlockShown = false; nested = RATES; seen = 0; tellingAtParse = false; TelemetryFromPipe(GOV); CHECK(seen == 5 && tellingAtParse && !BlockTellingNow());
+        // (e99 work, 17 Nov 2026: review 20 A's N14, which no run held) A LINE CUT SHORT - its last item broken off ("... 30:15161718 3", a line the screen's
+        // buffer cut) - is looked through AS FAR AS IT IS WHOLE: the Governor global's six items before the cut, told to the Governor page, are another page's
+        // block (not taken, a mark on it taken back); the Rates' four items before a cut, to the Governor page, are a smaller block (not taken). A break in
+        // the look does not make the line "nothing told" (taken unlooked, its items parsed up to the break).
+        Reading_GOV_Now = true; GOV_Loaded = true; BlockShown = true; BlockSeen = 0x1F; seen = 0; TelemetryFromPipe("25:01020304 26:05060708 27:090A0B0C 28:0D0E0F10 29:11121314 30:15161718 3");
+        CHECK(seen == 0 && !GOV_Loaded && !BlockShown && BlockSeen == 0);
+        GOV_Loaded = false; BlockShown = false; BlockSeen = 0x03; seen = 0; TelemetryFromPipe("25:01020304 26:05060700 27:08090A0B 28:0C0D0000 2"); CHECK(seen == 0 && BlockSeen == 0x03);
+        seen = 0; TelemetryFromPipe("25:01020304 26:05060700 27:08090A0B 28:0C0D0000 xx:00"); CHECK(seen == 0 && BlockSeen == 0x03);
+        Reading_GOV_Now = false; BlockSeen = 0x3FF; BlockShown = true;
+    }
     // B71: a write queued as the pages queue it (the trigger part first) goes out trigger LAST, and nothing goes before the flush
     AddParameterstoQueue(11); AddParameterstoQueue(10); CHECK(sentN == 0); PipeFlush(); CHECK(sentN == 2 && sentOrder[0] == 10 && sentOrder[1] == 11);
     sentN = 0; AddParameterstoQueue(21); AddParameterstoQueue(20); AddParameterstoQueue(19); PipeFlush(); CHECK(sentN == 3 && sentOrder[0] == 19 && sentOrder[1] == 20 && sentOrder[2] == 21);
@@ -120,6 +179,7 @@ static int CurrentView = RFGOVERNORVIEW_GLOBAL, CurrentMode = 0;
 static uint16_t BlockSeen = 0; static bool BlockShown = false, BlockBankChanges = true;
 static bool Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = true;
 static bool PIDS_Loaded = false, GOV_Loaded = false;   // (B40/B41: set when a set comes whole)
+static bool RATES_Loaded = false, RATES_ADV_Loaded = false, PIDS_ADV_Loaded = false;   // (B211: the same for the Rates, Advanced rates and Advanced PIDs pages)
 static int hides = 0, boxes = 0, restarts = 0, values = 0; static std::string lastBox;
 static void SendCommand(char *) {}
 static void SendValue(char *, int) { ++values; }
@@ -130,7 +190,7 @@ static void Start_RF_Governor() { ++restarts; }
 static void AddWords() {}
 static void DisplayGovValues(uint8_t, uint8_t) {}
 static void HidePIDMsg() {} static void HidePID_Advanced_Msg() {} static void HideGOVMsg() {} static void HideRATESMsg() {} static void Hide_Advanced_Rates_Msg() {}
-static bool RfVerifyPending() { return false; } static int RfVerifySet() { return 0; }   // (B153: no read-back here)
+static int vfAnswer = 0, vfAsked = 0; static bool RfVerifyPending() { return vfAnswer != 0; } static int RfVerifySet() { ++vfAsked; return vfAnswer; }   // (B153: no read-back here - but for the e99 work's check below: vfAnswer 2 = a read-back's set that differs)
 bool AllGlobalConfigBytesReceived();
 void DisplayGovConfigValues(uint8_t n, uint8_t m);
 void HideGOVConfigMsg();
@@ -147,6 +207,9 @@ static void Fresh() { memset(Global_Params_Received_Flags, 0, sizeof(Global_Para
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
 int main() {
+    // (B211, the nineteenth review: BY RADIO A SET IS WHOLE WHEN IT HAS COME TWICE - further down. These orders are looked at as a TELLING hands the items
+    //  over: whole in its one pass.)
+    BlockTelling = true;
     // B79's order, kept here as the record of the fault: the hide after item 30 ran with bytes 38..41 still to come
     Fresh(); for (uint8_t it = 25; it <= 30; ++it) Item(it, true);
     CHECK(hides == 1 && boxes == 1 && lastBox.find("Failed to read global") != std::string::npos && restarts == 1);
@@ -158,6 +221,85 @@ int main() {
     // the same set again (a fresh read within the window) updates the numbers without a second hide
     hides = 0; for (uint8_t it = 25; it <= 30; ++it) Item(it, false);
     CHECK(hides == 0 && boxes == 0);
+    BlockTelling = false;
+    // ... and by radio, item by item: the first whole pass hides nothing; the second does, once
+    Fresh(); for (uint8_t it = 25; it <= 30; ++it) Item(it, false);
+    CHECK(hides == 0 && !BlockShown && BlockSeen == BLOCK_ONCE);
+    for (uint8_t it = 25; it <= 30; ++it) { Item(it, false); CHECK(hides == (it == 30 ? 1 : 0)); }
+    CHECK(BlockShown && boxes == 0 && restarts == 0);
+    // B211 (released code had it): THE RATES, ADVANCED RATES AND ADVANCED PIDS PAGES KNOW WHEN THEIR SET HAS COME WHOLE - as the PIDs and the Governor
+    // pages have since B40 and B41. Each flag is set by the LAST item of its own set, by no item before it, and by no other page's read
+    {
+        struct Kind { bool *reading; bool *loaded; uint16_t want; const char *name; };
+        const Kind kinds[] = { { &Reading_RATES_Now, &RATES_Loaded, 0x0F, "rates" }, { &Reading_RATES_Advanced_Now, &RATES_ADV_Loaded, 0x0F, "advanced rates" },
+                               { &Reading_PIDS_Advanced_Now, &PIDS_ADV_Loaded, 0xBF, "advanced PIDs" }, { &Reading_PIDS_Now, &PIDS_Loaded, 0x3BF, "PIDs" }, { &Reading_GOV_Now, &GOV_Loaded, 0x1F, "governor" } };
+        for (const Kind &k : kinds)
+        {
+            Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false;
+            PIDS_Loaded = GOV_Loaded = RATES_Loaded = RATES_ADV_Loaded = PIDS_ADV_Loaded = false; BlockWasReading = false; BlockMaskTick();
+            *k.reading = true; BlockMaskTick();                                                 // (the read begins: nothing seen yet)
+            int last = 0; for (int bit = 0; bit < 10; ++bit) if (k.want & (1 << bit)) last = bit;
+            auto pass = [&](int leaveOut, bool *early) { for (int bit = 0; bit < 10; ++bit) { if (!(k.want & (1 << bit)) || bit == leaveOut) continue; if (bit == last && early) *early = *k.loaded; BlockItemSeen((uint8_t) (25 + bit)); } };
+            auto flags = [&]() { return (int) PIDS_Loaded + GOV_Loaded + RATES_Loaded + RATES_ADV_Loaded + PIDS_ADV_Loaded; };
+            auto again = [&]() { *k.loaded = false; BlockWasReading = false; *k.reading = false; BlockMaskTick(); *k.reading = true; BlockMaskTick(); };   // (the read begins afresh: nothing seen yet)
+            // BY RADIO (the nineteenth review): one whole pass marks nothing - it is noted (BlockSeen's top bit) ...
+            pass(-1, nullptr);
+            CHECK(!*k.loaded && flags() == 0 && !BlockShown && BlockSeen == BLOCK_ONCE);
+            // ... and the second whole pass marks the page, with its LAST item and no item before it
+            bool early = false; pass(-1, &early);
+            if (early || !*k.loaded || flags() != 1) fprintf(stderr, "the %s set: whole before its last item %d, whole after it %d, flags set %d\n", k.name, (int) early, (int) *k.loaded, flags());
+            CHECK(!early && *k.loaded && flags() == 1 && BlockShown);
+            // a set that came in PART (one item lost), however often, is not whole
+            again(); pass(last, nullptr); pass(last, nullptr); pass(last, nullptr);
+            CHECK(!*k.loaded && !BlockShown && !(BlockSeen & BLOCK_ONCE));
+            // whole once, then the rest of a second pass in two parts: every item has come again behind the first whole pass - whole
+            again(); pass(-1, nullptr); pass(last, nullptr); CHECK(!*k.loaded); BlockItemSeen((uint8_t) (25 + last)); CHECK(*k.loaded && BlockShown);
+            // AS A TELLING (TelemetryFromPipe has looked the line through: exactly this page's items): whole in its one pass
+            again(); BlockTelling = true; early = false; pass(-1, &early); BlockTelling = false;
+            CHECK(!early && *k.loaded && flags() == 1 && BlockShown);
+            // item 31 (the flight controller's version, in every rotation) is no block's: it disturbs nothing
+            again(); pass(-1, nullptr); BlockItemSeen(31); CHECK(BlockSeen & BLOCK_ONCE); pass(-1, nullptr); CHECK(*k.loaded);
+            // AN ITEM THIS PAGE'S BLOCK HAS NOT GOT (the PIDs' block has every item: none there)
+            int foreign = -1; for (int bit = 9; bit >= 0; --bit) if (!(k.want & (1 << bit)) && bit != 6) foreign = bit;
+            if (foreign >= 0)
+            {
+                // ... behind a first whole pass: that pass was another page's block - counted afresh (two more whole passes)
+                again(); pass(-1, nullptr); BlockItemSeen((uint8_t) (25 + foreign)); CHECK(BlockSeen == 0 && !*k.loaded);
+                pass(-1, nullptr); CHECK(!*k.loaded && BlockSeen == BLOCK_ONCE); pass(-1, nullptr); CHECK(*k.loaded);
+                // ... in every rotation (the other page's block told on and on): never whole
+                again(); for (int r = 0; r < 20; ++r) { pass(-1, nullptr); BlockItemSeen((uint8_t) (25 + foreign)); } CHECK(!*k.loaded && !BlockShown);
+                // ... behind a mark: the mark is taken back, and the page's own set gives it again
+                again(); pass(-1, nullptr); pass(-1, nullptr); CHECK(*k.loaded); BlockItemSeen((uint8_t) (25 + foreign)); CHECK(!*k.loaded && !BlockShown && flags() == 0 && BlockSeen == 0);
+                pass(-1, nullptr); pass(-1, nullptr); CHECK(*k.loaded && BlockShown);
+                // ... but no mark that this read did not give is taken (a read-back's page keeps what was whole before its save)
+                again(); *k.loaded = true; pass(-1, nullptr); BlockItemSeen((uint8_t) (25 + foreign)); CHECK(*k.loaded && BlockSeen == 0);
+            }
+        }
+        // (e99 work, 17 Nov 2026: review 20 A's N13, which no run held) A READ-BACK'S SET THAT DIFFERS (the block before the write) IS COUNTED AFRESH, ITS FIRST
+        // PASS WITH IT: by radio the next set must come whole TWICE again before it is compared - the pass that follows is noted, not compared (rule 2 holds for
+        // every set, and every place that clears the count clears the first pass with it)
+        for (const Kind &k : kinds)
+        {
+            Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false;
+            PIDS_Loaded = GOV_Loaded = RATES_Loaded = RATES_ADV_Loaded = PIDS_ADV_Loaded = false; BlockWasReading = false; BlockMaskTick(); *k.reading = true; BlockMaskTick();
+            auto pass = [&]() { for (int bit = 0; bit < 10; ++bit) if (k.want & (1 << bit)) BlockItemSeen((uint8_t) (25 + bit)); };
+            vfAnswer = 2; vfAsked = 0;
+            pass(); CHECK(vfAsked == 0 && BlockSeen == BLOCK_ONCE);            // the first pass: noted
+            pass(); CHECK(vfAsked == 1 && BlockSeen == 0 && !*k.loaded);       // the second: compared - it differs: counted afresh, the first pass with it
+            pass(); CHECK(vfAsked == 1 && BlockSeen == BLOCK_ONCE);            // the pass behind it: a FIRST pass again, noted, not compared
+            pass(); CHECK(vfAsked == 2 && BlockSeen == 0 && !*k.loaded && !BlockShown);
+            vfAnswer = 1; pass(); pass(); CHECK(vfAsked == 3 && BlockShown);  // (the same as sent: the read-back's verdict ends it - marked)
+            vfAnswer = 0; *k.reading = false;
+        }
+        BlockShown = false;
+        // THE OTHER PAGE'S ROTATION CUT OFF RIGHT BEHIND THIS PAGE'S ITEMS (its request reached the receiver just then): the Governor page, the PIDs' block
+        // told by radio - items 25 to 29 come, item 30 never does. One whole pass: no mark. Nothing more comes: no mark, ever.
+        Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Config_Now = false; GOV_Loaded = false; BlockWasReading = false; BlockMaskTick(); Reading_GOV_Now = true; BlockMaskTick();
+        for (uint8_t it = 25; it <= 29; ++it) BlockItemSeen(it);
+        CHECK(!GOV_Loaded && !BlockShown);
+        Reading_GOV_Now = false;
+        Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = false; Reading_GOV_Config_Now = true;
+    }
     printf("test_pipe (telemetry items): %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
@@ -281,7 +423,8 @@ static bool PipeReplyLate() { return late; }
 static int PipeReplyBytes(uint8_t *out, int max) { const int n = nBytes < max ? nBytes : max; memcpy(out, reply, n); return n; }
 static void Then() { ++thens; }
 static int CurrentView = 45; static uint8_t UndoFnOfView(int) { return 0; } static void UndoPreGo(uint8_t, int, void (*t)(), const char *, int) { t(); } static bool UndoPreBusy() { return false; }
-static bool RadiosMustBeOff() { return false; } static bool ModelSeemsArmed(char *, size_t) { return false; } static int logs = 0; static void LogText(char *, uint16_t, bool) { ++logs; }
+static bool logMustWait = false; static bool LogMustWait() { return logMustWait; } static int notesKept = 0; static std::string lastKept; static void KeepScreenNote(const char *l, bool) { ++notesKept; lastKept = l; }   // (B211, the seventeenth review: PipeHttp.h RfSayQuietly)
+static bool mayFlyNow = false; static bool RadiosMustBeOff() { return mayFlyNow; } static bool ModelSeemsArmed(char *, size_t) { return false; } static int logs = 0; static void LogText(char *, uint16_t, bool) { ++logs; }
 #define PIDVIEW 45
 #define RATESVIEW_RF 46
 #define RATESADVANCEDVIEW 48
@@ -296,6 +439,17 @@ static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
 static void answer(int pidBank, int rateBank) { memset(reply, 0, sizeof reply); reply[23] = (uint8_t)(pidBank - 1); reply[25] = (uint8_t)(rateBank - 1); ready = true; BankCheckTick(); }
 int main() {
+    // (B211, the seventeenth review; the break-it round of 16 Nov 2026 - mut19 QR13 - found that nothing held it) THE QUIET NOTE IS KEPT, NOT WRITTEN,
+    // WHILE A LINE MUST WAIT (a card write is an open-write-close with no new copy of the sticks): its first words, for a quiet moment. Else it is written.
+    { logs = 0; notesKept = 0; logMustWait = true; RfSayQuietly("Not written\r\n(the receiver said so)");
+      CHECK(logs == 0 && notesKept == 1 && lastKept == "RF, no box: Not written  (the receiv");
+      logMustWait = false; RfSayQuietly("Not written\r\n(the receiver said so)"); CHECK(logs == 1 && notesKept == 1); logs = 0; notesKept = 0; }
+    // ... and "a box on the bench, the quiet road while the model may fly" (PipeHttp.h RfBoxOrQuiet; mut19 QR12): on the quiet road OK's "close when
+    // saved" does not stand on - a later Save behind a save that failed would close the page by itself
+    { boxes = 0; mayFlyNow = true; RfLeaveAfterSave = true; RfBoxOrQuiet("page BasicsView", "PART WRITTEN, NOT STORED");
+      CHECK(boxes == 0 && !RfLeaveAfterSave && logs + notesKept == 1);
+      mayFlyNow = false; RfBoxOrQuiet("page BasicsView", "PART WRITTEN, NOT STORED"); CHECK(boxes == 1 && logs + notesKept == 1);
+      boxes = 0; logs = 0; notesKept = 0; RfLeaveAfterSave = false; }
     // the flight controller on the transmitter's bank: the write goes (one question, the bank shown)
     BankCheck(false, 2, Then, "page RFGovView"); CHECK(asks == 1 && lastAskFn == 101 && thens == 0 && !FcBankPending);
     BankCheckTick(); CHECK(thens == 0);                                  // (no answer yet)

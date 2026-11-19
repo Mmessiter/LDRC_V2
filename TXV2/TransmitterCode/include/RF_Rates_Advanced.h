@@ -16,8 +16,8 @@ FLASHMEM void Hide_Advanced_Rates_Msg()
     {
         SendCommand((char *)"vis busy,0");    // Hide RATES message
         ForegroundColourAdvancedRates(Black); // make text black so it is visible again
-        BlockBankChanges = false;
     }
+    BlockBankChanges = false; // B211 (the nineteenth review): ALWAYS clear, as the Rates page's (RF_Rates.h HideRATESMsg) - it was freed on this page only: left before its set came, the bank switch stayed dead
 }
 // ************************************************************************************************************/
 FLASHMEM void Display_Advanced_Rates_Values(uint8_t n, uint8_t m)
@@ -50,6 +50,8 @@ FLASHMEM void ForegroundColourAdvancedRates(uint16_t Colour)
 // ************************************************************************************************************/
 FLASHMEM void RatesAdvancedWereEdited()
 {
+    if (RfBlockNotLoaded(RATES_ADV_Loaded, "page Rates_A_View", "advanced rates")) // B211 (as B40): no edit, and no Save, on a set that never came whole
+        return;
     SendCommand((char *)"vis b3,1"); // show "Send" button
     Rates_Advanced_Were_Edited = true;
 }
@@ -88,6 +90,7 @@ FLASHMEM void ShowLocalRatesAdvancedBank()
     else
         RatesAdvancedMsg(KeptNoneText(Bank), Gray);
     SendCommand((char *)"vis b3,0"); // hide "Send" button
+    RATES_ADV_Loaded = true; // B211: (the model file's own copy: editable)
 }
 
 // ************************************************************************************************************/
@@ -96,6 +99,7 @@ FLASHMEM static void RatesAdvAskValues()
 {
     if (CurrentView != RATESADVANCEDVIEW) { BlockBankChanges = false; return; }
     Rates_Advanced_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await RATES values
+    RfOtherReadsOver();                    // B211: a page's read is over when another page's begins (1Definitions.h) - the block on the bank switch is this read's now
     Reading_RATES_Advanced_Now = true;                // This tells the Ack payload parser to
     AddParameterstoQueue(SEND_RATES_ADVANCED_VALUES); // Request RATES values from RX
     RATES_Advanced_Start_Time = millis();             // record start time as it's not long
@@ -152,6 +156,7 @@ FLASHMEM void ShowRatesAdvancedBank()
     RatesAdvancedMsg(buf, Gray);
     BlockBankChanges = true;                  // block bank changes while we do this
     Rates_Advanced_Were_Edited = false;               // reset edited flag
+    RATES_ADV_Loaded = false;                         // B211 (as B40): until the whole set has come (transceiver.h BlockItemSeen)
     RatesAdvAskValues();
 }
 
@@ -192,22 +197,39 @@ FLASHMEM void EndRatesAdvancedView()
 // ************************************************************************************************************/
 FLASHMEM void ReadRatesAdvanced()
 {
+    KEEP_WHOLE(adv, Rate_Advanced_Values); // B211 (the eleventh review): a gather - whole, or not at all
+    KEEP_WHOLE(cut, RfValueWasCut);
     for (uint8_t i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
     {
         if (i == 14) // last one is divided by 10 and therefore must be text
         {
             char temp[10];
             if (GetText(RatesAWindows[i], temp, sizeof(temp)) == 0) continue;   // B152: unanswered: the value in hand stays (NextionTextMissed: a save stops)
+            if (!TextMustBeNumber(RatesAWindows[i], temp)) continue; // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
             Rate_Advanced_Values[i] = RfByteOf((float)atof(temp) * 10.0f); // B07: cut, never wrapped
             continue;
         }
-        Rate_Advanced_Values[i] = RfByteOf((float)(int32_t)GetValue(RatesAWindows[i])); // B07
+        const uint32_t gv = GetValue(RatesAWindows[i]);
+        if (gv != 65535) // B211: no answer from the screen keeps the value in hand (it became 255; RfFieldsMissed refuses the save all the same)
+            Rate_Advanced_Values[i] = RfByteOf((float)(int32_t)gv); // B07
     }
 }
 
 // ************************************************************************************************************/
 FLASHMEM void SaveLocalRatesAdvancedBank()
 {
+    if (!KeptHasPlace(Bank))
+    { // B211 (the fourteenth review): the record has no place for a copy of banks 5 and 6 (RF_Kept.h) - "kept" was said, and marked, and nothing was.
+      // The fifteenth review: THE PAGE GOES BACK TO WHAT IT SHOWED (this is the save WITHOUT the model: no values, greyed, under its standing line
+      // "The card keeps copies of banks 1 to 4 only"). The refusal had a line of its own, which took the grey and that line away: six seconds on the
+      // bank stood there as 0 0 0 in black. What was typed over the zeros is let go - nothing can keep it - and the sound says so.
+        PlaySound(WHAHWHAHMSG);
+        RfLeaveAfterSave = false; // (as a box does: OK's "Save now?" does not close the page after a save that was not made)
+        Rates_Advanced_Were_Edited = false;
+        ShowLocalRatesAdvancedBank();
+        SendCommand((char *)"vis b3,0");
+        return;
+    }
     RatesAdvancedMsg((char *)"Saving edited advanced rates ...", Gray); // Show sending message
     Rates_Advanced_Were_Edited = false;
     RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
@@ -232,6 +254,8 @@ FLASHMEM void SaveLocalRatesAdvancedBank()
 // **********************************************************************************************************/
 FLASHMEM void SendEditedRatesAdvanced()
 {
+    if (RfBlockNotLoaded(RATES_ADV_Loaded, "page Rates_A_View", "advanced rates")) // B211 (as B40): a set that never came whole is never written - nor kept
+        return;
     if (!(RfLive())) // Model not connected so save to local Advanced RATES
     {
         Rates_Advanced_Were_Edited = false;

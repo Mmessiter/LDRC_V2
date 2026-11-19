@@ -20,6 +20,19 @@ prog = r'''
 #include <vector>
 #define DMAMEM
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 #define PROGMEM
 #define WHAHWHAHMSG 1
 #define BEEPCOMPLETE 2
@@ -40,7 +53,10 @@ static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendValue(char *n, int v) { vals[n] = v; }
 static std::string lastPage; static int gathers = 0; static bool armedFake = false;
 static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; lastPage = page; }
-static void RFSettingsGather() { ++gathers; }   // (B104: Calibrate opened from the settings page keeps its edits first)
+static bool RfHomeNotRead = false; static bool rfMayFlyNow = false; static int quietSaid = 0;   // (B211, the sixteenth review: PipeHttp.h RfMayFly / RfSayQuietly / RfBoxOrQuiet stood in for - no box that waits while the model may fly)
+static bool RfMayFly() { return rfMayFlyNow; } static void RfSayQuietly(const char *) { ++quietSaid; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { if (RfMayFly()) { RfSayQuietly(msg); return; } MsgBox((char *)page, (char *)msg); }
+static bool RFSettingsGather() { ++gathers; return true; }   // (B104: Calibrate opened from the settings page keeps its edits first)
 static bool GetConfirmation(char *page, char *prompt) { ++asked; lastBox = prompt; return confirmAnswer; }
 static void PlaySound(int) { ++sounds; }
 static void RotorFlightStart() { ++rfStarts; CurrentView = 47; }
@@ -48,10 +64,9 @@ static bool ModelSeemsArmed(char *why, size_t n) { if (armedFake) snprintf(why, 
 static bool RfPipeBlocked(char *, size_t) { return false; }
 static bool RfNeedsModel(char *, size_t) { return false; }
 static bool BakOffline() { return offline; }
-static bool RfMayFly() { return false; } static void RfBoxOrQuiet(const char *page, const char *msg) { MsgBox((char *)page, msg); }   // (B196: PipeHttp.h's - here the bench)
 static void GetText(char *n, char *out, int len) { snprintf(out, len, "%s", fields[n].c_str()); }
 bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; return true; }   // (B152)
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 // (the helpers the module shares with RF_Rescue.h and RF_Servos.h, as they are there)
 static uint16_t RdU16(const uint8_t *b, int o) { return (uint16_t)(b[o] | (b[o + 1] << 8)); }
 static void WrU16(uint8_t *b, int o, long v) { if (v < 0) v = 0; if (v > 65535) v = 65535; b[o] = (uint8_t)(v & 0xFF); b[o + 1] = (uint8_t)(v >> 8); }
@@ -70,6 +85,7 @@ static std::string hexOf(const uint8_t *d, int n) { char b[4]; std::string s; fo
 static uint8_t bat[27], vm[33], cm[8], bb[13], mem[13], modes[80], trims[4], att[6];
 static uint32_t armFlags = 0; static int armCount = 26; static int pidUs = 500, rebootLeft = 0, eraseLeft = -1;
 static void fcReply(int code, const std::string &body) { PipeRepCode = code; strncpy(PipeRepBody, body.c_str(), sizeof(PipeRepBody) - 1); PipeRepBody[sizeof(PipeRepBody) - 1] = 0; PipeRepId = PipeReqId; }
+static bool fcKeepsItsSetup = false;   // (it answers a write and keeps what it had: it is recording, or erasing)
 static void put32(uint8_t *b, int o, uint32_t v) { b[o] = v; b[o + 1] = v >> 8; b[o + 2] = v >> 16; b[o + 3] = v >> 24; }
 int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     ++PipeReqId; PipeReqSentMs = now; fcLog.push_back({fn, hexOf(data, len)});
@@ -84,7 +100,7 @@ int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     case 40: fcReply(200, hexOf(cm, 8)); return PipeReqId;
     case 41: if (cm[2] == data[0]) memcpy(cm + 4, data + 1, 4); fcReply(200, ""); return PipeReqId;
     case 80: fcReply(200, hexOf(bb, 13)); return PipeReqId;
-    case 81: memcpy(bb + 1, data, 12); fcReply(200, ""); return PipeReqId;
+    case 81: if (!fcKeepsItsSetup) memcpy(bb + 1, data, 12); fcReply(200, ""); return PipeReqId;   // (a flight controller that records or erases answers and keeps its setup)
     case 34: fcReply(200, hexOf(modes, 80)); return PipeReqId;
     case 70: if (eraseLeft > 0) { --eraseLeft; mem[0] = 2; } else if (eraseLeft == 0) { mem[0] = 3; put32(mem, 9, 0); eraseLeft = -1; } fcReply(200, hexOf(mem, 13)); return PipeReqId;
     case 72: eraseLeft = 3; fcReply(200, ""); return PipeReqId;
@@ -168,6 +184,11 @@ int main() {
     if (lastData(81) != "020210007FEE07000000010A" || writes(68) != 1) { fprintf(stderr, "81 %s  68 %d  250 %d  80 %d step %d\n", lastData(81).c_str(), writes(68), writes(250), writes(80), BbStep); for (auto &r : fcLog) fprintf(stderr, "  fn %d %s\n", r.fn, r.data.c_str()); }
     CHECK(writes(81) == 1 && lastData(81) == "020210007FEE07000000010A" && writes(250) == 1 && writes(68) == 1 && writes(80) >= 1);
     CHECK(bb[1] == 2 && RdU16(bb, 3) == 16 && bb[11] == 1 && bb[12] == 10 && BbStep == BB_IDLE && fields["busy"] == "Saved, and read back the same.");
+    // B211 (the thirteenth review's cure of "what is typed while a job runs", and its break-it round): A SAVE'S OWN END SHOWS WHAT THE FLIGHT CONTROLLER
+    // READ BACK - also when it did not take it ("Not all saved": it records, and keeps its setup). The page must not go on showing what was typed
+    // as if the flight controller had it. (An erase's end and a failure's box keep what was typed: dev/test_wholepage/scene_jobs_end.)
+    fcKeepsItsSetup = true; fields["tn3"] = "25"; fcLog.clear(); SaveBlackbox(); runBb(200); fcKeepsItsSetup = false;
+    CHECK(writes(81) == 1 && bb[12] == 10 && BbStep == BB_IDLE && fields["busy"].find("Not all saved") == 0 && fields["tn3"] == "10");
     // where nowhere with recording on: refused
     BlackboxDeviceTapped(); BlackboxDeviceTapped(); CHECK(fields["tn1"] == "Nowhere");
     fcLog.clear(); boxes = 0; SaveBlackbox(); CHECK(boxes == 1 && lastBox.find("Where") != std::string::npos && fcLog.empty());

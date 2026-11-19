@@ -136,6 +136,7 @@ FLASHMEM bool ReadOneModel(uint32_t Mnum)
     uint16_t j;
     uint16_t i;
     char NoModelYet[] = "File error?";
+    ModelMemoryHold reading; // B211: nothing is flown from the memory while it is being read into, and nothing saved from it (1Definitions.h, at ModelMemoryBusy: the waits below - half a second at most)
 
     // static int Counter = 0;
 
@@ -308,6 +309,9 @@ FLASHMEM bool ReadOneModel(uint32_t Mnum)
     BuddyHasAllSwitches = SDRead8BITS(SDCardAddress);
     ++SDCardAddress;
     GearRatio = SDReadFLOAT(SDCardAddress);
+    if (!(GearRatio > 0.0f && GearRatio < 1000.0f))
+        GearRatio = 10.3f; // B211 (the thirteenth review; the released code had it): a card that holds no number there (FF FF FF FF reads as "nan") - the settings
+                           // page showed "nan", and its OK then refused for good: a number box that holds no number is no answer. The usual ratio, as a new model has
     ++SDCardAddress;
     ++SDCardAddress;
     ++SDCardAddress;
@@ -505,6 +509,20 @@ FLASHMEM bool ReadOneModel(uint32_t Mnum)
             Saved_GOV_Profiles_Values[i][j] = SDRead8BITS(SDCardAddress);
             ++SDCardAddress;
         }
+    for (j = KEPT_BANKS_ON_CARD; j < BANKS_USED; ++j)
+    { // B211 (the fourteenth review; the released code had it): THE RECORD HOLDS THESE COPIES FOR BANKS 1 TO 4 (RF_Kept.h) - banks 5 and 6 kept, in
+      // memory, whatever the model BEFORE had put there, and this model showed them as its own. Nothing of them is this model's: cleared.
+        for (i = 0; i < MAX_PID_WORDS + 5; ++i)
+            Saved_PID_Values[i][j] = 0;
+        for (i = 0; i < MAX_RATES_BYTES; ++i)
+            Saved_Rate_Values[i][j] = 0;
+        for (i = 0; i < MAX_RATES_ADVANCED_BYTES; ++i)
+            Saved_Rate_Advanced_Values[i][j] = 0;
+        for (i = 0; i < MAX_PIDS_ADVANCED_BYTES; ++i)
+            Saved_PID_Advanced_Values[i][j] = 0;
+        for (i = 0; i < GOV_PROFILE_PAYLOAD_SIZE; ++i)
+            Saved_GOV_Profiles_Values[i][j] = 0;
+    }
 
     // Read config values for RF Governor global (no bank dimension)
     for (i = 0; i < GOV_CONFIG_PAYLOAD_SIZE; ++i)
@@ -1000,6 +1018,11 @@ FLASHMEM void ReadModelExtension()
                 }
             }
     }
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: bit 1 of the six-banks header's flags = this model's receiver is an ELRS one (ElrsCrsf.h). No header, or one
+                 // that is not sound: LDRC. A firmware without this reads bit 0 alone, and writes the byte without bit 1 at its next save.
+    ElrsModel = first && size >= pos + 4 && SDRead8BITS(pos) == TX_EXT_MAGIC && SDRead8BITS(pos + 1) == TX_EXT_MAGIC7 &&
+                SDRead8BITS(pos + 3) == (uint8_t)(TX_EXT_MAGIC7 + SDRead8BITS(pos + 2)) && (SDRead8BITS(pos + 2) & ELRS_MODEL_FLAG) != 0;
+#endif
     // B130: the six-banks header, then banks 5 and 6 - in-line in a .MOD, from the slot's own file in models.dat
     bool six = false, taken = false;
     if (first && size >= pos + 4 && SDRead8BITS(pos) == TX_EXT_MAGIC && SDRead8BITS(pos + 1) == TX_EXT_MAGIC7)
@@ -1079,13 +1102,21 @@ FLASHMEM void SaveModelExtension()
             BanksBlockBuild(blk);
             ModelCrcFold(blk, BANKS_BLOCK_LEN);
         }
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a model set to ELRS has that in its content (an LDRC model's CRC is as it always was)
+        if (ElrsModel)
+            ModelCrcByte(ELRS_MODEL_FLAG);
+#endif
     }
     DoingCheckSm = true;
     if (size >= a + 5)
         had2 = SDRead8BITS(a + 3) == TX_EXT_MAGIC && (SDRead8BITS(a + 4) == TX_EXT_MAGIC4 || SDRead8BITS(a + 4) == TX_EXT_MAGIC3);
     int pos = a + 3; // B130: where the six-banks header goes
     int end = pos;   // B170: where the mark goes - after everything else
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a model set to ELRS has something to say here too (the #else is the transmitter as it was)
+    if (MaxRangeNarrow || curves || had2 || size > a || SixBanks || ElrsModel)
+#else
     if (MaxRangeNarrow || curves || had2 || size > a || SixBanks)
+#endif
     {
         SDUpdate8BITS(a, TX_EXT_MAGIC);
         SDUpdate8BITS(a + 1, TX_EXT_MAGIC2);
@@ -1111,9 +1142,15 @@ FLASHMEM void SaveModelExtension()
         // the banks 5 and 6 block: in-line in a .MOD, in the slot's own file for models.dat. A four-bank model that never had
         // the header writes exactly what B129 wrote.
         const bool hadC7 = size >= pos + 2 && SDRead8BITS(pos) == TX_EXT_MAGIC && SDRead8BITS(pos + 1) == TX_EXT_MAGIC7;
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: the header's flags carry "ELRS receiver" in bit 1 (the #else is the transmitter as it was)
+        if (SixBanks || hadC7 || ElrsModel)
+        {
+            const uint8_t flags = (uint8_t)((SixBanks ? 1 : 0) | (ElrsModel ? ELRS_MODEL_FLAG : 0));
+#else
         if (SixBanks || hadC7)
         {
             const uint8_t flags = SixBanks ? 1 : 0;
+#endif
             SDUpdate8BITS(pos, TX_EXT_MAGIC);
             SDUpdate8BITS(pos + 1, TX_EXT_MAGIC7);
             SDUpdate8BITS(pos + 2, flags);

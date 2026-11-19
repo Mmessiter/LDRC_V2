@@ -56,6 +56,14 @@ RTC_NOINIT_ATTR static volatile uint32_t lmRadioMs;        // the radios' last s
 RTC_NOINIT_ATTR static volatile uint8_t lmRadioOn, lmRadioN;   // ... on or off, and how many switches this run
 RTC_NOINIT_ATTR static volatile uint32_t lmStallN, lmStallMaxMs;   // a core seen silent for 200 ms and more: how often, the longest
 RTC_NOINIT_ATTR static char lmStuck[200];                  // the last such verdict, from the core that could still speak
+RTC_NOINIT_ATTR static char lmRomSaid[104];                // (1.11.198) a DYING line of the ROM's own printf ("CORRUPT HEAP: ...", "... core dump ..."): main.cpp romPutc keeps it here -
+                                                           // it no longer goes down the wire, the run that says it ends there, and the next start tells it (lmBeforeText)
+// (1.11.198; the main board's twelfth review) WHERE THE ROM'S PRINTF GOES when the heap check below is not listening to it. The check's task took the
+// ROM's printing for itself and afterwards gave it BACK TO THE UART (esp_rom_install_uart_printf) - the wire to the main board: on a 16 MB board
+// main.cpp's hook, installed in setup(), lived for ten lines of setup(), and the Bluetooth library's lines went down the wire as before. It is
+// given back to whoever setup() named (main.cpp romPutc) - and until setup() has, to nobody.
+static void IRAM_ATTR lmRomDrop(char) {}
+static void (*lmRomPutc)(char) = lmRomDrop;
 // (1.11.192) THE INTERRUPTS-OFF METER: a 1 ms timer interrupt on each core; the longest gap between two of its runs is the longest
 // stretch that core spent with its interrupts off (or in a longer interrupt) - the quantity the interrupt watchdog resets the chip
 // on when it reaches 300 ms. The run's longest, when, and (core 1, the loop's) where the loop was; and the longest lately (/status).
@@ -115,9 +123,19 @@ static void lmMeterStart(int c) {                           // called ON the cor
     timerAlarmWrite(lmTimer[c], 1000, true);                // every millisecond
     timerAlarmEnable(lmTimer[c]);
 }
+// (1.11.198) IN ONE PIECE, WITH AN END. The line was pushed in pieces - what fitted the FIFO, 300 us, the next piece - and a hold
+// of this core between two of them, or a reply the loop's core wrote between them, left the line's TAIL to begin a frame of its
+// own on the main board: a tail that began "page RXOptionsView" was read there as the head of a text reply, and the box's real
+// answer handed back with it in front (the ninth review of the main board's B211, 15 Nov 2026). Now the whole line goes into
+// the FIFO with ONE call - it is 126 characters at most and a newline, and the FIFO holds 128: on a port the loop has not
+// written to for a fifth of a second all of it fits - and what does not fit is NOT SAID: never a second piece. The main board
+// takes a bare line that ends with a newline for whole (its Nextion.h, A WORD WITH NO END MAY NOT BE OVER).
 static void lmShout(const char *s) {                       // from core 0, straight into UART0's FIFO: the loop, which owns Serial, may be the one that stopped
-    char line[240]; const int n = snprintf(line, sizeof line, "LDRCLOG %s", s);
-    for (int at = 0, tries = 0; at < n && tries < 80; ++tries) { const int w = uart_tx_chars(UART_NUM_0, line + at, n - at); if (w > 0) at += w; else esp_rom_delay_us(300); }
+    char line[128]; int n = snprintf(line, sizeof line - 1, "LDRCLOG %s", s);
+    if (n > (int) sizeof line - 2) n = (int) sizeof line - 2;
+    if (n < 0) return;
+    line[n++] = '\n';
+    uart_tx_chars(UART_NUM_0, line, n);
 }
 static void lmWatch() {                                    // on core 0, every 50 ms: has the loop (core 1) fallen silent? (the interrupt watchdog resets the chip at 300 ms)
     const uint32_t now = (uint32_t) (esp_timer_get_time() / 1000);
@@ -134,7 +152,10 @@ static void lmWatch() {                                    // on core 0, every 5
     const int i = (lmCmdAt + 11) % 12; lmPart[sizeof(lmPart) - 1] = 0; lmCmd[i][31] = 0;
     snprintf(lmStuck, sizeof lmStuck, "core 1 (the loop's) silent for %lu ms at %lu ms: task '%.15s' on it, part '%.15s', loop at '%s', last command %lu ms ago: %s",
              (unsigned long) gone, (unsigned long) now, tn, lmPart, lmWhatName(busyWhat), (unsigned long) (now - lmCmdMs[i]), lmCmd[i]);
-    lmShout(lmStuck);
+    char wire[120];                                         // (1.11.198) for the wire: short enough to go in one piece (lmShout) - the time is the main board's log's own
+    snprintf(wire, sizeof wire, "core 1 (the loop's) silent for %lu ms: task %.15s, part %.15s, at %s, cmd %lu ms ago: %.31s",
+             (unsigned long) gone, tn, lmPart, lmWhatName(busyWhat), (unsigned long) (now - lmCmdMs[i]), lmCmd[i]);
+    lmShout(wire);
 }
 
 // What the record says about the run that ended (called at the start, BEFORE lmBegin resets it). Empty if there is none.
@@ -152,6 +173,8 @@ static std::string lmBeforeText() {
     } else b += "; no flash operation";
     if (lmFlashMaxUs) { snprintf(t, sizeof t, "; the longest %lu us by '%s' during '%s'", (unsigned long) lmFlashMaxUs, lmFlashMaxTask, lmWhatName(lmFlashMaxWhat)); b += t; }
     if (lmHeapBadN) { lmHeapBad[sizeof(lmHeapBad) - 1] = 0; snprintf(t, sizeof t, "; THE HEAP CHECK HAD FAILED %lu times, last: %s", (unsigned long) lmHeapBadN, lmHeapBad); b += t; }
+    lmRomSaid[sizeof(lmRomSaid) - 1] = 0;                   // (1.11.198) what the ROM's printf said as the run died - it used to go down the wire, where the main board's log kept it
+    if (lmRomSaid[0]) { snprintf(t, sizeof t, "; AS IT DIED THE SYSTEM SAID: %s", lmRomSaid); b += t; }
     // (1.11.191)
     lmPart[sizeof(lmPart) - 1] = 0; snprintf(t, sizeof t, "; part '%s'", lmPart); b += t;
     if (lmRadioN) { snprintf(t, sizeof t, "; the radios went %s at %lu ms (%ld ms before the loop's last pass; %u switches)", lmRadioOn ? "ON" : "OFF", (unsigned long) lmRadioMs, (long) (int32_t) (lmLoopMs - lmRadioMs), (unsigned) lmRadioN); b += t; }
@@ -166,7 +189,7 @@ static std::string lmBeforeText() {
 static void lmBegin() {
     lmMagic = LM_MAGIC; lmFlashN = 0; lmFlashBusy = 0; lmFlashStartUs = 0; lmFlashLastUs = lmFlashMaxUs = lmFlashEndMs = 0;
     lmFlashTask[0] = lmFlashMaxTask[0] = 0; lmFlashWhat = lmFlashMaxWhat = 0; lmLoopMs = 0; lmLoopN = 0; lmHeapBad[0] = 0; lmHeapBadN = 0;
-    lmCmdAt = 0; for (int i = 0; i < 12; ++i) { lmCmd[i][0] = 0; lmCmdMs[i] = 0; } lmPart[0] = '-'; lmPart[1] = 0; lmRadioMs = 0; lmRadioOn = 0; lmRadioN = 0; lmStallN = 0; lmStallMaxMs = 0; lmStuck[0] = 0;   // (1.11.191)
+    lmCmdAt = 0; for (int i = 0; i < 12; ++i) { lmCmd[i][0] = 0; lmCmdMs[i] = 0; } lmPart[0] = '-'; lmPart[1] = 0; lmRadioMs = 0; lmRadioOn = 0; lmRadioN = 0; lmStallN = 0; lmStallMaxMs = 0; lmStuck[0] = 0; lmRomSaid[0] = 0;   // (1.11.191)
     lmIntOffMax[0] = lmIntOffMax[1] = 0; lmIntOffAt[0] = lmIntOffAt[1] = 0; lmIntOffPart[0] = '-'; lmIntOffPart[1] = 0; lmIntOffWhat = 0;   // (1.11.192)
     if (esp_flash_default_chip && esp_flash_default_chip->os_func && !lmOrig) {
         lmOrig = esp_flash_default_chip->os_func;
@@ -195,7 +218,7 @@ static void lmHeapTaskFn(void *) {
         const uint32_t t0 = micros();
         lmHeapOk = heap_caps_check_integrity_all(true);
         lmHeapUs = micros() - t0;
-        esp_rom_install_uart_printf();                       // the ROM's printing back to the UART, as the system had it
+        esp_rom_install_channel_putc(1, lmRomPutc);          // (1.11.198) the ROM's printing back to where setup() put it (lmRomPutc, above) - NOT to the UART: that is the wire
         lmHeapCap[lmHeapCapN] = 0;
         xSemaphoreGive(lmHeapDone);
     }

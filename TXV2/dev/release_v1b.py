@@ -16,7 +16,13 @@
         text of the screen project's include/secrets.h, at stage and again at publish. One that holds any is refused.
 
    stage takes  --no-build         use the firmware already built (Teensy: dev/out/TXFW.BIN, screen: dev/out/screen_build/.pio/build/ota and ota_full)
+                                   - the Teensy's package must be the SOURCE'S version, newer than every file of its source, and the very one
+                                     THIS script's build made from the source as it is now (the build says so beside it: dev/out/TXFW.BIN.source)
+                                   - the screen's two images likewise: the very ones THIS script's build made, from the screen's source as it is
+                                     now (the build says so beside its log: dev/out/screen_build/.pio/build/release_build.source)
                 --without-screen   a release that leaves the screen's firmware as it is
+                --teensy-source-unchanged   (a release of the screen alone, once) the Teensy's source has NOT changed since the earlier release that
+                                   has this Teensy version and was made before the releases recorded their source: see teensy_version_checked
 
    A release is four parts, and a fifth since 23 Oct 2026. The screen compares each with what the transmitter has and fetches what differs:
      teensy        the Teensy's firmware, as an update package (dev/make_fw_package.py)     compared by version
@@ -51,24 +57,149 @@ PIO = shutil.which('pio') or os.path.expanduser('~/.platformio/penv/bin/pio')
 
 def crc(b): return zlib.crc32(b) & 0xFFFFFFFF
 def blob_name(b): return f'files/{crc(b):08X}-{len(b)}.bin'
+def build_env():
+    """B211 (the thirteenth review, reviewer A's finding 3): A RELEASE IS BUILT FROM ITS platformio.ini ALONE. PlatformIO adds what the shell's PLATFORMIO_*
+       variables say to what the ini says (PLATFORMIO_BUILD_FLAGS, _BUILD_UNFLAGS, _LIB_EXTRA_DIRS, _EXTRA_SCRIPTS) and takes others INSTEAD of it
+       (_LIBDEPS_DIR, _BUILD_DIR): the test builds are made with PLATFORMIO_BUILD_FLAGS=-DELRS_TEST, and that variable left in the shell built the RELEASE
+       with the ELRS driver in it - the same version text, every check passed; for the screen, -DEMU_ECHO echoes every command down the wire, and
+       another library folder is taken while the pin hashes the untouched one. No pin looks at the environment: so no such variable reaches a build."""
+    left = sorted(k for k in os.environ if k.upper().startswith('PLATFORMIO_'))
+    if left: print('  (NOT passed on to the build: ' + ', '.join(left) + ' - a release is built from its platformio.ini alone)')
+    return {k: v for k, v in os.environ.items() if not k.upper().startswith('PLATFORMIO_')}
 def run(cmd, cwd):
     print('  $', ' '.join(cmd))
-    r = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    r = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=build_env())
     if r.returncode: sys.exit(r.stdout[-3000:] + f'\nFAILED: {" ".join(cmd)}')
     return r.stdout
 
 # ---------------------------------------------------------------- the parts
+def teensy_source_files():
+    """Every file the Teensy's firmware is built from: TransmitterCode/src, include, lib (all of them) and platformio.ini. {path below TransmitterCode: full path}"""
+    out = {}
+    for top in ('src', 'include', 'lib'):
+        for d, dirs, names in os.walk(os.path.join(TEENSY, top)):
+            dirs[:] = sorted(x for x in dirs if not x.startswith('.'))
+            for n in sorted(names):
+                if not n.startswith('.'): out[os.path.relpath(os.path.join(d, n), TEENSY).replace(os.sep, '/')] = os.path.join(d, n)
+    ini = os.path.join(TEENSY, 'platformio.ini')
+    if os.path.isfile(ini): out['platformio.ini'] = ini
+    return out
+
+def teensy_source_hash():
+    """One number for the Teensy's whole source (the names and the bytes of teensy_source_files): recorded with every release - teensy_version_checked."""
+    import hashlib
+    h = hashlib.sha256()
+    for rel_path, full in sorted(teensy_source_files().items()):
+        b = open(full, 'rb').read(); h.update(rel_path.encode() + b'\0' + str(len(b)).encode() + b'\0' + b)
+    return h.hexdigest()[:32]
+
+def source_version():
+    """The version text the Teensy's source says (1Definitions.h TXVERSION_*) - as dev/make_fw_package.py puts it into a package's header."""
+    text = open(os.path.join(TEENSY, 'include', '1Definitions.h'), encoding='latin1').read()
+    def grab(name):
+        m = re.search(r'#define\s+' + name + r'\s+(?:"([^"\n]*)"|(\S+))', text)
+        if not m: sys.exit(f'{name} not found in 1Definitions.h')
+        return (m.group(1) if m.group(1) is not None else m.group(2)).strip()
+    return f"{grab('TXVERSION_MAJOR')}.{grab('TXVERSION_MINOR')}.{grab('TXVERSION_MINIMUS')} {grab('TXVERSION_EXTRA')}"
+
+def teensy_package_is_the_sources(version, pkg, built_now):
+    """B211 (the fourteenth review, reviewer A's finding 5): THE PACKAGE THAT IS STAGED IS THIS SOURCE'S. With --no-build whatever lay in dev/out/TXFW.BIN
+       was taken - a package of ANOTHER version (an older build), or one built by hand: only its header and the ELRS mark were looked at. Its version
+       must be the source's, and a package kept from before must be newer than every file of the Teensy's source."""
+    want = source_version()
+    if version != want: sys.exit(f'REFUSING TO PUBLISH: the Teensy package {pkg} is version "{version}" and the source says "{want}": build it (leave out --no-build)')
+    if built_now: return
+    made = os.path.getmtime(pkg)
+    newer = sorted((os.path.getmtime(full), rel_path) for rel_path, full in teensy_source_files().items() if os.path.getmtime(full) > made + 2)
+    if newer: sys.exit(f'REFUSING --no-build: the Teensy package {pkg} is OLDER than the Teensy\'s source ({len(newer)} file(s) were changed since it was built, the last of them '
+                       f'TransmitterCode/{newer[-1][1]}): build it (leave out --no-build)')
+
+TEENSY_BUILT_FROM = '.source'    # dev/out/TXFW.BIN.source: what THIS script's build says of the package beside it - teensy_package_is_the_builds
+def package_hash(b):
+    import hashlib
+    return hashlib.sha256(b).hexdigest()[:32]
+
+def teensy_build_noted(pkg, b, source):
+    """The build's own word, written beside its package: the hash of the source it was built from, and which package it made."""
+    open(pkg + TEENSY_BUILT_FROM, 'w').write(f'source={source}\npackage={package_hash(b)}\n')
+
+def teensy_package_is_the_builds(b, pkg, source):
+    """B211 (the fifteenth review): "NEWER THAN EVERY FILE OF THE SOURCE" IS NOT "BUILT FROM THIS SOURCE" (--no-build). A package made again by hand from
+       the build before (dev/make_fw_package.py, nothing built) is newer than a source cured since; a source file copied in with its old time
+       (rsync -a, cp -p) is older than the package of the build before. Both were taken - and the hash recorded with the old firmware was the new source's.
+       THIS script's build writes beside its package what it built it from - the source's hash - and which package it made (teensy_build_noted).
+       --no-build takes a package only by that word: the source as it is now, the package as it was made. No word (built by hand, or before this
+       rule), another source, another package: refused. The files' times are still looked at, before this (teensy_package_is_the_sources)."""
+    p = pkg + TEENSY_BUILT_FROM
+    said = dict(l.split('=', 1) for l in open(p, encoding='utf-8', errors='replace').read().splitlines() if '=' in l) if os.path.isfile(p) else {}
+    if not said.get('source') or not said.get('package'):
+        sys.exit(f'REFUSING --no-build: nothing beside the Teensy package {pkg} says which source it was built from ({os.path.basename(p)} is not there, or says nothing: '
+                 f'the package was built by hand, or before B211): build it (leave out --no-build)')
+    if said['package'] != package_hash(b):
+        sys.exit(f'REFUSING --no-build: the Teensy package {pkg} is NOT the one this script\'s build made (it was made again since, by hand): build it (leave out --no-build)')
+    if said['source'] != source:
+        sys.exit(f'REFUSING --no-build: the Teensy\'s source is NOT the one the package {pkg} was built from, whatever the files\' times say (a file was changed, put back, '
+                 f'or copied in with its old time): build it (leave out --no-build)')
+
 def teensy_package(build):
+    """-> the package, its version text, and the hash of the Teensy's source it was built from (teensy_source_hash: stage records it with the release)"""
     pkg = os.path.join(HERE, 'out', 'TXFW.BIN')
     if build:
         print('Building the Teensy firmware ...')
+        if os.path.exists(pkg + TEENSY_BUILT_FROM): os.remove(pkg + TEENSY_BUILT_FROM)   # (what an earlier build said is not said of this one, whatever becomes of it)
+        source = teensy_source_hash()                                                    # B211 (the fifteenth review): what it is built from - teensy_package_is_the_builds
         run([PIO, 'run', '-e', 'teensy41'], TEENSY)
         print(run([sys.executable, os.path.join(HERE, 'make_fw_package.py')], ROOT).strip())
-    b = open(pkg, 'rb').read()
+        if teensy_source_hash() != source: sys.exit('REFUSING TO PUBLISH: the Teensy\'s source was CHANGED WHILE its firmware was being built: which of the two the package holds is not known - build it again')
+    else: source = teensy_source_hash()
+    if not os.path.isfile(pkg): sys.exit(f'the Teensy firmware has not been built yet ({pkg}): leave out --no-build')
+    b, version = checked_teensy_package(open(pkg, 'rb').read(), pkg)
+    teensy_package_is_the_sources(version, pkg, build)
+    if build: teensy_build_noted(pkg, b, source)
+    else: teensy_package_is_the_builds(b, pkg, source)
+    return b, version, source
+
+def teensy_version_checked(version, package, name, source, said_unchanged=False):
+    """B211 (the fourteenth review, reviewer A's finding 11): A TEENSY FIRMWARE THAT HAS CHANGED HAS A VERSION TEXT OF ITS OWN. The transmitters compare the
+       Teensy's part BY ITS VERSION ("Check for update"): a release staged from a tree that still says an earlier release's version would install the new
+       screen and the new page files and LEAVE THE OLD FIRMWARE in the Teensy - a mixture nobody tested (B211's new Sub-trim page file beside B210).
+       Every release records a hash of the Teensy's source (release.json: teensy.source). This one's version against every EARLIER release:
+       the same version with another source is refused. An earlier release from before this gate recorded none: then the very same package passes, and
+       a rebuilt one passes only when it is SAID that the source has not changed since (--teensy-source-unchanged: a release of the screen alone).
+       B211 (the fifteenth review): WHATEVER THE EARLIER RELEASE IS CALLED - THIS RELEASE'S OWN NAME TOO. One of this name was passed over as "the same
+       release staged again" - and the name a release gets by itself is made of the Teensy's version and the screen's: a Teensy source changed under its
+       old version text had the earlier release's own name, was taken, and wrote over that release's record. A NAME PROVES NOTHING: the same release
+       staged again is the one whose RECORDED source is the tree's now; one of this name that recorded none is held as any other from before this gate."""
+    vdir = os.path.join(REL, 'v')
+    for n in sorted(os.listdir(vdir)) if os.path.isdir(vdir) else []:
+        jp = os.path.join(vdir, n, 'release.json')
+        if not os.path.exists(jp): continue
+        r = json.load(open(jp))
+        if r.get('teensy', {}).get('version') != version: continue
+        own = ' (staged before, under this very name)' if r.get('name') == name else ''
+        was = r['teensy'].get('source')
+        if was is not None:
+            if was != source: sys.exit(f'REFUSING TO PUBLISH: the Teensy\'s source has CHANGED since the release "{r["name"]}"{own}, and its version text is still "{version}". Transmitters compare the Teensy\'s '
+                                       f'firmware by its version: they would take this release\'s screen and files and KEEP the old firmware. Give the firmware its own version (TXVERSION_EXTRA in 1Definitions.h).')
+        elif r['teensy'].get('crc') != f'{crc(package):08X}':
+            if not said_unchanged:
+                sys.exit(f'REFUSING TO PUBLISH: the release "{r["name"]}"{own} has a Teensy firmware of this version, "{version}", and this package is not that one. Transmitters compare the Teensy\'s firmware by its '
+                         f'version: one that has it would KEEP it. If the Teensy\'s source has changed since: give the firmware its own version (TXVERSION_EXTRA in 1Definitions.h). If it has NOT '
+                         f'(a release of the screen alone, built again - the build\'s time is in the image): say --teensy-source-unchanged. (That release was made before the releases recorded their source.)')
+            print(f'  (the Teensy firmware has the version of the release "{r["name"]}"{own}, made before the releases recorded their source: taken as unchanged since, as said)')
+
+TEST_BUILD_MARKS = (b'ELRS test', b'LDRC TEST BUILD')    # what only a TEST build of the Teensy's firmware holds (ElrsCrsf.h: every line the ELRS driver says begins "ELRS test" - a release holds no "ELRS" at all;
+                                                         # main.cpp: the build that falls over on purpose, -DLDRC_TEST_FALL_OVER, holds "LDRC TEST BUILD: falls over")
+def checked_teensy_package(b, pkg):
+    """The Teensy's update package, looked at before it is staged - built just now, or kept from before (--no-build).
+       (The thirteenth review: nothing looked INTO it for what it was built with. A package built with -DELRS_TEST - by a variable left in the shell, or a
+       test package left in dev/out/TXFW.BIN - has the release's version text, magic, size, CRC and target: it would have been published as the release.)"""
     if b[:8] != b'LDRCFW01': sys.exit(f'{pkg} is not an update package')
     size, c = int.from_bytes(b[8:12], 'little'), int.from_bytes(b[12:16], 'little')
     if size != len(b) - 64 or c != crc(b[64:]): sys.exit(f'{pkg} is damaged')
     if b[48:64].split(b'\0')[0] != b'fw_teensy41': sys.exit(f'{pkg} is not for the Teensy 4.1')
+    for mark in TEST_BUILD_MARKS:
+        if mark in b[64:]: sys.exit(f'REFUSING TO PUBLISH: {pkg} is a TEST build of the Teensy firmware (it holds "{mark.decode()}"): a release is built without -DELRS_TEST and without -DLDRC_TEST_FALL_OVER - build it (leave out --no-build)')
     return b, b[16:48].split(b'\0')[0].decode()
 
 TEENSY_HEX = 'ldrc-v2-teensy41.hex'      # its name on the website: one name, always the latest release's firmware
@@ -129,6 +260,93 @@ def clean_copy():
         for n in names:
             if 'secret' in n.lower(): sys.exit(f'REFUSED: {os.path.join(d, n)} is in the copy the firmware is built from')
 
+def screen_libraries_checked(build_log=None):
+    """B211 (the twelfth review): THE LIBRARIES THE PUBLISHED SCREEN FIRMWARE IS BUILT WITH ARE THE PINNED ONES - looked at HERE, in the folder it was
+       just built in, every time (built now, or kept from before: --no-build). dev/test_stalepress pinned the bench builds' folder, where other
+       versions lay; its "not looked at" passed, and the gate reads exit codes only. A library can write to the wire to the main board by itself
+       (the Bluetooth one does): one that has moved on, or a folder that cannot be looked at, stops the release."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('ldrc_pins', os.path.join(HERE, 'test_stalepress', 'test_stalepress.py'))
+    pins = importlib.util.module_from_spec(spec); spec.loader.exec_module(pins)
+    bad = pins.release_lib_problems(CLEAN)
+    if build_log is not None:
+        # ... and the framework THIS BUILD SAYS IT USED (PlatformIO names its packages at the head of each build): a second copy of the framework on
+        # the machine, taken by a range, would not show in what is installed under the usual name
+        used = re.findall(r'^\s*-\s*framework-arduinoespressif32\s*@\s*(\S+)', build_log, re.M)
+        if len(used) != 2: bad.append('the build did not say which Arduino framework it used, once for each of its two builds (it said: %s)' % (', '.join(used) or 'nothing'))
+        bad += ['the build used the Arduino framework %s, pinned %s' % (u, pins.FRAMEWORK_PIN) for u in sorted(set(used)) if u != pins.FRAMEWORK_PIN]
+    if bad:
+        sys.exit('REFUSING TO PUBLISH: the screen firmware in dev/out/screen_build is not built with what dev/test_stalepress pins (LIB_PINS, FRAMEWORK_PIN):\n  ' + '\n  '.join(bad)
+                 + '\n(LOOK at what changed - can it put a byte on the wire? - then bring the pins up to date.)')
+    print('  the screen\'s libraries and framework are the pinned ones')
+
+BUILD_LOG_KEPT = 'release_build.log'
+def kept_build_log():
+    """--no-build (the thirteenth review, reviewer A's finding 7: the framework's name was read from the build's own output - and with --no-build there was none):
+       the output of the build that MADE the images that are there, kept by that build beside them. None kept, or an image newer than it (built again by
+       hand since): which framework the images were built with is not known - refused."""
+    p = os.path.join(CLEAN, '.pio', 'build', BUILD_LOG_KEPT)
+    if not os.path.isfile(p): sys.exit('REFUSING --no-build: the build that made the screen images in dev/out/screen_build left no log beside them (built before B211, or by hand): which Arduino framework they were built with is not known - build them (leave out --no-build)')
+    for env in ('ota', 'ota_full'):
+        img = os.path.join(CLEAN, '.pio', 'build', env, 'firmware.bin')
+        if os.path.isfile(img) and os.path.getmtime(img) > os.path.getmtime(p) + 2: sys.exit(f'REFUSING --no-build: the {env} image in dev/out/screen_build is newer than the log of the release\'s own build: it was built again by hand - build it (leave out --no-build)')
+    return open(p, encoding='utf-8', errors='replace').read()
+
+SCREEN_BUILT_FROM = 'release_build.source'    # dev/out/screen_build/.pio/build/release_build.source: what THIS script's build says of the two images it made - screen_images_are_the_builds
+def screen_source_files(top):
+    """Every file the screen's firmware is built from, in the folder top - the screen's project, or the clean copy of it that the firmware is built
+       in (clean_copy): all of src, include, lib and boards, and every file that lies beside them (platformio.ini; a partition table or a build
+       script, should platformio.ini ever name one). As for the Teensy (teensy_source_files): no name that begins with a dot. As the clean copy is
+       made: no secrets.h - NO FILE WITH "secret" IN ITS NAME IS OPENED HERE (the copy holds none: clean_copy) - and no __pycache__.
+       NOT the card's files (sd) and not the page tools (hmi, dev): no firmware is built from them - dev/test_release_gate.py holds the screen's
+       platformio.ini to naming nothing else (no build script, no folder of its own). {path below top: full path}"""
+    out = {}
+    def counts(n): return not n.startswith('.') and 'secret' not in n.lower()
+    for n in sorted(os.listdir(top)) if os.path.isdir(top) else []:
+        if counts(n) and os.path.isfile(os.path.join(top, n)): out[n] = os.path.join(top, n)
+    for part in ('src', 'include', 'lib', 'boards'):
+        for d, dirs, names in os.walk(os.path.join(top, part)):
+            dirs[:] = sorted(x for x in dirs if not x.startswith('.') and x not in ('__pycache__', 'secrets.h'))
+            for n in sorted(names):
+                if counts(n): out[os.path.relpath(os.path.join(d, n), top).replace(os.sep, '/')] = os.path.join(d, n)
+    return out
+
+def screen_source_hash(top):
+    """One number for the screen's whole source (the names and the bytes of screen_source_files): the same for the screen's project and for a clean
+       copy just made of it."""
+    import hashlib
+    h = hashlib.sha256()
+    for rel_path, full in sorted(screen_source_files(top).items()):
+        b = open(full, 'rb').read(); h.update(rel_path.encode() + b'\0' + str(len(b)).encode() + b'\0' + b)
+    return h.hexdigest()[:32]
+
+def screen_build_noted(images, source):
+    """The build's own word, written beside its log: the hash of the source it was built from, and which two images it made."""
+    open(os.path.join(CLEAN, '.pio', 'build', SCREEN_BUILT_FROM), 'w').write(f'source={source}\nota={package_hash(images[0])}\nota_full={package_hash(images[1])}\n')
+
+def screen_images_are_the_builds(images):
+    """B211 (the sixteenth review, reviewer A's finding 4): --no-build HELD THE TEENSY'S PACKAGE TO ITS SOURCE, AND NOT THE SCREEN'S IMAGES TO THEIRS.
+       The images built, then a fault cured in the screen's source under the same SCREEN_VERSION, then --no-build: the OLD images were taken, beside
+       the new card files. Their version text was right, and no file's time was looked at.
+       As for the Teensy (teensy_package_is_the_builds): THIS script's build writes beside its log what it built the two images from - the hash of
+       the clean copy's source - and which images it made (screen_build_noted). --no-build takes the images only by that word: the screen's source
+       as it is now, the images as they were made. No word (built by hand, or before this rule), another image, another source: refused."""
+    p = os.path.join(CLEAN, '.pio', 'build', SCREEN_BUILT_FROM)
+    said = dict(l.split('=', 1) for l in open(p, encoding='utf-8', errors='replace').read().splitlines() if '=' in l) if os.path.isfile(p) else {}
+    if not said.get('source') or not said.get('ota') or not said.get('ota_full'):
+        sys.exit(f'REFUSING --no-build: nothing beside the screen images in dev/out/screen_build says which source they were built from ({SCREEN_BUILT_FROM} is not there, or says nothing: '
+                 f'they were built by hand, or before this rule): build them (leave out --no-build)')
+    for label, env, b in (('STANDARD', 'ota', images[0]), ('FULL', 'ota_full', images[1])):
+        if said[env] != package_hash(b):
+            sys.exit(f'REFUSING --no-build: the {label} screen image in dev/out/screen_build is NOT the one this script\'s build made (it was made again since, by hand): build it (leave out --no-build)')
+    if said['source'] != screen_source_hash(SCREEN):
+        # (which files: the copy the images were built in is still there - if IT is as it was built, what differs from it is what was changed since)
+        was, now = (screen_source_files(CLEAN), screen_source_files(SCREEN)) if screen_source_hash(CLEAN) == said['source'] else ({}, {})
+        changed = sorted(f for f in set(was) | set(now) if f not in was or f not in now or open(was[f], 'rb').read() != open(now[f], 'rb').read())
+        which = ('changed since: ' + ', '.join(changed[:3]) + (f' and {len(changed) - 3} more' if len(changed) > 3 else '')) if changed else 'a file was changed, added or taken away since'
+        sys.exit(f'REFUSING --no-build: the screen\'s source is NOT the one the screen images in dev/out/screen_build were built from, whatever SCREEN_VERSION says ({which}): '
+                 f'build them (leave out --no-build)')
+
 def screen_firmware(build):
     """The screen's TWO firmwares, from the one source (23 Oct 2026, the three 16 MB screens): STANDARD (env ota) for the
        4 MB boards' 1.9 MB slot, and FULL (env ota_full, -DLDRC_FULL) for the 16 MB boards' 6.25 MB slots. Each image says
@@ -140,9 +358,16 @@ def screen_firmware(build):
     if not m: sys.exit('SCREEN_VERSION not found in the screen\'s main.cpp')
     if build:
         print('Building the screen firmware, STANDARD and FULL (in a copy of its project that holds no secrets.h) ...')
+        word = os.path.join(CLEAN, '.pio', 'build', SCREEN_BUILT_FROM)
+        if os.path.exists(word): os.remove(word)                                         # (what an earlier build said is not said of this one, whatever becomes of it)
         clean_copy()
-        run([PIO, 'run', '-e', 'ota', '-e', 'ota_full'], CLEAN)
+        source = screen_source_hash(CLEAN)                                               # B211 (the sixteenth review): what it is built from - screen_images_are_the_builds
+        built = run([PIO, 'run', '-e', 'ota', '-e', 'ota_full'], CLEAN)
+        open(os.path.join(CLEAN, '.pio', 'build', BUILD_LOG_KEPT), 'w', encoding='utf-8').write(built)   # (kept for a later --no-build: which framework THESE images were built with)
+    else: built = kept_build_log()
+    screen_libraries_checked(built)
     images = []
+    if build and screen_source_hash(CLEAN) != source: sys.exit('REFUSING TO PUBLISH: the copy the screen\'s firmware is built in (dev/out/screen_build) was CHANGED WHILE it was being built: which of the two the images hold is not known - build them again')
     keep = os.path.join(HERE, 'out', 'elf')
     for env, label, full, limit, header_mb in (('ota', 'STANDARD', False, 0x1E0000, 4), ('ota_full', 'FULL', True, 0x640000, 16)):
         image = os.path.join(CLEAN, '.pio', 'build', env, 'firmware.bin')
@@ -164,6 +389,8 @@ def screen_firmware(build):
             os.makedirs(keep, exist_ok=True)
             shutil.copy2(elf, os.path.join(keep, f'screen-{version}{"-full" if full else ""}.elf'))
         images.append(b)
+    if build: screen_build_noted(images, source)       # B211 (the sixteenth review): the build's own word beside its log - which source it built these two images from
+    else: screen_images_are_the_builds(images)         # ... and --no-build takes them only by that word, and only for the screen's source as it is now
     # (17 Oct 2026: 74 of them, 32 MB each, helped fill the Mac's disk) the newest sixteen stay here; older ones go to the
     # archive on the 2TB SSD when it is plugged in (still there for an old core dump), else they wait here
     archive = '/Volumes/2TB SSD/LDRC archive/TXV1B screen ELFs'
@@ -210,6 +437,24 @@ def screen_files():
             full = os.path.join(d, n)
             out['/' + os.path.relpath(full, root).replace(os.sep, '/')] = open(full, 'rb').read()
     return out
+
+def subtrim_page_checked(scf):
+    """B211: THIS FIRMWARE TAKES A CHANGE OF THE SUB-TRIM PAGE ONLY FROM THE PAGE FILE THAT SAYS WHAT IT DID ("StEDIT", the channel, the number as it stood,
+    the number it made - Trims.h SubTrimWord); from a page file from before it takes NOTHING. Every release stages the screen's card files as the
+    screen project has them: beside the old page 32, every transmitter that took the release would have a Sub-trim page that only shows."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('ldrc_page32', os.path.join(HERE, 'test_wholepage', 'page32.py'))
+    p32 = importlib.util.module_from_spec(spec); spec.loader.exec_module(p32)
+    b = scf.get('/hmi/pages/32.json')
+    if b is None: sys.exit('REFUSING TO PUBLISH: the screen\'s card folder has no Sub-trim page (hmi/pages/32.json)')
+    try: kind = p32.page_kind(b)
+    except Exception as e:
+        sys.exit('REFUSING TO PUBLISH: the Sub-trim page file (the screen project\'s sd/hmi/pages/32.json) is neither the one from before nor this release\'s, word for word - LOOK at it: '
+                 'the main board\'s rule (Trims.h) and its tests (dev/test_wholepage/scene_subtrim.py) are written for those two (%s)' % (str(e)[:200] or type(e).__name__))
+    if kind != 'new':
+        sys.exit('REFUSING TO PUBLISH: the Sub-trim page file in the screen project (sd/hmi/pages/32.json) is the one from BEFORE B211. This firmware takes NOTHING from that page '
+                 '(its word does not say what it did): every transmitter that took this release would have a Sub-trim page that only shows. '
+                 'Run hmi/subtrim_words.py in the screen project (it goes in with screen 1.11.198), then release.')
 
 def check_paths(files, roots, what):
     for p in files:
@@ -302,16 +547,33 @@ def put_blob(b):
 
 def slug(name): return re.sub(r'[^A-Za-z0-9.]+', '-', name).strip('-')
 
-def stage(notes, build, name, with_screen=True):
-    tp, tv = teensy_package(build)
+def release_folder_checked(name):
+    """B211 (the fifteenth review): A RELEASE'S FOLDER IS ITS OWN. slug() makes ONE folder name of two release names ("2.5.6 B211 (screen 1.11.198)" and
+       "2.5.6 B211 screen 1.11.198"): staging the second wrote over the first one's release.json - its record, and with it the source that
+       teensy_version_checked holds every later release against - and nothing was said. A name whose folder holds a release of ANOTHER name is
+       refused (looked at in the folder itself: so also two names that this disk takes as one). So is a name that gives no folder at all (no letter
+       and no digit in it: its record would lie where no later release looks). The same name is the same release, staged again: written, as before."""
+    folder = slug(name)
+    if not folder.strip('.'): sys.exit(f'REFUSING TO PUBLISH: the name "{name}" gives the release no folder of its own (it has no letter and no digit in it): give it another name (--name)')
+    jp = os.path.join(REL, 'v', folder, 'release.json')
+    if not os.path.exists(jp): return
+    was = json.load(open(jp)).get('name')
+    if was != name: sys.exit(f'REFUSING TO PUBLISH: the name "{name}" has the folder of ANOTHER release, "{was}" (v/{folder}: a folder\'s name is the letters, digits and dots of the release\'s name). '
+                             f'That release\'s record would be written over. Give this release a name of its own (--name).')
+
+def stage(notes, build, name, with_screen=True, teensy_unchanged=False):
+    tp, tv, tsource = teensy_package(build)   # (tsource: the hash of the source the package was BUILT FROM - recorded with the release, below)
     sf, sff, sv = screen_firmware(build) if with_screen else (None, None, None)
     tf, scf = teensy_files(), screen_files()
+    subtrim_page_checked(scf)   # B211: the Sub-trim page file that goes out is this release's (the firmware takes nothing from the one before)
     private = private_values()
     print(f'  looking for {len(private)} private texts of secrets.h in everything that is to be published' if private else '  (there is no secrets.h: nothing private to look for)')
     for label, b in [('the Teensy firmware', tp)] + ([('the screen firmware', sf), ('the 16 MB screen firmware', sff)] if with_screen else []) + list(tf.items()) + list(scf.items()): refuse_private(label, b, private)
     check_paths(tf, ['/help/'], 'the Teensy\'s files'); check_paths(scf, ['/hmi/', '/images/'], 'the screen\'s files')
     if not tf or len(scf) < 100: sys.exit('files are missing: the help texts or the screen\'s card folder')
     name = name or (f"{' '.join(tv.split(' ')[:2])} (screen {sv})" if with_screen else f"{' '.join(tv.split(' ')[:2])} (screen as it is)")
+    release_folder_checked(name)                                      # B211 (the fifteenth review): its folder is no other release's
+    teensy_version_checked(tv, tp, name, tsource, teensy_unchanged)   # B211: a Teensy firmware that has changed has a version text of its own
     if '\n' in notes or len(notes) > 300: sys.exit('the notes: one line, 300 characters at most')
     new = 0
     names = {}
@@ -321,7 +583,7 @@ def stage(notes, build, name, with_screen=True):
     for files in (tf, scf):
         for b in files.values(): new += put_blob(b)[1]
     d = {'name': name, 'date': datetime.date.today().isoformat(), 'notes': notes, 'base': BASE,
-         'teensy': {'version': tv, 'file': names['teensy'], 'size': len(tp), 'crc': f'{crc(tp):08X}'},
+         'teensy': {'version': tv, 'file': names['teensy'], 'size': len(tp), 'crc': f'{crc(tp):08X}', 'source': tsource},   # (source: release.json only - teensy_version_checked; the screen reads release.txt, which names its own keys)
          'teensy_files': {'file': names['teensy_list'], 'size': len(list_text(tf)), 'crc': f'{crc(list_text(tf)):08X}', 'count': len(tf), 'bytes': sum(map(len, tf.values()))},
          'screen_files': {'file': names['screen_list'], 'size': len(list_text(scf)), 'crc': f'{crc(list_text(scf)):08X}', 'count': len(scf), 'bytes': sum(map(len, scf.values()))}}
     if with_screen:
@@ -373,6 +635,7 @@ def recent_text():
     return t + 'end=1\n', n
 
 def write_release(d, history=True):
+    release_folder_checked(d['name'])                        # B211 (the fifteenth review): asked again HERE, where the folder is written - whoever calls
     text = release_text(d)
     os.makedirs(os.path.join(REL, 'v', slug(d['name'])), exist_ok=True)
     open(os.path.join(REL, 'v', slug(d['name']), 'release.txt'), 'w').write(text)
@@ -431,6 +694,11 @@ def staged():
     if d.get('end') != '1': sys.exit('the staged description is incomplete')
     return text, d
 
+def staged_has_screen():
+    """The staged release holds a screen's firmware (not: the Teensy's alone). Asked by gate(), softly - publish() has read the description already."""
+    try: return any(l.startswith('screen.file=') for l in open(os.path.join(REL, 'latest.txt')).read().splitlines())
+    except OSError: return False
+
 def wanted(d):
     """Every file of the staged release: {name on the site: bytes}."""
     out = {}
@@ -464,16 +732,50 @@ def fetch(conn, path):
             conn[0] = None; last = e
     return 0, str(last).encode()
 
+def test_passed(returncode, output):
+    """B211 (the fifteenth review): A TEST THAT DID NOT RUN HAS NOT PASSED. The scenes that run the Sub-trim page's REAL file need the screen project's
+       script interpreter beside this repository; without it they said "ALL GOOD" and ended with 0 - and this gate read the 0. A scene that cannot
+       run says "NOT RUN: ..." (dev/test_wholepage hands the line on, and still ends with 0 for whoever has only this repository): here that is a
+       refusal."""
+    return returncode == 0 and re.search(r'^\s*NOT RUN\b', output, re.M) is None
+
+def gate_tests():
+    """the main board's own host tests: dev/test_*/test_*.py - and dev/test_release_gate.py, this script's own, which stands beside the folders
+       (B211, the fifteenth review: the pattern alone never ran it)"""
+    import glob
+    return sorted(glob.glob(os.path.join(HERE, 'test_*', 'test_*.py'))) + [os.path.join(HERE, 'test_release_gate.py')]
+
+TEST_SWITCHES = (   # EVERY VARIABLE A TEST READS FROM THE ENVIRONMENT - ONE LIST. A new one goes here (dev/test_release_gate.py finds a name that is not on it).
+    'LDRC_RUNS_ONLY',                                     # test_wholepage (scene_subtrim, scene_trims_box): the source checks are set aside
+    'LDRC_NEW_PAGE32',                                    # test_wholepage (scene_subtrim): another file is taken as this release's Sub-trim page
+    'RB_RESCUE_H', 'RB_TRAVEL_H',                         # test_wholepage (scene_rescue_switch, scene_stale_block, scene_travel_dir): another header than the tree's is run
+    'TXV1B_TC', 'V2_SCREEN',                              # test_banks, test_curve_marker, test_curve_points, test_curve_type, test_models_file: ANOTHER tree is tested
+    'NO_SSD',                                             # test_tools: a made-up backup in place of the real one that lies beside it
+    'ELRS_SIM_KEEP', 'RC_SCENARIO', 'RC_DOTS', 'WORDS',   # test_elrs, test_rates, test_tools: a file is written where the variable says
+    'A16_TELL', 'ETA_TRACE')                              # test_wholepage (scene_subtrim_door_storm), the screen project's hmi/test_update: more is printed
+
+def test_env():
+    """B211 (the sixteenth review, reviewer A's finding 3): A VARIABLE LEFT IN THE SHELL SWITCHED THE GATE'S CHECKS OFF WITHOUT A WORD. The tests have
+       switches of their own, for the work on them (TEST_SWITCHES): LDRC_RUNS_ONLY sets the Sub-trim scenes' source checks aside, TXV1B_TC makes five
+       tests look at another tree. gate() handed the shell's environment on: with LDRC_RUNS_ONLY=1 left set, a tree with a rule taken out that only
+       a source check holds passed - "ALL GOOD", and not a line about checks set aside.
+       As build_env does for the builds: no such variable reaches a test the gate runs. It says which it left out - their names, not what they held."""
+    left = sorted(k for k in os.environ if k.upper() in TEST_SWITCHES)
+    if left: print('  (NOT passed on to the tests: ' + ', '.join(left) + ' - the gate runs every check, and on this tree)')
+    return {k: v for k, v in os.environ.items() if k.upper() not in TEST_SWITCHES}
+
 def gate():
     """The screen's own parser reads the staged release (the host tests of the screen's project): what it refuses is not published.
-       First the main board's own host tests (dev/test_*/test_*.py, B61): a failing one stops the release."""
-    import glob
-    for t in sorted(glob.glob(os.path.join(HERE, 'test_*', 'test_*.py'))):
-        r = subprocess.run([sys.executable, t], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+       First the main board's own host tests (gate_tests, B61): one that fails - or did not run (test_passed) - stops the release.
+       None of them is handed a switch of the tests' own that was left in the shell (test_env)."""
+    env = test_env()
+    with_screen = staged_has_screen()   # (a release of the Teensy's firmware alone builds no screen: what --gate asks of the folder the screen is built in is not asked of it)
+    for t in gate_tests():
+        r = subprocess.run([sys.executable, t] + (['--gate'] if with_screen and os.path.basename(t) == 'test_release_gate.py' else []), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)   # (--gate: what that test passes over in brackets beside a working copy is NOT RUN at the gate)
         print('  ' + r.stdout.strip().replace('\n', '\n  '))
-        if r.returncode: sys.exit(f'REFUSING TO PUBLISH: {os.path.basename(t)} failed (above).')
+        if not test_passed(r.returncode, r.stdout): sys.exit(f'REFUSING TO PUBLISH: {os.path.basename(t)} failed, or a part of it did not run (above).')
     test = os.path.join(SCREEN, 'hmi', 'test_update', 'run.sh')
-    r = subprocess.run([test, '--release', REL], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    r = subprocess.run([test, '--release', REL], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
     print('  ' + r.stdout.strip().replace('\n', '\n  '))
     if r.returncode: sys.exit('REFUSING TO PUBLISH: the screen would not accept this release (above).')
 
@@ -629,10 +931,11 @@ def main():
     ap.add_argument('text', nargs='*', default=[])
     ap.add_argument('--no-build', action='store_true'); ap.add_argument('--name', default=None)
     ap.add_argument('--without-screen', action='store_true', help='a release that leaves the screen\'s firmware as it is')
+    ap.add_argument('--teensy-source-unchanged', action='store_true', help='(once, for a release of the screen alone) the Teensy\'s source has not changed since the earlier release with this Teensy version')
     a = ap.parse_intermixed_args()
     if a.what == 'stage':
         if len(a.text) != 1: sys.exit('say what is new: dev/release_v1b.py stage "what is new"')
-        stage(a.text[0], not a.no_build, a.name, not a.without_screen)
+        stage(a.text[0], not a.no_build, a.name, not a.without_screen, a.teensy_source_unchanged)
     elif a.what == 'publish': publish()
     elif a.what == 'status': status()
     elif a.what == 'purge': purge(a.text)

@@ -39,6 +39,19 @@ prog = r'''
 #include <sstream>
 #define DMAMEM
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 #define PROGMEM
 #define PSTR(s) (s)
 #define WHAHWHAHMSG 1
@@ -58,9 +71,12 @@ static std::map<std::string, uint32_t> finger;   // what the screen answers to "
 static int boxes = 0, confirms = 0, sounds = 0, rfStarts = 0; static std::string lastBox, lastQuestion; static bool confirmAnswer = true, saveAnswer = true;
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void SendText(char *n, char *t) { fields[n] = t; }
-static void SendValue(char *n, int v) { vals[n] = v; }
+static void SendValue(char *n, int v) { vals[n] = v; auto it = finger.find(n); if (it != finger.end()) it->second = (uint32_t) v; }   // (the fifteenth review: a slider or the switch WRITTEN goes there on the screen - what it is asked next is that)
 static uint32_t GetValue(char *n) { auto it = finger.find(n); return it == finger.end() ? 65535 : it->second; }
 static void MsgBox(char *, char *msg) { RfLeaveAfterSave = false; ++boxes; lastBox = msg; }
+static bool RfHomeNotRead = false; static bool rfMayFlyNow = false; static int quietSaid = 0;   // (B211, the sixteenth review: PipeHttp.h RfMayFly / RfSayQuietly / RfBoxOrQuiet stood in for - no box that waits while the model may fly)
+static bool RfMayFly() { return rfMayFlyNow; } static void RfSayQuietly(const char *) { ++quietSaid; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { if (RfMayFly()) { RfLeaveAfterSave = false; RfSayQuietly(msg); return; } MsgBox((char *)page, (char *)msg); }
 static bool GetConfirmation(char *, char *q) { ++confirms; lastQuestion = q; if (!confirmAnswer) RfLeaveAfterSave = false; return confirmAnswer; }
 static bool GetSaveOrDiscard(char *, char *q) { lastQuestion = q; return saveAnswer; }
 static void PlaySound(int) { ++sounds; }
@@ -310,6 +326,18 @@ int main(int argc, char **argv) {
     model(); open(); slide(4, 8); saveAnswer = true; confirmAnswer = false; fcLog.clear(); EndEasyView(); CHECK(CurrentView == EASYVIEW && fcLog.empty() && !RfLeaveAfterSave);
     // OK with nothing moved: straight back to the menu
     model(); open(); EndEasyView(); CHECK(CurrentView == ROTORFLIGHTVIEW);
+    // (the fifteenth review) OK ASKS EVERY SLIDER FIRST, while edits wait. A slider moved while a save ran is not taken (EzSlider) and - that save having
+    // failed - stays where he left it on the screen; the Save button asks them all, but OK's "Save now?" drew the page from what was in hand first
+    // (EzSaveNow: that slider back to its earlier place) and saved THAT as the page closed
+    model(); open(); finger.clear(); slide(4, 8); finger["s4"] = 8;                                 // the Tail slider to +10 %: in hand, and on the screen
+    finger["s3"] = 9; finger["s0"] = 6; finger["s1"] = 10; finger["s2"] = 10; finger["sw"] = 1;       // ... and the Cyclic slider at +15 % on the screen only (moved while a save ran: no word taken)
+    { const uint32_t s0 = finger["s0"], s1 = finger["s1"], s2 = finger["s2"]; (void) s0; (void) s1; (void) s2;
+      for (int k = 0; k < 3; ++k) { char n[4] = { 's', (char) ('0' + k), 0, 0 }; finger[n] = (uint32_t) (EzPos[k] / 5); } }   // (the other three as they are in hand)
+    finger["sw"] = EzSpool ? 1 : 0;
+    saveAnswer = true; confirmAnswer = true; fcLog.clear(); EndEasyView();
+    CHECK(EzPos[3] == 15 && EzMoved[3] && CurrentView == EASYVIEW && RfLeaveAfterSave);               // taken BEFORE the question - and the page drawn from that
+    run(); CHECK(CurrentView == ROTORFLIGHTVIEW && word(pid[1], 0) == 55 && word(pid[1], 4) == 60 && word(pid[1], 8) == 64);   // what the page showed is what was saved: Cyclic +15 %, Tail +10 %
+    finger.clear();
 
     // 14. the bank switch moved with a slider moved: said, and the new bank read
     model(); open(); slide(3, 10); boxes = 0; Bank = 3; fcPid = 2; fcLog.clear(); EasyBankChanged(); run();

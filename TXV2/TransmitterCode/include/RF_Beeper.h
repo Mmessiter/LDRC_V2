@@ -45,6 +45,8 @@ FLASHMEM static void BpHead()
 FLASHMEM static void BpShow()
 {
     if (CurrentView != BEEPERVIEW || !BpHave) return;
+    if (RfKeepTyped) return; // B211 (the eleventh review): every part this draws is the pilot's until Save takes it - the name, the ten switches (the screen turns
+                             // them at the touch), the tone: left as the screen has them (Nextion.h, WHAT THE PILOT TYPED STAYS ON THE PAGE)
     SendText((char *)"tn0", BpNameWant);
     const uint32_t off = RdU32(BpWant, 0), boff = RdU32(BpWant, 5);
     char n[6];
@@ -55,6 +57,8 @@ FLASHMEM static void BpShow()
 FLASHMEM static void BpGather() // the page into BpWant / BpNameWant (an unanswered box: GetValue / GetText mark it missed)
 {
     if (CurrentView != BEEPERVIEW || !BpHave) return;
+    KEEP_WHOLE(want, BpWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    KEEP_WHOLE(name, BpNameWant);
     char t[BP_NAME_MAX + 8] = "";
     GetText((char *)"tn0", t, sizeof(t) - 1);
     BpNameFrom((const uint8_t *)t, (int)strlen(t), BpNameWant);
@@ -76,7 +80,7 @@ FLASHMEM static void BpGather() // the page into BpWant / BpNameWant (an unanswe
     BpPutU32(BpWant, 5, boff);
     BpWant[4] = (uint8_t)FieldNumber("tn1", 1, 5);
 }
-FLASHMEM static void BpFail(const char *what) { BpStep = BP_IDLE; FsFail("page BeeperView", what); BpHead(); BpShow(); }
+FLASHMEM static void BpFail(const char *what) { BpStep = BP_IDLE; FsFail("page BeeperView", what); FsShowKeepingTyped(BpHead, BpShow); }   // (B211, the fourteenth review: a save runs for seconds and he types meanwhile - what was typed stays, as behind BbFail and CalFail)
 FLASHMEM static void BpWriteName()
 {
     uint8_t d[BP_NAME_MAX];
@@ -88,12 +92,12 @@ FLASHMEM static void BpWriteName()
 FLASHMEM void BeeperPoll()
 {
     if (CurrentView != BEEPERVIEW) { BpStep = BP_IDLE; BpMsgUntil = 0; return; }
-    if (BpMsgUntil && (int32_t)(millis() - BpMsgUntil) >= 0) { BpMsgUntil = 0; FsBusy(""); BpShow(); }
+    if (BpMsgUntil && (int32_t)(millis() - BpMsgUntil) >= 0) { BpMsgUntil = 0; FsBusy(""); }   // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     if (BpStep == BP_IDLE) return;
     if (!PipeReplyReady(BpReq))
     {
         if (!PipeReplyLate()) return;
-        BpFail("No answer");
+        BpFail(RfNoAnswerWords(BpStep >= BP_WRITE_NAME && BpStep <= BP_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -122,11 +126,11 @@ FLASHMEM void BeeperPoll()
         BpReq = MspAsk(185, BpWant, BP_BYTES); BpStep = BP_WRITE;
         return;
     case BP_WRITE:
-        if (!ok) { BpFail("Not written (the beeper)"); return; }
+        if (!ok) { BpFail("PART WRITTEN, NOT STORED (the beeper failed) - try again, or switch the model off and on"); return; }
         BpReq = MspAsk(250, nullptr, 0); BpStep = BP_STORE;
         return;
     case BP_STORE:
-        if (!ok) { BpFail("Not stored"); return; }
+        if (!ok) { BpFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         BpReq = MspAsk(10, nullptr, 0); BpStep = BP_VERIFY_NAME;
         return;
     case BP_VERIFY_NAME:
@@ -183,6 +187,7 @@ FLASHMEM void EndBeeperView() // 233: OK
     if (Bp_Was_Edited)
     {
         BpGather();
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!RfSaveFirst("page BeeperView", "The edited beeper and name are", BpSaveNow, EndBeeperView, &Bp_Was_Edited)) return;
     }
     Bp_Was_Edited = false;
@@ -197,7 +202,7 @@ FLASHMEM void BeeperWasEdited() // 235: a switch, the name or the tone
 FLASHMEM void SaveBeeper() // 234
 {
     if (!BpHave || BpStep != BP_IDLE) return;
-    if (FsRefused("page BeeperView", false)) { BpHead(); BpShow(); return; }
+    if (FsRefused("page BeeperView", false)) { FsShowKeepingTyped(BpHead, BpShow); return; }   // (B211, the eleventh review: the name typed, the switches turned stay - they have not been taken yet)
     RfGatherStart();
     BpGather();
     if (RfFieldsMissed("page BeeperView")) return;   // a box unanswered: nothing written

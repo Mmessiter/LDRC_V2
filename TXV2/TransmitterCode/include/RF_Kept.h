@@ -15,6 +15,12 @@
 // global kind uses bit 0), [7] a sum. A record from before B180 has no mark - the bytes there are junk or zero - so nothing is
 // kept until the pilot keeps it again, with the model connected or with its backup loaded (which is where the pages read from
 // then anyway). A new model (SetDefaultValues) starts with no mark. Nothing in the record's layout changes.
+//
+// B211 (the fourteenth review; B180 to B210 had it): THE RECORD HOLDS THESE COPIES FOR BANKS 1 TO 4 ONLY (SDcard.h writes and reads four of each; its
+// block for banks 5 and 6 holds trims, speeds, expo and curves). In memory they are six banks wide, and the mark has a bit a bank - so a copy of
+// bank 5 "kept" was marked on the card and was not there: after the next switch-on the page showed 0 0 0 as the kept copy, with no "No copy kept"
+// line; and in one session, model A's bank 5 kept and model B read, B showed A's numbers as its own. Until the record has a place for them, NO COPY
+// OF BANKS 5 AND 6 IS MARKED, SHOWN OR SAID "KEPT" (KeptHasPlace): the pages say so, and a mark bit of theirs found on a card is not believed.
 // *********************************************************************************************
 
 #ifndef RF_KEPT_H
@@ -34,11 +40,13 @@ static inline uint8_t KeptSum()
     return s;
 }
 static inline bool KeptMarked() { return Saved_GOV_Config_Values[0] == KEPT_MARK && Saved_GOV_Config_Values[7] == KeptSum(); }
-static inline uint8_t KeptBit(uint8_t kind, uint8_t bank) // 0..5, or 7 for a bank that is none
+// (KEPT_BANKS_ON_CARD: 1Definitions.h - 4, as SDcard.h's loops have it; dev/test_wholepage/scene_kept_copies holds the two together)
+static inline bool KeptHasPlace(uint8_t bank) { return bank >= 1 && bank <= KEPT_BANKS_ON_CARD; } // the record has a place for that bank's copies
+static inline uint8_t KeptBit(uint8_t kind, uint8_t bank) // 0..3, or 7 for a bank that has no place (none; or 5 and 6: B211, above)
 {
     if (kind == KEPT_GOV_GLOBAL)
         return 0;
-    return (bank >= 1 && bank <= 6) ? (uint8_t)(bank - 1) : 7;
+    return KeptHasPlace(bank) ? (uint8_t)(bank - 1) : 7;
 }
 // True when that copy was kept since B180 (bank 1..6; the global kind takes any bank)
 bool KeptCopy(uint8_t kind, uint8_t bank)
@@ -74,7 +82,9 @@ void ClearKept()
 const char *KeptNoneText(uint8_t bank)
 {
     static char line[80];
-    if (bank)
+    if (bank > KEPT_BANKS_ON_CARD)
+        snprintf(line, sizeof(line), "The card keeps copies of banks 1 to 4 only (bank %u: connect the model)", (unsigned)bank); // B211
+    else if (bank)
         snprintf(line, sizeof(line), "No copy kept on the card for bank %u (Keep a copy with the model on)", (unsigned)bank);
     else
         snprintf(line, sizeof(line), "No copy kept on the card (Keep a copy with the model on)");

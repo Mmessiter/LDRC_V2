@@ -13,6 +13,20 @@ prog = r'''
 #include <cstring>
 #include <cstdint>
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+static void RfGatherStart() {} static bool RfFieldsMissed(const char *) { return WorkLostABox(); }   // (the pair a Save asks with: Nextion.h)
+#endif
 #include <string>
 #include <vector>
 #include <map>
@@ -33,9 +47,14 @@ static void SendValue(char *n, int v) { fields[n] = v ? "Yes" : "No"; }   // (a 
 static void GetText(char *n, char *buf, int max) { strncpy(buf, fields[n].c_str(), max); buf[max] = 0; }
 static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
 static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; RfLeaveAfterSave = false; }   // (B102: as Utilities.h)
+static bool RfHomeNotRead = false; static bool rfMayFlyNow = false; static int quietSaid = 0;   // (B211, the sixteenth review: PipeHttp.h RfMayFly / RfSayQuietly / RfBoxOrQuiet stood in for - no box that waits while the model may fly)
+static bool RfMayFly() { return rfMayFlyNow; } static void RfSayQuietly(const char *) { ++quietSaid; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { if (RfMayFly()) { RfLeaveAfterSave = false; RfSayQuietly(msg); return; } MsgBox((char *)page, (char *)msg); }
 static bool GetConfirmation(char *page, char *prompt) { if (!confirmAnswer) RfLeaveAfterSave = false; return confirmAnswer; }   // (B102: a No keeps the page, as Utilities.h)
 static void PlaySound(int) { ++sounds; }
-static int rfStarts = 0; static void RotorFlightStart() { ++rfStarts; }
+#define ROTORFLIGHTVIEW 47
+static bool menuTakesView = false, menuShut = false;   // (the fifteenth review: the menu opened is the menu's view - asked for by the parts that look; shut: the motor switch on)
+static int rfStarts = 0; static void RotorFlightStart() { if (menuShut) return; ++rfStarts; if (menuTakesView) CurrentView = ROTORFLIGHTVIEW; }
 static bool RfNeedsModel(char *, int) { return false; }
 static bool ModelSeemsArmed(char *, int) { return false; }
 static bool RfPipeBlocked(char *, int) { return false; }
@@ -163,6 +182,35 @@ int main() {
     // 8. a dynamic range upside down is refused before anything goes out
     openPage(BOTH); fields["tn9"] = "300"; fields["tn10"] = "200"; FilterWasEdited(); reqs.clear(); boxes = 0; SaveFilters();
     CHECK(reqs.empty() && boxes == 1 && lastBox.find("Not saved") == 0);
+    // ---------------------------------------------------------------- B211 (the fifteenth review; released code had it): A READ THAT FAILS LEAVES NOTHING
+    // IN HAND, AND THE PAGE IS LEFT. FltHave was set by the first read that worked and never cleared. Model A's filters and features were read; model
+    // B's first question failed: a toggled Enable then wrote A's whole feature mask into B (MSP 37) and restarted its flight controller.
+    openPage(BOTH); CHECK(FltHave);
+    menuTakesView = true; CurrentView = FILTERVIEW; reqs.clear(); boxes = 0; rfStarts = 0; StartFilterView(); CHECK(!FltHave && reqs.size() == 1 && reqs[0].fn == 36);
+    FilterRpmEnableTapped(); FilterDynNotchEnableTapped(); FilterLpf2Tapped();                      // taps while the read runs: nothing - what is in hand is the model's before
+    CHECK(reqs.size() == 1 && !Flt_Was_Edited);
+    strcpy(PipeRepBody, "the receiver did not answer"); reply(503, {}); FilterPoll();
+    CHECK(boxes == 1 && lastBox.find("Could not read the features") == 0 && !FltHave && FltStep == FLT_IDLE && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW);   // THE PAGE IS LEFT
+    reqs.clear(); SaveFilters(); FilterRpmEnableTapped(); SaveFilters(); CHECK(reqs.empty());         // (and nothing writes: nothing is in hand)
+    // ... the SECOND question fails (the features read, the filters not): the same - and the features just read are not turned over by a tap in between
+    CurrentView = FILTERVIEW; reqs.clear(); boxes = 0; rfStarts = 0; StartFilterView(); reply(200, feat(0)); FilterPoll(); CHECK(reqs.size() == 2 && reqs[1].fn == 92 && !FltHave && FeatWant == 0);
+    FilterRpmEnableTapped(); FilterDynNotchEnableTapped(); CHECK(FeatWant == 0 && !Flt_Was_Edited);
+    reply(503, {}); FilterPoll(); CHECK(boxes == 1 && lastBox.find("Could not read the filters") == 0 && !FltHave && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW);
+    reqs.clear(); SaveFilters(); CHECK(reqs.empty());
+    // ... the menu will not open: the page is put up again and says that it was not read; nothing in hand
+    menuShut = true; CurrentView = FILTERVIEW; reqs.clear(); boxes = 0; rfStarts = 0; cmds.clear(); StartFilterView(); reply(503, {}); FilterPoll();
+    { int pages = 0; for (auto &c : cmds) pages += c == "page FilterView"; CHECK(boxes == 1 && !FltHave && rfStarts == 0 && CurrentView == FILTERVIEW && pages == 2 && fields["busy"] == "NOT READ. Safety on, motor off - then OK."); }
+    reqs.clear(); FilterWasEdited(); SaveFilters(); CHECK(reqs.empty()); Flt_Was_Edited = false; menuShut = false;
+    // ... a SAVE that fails stays on the page; the next visit's read works: the page as that flight controller has it
+    openPage(BOTH); CHECK(FltHave && CurrentView == FILTERVIEW); fields["tn2"] = "120"; FilterWasEdited(); confirmAnswer = true; reqs.clear(); boxes = 0; rfStarts = 0; SaveFilters();
+    CHECK(reqs.size() == 1 && reqs[0].fn == 93); reply(503, {}); FilterPoll();
+    CHECK(boxes == 1 && lastBox.find("Not written") == 0 && FltHave && rfStarts == 0 && CurrentView == FILTERVIEW && Flt_Was_Edited && fields["tn2"] == "120");
+    menuTakesView = false; Flt_Was_Edited = false;
+    // B10 (the sixteenth review): NOTHING IN HAND - nothing is an edit (OK asked "Save now?" for it, the save returned at once), and a Save refused
+    // for it does not leave "close when saved" standing for a later Save
+    { const bool h = FltHave, e = Flt_Was_Edited; FltHave = false; Flt_Was_Edited = false; FilterWasEdited(); CHECK(!Flt_Was_Edited);
+      RfLeaveAfterSave = true; SaveFilters(); CHECK(!RfLeaveAfterSave);
+      FltHave = true; FilterWasEdited(); CHECK(Flt_Was_Edited); FltHave = h; Flt_Was_Edited = e; }
     printf("test_filters: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

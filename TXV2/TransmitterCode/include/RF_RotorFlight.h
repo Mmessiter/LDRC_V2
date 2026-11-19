@@ -96,17 +96,47 @@ FLASHMEM void RotorFlightEnd() // OK on the menu: to the front page (B56: the fi
     ZeroGapStats();          // clear the comms gaps: editing Rotorflight parameters may have created misleading ones (B155: the gaps only - the lost packets and the rest stay)
     GotoFrontView();
 }
-FLASHMEM void RFSettingsGather() // B99: the settings page's fields read back and the model saved (its OK, and the way on to Model basics)
+FLASHMEM bool RFSettingsGather() // B99: the settings page's fields read back and the model saved (its OK, and the way on to Model basics). true: taken and saved
 {
-    char temp[15];
+    // B211 (15 Nov 2026, found by the tenth review's check of what a gather writes): ALL THREE BOXES ARE ASKED BEFORE ANY IS TAKEN.
+    // Each field was looked at for itself - a ratio above 0, digits only, 0 or 1 - so "no answer" changed none of them; but the
+    // first could be taken and the next not (the gear ratio new, the arming channel as it was), the model saved so, and the page
+    // left with no more than a sound. Now a box with no answer takes nothing: the box "The screen did not answer ..." says so,
+    // and whoever asked stays on this page (Nextion.h: A PAGE'S FIELDS ARE TAKEN WHOLE, OR NOT AT ALL).
+    char ratio[15], temp[15];
+    RfGatherStart();
+    GetText((char *)"Ratio", ratio, sizeof(ratio));  // ClaudeFix-2-7-2026
+    TextMustBeNumber("Ratio", ratio); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
+    GetText((char *)"Arming", temp, sizeof(temp));   // ClaudeFix-2-7-2026
+    TextMustBeNumber("Arming", temp);
+    const uint32_t sw = GetValue((char *)"sw0");
+    if (RfFieldsMissed("page RFSetupView"))
+        return false;
     // Nextion serial can carry stale bytes after heavy MSP traffic, so GetText may fail silently.
     // Only overwrite the globals if the read-back parses to a plausible value — otherwise keep the current one.
-    GetText((char *)"Ratio", temp, sizeof(temp));  // ClaudeFix-2-7-2026
-    float newRatio = atof(temp);
+    float newRatio = atof(ratio);
+    bool ratioFits = newRatio > 0.0f && newRatio < 1000.0f;
+    if (ratioFits)
+    { // (the fifteenth review) ... AND AS THIS PAGE WILL SHOW IT - to two places (StartRFSettingsView) - it must fit too: "999.999" was taken and shown as
+      // "1000.00", "0.004" as "0.00", and the next OK on the untouched page was refused for a number he had not typed
+        char as[16];
+        snprintf(as, sizeof(as), "%1.2f", newRatio);
+        const float shown = (float)atof(as);
+        ratioFits = shown > 0.0f && shown < 1000.0f;
+        if (ratioFits)
+            newRatio = shown; // (the sixteenth review) ... AND IT IS KEPT AS SHOWN: "0.0051" was kept as typed and shown as 0.01 - the next OK kept 0.01
+    }
+    if (ratio[0] && !ratioFits)
+    { // B211 (the fourteenth review; the released code had it): THE PAGE TAKES THE RATIOS THE CARD KEEPS. It took any ratio above 0 - and the card's
+      // reader (SDcard.h) makes 10.3 of anything from 1000 up: "1030" typed for 10.30 was used today, and was 10.3 at the next switch-on, without a
+      // word. Nothing is taken, the page stays, and the box says why.
+        PlaySound(WHAHWHAHMSG);
+        MsgBox((char *)"page RFSetupView", (char *)"The gear ratio must be more than 0\r\nand less than 1000 (10.3 is usual).\r\nNOTHING was changed.");
+        return false;
+    }
     if (newRatio > 0.0f)
-        GearRatio = newRatio;
+        GearRatio = newRatio; // (an empty box: the ratio as it was)
 
-    GetText((char *)"Arming", temp, sizeof(temp));  // ClaudeFix-2-7-2026
     // ClaudeFix-2-7-2026 Digits ONLY: a desynced read-back once returned the Ratio box's "10.30"
     // here, and atoi turned it into a perfectly plausible channel 10. A real
     // channel number can never contain a dot (GetText is fixed too, but this
@@ -130,16 +160,15 @@ FLASHMEM void RFSettingsGather() // B99: the settings page's fields read back an
     else if (armDigitsOnly && newArming > 0 && newArming <= CHANNELSUSED)
         ArmingChannel = (uint8_t)newArming;
 
-    {
-        uint32_t sw = GetValue((char *)"sw0");
-        if (sw <= 1)
-            LinkRatesToBanks = (bool)sw; // ClaudeFix-2-7-2026 ignore a comms-error 65535 (would have saved as 'true')
-    }
+    if (sw <= 1)
+        LinkRatesToBanks = (bool)sw; // ClaudeFix-2-7-2026 ignore a comms-error 65535 (would have saved as 'true')
     SaveOneModel(ModelNumber); // save the model including gear ratio and arming channel
+    return true;
 }
 FLASHMEM void EndRFSettingsView() // OK on the settings page: the fields read back, the model saved, back to the menu
 {
-    RFSettingsGather();
+    if (!RFSettingsGather())
+        return; // B211: a box had no answer - nothing was taken, the page stays (the box said so)
     RotorFlightStart();
 }
 // **********************************************************************************************************/

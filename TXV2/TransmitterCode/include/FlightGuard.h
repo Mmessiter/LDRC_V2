@@ -324,6 +324,16 @@ bool SafetyIsDefined() { return SafetySwitch != 0; }
 bool SafetyIsOff() { return SafetyIsDefined() && !SafetyON; }
 // Malcolm's rule, in one place:
 bool RadiosMustBeOff() { return SafetyIsDefined() ? SafetyIsOff() : MotorEnabled; }
+// B211 (the fifteenth review): A LINE FOR THE LOG WAITS WHILE THE MODEL MAY FLY - AND, WITH NO SAFETY SWITCH, WHILE A MODEL IS CONNECTED AT ALL. With no
+// safety switch the radios' rule goes by the motor switch - and a glider on the glide, a helicopter in an autorotation, has that OFF: the screen's
+// own lines and this release's notes went to the card at once (an open, a write and a close: tens of milliseconds with no packet). A safety switch
+// that is ON is the pilot's own word that the model is on the ground: written at once, as before. (What waits is written when the model has gone,
+// at the safety's change, at power-off: LogFiles.h FlushDeferredLog.)
+#ifdef ELRS_TEST
+bool LogMustWait() { return RadiosMustBeOff() || (!SafetyIsDefined() && ((BoundFlag && ModelMatched) || ElrsFlies())); }   // (the sixteenth review: ... or flown by the module - a test build's)
+#else
+bool LogMustWait() { return RadiosMustBeOff() || (!SafetyIsDefined() && BoundFlag && ModelMatched); }
+#endif
 
 // bit 0 (1):  the motor is enabled
 // bit 1 (2):  the safety is off (a safety switch is defined, and it is off)
@@ -444,6 +454,9 @@ void TellScreen(bool evenIfUnchanged)
 #define FLIGHT_RESTART_LONGEST_MS 60000UL
 #define FLIGHT_STAMP_EVERY_MS 2000
 bool FlightRestart = false;
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: the stamp said that the ELRS module had said the switch mode that carries channel 5 (ElrsCrsf.h)
+bool FlightRestartElrsCarried = false;
+#endif
 static bool FlightRestartArmed = false;  // (the stamp's: the model was armed)
 static uint32_t FlightRestartAt = 0, FlightRestartQuiet = 0;
 static bool FlightRestartToLog = false;
@@ -486,6 +499,9 @@ FLASHMEM void FlightRestartCheck() // setup(): after ReadWhyOff and CheckTheCloc
         return;
     FlightRestart = true;
     FlightRestartArmed = (b[5] & 1) != 0;
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: ... and whether the ELRS module had said the switch mode that carries channel 5 (ElrsCrsf.h ElrsBegin: such a model flies on)
+    FlightRestartElrsCarried = (b[5] & 2) != 0;
+#endif
     FlightRestartAt = millis();
     FlightRestartQuiet = now - stamp;
     FlightRestartToLog = true;
@@ -528,6 +544,10 @@ void FlightStampTick() // the once-a-second round
         if (now < 1704067200UL)
             return; // (not set from the chip: 1 Jan 2024. No stamp, no restart in flight: the ground's rules)
         uint8_t b[6] = {FLIGHT_STAMP_MAGIC, (uint8_t)now, (uint8_t)(now >> 8), (uint8_t)(now >> 16), (uint8_t)(now >> 24), (uint8_t)(Armed ? 1 : 0)};
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: the stamp's second bit - an ELRS model is flying and its module has said the switch mode that carries channel 5 (ElrsCrsf.h)
+        if (ElrsModuleCarries())
+            b[5] |= 2;
+#endif
         if (ClockRam(FLIGHT_STAMP_REG, b, 6, true))
         {
             FlightStampOnChip = true;

@@ -54,7 +54,15 @@ FLASHMEM void ShowGOVConfigMsg(const char *msg, uint16_t Colour)
 // ====================================================
 FLASHMEM void AddWords() // Add in the text words to describe the meaning of numeric config values, so user doesn't have to keep the manual open
 {
-    uint8_t temp = GetValue((char *)"n14"); // Current governor mode
+    // B211 (the eleventh review): the page's own timer asks for these words twice a second. While the screen cannot be asked (it owes an answer,
+    // it has started again, a question is up) each asking was "a box with no answer" - the sound and a line in the log, twice a second; and no
+    // answer (65535) was written up as a mode: "0 - 4 only!". Not asked then; and with no answer the words stay as they are.
+    if (BoxesHaveNoPage())
+        return;
+    const uint32_t mode = GetValue((char *)"n14"), type = GetValue((char *)"n28"); // Current governor mode, current throttle type
+    if (mode == 65535 || type == 65535)
+        return;
+    const uint8_t temp = (uint8_t)(mode > 255 ? 255 : mode), temp1 = (uint8_t)(type > 255 ? 255 : type);
     static uint8_t last_temp = -1;
     static uint8_t last_temp1 = -1;
 
@@ -67,7 +75,6 @@ FLASHMEM void AddWords() // Add in the text words to describe the meaning of num
         last_temp = temp;
     }
 
-    uint8_t temp1 = GetValue((char *)"n28"); // Current throttle type
     if (temp1 != last_temp1)
     {
         if (temp1 < 3)
@@ -131,6 +138,7 @@ FLASHMEM void GovCfgAskValues()
 {
     if (CurrentView != RFGOVERNORVIEW_GLOBAL) { BlockBankChanges = false; return; }
     GOV_Config_Send_Duration = GOV_GLOBAL_WAIT_TIME;
+    RfOtherReadsOver();                    // B211: a page's read is over when another page's begins (1Definitions.h) - the block on the bank switch is this read's now
     Reading_GOV_Config_Now = true;
     AddParameterstoQueue(SEND_GOV_CONFIG_VALUES);
     GOV_Global_Start_Time = millis();
@@ -152,6 +160,7 @@ FLASHMEM void GOVS_G_Were_Edited()
 // ====================================================
 FLASHMEM void LoadGovConfigWritePayload()
 {
+    KEEP_WHOLE(payload, GovWritePayload); // B211 (the ninth review): whole, or not at all (as LoadGovWritePayload)
     // Gov mode and Handover thr — visible, editable
     GovWritePayload[18] = (uint8_t)GetValue((char *)"n14"); // Gov mode
     GovWritePayload[19] = (uint8_t)GetValue((char *)"n15"); // Handover thr %
@@ -551,6 +560,7 @@ FLASHMEM void ShowGOV_Global_Bank()
         BlockBankChanges = true;
         ShowGOVConfigMsg((char *)"Loading config values ...", Gray);
         GOV_Config_Send_Duration = GOV_GLOBAL_WAIT_TIME; // heer
+        RfOtherReadsOver();                    // B211: (as GovCfgAskValues)
         Reading_GOV_Config_Now = true;
         AddParameterstoQueue(SEND_GOV_CONFIG_VALUES);
         GOVS_GLOBAL_Were_Edited = false;

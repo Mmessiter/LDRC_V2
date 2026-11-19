@@ -19,7 +19,7 @@
 // B140: this engine's rows are shown on the one page of RF_Jobs.h (Switches and knobs), which also keeps the head and the
 // title; the page names here are that page's (AdjustView). SwitchPoll runs its MSP state machine; the page's JobsPoll
 // sequences it with the adjustments' and ticks the live marker.
-static void JobsTitle(); static void JobsHead(); static void JobsShow();
+static void JobsTitle(); static void JobsHead(); static void JobsShow(); static void JobsBarOwn();
 
 static const int SW_SLOTS = 20;
 struct SwSlot { uint8_t perm, aux; int16_t lo, hi; };
@@ -118,6 +118,7 @@ FLASHMEM static void SwShow() // the switch job at SwAt on the page: "Does [job]
     SendCommand((char *)"bar.kind=1"); SendCommand((char *)"bar.n=3");
     snprintf(b, sizeof(b), "bar.d0=%d", s.lo); SendCommand(b); snprintf(b, sizeof(b), "bar.d1=%d", s.hi); SendCommand(b);
     SwText("bar", (char *)"|ON|");
+    JobsBarOwn();   // (B211: the bar is this board's from here - RF_Jobs.h)
     char h[100];
     if (s.perm == 0 && SwArmFrom && Sw_Was_Edited) snprintf(h, sizeof(h), "Arm moved from channel %d to %d, this model's arming channel (Settings). Save keeps it.", SwArmFrom, ch);   // B97
     else snprintf(h, sizeof(h), "%s", s.perm == 0 ? "Arm switch: its ON zone must reach 2012 us, but not 988 us." : "Drag the round ends to set where the switch turns it on.");
@@ -168,7 +169,7 @@ FLASHMEM void SwitchPoll() // the MSP state machine (B140: on the Switches and k
     if (!PipeReplyReady(SwReq))
     {
         if (!PipeReplyLate()) return;
-        SwFail("No answer", SwStep == SW_READ);
+        SwFail(RfNoAnswerWords(SwStep == SW_WRITE || SwStep == SW_STORE), SwStep == SW_READ);
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -199,13 +200,13 @@ FLASHMEM void SwitchPoll() // the MSP state machine (B140: on the Switches and k
     }
     case SW_WRITE:
         if (again) { ++SwTries; SwWriteNext(); return; }
-        if (!ok) { char w[40]; snprintf(w, sizeof(w), "Slot %d was not written", SwWriteAt + 1); SwFail(w, false); return; }
+        if (!ok) { char w[110]; snprintf(w, sizeof(w), SwWriteAt > 0 ? "Slot %d was not written - THE SLOTS BEFORE IT ARE, not stored: try again, or switch the model off and on" : "Slot %d was not written", SwWriteAt + 1); SwFail(w, false); return; }   // (the seventeenth review: what stands in the flight controller)
         SwTries = 0; ++SwWriteAt;
         SwWriteNext();
         return;
     case SW_STORE:
         if (again) { ++SwTries; SwReq = MspAsk(250, nullptr, 0); return; }
-        if (!ok) { SwFail("Not stored", false); return; }
+        if (!ok) { SwFail("Written, but NOT STORED - try again, or switch the model off and on", false); return; }
         SwTries = 0;
         SwReq = MspAsk(34, nullptr, 0); SwStep = SW_VERIFY;
         return;

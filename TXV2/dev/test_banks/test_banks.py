@@ -278,6 +278,8 @@ static uint8_t pos[9]; static uint8_t GetSwitchPosition(uint8_t n) { return n >=
 static uint8_t Bank = 1, BankSwitch = 4, Autoswitch = 1, CurrentMode = 0, ParametersToBeSentPointer = 0; static bool MotorEnabled = false, BlockBankChanges = false, SixBanks = false;
 #define NORMAL 0
 static bool CopyBankRunning() { return false; } static bool EasyHoldsBanks() { return false; } static uint32_t millis() { return 1000; }
+static bool RfSaveHoldsBank() { return false; }   // (B211, e101: RF_Verify.h - a bank page's save holds the bank switch itself; dev/test_bankblock and dev/test_savehold run the real one)
+static bool RescueHoldsBanks() { return false; }   // (B211, the sixteenth review: RF_Rescue.h - the Rescue page's save holds the bank switch; dev/test_rescuebank runs the real one with the real ReadBankSwitch)
 ''' + one_liner(sw, 'uint8_t BanksCount()') + lift('include/Switches.h', 'uint8_t BankOf123()') + one_liner(sw, 'static uint8_t UpperBank()') \
    + lift('include/Switches.h', 'void ReadBankSwitch()') + lift('include/Switches.h', 'void ReadAutoAndMotorSwitch()') + r'''
 int main()

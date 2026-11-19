@@ -48,7 +48,7 @@
 // The screen's own version. "Check for update" compares it with the release on messiter.com: a release
 // with different firmware for the screen MUST carry a different number here (TXV1B dev/release_v1b.py checks).
 #ifndef SCREEN_VERSION                                   // (the test builds of platformio.ini name themselves)
-#define SCREEN_VERSION "1.11.197"
+#define SCREEN_VERSION "1.11.198"
 #endif
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);                  // (1.11.16) the main task had 2.5 kB of its 8 to spare at the worst moment seen: room. (23 Oct 2026: outside the #ifndef, so the bench builds - which name themselves - get it too; the published ones always had it)
 constexpr int W = 800, H = 480, LCD_BL = 2, TP_SDA = 19, TP_SCL = 20;
@@ -915,6 +915,8 @@ static std::vector<BgEntry> bgCache;                       // up to 4 background
 static size_t bgCacheMax = 4;                              // (1.11.131) fewer when the firmware's code took its share of the PSRAM (setup)
 static uint32_t cmdCount = 0, badCount = 0;
 static bool touchLockout = false;                      // set on a page change: ignore touches until the finger is off
+static const uint32_t TOUCH_AFTER_PAGE_MS = 250;       // (1.11.198) a press that begins so soon after a page was put up is not for that page
+static uint32_t pageUpMs = 0;                          // ... counted from when the page is UP (the end of its load: a page a quarter of a second in coming up had no such time at all - the tenth review of the main board's B211)
 static bool touchPainted = false;                      // a touch changed the picture: show it without waiting for the frame timer
 static bool noDraw = false;                            // test: /nodraw?on=1
 // The pilot's colours for the panels and their writing (screen 1.7.0: lib/LdrcTheme, src/theme_device.h), navy and white
@@ -1120,6 +1122,46 @@ static int sysLogHook(const char *fmt, va_list ap) {
     return n;
 }
 static std::string sysLine(uint32_t i) { char b[112]; portENTER_CRITICAL(&sysMux); strlcpy(b, sysLines[i % SYS_LINES], sizeof(b)); portEXIT_CRITICAL(&sysMux); return b; }
+// (1.11.198; the main board's eleventh review, 15 Nov 2026) THE ROM'S OWN PRINTF COMES TO US TOO. The hook above takes the system's log. But some
+// code says its lines with esp_rom_printf - the Bluetooth library ("Host not enabled. Dropping the packet!", with no end; "Failed to allocate
+// buffer, retrying" every 10 ms while it lasts), the heap's own checks - and that goes straight to UART0, the wire, a character at a time, from
+// whichever task says it: past the hook, unframed, and in between the bytes of whatever the loop is answering at that moment. From setup's first
+// lines the ROM's characters are kept here instead: gathered to a line, and each line put into the ring above, begun "rom: " (GET /recent,
+// /status "sys"). None reaches the wire. (Called from any task or interrupt, the caches on or off: in RAM, a fixed buffer, the ring's own short
+// critical section when a line is whole. Two tasks saying lines at once may mix their letters - these are words for a person to read.)
+static char romLine[104]; static volatile uint8_t romLineN = 0;
+static void IRAM_ATTR romPutc(char c) {
+    if (c == '\r') return;
+    uint8_t n = romLineN;
+    if (c != '\n') {
+        if (n < sizeof(romLine) - 1) { romLine[n++] = c; romLineN = n; }
+        if (n < sizeof(romLine) - 1) return;                   // (a line that fills the buffer is put away as it stands, and the next begins)
+    }
+    if (!n) return;
+    {   // (the main board's twelfth review) A DYING LINE IS KEPT FOR THE NEXT START. The heap's own "CORRUPT HEAP: Bad head at ..." and the core dump's lines
+        // are said with this printf just before the chip restarts. The ring below does not outlive that - and the main board's log, which kept
+        // those lines when they came down the wire, would never see them again. Such a line goes into the record of the run that is ending
+        // (last_moments.h lmRomSaid, RTC memory): the next start says it in its "LDRCLOG" line. A heap's line is never written over by a core
+        // dump's. (No library call here: this may run with the flash cache off.)
+        bool heap = false, dump = false;
+        for (uint8_t i = 0; i + 7 <= n && !heap; ++i)
+            heap = romLine[i] == 'C' && romLine[i + 1] == 'O' && romLine[i + 2] == 'R' && romLine[i + 3] == 'R' && romLine[i + 4] == 'U' && romLine[i + 5] == 'P' && romLine[i + 6] == 'T';
+        for (uint8_t i = 0; i + 8 <= n && !heap && !dump; ++i)
+            dump = romLine[i] == 'o' && romLine[i + 1] == 'r' && romLine[i + 2] == 'e' && romLine[i + 3] == ' ' && romLine[i + 4] == 'd' && romLine[i + 5] == 'u' && romLine[i + 6] == 'm' && romLine[i + 7] == 'p';
+        if (heap || (dump && !lmRomSaid[0])) {
+            uint8_t k = 0;
+            for (; k < n && k < sizeof(lmRomSaid) - 1; ++k) lmRomSaid[k] = (romLine[k] >= 32 && romLine[k] < 127) ? romLine[k] : '?';
+            lmRomSaid[k] = 0;
+        }
+    }
+    portENTER_CRITICAL_SAFE(&sysMux);
+    char *line = sysLines[sysN % SYS_LINES];
+    line[0] = 'r'; line[1] = 'o'; line[2] = 'm'; line[3] = ':'; line[4] = ' ';
+    for (uint8_t i = 0; i < n; ++i) line[5 + i] = romLine[i];
+    line[5 + n] = 0; sysN = sysN + 1;
+    portEXIT_CRITICAL_SAFE(&sysMux);
+    romLineN = 0;
+}
 static std::string sysText() { std::string out; const uint32_t n = sysN; for (uint32_t i = n > SYS_LINES ? n - SYS_LINES : 0; i < n; ++i) { out += sysLine(i); out += "\n"; } return out; }
 static std::string sysLast() { const uint32_t n = sysN; return n ? sysLine(n - 1) : std::string(); }
 // 1.11.15 (Malcolm, 7 Oct: "the tx screen went blank for a moment, and I think it rebooted" - rst said 4, a panic): the
@@ -2387,7 +2429,7 @@ static void saverApply(Page &np) {
 }
 // (1.11.188) A line for the Teensy's day log ("LDRCLOG ...", B198): the heap check's verdict, the record of a restart - the one
 // log a power-off does not lose. An unframed word on the wire, as "UKRULES" is.
-static void lmTell(const std::string &line) { flushOut(); Serial.print(line.c_str()); Serial.flush(); }
+static void lmTell(const std::string &line) { flushOut(); Serial.print((line + "\n").c_str()); Serial.flush(); }   // (1.11.198: every line for the main board's log ends with a newline - a bare line that does is whole to it)
 static bool loadPage(const std::string &name) {
     auto it = pageIds.find(name); if (it == pageIds.end() || !assetsOk()) return false;
     if (lmHeapOn && !lmHeapCheck((page.name + ">" + name).c_str())) { blog("heap", lmHeapLast.substr(0, 60)); lmTell("LDRCLOG heap check failed " + lmHeapLast.substr(0, 200)); }
@@ -2505,6 +2547,7 @@ static bool loadPage(const std::string &name) {
     appearancePageLoaded();
     drawPage();
     runScript(page.evPost, "");
+    pageUpMs = millis() | 1;                               // (1.11.198) the page is up: a finger that lands in the next quarter of a second was aimed at the one that has gone (pollTouch)
     return true;
 }
 void Host::gotoPage(const std::string &name) { loadPage(name); }
@@ -2678,9 +2721,35 @@ static std::string heapByJson() {
     }
     return out + "]";
 }
+// (1.11.198) THE PAGE UNDER THE KEYBOARD. A touch on a number box puts a keyboard page up over the page the main board drew - the
+// main board is not told - and what it wrote meanwhile ("n3.val=45": no page named) was filed under the KEYBOARD's page. The
+// page came back with what it had before: a Rotorflight read that finished while a number was being typed left the last
+// visit's numbers in the boxes, and a Save then sent them (the sixth review of the main board's B211, 14 Nov 2026). The name of
+// the page a keyboard is up over ("" when none is): what the main board says without naming a page is for THAT page.
+static std::string pageUnderKeyboard() {
+    if (page.name.rfind("keybd", 0) != 0) return std::string();
+    const auto k = kept.find(page.name + ".loadpageid"); if (k == kept.end()) return std::string();
+    const auto v = k->second.ints.find("val"); if (v == k->second.ints.end()) return std::string();
+    if (v->second < 0 || v->second >= (int) pageNames.size() || pageNames[v->second].rfind("keybd", 0) == 0) return std::string();
+    return pageNames[v->second];
+}
+// (1.11.198) What the main board says at every page change and with every box it asks for since its B211 - its two markers, "which
+// page are you showing?", the session's number: not worth a place among the last twelve commands or in the bench's log, where
+// they pushed out the commands that tell what was going on.
+static bool chatter(const std::string &cmd) {
+    return cmd == "sendme" || cmd.rfind("ldrcsync=", 0) == 0 || cmd == "get ldrcsync" || cmd.rfind("ldrcup=", 0) == 0 || cmd == "get ldrcup" || cmd.rfind("ldrcech=", 0) == 0 || cmd == "get ldrcech";
+}
+// (1.11.198) "WHICH PAGE?" RIGHT BEHIND A BOX'S get SAYS THE PAGE THAT get WAS ANSWERED ON. The main board asks for a box and then for the
+// page ("get n0.val", "sendme") and takes the box's answer only when the page is the one it put up. They are two commands: a keyboard
+// of ours that CLOSED between them (the finger on its OK in that moment) left the box answered from the keyboard's page - 0 - and
+// the page's number said as the page's own: the 0 was taken, and saved (found by a storm on the Mac, the tenth review of the main
+// board's B211). The number of the page a box was answered on is kept until the next command, and a "sendme" that comes next says THAT.
+static int getAnsweredOnPage = -1;
 static void handle(const std::string &cmd) {
+    const int getPage = getAnsweredOnPage; getAnsweredOnPage = -1;   // (kept for the very next command only)
     Busy busy_(BUSY_HANDLE);
-    lmCmdNote(cmd.data(), cmd.size());                     // (1.11.191) the last twelve commands, in RTC memory
+    const bool quiet = chatter(cmd);
+    if (!quiet) lmCmdNote(cmd.data(), cmd.size());         // (1.11.191) the last twelve commands, in RTC memory
     char head[14]; { size_t i = 0; for (; i < sizeof head - 1 && i < cmd.size() && cmd[i] != '=' && cmd[i] != ' '; ++i) head[i] = cmd[i]; head[i] = 0; }
     // (1.11.152/153) by the property, not the component ("txt", "val", "page", "vis" ...: twenty names, not hundreds), and a
     // long text apart ("txt>1k": the log viewer's window of words)
@@ -2696,8 +2765,8 @@ static void handle(const std::string &cmd) {
     // kept each one WHOLE - the log viewer's window of words is 1-3 kB, a std::string slot never gives capacity back, and
     // after a scroll the ring held up to 64 x 3 kB of the chip's own RAM: the "joined but deaf" WiFi, the 12 kB heap in
     // 2.8 kB pieces, the fresh starts before a check. The first 80 characters say what the command was.
-    recent[recentN++ % 64].assign(cmd, 0, cmd.size() > 80 ? 80 : cmd.size());
-    if (cmd.rfind("Ch", 0) != 0 && cmd.rfind("J", 0) != 0 && cmd.rfind("TXBV", 0) != 0 && cmd.rfind("RXBV", 0) != 0 && cmd.rfind("vis Warning", 0) != 0) blog("<", cmd);
+    if (!quiet) recent[recentN++ % 64].assign(cmd, 0, cmd.size() > 80 ? 80 : cmd.size());
+    if (!quiet && cmd.rfind("Ch", 0) != 0 && cmd.rfind("J", 0) != 0 && cmd.rfind("TXBV", 0) != 0 && cmd.rfind("RXBV", 0) != 0 && cmd.rfind("vis Warning", 0) != 0) blog("<", cmd);
 #ifdef EMU_ECHO
     Serial.printf("[%lu:%s]\n", (unsigned long) cmdCount, cmd.c_str());
 #endif
@@ -2717,8 +2786,8 @@ static void handle(const std::string &cmd) {
         if (!loadPage(p)) badCount++;
         return;
     }
-    if (cmd.rfind("vis ", 0) == 0) { size_t c = cmd.find(','); if (c == std::string::npos) { badCount++; return; } std::string pg, nm; splitRef(cmd.substr(4, c - 4), pg, nm); host.vis(pg, nm, cmd[c + 1] != '0'); return; }
-    if (cmd.rfind("click ", 0) == 0) { size_t c = cmd.find(','); if (c == std::string::npos) { badCount++; return; } std::string pg, nm; splitRef(cmd.substr(6, c - 6), pg, nm); host.click(pg, nm, cmd[c + 1] == '1'); return; }
+    if (cmd.rfind("vis ", 0) == 0) { size_t c = cmd.find(','); if (c == std::string::npos) { badCount++; return; } std::string pg, nm; splitRef(cmd.substr(4, c - 4), pg, nm); if (pg.empty()) pg = pageUnderKeyboard(); host.vis(pg, nm, cmd[c + 1] != '0'); return; }   // (1.11.198: under a keyboard it is the page beneath that is meant - a key of the keyboard's with the same name was hidden)
+    if (cmd.rfind("click ", 0) == 0) { size_t c = cmd.find(','); if (c == std::string::npos) { badCount++; return; } std::string pg, nm; splitRef(cmd.substr(6, c - 6), pg, nm); if (pg.empty()) pg = pageUnderKeyboard(); host.click(pg, nm, cmd[c + 1] == '1'); return; }
     if (cmd.rfind("findfile ", 0) == 0) {                 // findfile "sd0/images/Yak.jpg",sys0 -> 1 if that file is on our card (as .565)
         const size_t q1 = cmd.find('"'), q2 = q1 == std::string::npos ? std::string::npos : cmd.find('"', q1 + 1);
         const size_t c = q2 == std::string::npos ? std::string::npos : cmd.find(',', q2);
@@ -2743,6 +2812,7 @@ static void handle(const std::string &cmd) {
             return;
         }
         std::string attr = ref.substr(dot + 1), pg, nm; splitRef(ref.substr(0, dot), pg, nm);
+        getAnsweredOnPage = page.id;                           // (1.11.198: above)
         if (attr == "txt") { std::string s = host.getTxt(pg, nm); std::string f = "p" + s; f += "\xFF\xFF\xFF"; Serial.write((const uint8_t *) f.data(), f.size()); sentTrace += "p\"" + s + "\" | "; }
         else { int32_t v = host.getInt(pg, nm, attr); const uint8_t f[8] = { 'q', (uint8_t) v, (uint8_t) (v >> 8), (uint8_t) (v >> 16), (uint8_t) (v >> 24), 0xFF, 0xFF, 0xFF }; Serial.write(f, 8); char b[24]; snprintf(b, sizeof(b), "q%ld | ", (long) v); sentTrace += b; }
         if (sentTrace.size() > 600) sentTrace.erase(0, sentTrace.size() - 600);
@@ -2750,7 +2820,7 @@ static void handle(const std::string &cmd) {
     }
     if (drawVerb(cmd)) return;
     if (cmd.rfind("play ", 0) == 0) { int ch = 0, id = 0, lp = 0; if (sscanf(cmd.c_str() + 5, "%d,%d,%d", &ch, &id, &lp) >= 2) host.play(id, ch, lp); return; }
-    if (cmd == "sendme") { const uint8_t f[5] = { 0x66, (uint8_t) page.id, 0xFF, 0xFF, 0xFF }; Serial.write(f, 5); return; }
+    if (cmd == "sendme") { const uint8_t f[5] = { 0x66, (uint8_t) (getPage >= 0 ? getPage : page.id), 0xFF, 0xFF, 0xFF }; Serial.write(f, 5); return; }   // (1.11.198: right behind a box's get, the page THAT was answered on)
     static const char *ignored[] = { "ref", "bkcmd", "sleep", "thup", "thsp", "cle ", "add ", "rest", "tsw ", "printh", "prints", "print ", "ussp", "delay" };
     for (const char *k : ignored) if (cmd.rfind(k, 0) == 0) return;
     size_t eq = cmd.find('='); size_t dot = cmd.rfind('.', eq);
@@ -2761,6 +2831,7 @@ static void handle(const std::string &cmd) {
     if (eq == std::string::npos || dot == std::string::npos) { badCount++; oddTrace += cmd + " | "; if (oddTrace.size() > 400) oddTrace.erase(0, oddTrace.size() - 400); return; }
     std::string attr = cmd.substr(dot + 1, eq - dot - 1), pg, nm; splitRef(cmd.substr(0, dot), pg, nm);
     std::string v = cmd.substr(eq + 1);
+    if (pg.empty() && !(nm == "bt0" && attr == "txt")) pg = pageUnderKeyboard();   // (1.11.198) THE PAGE UNDER THE KEYBOARD, above: kept for it, shown when it comes back. (Not an old main board's "bt0.txt=Motor is ...": setTxt listens for that whatever page shows)
     if (attr == "txt" || attr == "path") {
         if (v.size() >= 2 && v.front() == '"' && v.back() == '"') v = v.substr(1, v.size() - 2);
         if (attr == "path") host.setPath(pg, nm, v); else host.setTxt(pg, nm, v);
@@ -3151,6 +3222,12 @@ static void pollTouch() {
     const bool up = !pressed && down && now - lastSeen > 80;
     if (pressed && !down) {
         if (touchLockout) return;                             // the finger that changed the page is still down
+        // (1.11.198) ... and A FINGER THAT LANDS WITHIN A QUARTER OF A SECOND OF A PAGE COMING UP was aimed at the page that has
+        // gone: the second tap of a double tap fell through onto whatever the new page has at that place - "Delete", then "Yes"
+        // under the same finger - and a number box touched in that moment opened its keyboard before the main board had been
+        // told which page was up (the reviews of the main board's B211, 14 Nov 2026). It is not taken, and nor is anything
+        // until that finger has lifted.
+        if (pageUpMs && (int32_t) (now - pageUpMs) < (int32_t) TOUCH_AFTER_PAGE_MS) { touchLockout = true; lastSeen = now; return; }   // (counted with a sign: "millis() | 1" is a millisecond AHEAD in an even one)
         if (now - lastRelease < 30) return;                   // a bounce, not a second tap (1.11.158: 30 ms, was 150 - the finger has been away for the 80 ms above, so it is up; the second tap of a quick double tap was dropped here)
         if (oursWentAt && now - oursWentAt < 400) return;     // our own page closed a moment ago
         down = true; held = hit(x[0], y[0]); dragY0 = lastY = y[0]; dragged = false; ++touchPresses;
@@ -4173,6 +4250,9 @@ void setup() {
     Serial.begin(NEXTION_BAUD);
     lmBeforeSaved = lmBeforeText(); lmBegin();            // (1.11.188) the run that ended, read before this run's record begins; the flash driver's hooks wrapped (last_moments.h)
     esp_log_set_vprintf(sysLogHook);                      // 1.11.5: the system's own error lines come to us, not to the main board
+    lmRomPutc = romPutc;                                  // (the heap check's task borrows the ROM's printing and gives it back to THIS - last_moments.h)
+    esp_rom_install_channel_putc(1, romPutc);             // 1.11.198: ... and so does what is said with the ROM's own printf (romPutc, above):
+    esp_rom_install_channel_putc(2, NULL);                // nothing of it reaches the wire, by either of its channels
     // Above 57600 baud the core raises the receive interrupt at 120 bytes of the 128-byte hardware FIFO: at
     // 921600 that leaves 87 microseconds before bytes are lost, and any brief interrupt delay mangled a command
     // (a stray line across the curve page). At 24 bytes there is over a millisecond in hand.
@@ -4355,7 +4435,7 @@ void setup() {
     // (1.11.180) ... after ANY restart that is not a power-on (a watchdog's, a panic's, a brown-out's too: the Teensy ran on through
     // them all), and with the reason, which the Teensy writes in its log (B185): 3 our own restart, 4 panic, 5/6/7 watchdogs, 9 brown-out
     if (why != ESP_RST_POWERON && !pageNames.empty()) { delay(300); Serial.printf("FrontView rst=%d", (int) why); }
-    if (!bootBefore.empty()) { Serial.flush(); for (size_t i = 0; i < bootBefore.size(); i += 280) { delay(i ? 300 : 30); Serial.printf("LDRCLOG %s%.280s", i ? "(cont) " : "", bootBefore.c_str() + i); Serial.flush(); } }   // (1.11.191: in parts of 280, 300 ms apart - the Teensy keeps 8 lines a second)   // (1.11.188) the Teensy's day log keeps the record (B198): a power-off loses ours
+    if (!bootBefore.empty()) { Serial.flush(); for (size_t i = 0; i < bootBefore.size(); i += 280) { delay(i ? 300 : 30); Serial.printf("LDRCLOG %s%.280s\n", i ? "(cont) " : "", bootBefore.c_str() + i); Serial.flush(); } }   // (1.11.191: in parts of 280, 300 ms apart - the Teensy keeps 8 lines a second)   // (1.11.188) the Teensy's day log keeps the record (B198): a power-off loses ours
     holdWatchBegin();                                      // (1.11.164) the hold watch, on this core, from here on
     // (1.11.178) The loop task goes on the task watchdog: 20 s without a pass of loop() is a hang (Malcolm, 4 Nov 2026, the
     // curves page's Reset: "it locked up the transmitter completely, and I had to switch everything off" - nothing watched

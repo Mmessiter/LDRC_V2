@@ -63,6 +63,7 @@ FLASHMEM static void ServoShow()
 }
 FLASHMEM static void ServoGather() // the page's fields, clamped as the receiver's page clamps them
 {
+    KEEP_WHOLE(want, ServoWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     const uint8_t *was = ServoBytes(ServoAt);
     memcpy(ServoWant, was, SERVO_BYTES);
     WrU16(ServoWant, 0, FieldNumber("tn0", 750, 2250));
@@ -81,13 +82,42 @@ FLASHMEM static void ServoFail(const char *what)
     ServoStep = SRV_IDLE;
     ServoBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)"page ServoView", msg);
+    if (!ServoHave)
+    { // B211 (the fifteenth review): THE READ FAILED - THE PAGE IS LEFT (RF_SaveNow.h RfLeaveNotRead says why). This routine is the read's too, and
+      // since the eleventh review it draws no field: the seven numbers and the two switches of the servo LAST LOOKED AT stood under "Servo 1 of 4",
+      // with Save open - the tail servo's centre, limits, rate and reverse went into swash servo 1.
+        if (!RfLeaveNotRead(msg))
+        {
+            SendCommand((char *)"page ServoView");
+            SendText((char *)"t11", ModelName);
+            SendText((char *)"t9", (char *)"All banks");
+            SendCommand((char *)"vis b3,0");
+            ServoBusy(RF_NOT_READ_LINE); // (a standing line: whatever the screen still shows there is not in hand)
+        }
+        return;
+    }
+    const bool quiet = RfMayFly(); // (the seventeenth review: on the quiet road the page itself says that the save failed - below)
+    RfBoxOrQuiet("page ServoView", msg); // (the sixteenth review: no box that waits while the model may fly - PipeHttp.h; then a line in the log)
     SendText((char *)"t11", ModelName);
     SendCommand((char *)(Servo_Was_Edited ? "vis b3,1" : "vis b3,0"));
-    ServoShow();
+    // B211 (the eleventh review): THE FIELDS ARE LEFT AS THE SCREEN HAS THEM (it keeps them through the box). ServoShow drew them from what the FLIGHT
+    // CONTROLLER had - and put the two switches in hand back to that - while the edits still counted as edits: after a save that failed the page
+    // showed the old values with Save still offered, and Save wrote those.
+    if (ServoCount >= 1)
+        ServoTitle();
+    // (the fifteenth review) ... AND THE TWO SWITCHES ARE WRITTEN AS THEY ARE IN HAND: the screen turns a switch at the touch, and a tap made as this
+    // box came up - not obeyed, its page gone - left one turned that Save, which writes what is in hand, would not have written
+    SendValue((char *)"tn7", ServoRev ? 1 : 0);
+    SendValue((char *)"tn8", ServoGeo ? 1 : 0);
+    if (quiet)
+    {
+        ServoBusy(RF_NOT_SAVED_LINE);
+        ServoMsgUntil = millis() + 6000;
+    }
 }
 FLASHMEM static void ServoRead()
 {
+    ServoHave = false; // B211 (the fifteenth review; released code): NOTHING IS IN HAND UNTIL THIS READ HAS IT (RF_SaveNow.h RfLeaveNotRead)
     ServoBusy("Reading the servos from the flight controller ...");
     ServoReq = MspAsk(120, nullptr, 0);
     ServoStep = SRV_READ;
@@ -102,8 +132,7 @@ FLASHMEM void ServoPoll() // each time round the loop (ManageTransmitter)
     if (ServoMsgUntil && (int32_t)(millis() - ServoMsgUntil) >= 0)
     {
         ServoMsgUntil = 0;
-        ServoBusy("");
-        ServoShow();
+        ServoBusy(""); // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     }
     if (ServoStep == SRV_IDLE)
     {
@@ -117,7 +146,7 @@ FLASHMEM void ServoPoll() // each time round the loop (ManageTransmitter)
     if (!PipeReplyReady(ServoReq))
     {
         if (PipeReplyLate())
-            ServoFail("No answer");
+            ServoFail(RfNoAnswerWords(ServoStep == SRV_WRITE || ServoStep == SRV_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -146,7 +175,7 @@ FLASHMEM void ServoPoll() // each time round the loop (ManageTransmitter)
         ServoStep = SRV_STORE;
         return;
     case SRV_STORE:
-        if (!ok) { ServoFail("Not stored"); return; }
+        if (!ok) { ServoFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         ServoReq = MspAsk(120, nullptr, 0);
         ServoStep = SRV_VERIFY;
         return;
@@ -219,10 +248,12 @@ FLASHMEM void EndServoView() // OK
     }
     ServoStep = SRV_IDLE;
     Servo_Was_Edited = false;
-    RotorFlightStart();
+    RfMenuFromPage(ServoHave);
 }
 FLASHMEM void ServoWasEdited()
 {
+    if (!ServoHave)
+        return; // B211 (the sixteenth review): with nothing in hand nothing is an edit - OK asked "Save now?" for it, the save returned at once, and "close when saved" stood
     SendCommand((char *)"vis b3,1");
     Servo_Was_Edited = true;
 }
@@ -245,6 +276,7 @@ FLASHMEM static void ServoStep1(int d) // < Servo / Servo >
     if (Servo_Was_Edited)
     {
         ServoGather();
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!GetConfirmation((char *)"page ServoView", (char *)"Discard the edited servo values?")) { ServoShowEdits(); return; }
         SendText((char *)"t11", ModelName);
     }
@@ -258,7 +290,10 @@ FLASHMEM void ServoNext() { ServoStep1(1); }
 FLASHMEM void SaveServo()
 {
     if (!ServoHave)
+    {
+        RfLeaveAfterSave = false; // (the sixteenth review: ... and OK's "close when saved" does not stand on for a later Save - RF_SaveNow.h)
         return;
+    }
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {

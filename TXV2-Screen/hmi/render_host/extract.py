@@ -17,6 +17,7 @@ PARTS = [  # (first line starts with, the line that ends the part starts with)
     ('static Page page;', '// What the transmitter is doing'),
     ('@STUBS', None),
     ('static Comp *find(const std::string &nm)', '// ------------------------------------------------------------------ pages of our own'),
+    ('// A box whose `key` names a keyboard page opens it after its release event', 'static uint32_t touchGapMax = 0'),   # (1.11.198) openKeyboard itself: hmi/test_keyboard types on it
 ]
 _files = {}
 def lines_of(name):

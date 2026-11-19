@@ -247,7 +247,7 @@ void ReadBankSwitch()
     }
     else
         blockedQuietSince = 0;
-    if (BlockBankChanges) // do not change bank if blocked
+    if (BlockBankChanges || RescueHoldsBanks() || RfSaveHoldsBank()) // do not change bank if blocked (B211: nor while the Rescue page's save runs - RF_Rescue.h; e101: nor behind a bank page's save that is read back - RF_Verify.h)
         return;
     Bank = GetSwitchPosition(BankSwitch);
     if (!Bank)
@@ -278,12 +278,12 @@ void ReadAutoAndMotorSwitch()
         MotorEnabled = true;
         break;
     case 2:
-        if (!BlockBankChanges)
-            Bank = UpperBank();
+        if (!BlockBankChanges && !RescueHoldsBanks() && !RfSaveHoldsBank()) // B211 (the seventeenth review): THIS SWITCH MOVES THE BANK TOO - and the Rescue page's save held the
+            Bank = UpperBank();                       // other one only: bank 1's block went into bank 4 (with six banks: 4's into 5) - RF_Rescue.h
         MotorEnabled = true;
         break;
     case 3:
-        if (!BlockBankChanges)
+        if (!BlockBankChanges && !RescueHoldsBanks() && !RfSaveHoldsBank())
             Bank = UpperBank();
         MotorEnabled = false;
         break;
@@ -415,14 +415,18 @@ void CalibrateEdgeSwitches()
 
 
 //************************************************************************************************************/
-// This function is called when the bank has changed
+// This function is called when the bank has changed - and when the bank is to be SHOWN AGAIN (the motor switch moved: main.cpp GetBank).
+// B211 (the thirteenth review): SHOWN AGAIN IS NOT CHANGED. With the bank the same as it was, the trims, the bank's name and the model's name are
+// drawn again and that is all: no page is read again, none loses what was typed on it, nothing is taken into a bank. (PreviousBank is the bank
+// that was left, or a number that is no bank: 250 behind the screen's restart, 42 behind the receiver options - both mean "show everything".)
 void BankHasChanged()
 {
+    const bool sameBank = Bank == PreviousBank;
 
     if ((CurrentView == FRONTVIEW) || (CurrentView == TRIM_VIEW))
     {
-        for (int pp = 0; pp < 4; ++pp)
-            LastTrim[Bank][pp] = 0; // force a trimview update
+        for (int pp = 0; pp <= CHANNELSUSED; ++pp)
+            LastTrim[Bank][pp] = 0; // force a trimview update (B211: every channel a trim may move - it was the first four, and Trim setup may give a trim any)
         UpdateTrimView();
     }
 
@@ -433,7 +437,8 @@ void BankHasChanged()
         {
             DualRateInUse = Bank;                   // if linked, DualRateInUse is the same as Bank number
           //  AddParameterstoQueue(MSP_RATES_CHANGE); // and maybe rates change too if linked
-            ShowRatesBank();
+            if (!sameBank)
+                ShowRatesBank(); // (the Rates page reads the flight controller again: only for a bank that changed)
         }
         // BankCheckIsNeeded = true; // this tells the Ack payload parser to check that the bank change was successful
     }
@@ -454,6 +459,8 @@ void BankHasChanged()
     {
         UpdateModelsNameEveryWhere();
     }
+    if (sameBank)
+        return; // B211: nothing changed - every page below keeps what it shows and what was typed on it
     if (CurrentView == GRAPHVIEW)
     { // B179 (Malcolm, 4 Nov 2026: "I am more used to simply switching to another bank and assuming that my edits for that bank have
       // been saved"): the curve edits go to the card now, as the page's OK puts them (WriteNewCurve) - not while a model is connected,
@@ -463,8 +470,13 @@ void BankHasChanged()
         DisplayCurveAndServoPos();
     }
     if (CurrentView == SLOWSERVOVIEW)
-    {
-        ReadSpeedsScreen(PreviousBank - 1, true); // B37: with the edits made so far
+    { // B211 (the twelfth review): this is the MAIN LOOP's own work, counted as a button's is (Utilities.h CheckForNextionButtonPress) - it was counted
+      // against whatever button came last, and told nobody
+        const uint32_t lost = BoxesLost;
+        BoxesLostAtWork = BoxesLost;
+        ReadSpeedsScreen(PreviousBank - 1, true); // B37: with the edits made so far - whole, or not at all (a number that is no bank: nothing is read)
+        if (BoxesLost != lost)
+            NoteBoxesLost(); // (the speeds edited in the bank that was left are NOT taken: said - a sound, a line)
         UpdateSpeedScreen();
     }
     if (CurrentView == DUALRATESVIEW)

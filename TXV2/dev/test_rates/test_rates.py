@@ -13,7 +13,7 @@ plot and the codes. RC_SCENARIO=path writes the commands drawn, for the page ren
 B108: the dots - where Rotorflight has each stick (its map and centre / deflection / deadbands asked, or its defaults),
 on the curve, rubbed out and drawn anew only when a stick moves, within the wire's room; RC_DOTS=path writes a stick move.
    python3 dev/test_rates/test_rates.py"""
-import json, math, os, random, subprocess, sys, tempfile
+import json, math, os, random, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HDR = os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Rates.h')
 KEPT = open(os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Kept.h'), encoding='utf-8', errors='replace').read()
@@ -34,8 +34,26 @@ template <class T> static T constrain(T v, T lo, T hi) { return v < lo ? lo : (v
 struct FakeNextion { int room = 1 << 30; int over = 0; std::string out; int availableForWrite() { return room; } size_t write(const uint8_t *b, size_t n) { if ((int)n > room) ++over; room -= (int)n; out.append((const char *)b, n); return n; } };
 static FakeNextion NEXTION;
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+static uint16_t ScreenMarkCount = 1; static uint32_t ScreenMarkAwaited = 0;   // (Nextion.h: the count of this board's page commands; a page's marker still awaited)
+void RatesCurvesPageBack();   // (1Definitions.h has it: RatesCurvePoll calls it when the page's word never came)
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 #define PROGMEM
 #define MAX_RATES_BYTES 13
+#define KEPT_BANKS_ON_CARD 4
+static int pageSaid = 0; static void RfWordPageSays(int, const char *) { ++pageSaid; }   // (PipeHttp.h: the page's own line for six seconds - nothing waits)
+void ShowRatesLocalBank();   // (1Definitions.h's line, B211: the keep routine, above it in the file, puts the page back so when it refuses a bank the card has no place for)
 #define RATESVIEW_RF 46
 #define WHAHWHAHMSG 1
 #define BEEPCOMPLETE 2
@@ -58,7 +76,13 @@ static char RatesWindows[MAX_RATES_BYTES][5] = {"t10", "tn0", "tn1", "tn2", "tn3
 static char Rate_Types[7][16] = {"0 - NONE", "1 - BETAFLIGHT", "2 - RACEFLIGHT", "3 - KISS", "4 - ACTUAL", "5 - QUICKRATES", "6 - ROTORFLIGHT"};
 const float FactorTableRF2_2[13] = {1, 10, 10, .01, 10, 10, .01, 10, 10, .01, .25, .25, .01};
 const float FactorTableRF2_3[13] = {1, 5, 1, 1, 5, 1, 1, 5, 1, 1, .125, 1, 1};
+static bool RATES_Loaded = true;   // (B211: the set came whole - transceiver.h BlockItemSeen sets it, dev/test_pipe runs that; here the page's own lines)
+static int notLoadedBoxes = 0; static std::string notLoadedWhat;
+static bool RfBlockNotLoaded(bool loaded, const char *page, const char *what);   // (RF_PIDs.h, B40: its box - stood in for below)
+static bool Reading_RATES_Advanced_Now = false;   // (B211, the seventeenth review: ended as this page's read begins)
 static bool RfValueWasCut = false, Rates_Were_Edited = false, Reading_RATES_Now = false, BlockBankChanges = false, Wait_for_Advanced_Rates_to_Be_Sent_Too = false, live = true;
+static bool Reading_PIDS_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;   // (the nineteenth review: the rule names all six)
+''' + re.search(r'^inline void RfOtherReadsOver\(\)[^\n]*', open(os.path.join(ROOT, 'TransmitterCode', 'include', '1Definitions.h'), encoding='utf-8').read(), re.M).group(0) + r'''
 static uint32_t RATES_Send_Duration = 0, RATES_Start_Time = 0; static uint32_t nowMs = 1000; static uint32_t millis() { return nowMs; }
 // B108: what the transmitter sends (its channels), and the pipe's questions to the flight controller
 static uint16_t SendBuffer[21];
@@ -72,15 +96,21 @@ static std::map<std::string, std::string> fields; static std::vector<std::string
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendCommand(char *c) { cmds.push_back(c); }
 bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; ++sounds; ++boxes; lastBox = "The screen did not answer for one of\r\nthe boxes, so NOTHING was sent.\r\nPlease press Save again."; return true; }   // (B152: as Nextion.h)
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
-static uint16_t GetText(char *n, char *out, size_t sz) { if (!fields.count(n)) NextionTextMissed = true; strncpy(out, fields.count(n) ? fields[n].c_str() : "", sz - 1); out[sz - 1] = 0; return (uint16_t) strlen(out); }   // (B152: a box not on the page = the screen silent)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+static int loseFrom = -1, asked = 0;   // (the box asked for as number loseFrom, and every box behind it, has NO ANSWER: "", counted - as Nextion.h GetText does once a box has had none)
+static uint16_t GetText(char *n, char *out, size_t sz) { if (loseFrom >= 0 && asked++ >= loseFrom) { NextionTextMissed = true; ++BoxesLost; out[0] = 0; return 0; } if (!fields.count(n)) NextionTextMissed = true; strncpy(out, fields.count(n) ? fields[n].c_str() : "", sz - 1); out[sz - 1] = 0; return (uint16_t) strlen(out); }   // (B152: a box not on the page = the screen silent)
 static void SendForegroundColour(const char *, uint16_t) {}
 static void MsgBox(char *page, char *msg) { ++boxes; lastBox = msg; }
+static bool RfHomeNotRead = false; static bool rfMayFlyNow = false; static int quietSaid = 0;   // (B211, the sixteenth review: PipeHttp.h RfMayFly / RfSayQuietly / RfBoxOrQuiet stood in for - no box that waits while the model may fly)
+static bool RfMayFly() { return rfMayFlyNow; } static void RfSayQuietly(const char *) { ++quietSaid; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { if (RfMayFly()) { RfSayQuietly(msg); return; } MsgBox((char *)page, (char *)msg); }
+static bool RfBlockNotLoaded(bool loaded, const char *page, const char *what) { if (loaded) return false; ++notLoadedBoxes; notLoadedWhat = std::string(page) + "|" + what; return true; }
 static void PlaySound(int) { ++sounds; }
 static bool RfLive() { return live; }
 static bool RfPipeBlocked(char *, size_t) { return false; }
 static bool ModelSeemsArmed(char *, size_t) { return false; }
-static void AddParameterstoQueue(uint8_t id) { queued.push_back(id); }
+static bool setComes = true;   // (B211: a read asked is answered whole at once - transceiver.h BlockItemSeen sets the flag, dev/test_pipe runs that - unless the test says it does not come)
+static void AddParameterstoQueue(uint8_t id) { queued.push_back(id); if (id == SEND_RATES_VALUES && setComes) RATES_Loaded = true; }
 static void DelayWithDog(int) {}
 static void SaveOneModel(int) { ++saves; }
 static char *Str(char *b, int v, int) { snprintf(b, 10, "%d", v); return b; }
@@ -146,6 +176,16 @@ int main() {
     CHECK(Saved_Rate_Values[0][1] == 0 && Saved_Rate_Values[1][1] == 25);   // (B106: NONE kept - it was made Actual with zero rates; x10 as before)
     DualRateInUse = 1; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "6 - ROTORFLIGHT" && fields["tn0"] == "250" && fields["tn9"] == "12.50" && fields["t5"] == "Rate" && Rate_Values[0] == 6);
     DualRateInUse = 2; fields.clear(); ShowRatesLocalBank(); CHECK(fields["t10"] == "0 - NONE" && fields["tn0"] == "250" && fields["t5"] == "Centre");   // (B106: NONE, as kept)
+    // (the fifteenth review) A RATE THE CARD HAS NO PLACE FOR (5 and 6) is NOT kept: the sound, THE PAGE PUT BACK AS IT SHOWED (no values, greyed, under its
+    // standing line - the refusal's own line took both away, and six seconds on the rate stood there as zeros in black), the edit let go; nothing saved
+    DualRateInUse = 5; CurrentView = RATESVIEW_RF; fields.clear(); ShowRatesLocalBank(); const std::string standing = fields["busy"];
+    CHECK(standing.find("banks 1 to 4 only") != std::string::npos && fields["tn0"] != "250");
+    typed("250", "40", "20", "12.5"); Rates_Were_Edited = true; RfLeaveAfterSave = true; saves = 0; sounds = 0; fields["busy"] = "(gone)"; cmds.clear();
+    uint8_t rate5[MAX_RATES_BYTES]; for (int i = 0; i < MAX_RATES_BYTES; ++i) rate5[i] = Saved_Rate_Values[i][4];
+    SendEditedRates();
+    { bool untouched = true; for (int i = 0; i < MAX_RATES_BYTES; ++i) untouched = untouched && rate5[i] == Saved_Rate_Values[i][4];
+      CHECK(saves == 0 && sounds == 1 && !Rates_Were_Edited && !RfLeaveAfterSave && fields["busy"] == standing && fields["tn0"] != "250" && untouched && cmds.back() == "vis b3,0"); }
+    DualRateInUse = 1; CurrentView = RATESVIEW_RF;
     // 6. B106: the type chosen on the picker
     {
         static const uint8_t want[7][12] = {{0,0,0, 0,0,0, 0,0,0, 0,0,0}, {120,0,0, 120,0,0, 200,0,0, 203,1,0}, {24,0,0, 24,0,0, 40,0,0, 50,0,0},
@@ -195,6 +235,7 @@ int main() {
         // a bank whose type Rotorflight does not have: shown "?", the picker opens at ROTORFLIGHT (ACTUAL on a 2.2), Save refused - live and kept
         RotorFlight_V = 2; Rate_Values[0] = 9; RatesTypeTapped(); CHECK(values["list"] == 6); RatesTypePickCancel(); CHECK(fields["t10"] == "?");
         RotorFlight_V = 1; RatesTypeTapped(); CHECK(values["list"] == 4); RatesTypePickCancel(); RotorFlight_V = 2;
+        RATES_Loaded = true;   // (B211: the set has come whole - the picker's way back may have read the page again, and nothing answers a read here)
         live = true; queued.clear(); boxes = 0; SendEditedRates(); CHECK(boxes == 1 && lastBox.find("Not saved: the rates type is 9") == 0 && queued.empty());
         live = false; saves = 0; boxes = 0; Saved_Rate_Values[0][0] = 4; SendEditedRates(); CHECK(boxes == 1 && saves == 0 && Saved_Rate_Values[0][0] == 4);
         RotorFlight_V = 1; Rate_Values[0] = 6; live = true; boxes = 0; SendEditedRates(); CHECK(boxes == 1 && lastBox.find("Not saved: the rates type is 6") == 0 && queued.empty());
@@ -334,6 +375,93 @@ int main() {
             const uint8_t t = rnd() % 8, rc = rnd() % 256, sr = rnd() % 256, ex = rnd() % 101; const float x = (rnd() % 1001) / 1000.0f;
             printf("CURVE %u %u %u %u %.3f %.6f\n", t, rc, sr, ex, x, RfRatesCurve(t, rc, sr, ex, x));
         }
+    }
+    // (B211, the eleventh review, reviewer B's experiment 6) THE RATES PAGE IS TAKEN WHOLE, OR NOT AT ALL - AND IT IS NOT LEFT WITH A BOX UNANSWERED.
+    // "Curves ..." and the type's picker read the page's twelve numbers box by box ("no answer keeps the value in hand") and went to the other page
+    // with no question: back on the Rates page everything was drawn from the mixture - the numbers typed in the boxes that answered kept, those in
+    // the boxes that had not gone - and Save sent that. The fifth box asked, and all behind it, have no answer here (the screen's keyboard came up, say).
+    for (int which = 0; which < 2; ++which)
+    {
+        memset(Rate_Values, 0, sizeof Rate_Values); Rate_Values[0] = 6; Rate_Values[1] = 48; Rate_Values[4] = 48; Rate_Values[7] = 80; Rate_Values[10] = 100;   // ROTORFLIGHT rates: roll 240, pitch 240, yaw 400 deg/s
+        Rates_Were_Edited = false; CurrentView = RATESVIEW_RF; loseFrom = -1; asked = 0; Reading_RATES_Now = false; ParametersToBeSentPointer = 0; RotorFlight_V = 2; RfValueWasCut = false;
+        fields.clear(); DisplayRatesValues(0, MAX_RATES_BYTES);
+        fields["tn0"] = "300"; fields["tn3"] = "300"; fields["tn6"] = "500"; Rates_Were_Edited = true;                                                             // he types: roll 300, pitch 300, yaw 500
+        loseFrom = 4; asked = 0; BoxesLostAtWork = BoxesLost; cmds.clear();
+        if (which) RatesTypeTapped(); else RatesCurvesTapped();
+        CHECK(CurrentView == RATESVIEW_RF);                                                       // the page is NOT left ...
+        CHECK(Rate_Values[1] == 48 && Rate_Values[4] == 48 && Rate_Values[7] == 80);              // ... nothing was taken (it was: roll's 300 taken, yaw's 500 not) ...
+        CHECK(fields["tn0"] == "300" && fields["tn3"] == "300" && fields["tn6"] == "500");        // ... what he typed is still on the page ...
+        CHECK(BoxesLost != BoxesLostAtWork && cmds.empty());                                      // ... and he is told (the count that CheckForNextionButtonPress looks at); nothing was sent to the screen
+        loseFrom = -1; BoxesLostAtWork = BoxesLost;                                               // he taps again: every box answers
+        if (which) { RatesTypeTapped(); CHECK(CurrentView == RATESTYPEVIEW); RatesTypePickCancel(); } else { RatesCurvesTapped(); CHECK(CurrentView == RATESCURVEVIEW); RatesCurvesOk(); }
+        CHECK(CurrentView == RATESVIEW_RF && fields["tn0"] == "300" && fields["tn3"] == "300" && fields["tn6"] == "500" && Rate_Values[1] == 60 && Rate_Values[4] == 60 && Rate_Values[7] == 100);
+    }
+    // (the eleventh review, reviewer A's low 4) THE PLOT IS BEGUN EVEN WHEN THE PAGE'S WORD NEVER CAME: the curves page put up (a page command of this
+    // board's), "ldrcrcv" lost - a second and a half later RatesCurvePoll begins the plot by itself; with the word, at once (and not twice)
+    {
+        memset(Rate_Values, 0, sizeof Rate_Values); Rate_Values[0] = 6; Rate_Values[1] = 48; Rate_Values[4] = 48; Rate_Values[7] = 80; Rate_Values[10] = 100;
+        Rates_Were_Edited = false; CurrentView = RATESVIEW_RF; fields.clear(); DisplayRatesValues(0, MAX_RATES_BYTES); BoxesLostAtWork = BoxesLost;
+        RatesCurvesTapped(); ++ScreenMarkCount; CHECK(CurrentView == RATESCURVEVIEW && RcStep == -1);
+        const uint32_t t0 = nowMs; bool begun = false; uint32_t at = 0;
+        for (int k = 0; k < 80 && !begun; ++k) { nowMs += 25; NEXTION.room = 64; RatesCurvePoll(); if (RcDrawnAtMark == ScreenMarkCount) { begun = true; at = nowMs - t0; } }
+        CHECK(begun && at >= 1500 && at <= 1600);
+        for (int k = 0; k < 400; ++k) { nowMs += 25; NEXTION.room = 64; RatesCurvePoll(); }                           // (the plot drawn to its end; nothing begins it again)
+        CHECK(RcStep == -1 && RcDueMs == 0 && fields["lg0"] == "Roll 240 deg/s");
+        RatesCurvesOk(); ++ScreenMarkCount;
+        RatesCurvesTapped(); ++ScreenMarkCount; RatesCurvesPageBack(); CHECK(RcDrawnAtMark == ScreenMarkCount && RcStep == 0);   // the word came: begun at once
+        for (int k = 0; k < 400; ++k) { nowMs += 25; NEXTION.room = 64; RatesCurvePoll(); }
+        CHECK(RcStep == -1 && RcDueMs == 0);
+        ScreenMarkAwaited = 7; ++ScreenMarkCount; nowMs += 5000; RatesCurvePoll(); nowMs += 5000; RatesCurvePoll(); CHECK(RcDrawnAtMark != ScreenMarkCount);   // (a page's marker still awaited: not yet)
+        ScreenMarkAwaited = 0; RatesCurvePoll(); CHECK(RcDrawnAtMark == ScreenMarkCount);
+        // (the twelfth review; the author's own, found by a scene of the Sub-trim page) THE SECOND AND A HALF IS COUNTED WITH A SIGN. The moment is kept
+        // as "now | 1" - never 0, which means "none" - and in an EVEN millisecond that is one millisecond AHEAD: counted unsigned, the next pass of the
+        // main loop in that same millisecond read "49 days gone" and began the plot at once - the wait that lets the page's own word come was no wait
+        for (int k = 0; k < 400; ++k) { nowMs += 25; NEXTION.room = 64; RatesCurvePoll(); }
+        RatesCurvesOk(); ++ScreenMarkCount;
+        nowMs = (nowMs | 1) + 1;                                                                                       // an even millisecond
+        RatesCurvesTapped(); ++ScreenMarkCount; CHECK(CurrentView == RATESCURVEVIEW && RcStep == -1);
+        NEXTION.room = 64; RatesCurvePoll(); CHECK(RcDueMs == nowMs + 1);                                              // (first seen due: the moment kept, a millisecond ahead)
+        NEXTION.room = 64; RatesCurvePoll(); RatesCurvePoll(); CHECK(RcDrawnAtMark != ScreenMarkCount && RcStep == -1);   // the same millisecond: NOT begun
+        nowMs += 1400; RatesCurvePoll(); CHECK(RcDrawnAtMark != ScreenMarkCount);
+        nowMs += 110; RatesCurvePoll(); CHECK(RcDrawnAtMark == ScreenMarkCount);                                        // a second and a half on: begun
+        for (int k = 0; k < 400; ++k) { nowMs += 25; NEXTION.room = 64; RatesCurvePoll(); }
+        RatesCurvesOk(); RcStep = -1;
+    }
+    // ... the gather by itself: any one box unanswered, and Rate_Values is as it was - with "a value was cut" too (RfValueWasCut)
+    for (int at = 0; at < 12; ++at)
+    {
+        memset(Rate_Values, 0, sizeof Rate_Values); Rate_Values[0] = 6; Rate_Values[1] = 48; Rate_Values[4] = 48; Rate_Values[7] = 80; Rate_Values[10] = 100; uint8_t was[13]; memcpy(was, Rate_Values, 13);
+        fields.clear(); DisplayRatesValues(0, MAX_RATES_BYTES); fields["tn0"] = "300"; fields["tn6"] = "9999"; RfValueWasCut = false;   // (9999 deg/s is cut to the byte's most: "a value was cut")
+        loseFrom = at; asked = 0; ReadEditedRateValues(); loseFrom = -1;
+        CHECK(memcmp(Rate_Values, was, 13) == 0 && !RfValueWasCut);
+    }
+    // ---------------------------------------------------------------- B211 (released code had it): THE RATES PAGE OFFERED SAVE ON A SET THAT NEVER CAME.
+    // A read whose window ended with nothing, or with a part, took the "Loading ..." away: the numbers of the rate BEFORE stood under the new rate's
+    // name, and one edit and Save sent them into the flight controller's new rate. As the PIDs page since B40: nothing while the set is not whole.
+    {
+        live = true; RotorFlight_V = 2; DualRateInUse = 1; CurrentView = RATESVIEW_RF; Rates_Were_Edited = false; Reading_RATES_Now = false; queued.clear(); cmds.clear();
+        setComes = false; RATES_Loaded = true; Reading_RATES_Advanced_Now = true; ShowRatesBank();   // the page's read begins (a rate switch moved, the page opened; the Dynamics page's read still open):
+        CHECK(!Reading_RATES_Advanced_Now);                                               // (the seventeenth review: a set is given to ONE read - the page that went has none)
+        CHECK(!RATES_Loaded && Reading_RATES_Now && queued.size() == 1 && queued[0] == SEND_RATES_VALUES);   // ... nothing is whole until the set has come
+        // the window ends with nothing (transceiver.h Hide_msg_if_needed: the message goes, "nothing came back" is said): the old numbers stand there
+        Reading_RATES_Now = false; HideRATESMsg(); typed("250", "40", "20", "12.5");
+        notLoadedBoxes = 0; cmds.clear(); RatesWereEdited();                              // he types a number: no Save button, and the box says why
+        CHECK(notLoadedBoxes == 1 && notLoadedWhat == "page RatesView|rates" && !Rates_Were_Edited && cmds.empty());
+        Rates_Were_Edited = true; queued.clear(); saves = 0; notLoadedBoxes = 0; SendEditedRates();   // (Save, should it be reached all the same: nothing sent)
+        CHECK(notLoadedBoxes == 1 && queued.empty() && saves == 0 && !Reading_RATES_Now);
+        live = false; notLoadedBoxes = 0; SendEditedRates(); CHECK(notLoadedBoxes == 1 && saves == 0);   // ... and nothing KEPT as the model file's copy either
+        // the set comes whole (BlockItemSeen): edits and Save as ever
+        live = true; RATES_Loaded = true; Rates_Were_Edited = false; notLoadedBoxes = 0; cmds.clear(); RatesWereEdited();
+        CHECK(notLoadedBoxes == 0 && Rates_Were_Edited && cmds.back() == "vis b3,1");
+        // WITHOUT the model the page shows the model file's own copy: whole by itself
+        live = false; RATES_Loaded = false; DualRateInUse = 1; ShowRatesLocalBank(); CHECK(RATES_Loaded);
+        RATES_Loaded = false; DualRateInUse = 2; ShowRatesBank(); CHECK(RATES_Loaded && !Reading_RATES_Now);   // (ShowRatesBank without the model: the copy)
+        // the type's picker is an edit too (its OK puts a type and its starting values on the page, and shows Save): not opened on a set that never came
+        live = true; RATES_Loaded = false; DualRateInUse = 1; CurrentView = RATESVIEW_RF; Reading_RATES_Now = false; ParametersToBeSentPointer = 0; notLoadedBoxes = 0; cmds.clear(); RatesTypeTapped();
+        CHECK(notLoadedBoxes == 1 && CurrentView == RATESVIEW_RF && cmds.empty());
+        RATES_Loaded = true; RatesTypeTapped(); CHECK(notLoadedBoxes == 1);   // (the set whole: no such box - the picker's own road is part 6, above)
+        if (CurrentView == RATESTYPEVIEW) RatesTypePickCancel();
+        setComes = true; live = true; DualRateInUse = 1; Rates_Were_Edited = false;
     }
     printf("test_rates: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;

@@ -57,6 +57,8 @@ FLASHMEM void CheckAllModelIds()
     }
     if (!buf[0])
         strcpy(buf, "No models in use\r\n");
+    ModelNumber = SavedModelNumber; // B211 (the eleventh review's finding in MenuOptions.h LoadModelSelector, here too): the pilot's model is back in
+    ReadOneModel(ModelNumber);      // memory BEFORE anything is sent - every send waits, flying a connected model from whatever is in memory
     SendOtherText(MMemsp, buf);
     SendValue((char *)"MMems", 0); // the first row at the top
     char summary[64];
@@ -69,8 +71,6 @@ FLASHMEM void CheckAllModelIds()
     else
         snprintf(summary, sizeof(summary), "No model has a stored ID yet.");
     SendText((char *)"t1", summary);
-    ModelNumber = SavedModelNumber;
-    ReadOneModel(ModelNumber);
 }
 
 // *********************************************************************************************************************************/
@@ -130,6 +130,9 @@ FLASHMEM void DeleteModelID()
     }
     else
     {
+        if (QuestionOvertaken)
+            return; // B211 (the fifteenth review): THE QUESTION WAS CLOSED BY ANOTHER PAGE PUT UP OVER IT (the motor switched on while it waited brings the front page up - Motor_sign.h) - NO BOX
+        // BEHIND IT. The box went up over that page, and its way back put the screen on this routine's page while this board believed in the other.
         MsgBox(pModelsIDView, NotDone);
     }
     DisplayStoredID();
@@ -173,6 +176,9 @@ FLASHMEM void StoreModelID()
     }
     else
     {
+        if (QuestionOvertaken)
+            return; // B211 (the fifteenth review): THE QUESTION WAS CLOSED BY ANOTHER PAGE PUT UP OVER IT (the motor switched on while it waited brings the front page up - Motor_sign.h) - NO BOX
+        // BEHIND IT. The box went up over that page, and its way back put the screen on this routine's page while this board believed in the other.
         MsgBox(pModelsIDView, NotDone);
     }
     DisplayStoredID();

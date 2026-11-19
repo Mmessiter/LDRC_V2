@@ -153,13 +153,29 @@ void MotorEnabledHasChanged() //
         // behind, never half-applied; a Rotorflight read in progress stops (its values would land on a page that is gone).
         if (CurrentView != FRONTVIEW && CurrentMode == NORMAL && !ModalWaits)
         {
-            Reading_PIDS_Now = false;
-            Reading_PIDS_Advanced_Now = false;
-            Reading_RATES_Now = false;
-            Reading_RATES_Advanced_Now = false;
-            Reading_GOV_Now = false;
-            Reading_GOV_Config_Now = false;
-            LogFrontPageReason("the motor switch went on"); // B172
+            if (!RfVerifyFollows()) // (e99e: a bank page's save, its read open - not the Governor global page's, whose read-back is not followed: a flag of it stayed up on the front page)
+            {
+                Reading_PIDS_Now = false;
+                Reading_PIDS_Advanced_Now = false;
+                Reading_RATES_Now = false;
+                Reading_RATES_Advanced_Now = false;
+                Reading_GOV_Now = false;
+                Reading_GOV_Config_Now = false;
+                // (The bank switch a read held stays held until the five-second net frees it, Switches.h - as released: the queue's B19-B5. NOT freed
+                // here: a save whose words went out with no read-back - Save, then OK with the bank check still out - may be a round trip from
+                // landing, and the net's five seconds are all that stands in front of it. e99c freed it here; its own tests: e99d.)
+            }
+            // (B211, e99c) A SAVE ON ITS WAY: its read is not stopped - it is followed onto the front page (RF_Verify.h): the bank switch is free when
+            // what was sent has come back, at the read's window at the latest (main.cpp looks at the windows on every view meanwhile).
+            if (CurrentView == MODELSVIEW && PreviousModelNumber != ModelNumber)
+            { // B211 (e100b; Malcolm, 18 Nov 2026: no Models page while armed): THE MOTOR SWITCH ON THE MODELS PAGE. Its wheel loads the row it rests on
+              // into the memory in use, and this front page came without the page's "Select X?": the pilot flew the wheel's model. What "No" to
+              // that question does (MenuOptions.h ModelViewEnd): the model in use when the page was opened is put back. Only OK and "Select X?"
+              // make another model the one in use.
+                ModelNumber = PreviousModelNumber;
+                ReadOneModel(ModelNumber);
+            }
+            LogFrontPageReason("the motor switch went on", "motor switch on"); // B172
             GotoFrontView(); // (also wakes a blank screen)
         }
         ShowMotor();
@@ -217,7 +233,7 @@ static uint8_t SafetyWarnStep = 0;    // 0: the wah-wah next, 1: the words next
 static uint32_t LastGreenLostMs = 0;  // (RedLedOn: the moment the last connection was lost; 0 = none yet)
 static int LastGreenModel = -1;
 void NoteConnectionLost() { LastGreenLostMs = millis() | 1; }
-static bool LostJustNow() { return LastGreenModel == (int)ModelNumber && LastGreenLostMs && (millis() - LastGreenLostMs) <= 60000UL; }
+static bool LostJustNow() { return LastGreenModel == (int)ModelNumber && LastGreenLostMs && (int32_t)(millis() - LastGreenLostMs) <= 60000; } // (signed: "| 1" may be a millisecond ahead)
 static void SafetyWarnStart()
 {
     SafetyWarnSaid = 0;
@@ -246,7 +262,11 @@ void SafetyHoldUpdate() // GetBank, every pass, before anything else
     // warning once connected instead.
     const bool unexplainedStart = LastOffReason == OFF_NONE && LastGreenModel < 0;
     const bool hold = ArmingManaged() && SafetyIsOff() && !LedWasGreen && !LostJustNow() && !unexplainedStart && !BuddyPupilOnWireless &&   // (B209: Rotorflight found)
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: a model set to ELRS is not held back - the module makes its own connection; the warning at the connection stands (SafetyOffAtConnect). The #else is the transmitter as it was
+                      !ReceiverUpdateBusy() && CurrentMode == NORMAL && !ElrsCarries();
+#else
                       !ReceiverUpdateBusy() && CurrentMode == NORMAL;
+#endif
     if (hold && !SafetyHold)
     {
         SafetyWarnStart();

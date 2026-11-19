@@ -9,7 +9,7 @@ text's height) is the Sounds page's OK, B0 is GotoFrontView. Now a screen told "
 len_hi bytes; the Teensy reads it to its length, waits out a pause inside it, and once it has seen one framed burst drops an
 unframed binary frame (a split tail, a late reply split from its q).
    python3 dev/test_frames/test_frames.py"""
-import os, subprocess, sys, tempfile
+import re, os, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INC = os.path.join(ROOT, 'TransmitterCode', 'include')
 NEXTION = open(os.path.join(INC, 'Nextion.h'), encoding='utf-8', errors='replace').read()
@@ -18,7 +18,7 @@ def lift(text, head):
     """The function whose first line starts with `head` (column 0, Allman style): from there to the next line that is just '}'."""
     lines = text.split('\n')
     for i, l in enumerate(lines):
-        if l.startswith(head) and not l.split('//')[0].rstrip().endswith(';'):
+        if (l.startswith(head) or l.startswith('FLASHMEM ' + head)) and not l.split('//')[0].rstrip().endswith(';'):
             for j in range(i + 1, len(lines)):
                 if lines[j] == '}':
                     return '\n'.join(lines[i:j + 1]) + '\n'
@@ -54,10 +54,19 @@ struct FakeLink
     int available() { auto it = pauseAt.find(rd); if (it != pauseAt.end() && it->second > 0) { --it->second; return 0; } return (int) (rx.size() - rd); }
     int read() { return rd < rx.size() ? rx[rd++] : -1; }
     int peek() { return rd < rx.size() ? rx[rd] : -1; }
+    void print(const char *) {}                                       // (B211: what this board says to the screen without waiting - not this test's matter)
 } NEXTION;
 static std::vector<std::string> sent, ghosts;
 static void SendCommand(char *c) { sent.push_back(c); }
 static void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n) { char b[200]; int p = snprintf(b, sizeof b, "%s:", why); for (uint16_t i = 0; i < n && i < 8; ++i) p += snprintf(b + p, sizeof b - p, " %02X", f[i]); ghosts.push_back(b); }
+static void NoteStalePress(const uint8_t *, uint16_t) {}   // (B211: dev/test_stalepress is its test)
+static void SubTrimWordLetGo(const uint8_t *, uint16_t, bool) {}   // (B211: dev/test_wholepage/scene_subtrim_doors is its test)
+static void NoteNoScreenMark() {}
+static void NotePageChangedUnderGet(const char *) {}
+static void NoteBoxOffPage(const char *, bool) {}
+void StashFrame(const uint8_t *f, uint16_t n, bool withEnd = false);
+static std::map<std::string, uint32_t> sysVals; static int sysAsked = 0;                    // (B211: what the screen answers to "get <name>" - not there: no answer)
+uint32_t GetSysValue(const char *name) { ++sysAsked; auto it = sysVals.find(name); return it == sysVals.end() ? 65535 : it->second; }
 
 // ---- the Teensy's globals the lifted code uses
 char TextIn[MAXTEXTIN + 2];
@@ -65,6 +74,7 @@ uint32_t NextionReplyWaitMs = 100;
 static void DelayWithDog(uint32_t) {}   // (B188)
 #define NEXTION_GET_WAIT_MS 2000
 bool NextionGetPending = false;   // (B189)
+uint8_t ModalWaits = 0; bool InsideDelayWithDog = false;   // (B211, Utilities.h: a question waits; DelayWithDog is flying the model)
 static void NoteLateReply(const char *, uint32_t, bool) {}   // (B188)
 
 '''
@@ -75,7 +85,7 @@ static void feedWord(const char *w) { for (const char *p = w; *p; ++p) NEXTION.r
 static void framed(std::initializer_list<int> payload) { const int n = (int) payload.size(); feed({0x7E, 0x7E, n & 0xFF, n >> 8}); feed(payload); }
 static bool is(const char *bytes, int n) { return memcmp(TextIn, bytes, n) == 0; }
 static bool pressSoon() { for (int i = 0; i < 200; ++i) if (GetButtonPress()) return true; return false; }   // (the loop comes round again until the bytes are there)
-static void fresh() { NEXTION.rx.clear(); NEXTION.rd = 0; NEXTION.pauseAt.clear(); sent.clear(); ghosts.clear(); PendingEventLen = 0; PendingCount = 0; TextInFramed = false; ScreenFramesBursts = false; FrameEnableSentMs = 0; memset(TextIn, 0x55, 64); }
+static void fresh() { NEXTION.rx.clear(); NEXTION.rd = 0; NEXTION.pauseAt.clear(); sent.clear(); ghosts.clear(); PendingEventLen = 0; PendingCount = 0; TextInFramed = false; ScreenFramesBursts = false; WordOpenMs = 0; TextReplyDoubted = false; FrameEnableSentMs = 0; memset(TextIn, 0x55, 64);  ScreenRestartSeen = false; ScreenRestartReason = -1; ScreenStartupOver = false; ScreenSession = 0; ScreenToldMs = 0; ScreenSaidSession = false; sysVals.clear(); sysAsked = 0; }
 int main()
 {
     // 1. an older screen (never frames): an unframed code is read and obeyed as ever, and the screen is asked to frame - once in 2 s
@@ -97,8 +107,15 @@ int main()
     fresh(); framed({0xC1, 0x00, 0x00, 0x00}); CHECK(GetButtonPress() && TextInIsGenuine() && ScreenFramesBursts);
     feed({0x00, 0x03, 0x00, 0x00}); CHECK(GetButtonPress() && !TextInFramed && !TextInIsGenuine() && ghosts.size() == 1 && ghosts[0] == "an unframed code: 00 03 00 00");
     fakeMs += 3000; feed({0xB0, 0x00, 0x00, 0x00}); CHECK(GetButtonPress() && !TextInIsGenuine() && ghosts.size() == 2 && ghosts[1] == "an unframed code: B0 00 00 00");
-    feedWord("FrontView"); CHECK(GetButtonPress() && !TextInFramed && is("FrontView", 9) && TextInIsGenuine() && sent.empty());
-    feedWord("LDRCAWAKE"); CHECK(GetButtonPress() && TextInIsGenuine());
+    feedWord("FrontView"); CHECK(GetButtonPress() && !TextInFramed && TextIn[0] == 0 && ScreenRestartSeen && ScreenRestartReason == -1 && TextInIsGenuine() && sent.empty());   // (B211: the screen's restart word is noted where it is read, and is no word in TextIn any more)
+    feedWord("LDRCAWAKE"); CHECK(GetButtonPress() && TextInIsGenuine());                       // (the screen's own words pass, also while its restart is noted)
+    framed({0xC1, 0x00, 0x00, 0x00}); CHECK(GetButtonPress() && TextInFramed && !TextInIsGenuine());   // B211: ... and no press is obeyed until the page is drawn afresh
+    ScreenRestartSeen = false;
+    // 5b. B211: from a screen that frames, a page's WORD that comes bare is not obeyed either (a restarted screen frames nothing until told).
+    //     And NOTHING IS ASKED of the screen at such a press, nothing is sent, nothing waits (the seventh review: an asking stood here -
+    //     two seconds in the main loop at every restart of the screen, whose chip's start-up text is read as an unframed code)
+    fakeMs += 3000; feedWord("SwitchesView1"); CHECK(GetButtonPress() && !TextInFramed && !TextInIsGenuine() && ghosts.back() == "an unframed word: 53 77 69 74" && sysAsked == 0 && sent.empty());
+    fakeMs += 3000; feed({0x80, 0x80, 0x00, 0x80}); CHECK(GetButtonPress() && !TextInIsGenuine() && ghosts.back() == "an unframed code: 80 80 00 80" && sysAsked == 0 && sent.empty() && !ScreenRestartSeen);
     feed({0xB0, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF}); CHECK(GetButtonPress() && !TextInIsGenuine());   // (a late reply split from its q: B0 00 00 00 FF FF FF)
     // 6. a framed burst that never completes (the screen went away): dropped, logged, nothing obeyed; the next frame is read whole
     fresh(); feed({0x7E, 0x7E, 0x0C, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x90, 0x01, 0x00, 0x00});
@@ -127,7 +144,9 @@ int main()
     fresh(); at = NEXTION.rx.size(); framed({0x00, 0x0E, 0x00, 0x00, 0x90, 0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00}); NEXTION.pauseAt[at + 4 + 8] = 60;
     StashPendingEventBytes(); CHECK(PendingCount == 1 && PendingLens[0] == 12 && ghosts.empty());
     // 13. an empty frame of zeros (the screen's power-on 00 00 00 FF FF FF 88 FF FF FF) says nothing, framed or not
-    fresh(); ScreenFramesBursts = true; feed({0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x88, 0xFF, 0xFF, 0xFF}); CHECK(GetButtonPress() && TextInIsGenuine() && ghosts.empty());
+    fresh(); ScreenFramesBursts = true; feed({0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x88, 0xFF, 0xFF, 0xFF}); CHECK(GetButtonPress() && TextInIsGenuine() && ghosts.empty() && !ScreenRestartSeen);
+    //     (B211: ... at this board's own start. Once that is over they mean that the screen has started again)
+    fresh(); ScreenFramesBursts = true; ScreenStartupOver = true; feed({0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x88, 0xFF, 0xFF, 0xFF}); CHECK(GetButtonPress() && TextIn[0] == 0 && ghosts.empty() && ScreenRestartSeen && ScreenRestartReason == -2);
     // 14. B181: a PIPE LINE ("ldrctel 25:... 26:...") with a pause inside it (an interrupt held on the screen's side, a hold):
     //     read whole, to its newline - before, the pause ended the word and the second half, with no name, was lost ("PIDs:
     //     only PART came back in 2 s", Malcolm, 5 Nov 2026)
@@ -177,11 +196,15 @@ def main():
     decl_start = NEXTION.index('#define MAXPENDINGFRAME')
     decl_end = NEXTION.index('void PendingPush(')
     decls = '\n'.join(l for l in NEXTION[decl_start:decl_end].split('\n') if not l.startswith('//'))
+    decls = (lambda u: u[u.index('static uint16_t ScreenCountSeed()'):u.index('static uint16_t NextPageMark()')])(open(os.path.join(INC, 'Utilities.h'), encoding='utf-8', errors='replace').read()) + decls   # (the counts of a page's markers and of the numbers said back: Utilities.h)
+    decls = ''.join('#define %s %s\n' % (d, re.search(r'#define ' + d + r' (\d+)', open(os.path.join(INC, '1Definitions.h'), encoding='utf-8', errors='replace').read()).group(1)) for d in ('SUBTRIM_WORD_BYTES', 'SUBTRIM_DONE_BYTES')) + decls   # (1Definitions.h: the Sub-trim page's two bursts - IsPageOwnWord knows the "done" by its length)
     body = (decls + lift(NEXTION, 'void PendingPush(') + lift(NEXTION, 'int ReadFramedRest(') + lift(NEXTION, 'void StashFramed(') + lift(NEXTION, 'void PendingShrinkFirst()')
-            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n)')
-            + lift(NEXTION, 'static bool PipeLineDone(') + lift(NEXTION, 'static bool PipeLineOpen(') + lift(NEXTION, 'void StashPendingEventBytes()')
-            + lift(NEXTION, 'bool CollectReply(uint8_t expected, uint16_t &k)')
-            + lift(NEXTION, 'void GetTextIn()') + lift(NEXTION, 'bool GetButtonPress()') + lift(NEXTION, 'bool TextInIsGenuine()'))
+            + (lambda s: '\n'.join(l for l in s[s.index('#define WORD_OPEN_MS'):s.index('// B186 (Malcolm, 5 Nov 2026, PID plus:', s.index('#define WORD_OPEN_MS'))].split('\n') if not l.startswith('//')) + '\n')(NEXTION)   # (B211, the ninth review: A WORD WITH NO END MAY NOT BE OVER - its few lines, as they are)
+            + lift(NEXTION, 'static bool PipeLineHead(') + lift(NEXTION, 'static bool PipeLineDone(') + lift(NEXTION, 'static bool PipeLineOpen(') + lift(NEXTION, 'static bool BareLineDone(') + lift(NEXTION, 'B211_RARE static void NoteBareRead(')
+            + lift(NEXTION, 'void StashFrame(const uint8_t *f, uint16_t n, bool withEnd)') + 'static void NotePipeLineTooLong() { if (PipeLinesTooLong < 65535) ++PipeLinesTooLong; }   // (Nextion.h: counted, and said in the log - dev/test_wholepage/scene_long_pipe runs the real one)\n' + lift(NEXTION, 'void StashPendingEventBytes()')
+            + lift(NEXTION, 'static bool GluedNumberOk(') + lift(NEXTION, 'bool CollectReply(uint8_t expected, uint16_t &k)')
+            + lift(NEXTION, 'void GetTextIn()') + lift(NEXTION, 'bool GetButtonPress()')
+            + lift(NEXTION, 'B211_RARE static bool IsScreensOwnWord(') + lift(NEXTION, 'bool TextInIsGenuine()'))
     d = tempfile.mkdtemp()
     cpp = os.path.join(d, 't.cpp'); open(cpp, 'w').write(PRE + body + MAIN)
     r = subprocess.run(['clang++', '-std=c++14', '-Wall', '-Wno-unused-function', '-Wno-unused-variable', '-Wno-format', '-Wno-unused-but-set-variable',

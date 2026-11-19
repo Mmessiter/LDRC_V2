@@ -51,6 +51,18 @@ FLASHMEM void ShowLocalGovBank()
 // ====================================================
 FLASHMEM void SaveToLocalGovBank()
 {
+    if (!KeptHasPlace(Bank))
+    { // B211 (the fourteenth review): the record has no place for a copy of banks 5 and 6 (RF_Kept.h) - "kept" was said, and marked, and nothing was.
+      // The fifteenth review: THE PAGE GOES BACK TO WHAT IT SHOWED (this is the save WITHOUT the model: no values, greyed, under its standing line
+      // "The card keeps copies of banks 1 to 4 only"). The refusal had a line of its own, which took the grey and that line away: six seconds on the
+      // bank stood there as 0 0 0 in black. What was typed over the zeros is let go - nothing can keep it - and the sound says so.
+        PlaySound(WHAHWHAHMSG);
+        RfLeaveAfterSave = false; // (as a box does: OK's "Save now?" does not close the page after a save that was not made)
+        GOVS_PROFILE_Were_Edited = false;
+        ShowLocalGovBank();
+        SendCommand((char *)"vis b3,0");
+        return;
+    }
     ShowGOVMsg((char *)"Saving governor values ...", Gray);
     RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     LoadGovWritePayload(); // read from Nextion into GovWritePayload[]
@@ -75,6 +87,8 @@ FLASHMEM void SaveToLocalGovBank()
 // ====================================================
 FLASHMEM void LoadGovWritePayload()
 {
+    KEEP_WHOLE(payload, GovWritePayload); // B211 (the ninth review): whole, or not at all (Nextion.h). These bytes are what a save ALREADY UNDER WAY sends when its
+                                          // turn comes: a second Save whose boxes had no answer wrote 255s into them - "NOTHING was sent", and the first sent them
     GovWritePayload[0] = 0; // RF23 flag — not written back
 
     uint16_t hs = (uint16_t)GetValue((char *)"n0");
@@ -229,6 +243,7 @@ FLASHMEM static void GovAskValues()
 {
     if (CurrentView != RFGOVERNORVIEW_PROFILE) { BlockBankChanges = false; return; }
     GOV_Send_Duration = GOV_PROFILE_WAIT_TIME;
+    RfOtherReadsOver();                    // B211: a page's read is over when another page's begins (1Definitions.h) - the block on the bank switch is this read's now
     Reading_GOV_Now = true;
     AddParameterstoQueue(SEND_GOV_VALUES);
     GOV_Start_Time = millis();

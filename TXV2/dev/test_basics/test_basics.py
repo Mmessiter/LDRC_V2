@@ -19,6 +19,19 @@ prog = r'''
 #include <map>
 #include <vector>
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+uint32_t BoxesLost = 0;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+bool RfKeepTyped = false;   // (Nextion.h: what the pilot typed stays on the page)
+static bool TextMustBeNumber(const char *, char *text) { for (const char *p = text; *p; ++p) if (!((*p >= '0' && *p <= '9') || *p == ' ' || *p == '+' || *p == '-' || *p == '.')) { text[0] = 0; ++BoxesLost; return false; } return true; }   // (Nextion.h: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER)
+#endif
 #define PROGMEM
 #define WHAHWHAHMSG 1
 #define BEEPCOMPLETE 2
@@ -39,18 +52,28 @@ static std::map<std::string, std::string> fields; static std::vector<std::string
 static void SendCommand(char *c) { cmds.push_back(c); }
 static void SendText(char *n, char *t) { fields[n] = t; }
 static bool RfLeaveAfterSave = false; static int RfLeaveView = -1; static void (*RfLeaveFn)() = nullptr;
-static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; RfLeaveAfterSave = false; }   // (B102: as Utilities.h)
+#define FRONTVIEW_FOR_TEST 1
+static bool overtakeNextBox = false;   // (the fifteenth review: another page - the front page - is put up over the box while it waits; Utilities.h says so in QuestionOvertaken)
+static int overtakeBoxNo = 0;           // ... or the box of this number (counted from 1) is overtaken by ANOTHER BOX from inside its wait: this board's view stays what it was
+static std::vector<std::string> boxPages;   // (each box's way back)
+static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; boxPages.push_back(page); RfLeaveAfterSave = false; QuestionOvertaken = overtakeNextBox || boxes == overtakeBoxNo; if (overtakeNextBox) { overtakeNextBox = false; CurrentView = FRONTVIEW_FOR_TEST; } }   // (B102: as Utilities.h)
+static bool RfHomeNotRead = false; static bool rfMayFlyNow = false; static int quietSaid = 0;   // (B211, the sixteenth review: PipeHttp.h RfMayFly / RfSayQuietly / RfBoxOrQuiet stood in for - no box that waits while the model may fly)
+static std::string lastQuiet; static bool RfMayFly() { return rfMayFlyNow; } static void RfSayQuietly(const char *w) { ++quietSaid; lastQuiet = w; }
+static void RfBoxOrQuiet(const char *page, const char *msg) { if (RfMayFly()) { RfLeaveAfterSave = false; RfSayQuietly(msg); return; } MsgBox((char *)page, (char *)msg); }
 static bool GetConfirmation(char *page, char *prompt) { ++asked; lastBox = prompt; if (!confirmAnswer) RfLeaveAfterSave = false; return confirmAnswer; }   // (B102: a No keeps the page, as Utilities.h)
 static void PlaySound(int) { ++sounds; }
-static void RotorFlightStart() { ++rfStarts; CurrentView = ROTORFLIGHTVIEW; }
-static void RFSettingsGather() { ++gathers; }
+static bool menuShut = false, menuSaysWhy = false;   // (RF_RotorFlight.h: the motor switch on - the menu will not open: without a word while the model is connected, else with its own box)
+static void MsgBox(char *page, const char *msg);
+static bool homeNotReadAtMenu = false;
+static void RotorFlightStart() { homeNotReadAtMenu = RfHomeNotRead; if (menuShut) { if (menuSaysWhy) MsgBox((char *) "page RXSetupView", "The motor is ON.\r\nSwitch it off first."); return; } ++rfStarts; CurrentView = ROTORFLIGHTVIEW; }
+static bool RFSettingsGather() { ++gathers; return true; }
 static bool ModelSeemsArmed(char *why, size_t n) { if (!armed) return false; snprintf(why, n, "Model is armed"); return true; }
 static bool RfPipeBlocked(char *, size_t) { return false; }
 static bool RfNeedsModel(char *, size_t) { return false; }
 static bool BakOffline() { return offline; }
 static void GetText(char *n, char *out, int len) { snprintf(out, len, "%s", fields[n].c_str()); }
 bool NextionTextMissed = false; static bool RfFieldsMissed(const char *) { if (!NextionTextMissed) return false; NextionTextMissed = false; return true; }   // (B152)
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
 static long FieldNumber(const char *name, long lo, long hi) { char t[24] = ""; GetText((char *)name, t, sizeof(t) - 1); long v = strtol(t, nullptr, 10); return v < lo ? lo : v > hi ? hi : v; }
 // ---- the pipe and a fake flight controller
 static int PipeReqId = 0, PipeRepId = -1, PipeRepCode = 0; static char PipeRepBody[1600] = ""; static uint32_t PipeReqSentMs = 0;
@@ -66,12 +89,14 @@ static uint8_t board[48]; static int boardLen = 0;
 static void fcReply(int code, const std::string &body) { PipeRepCode = code; strncpy(PipeRepBody, body.c_str(), sizeof(PipeRepBody) - 1); PipeRepBody[sizeof(PipeRepBody) - 1] = 0; PipeRepId = PipeReqId; }
 static unsigned u16(const uint8_t *b, int o) { return b[o] | (b[o + 1] << 8); }
 static void w16(uint8_t *b, int o, unsigned v) { b[o] = v & 0xFF; b[o + 1] = v >> 8; }
+static int fail42 = 0, fail43 = 0, failWrite = 0;   // (failWrite: the request of this number is refused - a save that fails at that step)
 int MspAsk(uint8_t fn, const uint8_t *data, int len) {
     ++PipeReqId; PipeReqSentMs = now; fcLog.push_back({fn, hexOf(data, len)});
+    if (failWrite && fn == failWrite) { fcReply(503, "the receiver did not answer"); return PipeReqId; }
     if (rebootLeft > 0) { --rebootLeft; fcReply(503, "the flight controller is restarting"); return PipeReqId; }
     switch (fn) {
-    case 42: fcReply(200, hexOf(mix, 21)); return PipeReqId;
-    case 43: memcpy(mix, data, 21); fcReply(200, ""); return PipeReqId;
+    case 42: if (fail42 > 0) { --fail42; fcReply(503, "the receiver did not answer"); return PipeReqId; } fcReply(200, hexOf(mix, 21)); return PipeReqId;   // (the fifteenth review: a read that FAILS)
+    case 43: if (fail43 > 0) { --fail43; fcReply(503, "the receiver did not answer"); return PipeReqId; } memcpy(mix, data, 21); fcReply(200, ""); return PipeReqId;
     case 131: fcReply(200, hexOf(mot, 29)); return PipeReqId;
     case 222: memcpy(mot, data, 6); memcpy(mot + 7, data + 6, 22); fcReply(200, ""); return PipeReqId;   // (Rotorflight: the motor count is not written)
     case 123: if (escMissing) { fcReply(404, "unknown"); return PipeReqId; } fcReply(200, hexOf(esc, 14)); return PipeReqId;
@@ -99,6 +124,7 @@ static void run(int n = 40) { for (int i = 0; i < n; ++i) { BasicsPoll(); now +=
 static int writes(int fn) { int k = 0; for (auto &r : fcLog) if (r.fn == fn) ++k; return k; }
 static std::string lastData(int fn) { for (int i = (int) fcLog.size() - 1; i >= 0; --i) if (fcLog[i].fn == fn) return fcLog[i].data; return "?"; }
 static bool cmd(const char *c) { for (auto &x : cmds) if (x == c) return true; return false; }
+static int cmdCount(const char *c) { int k = 0; for (auto &x : cmds) k += x == c; return k; }
 static void fakeFc() {
     memset(mix, 0, sizeof mix); mix[5] = 2; w16(mix, 9, 1500);                       // CCPM 120, clockwise, variable-pitch tail
     memset(mot, 0, sizeof mot); w16(mot, 0, 1070); w16(mot, 2, 2000); w16(mot, 4, 1000); mot[6] = 1; mot[7] = 10; mot[9] = 0; w16(mot, 10, 250);
@@ -205,6 +231,72 @@ int main() {
     fakeFc(); portsMissing = true; CurrentView = RFSETUPVIEW; StartBasicsView(); run(); CHECK(BasHave && !BasPortsHave); StartBasics2View(); StartBasics3View(); CHECK(fields["ltn0"] == "No ports read"); portsMissing = false;
     // OK from any page lets a throttle hold go first (RF_EscCal.h)
     ecalStops = 0; EndBasicsView(); CHECK(ecalStops == 1);
+    // ---------------------------------------------------------------- B211 (the fifteenth review; reviewer B's experiments, adopted. Released code had it):
+    // A READ THAT FAILS LEAVES NOTHING IN HAND, AND THE PAGE IS LEFT. BasHave was set by the first read that worked and never cleared: the page stayed
+    // up with the block of the read BEFORE and Save open on it.
+    // (1) MODEL A is read; MODEL B is connected in the same session and ITS read fails: he typed the pole count he came for and saved - model B's
+    //     flight controller got A's swash type, rotor direction, tail type and gear ratio, "Saved, and read back the same."
+    fakeFc(); strcpy(ModelName, "Model A"); CurrentView = RFSETUPVIEW; StartBasicsView(); CHECK(!BasHave);        // (nothing is in hand while the read runs)
+    run(); CHECK(BasHave && fields["tn0"] == "CCPM 120 deg" && fields["tn5"] == "10"); EndBasicsView();
+    strcpy(ModelName, "Other"); mix[5] = 4; mix[0] = 1; mix[1] = 1; mot[13] = 6; w16(mot, 21, 1); w16(mot, 23, 8);                        // model B: a 140-degree swash, anticlockwise, a motorised tail, 6 poles, 1 : 8
+    boxes = 0; rfStarts = 0; fail42 = 1; fcLog.clear(); CurrentView = RFSETUPVIEW; StartBasicsView(); CHECK(!BasHave); run();
+    CHECK(boxes == 1 && lastBox.find("Could not read the mixer") == 0 && !BasHave && BasStep == BAS_IDLE && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW);   // THE PAGE IS LEFT: its box, then the menu
+    fields["tn5"] = "6"; confirmAnswer = true; fcLog.clear(); asked = 0; SaveBasics(); run(80);                                             // (a Save from anywhere: nothing is in hand - nothing asked, nothing written)
+    CHECK(fcLog.empty() && asked == 0 && mix[5] == 4 && mix[0] == 1 && mix[1] == 1 && u16(mot, 21) == 1 && u16(mot, 23) == 8);
+    BasicsSwashTapped(); BasicsDirectionTapped(); BasicsTailTapped(); CHECK(mix[5] == 4 && !Bas_Was_Edited);                                // (and no row turns: BasHave)
+    // (2) THE SAME MODEL, an edit typed and DISCARDED (the gather in front of OK's question had put it in the block); the next visit's read fails
+    fakeFc(); CurrentView = RFSETUPVIEW; StartBasicsView(); run(); CHECK(BasHave && fields["tn5"] == "10");
+    fields["tn5"] = "14"; BasicsWasEdited(); saveNowAnswer = 0; EndBasicsView(); CHECK(CurrentView == ROTORFLIGHTVIEW && writes(222) == 0 && mot[13] == 10);
+    boxes = 0; rfStarts = 0; fail42 = 1; fcLog.clear(); CurrentView = RFSETUPVIEW; StartBasicsView(); run();
+    CHECK(boxes == 1 && !BasHave && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW);
+    BasicsEscTapped(); confirmAnswer = true; fcLog.clear(); SaveBasics(); run(80); CHECK(fcLog.empty() && mot[13] == 10);                  // the discarded 14 is written by nothing
+    // (3) THE MENU WILL NOT OPEN (the motor switch on): the page is put up again and SAYS that it was not read; nothing is in hand, Save writes nothing
+    fakeFc(); menuShut = true; boxes = 0; rfStarts = 0; fail42 = 1; fcLog.clear(); cmds.clear(); CurrentView = RFSETUPVIEW; StartBasicsView(); run();
+    CHECK(boxes == 1 && !BasHave && rfStarts == 0 && CurrentView == BASICSVIEW && cmd("page BasicsView") && fields["busy"] == "NOT READ. Safety on, motor off - then OK.");
+    fields["tn5"] = "6"; BasicsWasEdited(); fcLog.clear(); SaveBasics(); run(80); CHECK(fcLog.empty() && mot[13] == 10);
+    menuShut = false; Bas_Was_Edited = false;
+    // (4) a box that another page was put up over: neither the menu nor this page is put over that page
+    fakeFc(); boxes = 0; rfStarts = 0; fail42 = 1; cmds.clear(); CurrentView = RFSETUPVIEW; StartBasicsView(); overtakeNextBox = true; run();
+    CHECK(boxes == 1 && rfStarts == 0 && !BasHave && CurrentView == FRONTVIEW_FOR_TEST && cmdCount("page BasicsView") == 1);               // (the one page command is StartBasicsView's own)
+    QuestionOvertaken = false;
+    // (4b) THE BOX BEHIND A FAILED READ GOES BACK TO THE MENU - not to the page that could not be read (RfLeaveNotRead)
+    fakeFc(); boxes = 0; boxPages.clear(); rfStarts = 0; fail42 = 1; CurrentView = RFSETUPVIEW; StartBasicsView(); run();
+    CHECK(boxes == 1 && boxPages.size() == 1 && boxPages[0] == "page RFView" && rfStarts == 1 && CurrentView == ROTORFLIGHTVIEW);
+    // (4c) THE MENU WILL NOT OPEN AND SAYS WHY (its own box, which goes back to the model's setup page): this page is put up again, saying NOT READ
+    fakeFc(); menuShut = menuSaysWhy = true; boxes = 0; boxPages.clear(); rfStarts = 0; fail42 = 1; cmds.clear(); CurrentView = RFSETUPVIEW; StartBasicsView(); run();
+    CHECK(boxes == 2 && boxPages[1] == "page RXSetupView" && !BasHave && rfStarts == 0 && CurrentView == BASICSVIEW && cmdCount("page BasicsView") == 2 && fields["busy"] == "NOT READ. Safety on, motor off - then OK.");
+    // (4d) ... and when ANOTHER BOX came over that box (from inside its wait: this board's view is what it was), the page is NOT put up over it
+    fakeFc(); boxes = 0; boxPages.clear(); rfStarts = 0; fail42 = 1; cmds.clear(); fields["busy"] = ""; overtakeBoxNo = 2; CurrentView = RFSETUPVIEW; StartBasicsView(); run();
+    CHECK(boxes == 2 && !BasHave && rfStarts == 0 && CurrentView == BASICSVIEW && cmdCount("page BasicsView") == 1 && fields["busy"] != "NOT READ. Safety on, motor off - then OK.");
+    overtakeBoxNo = 0; menuShut = menuSaysWhy = false; QuestionOvertaken = false;
+    // (5) a SAVE that fails stays on the page (what was typed is kept: scene_save_fails) - only a read leaves it
+    fakeFc(); CurrentView = RFSETUPVIEW; StartBasicsView(); run(); CHECK(BasHave);
+    BasicsSwashTapped(); confirmAnswer = true; boxes = 0; rfStarts = 0; fail43 = 1; fcLog.clear(); SaveBasics(); run(80);
+    CHECK(boxes == 1 && lastBox.find("Not written (mixer)") == 0 && BasHave && rfStarts == 0 && CurrentView == BASICSVIEW && Bas_Was_Edited);
+    // B10 (the sixteenth review): NOTHING IN HAND - nothing is an edit (OK asked "Save now?" for it, the save returned at once), and a Save refused
+    // for it does not leave "close when saved" standing for a later Save
+    { const bool h = BasHave, e = Bas_Was_Edited; BasHave = false; Bas_Was_Edited = false; BasicsWasEdited(); CHECK(!Bas_Was_Edited);
+      RfLeaveAfterSave = true; SaveBasics(); CHECK(!RfLeaveAfterSave);
+      BasHave = true; BasicsWasEdited(); CHECK(Bas_Was_Edited); BasHave = h; Bas_Was_Edited = e; }
+    // (the sixteenth review) A FAILED READ WHILE THE MODEL MAY FLY (the safety off): NO BOX THAT WAITS - a line for the log, the page stands under its line
+    fakeFc(); menuShut = false; menuSaysWhy = false; rfMayFlyNow = true; quietSaid = 0; boxes = 0; rfStarts = 0; fail42 = 1; cmds.clear(); CurrentView = RFSETUPVIEW; StartBasicsView(); run();
+    CHECK(boxes == 0 && quietSaid == 1 && !BasHave && rfStarts == 0 && CurrentView == BASICSVIEW && fields["busy"] == "NOT READ. Safety on, motor off - then OK.");
+    rfMayFlyNow = false;
+    //     ... and on the bench the menu's opening is told "this page could not be read" for its length only (RF_Tools.h: the guide does not tick the step)
+    fakeFc(); boxes = 0; rfStarts = 0; fail42 = 1; homeNotReadAtMenu = false; CurrentView = RFSETUPVIEW; StartBasicsView(); run();
+    CHECK(boxes == 1 && rfStarts == 1 && homeNotReadAtMenu && !RfHomeNotRead);
+    //     a SAVE'S failure while the model may fly: no box either, the page keeps its edits
+    fakeFc(); CurrentView = RFSETUPVIEW; StartBasicsView(); run(); CHECK(BasHave);
+    BasicsDirectionTapped(); confirmAnswer = true; failWrite = 222; rfMayFlyNow = true; quietSaid = 0; boxes = 0; lastQuiet.clear(); SaveBasics(); run(80);
+    CHECK(boxes == 0 && quietSaid == 1 && Bas_Was_Edited && BasStep == BAS_IDLE);
+    CHECK(lastQuiet.find("PART WRITTEN, NOT STORED (motor & ESC failed) - try again, or switch the model off and on") == 0);   // (THE WORDS SAY WHAT STANDS IN THE FLIGHT CONTROLLER: the mixer block is written - it said "Not written")
+    rfMayFlyNow = false; failWrite = 0;
+    //     ... and on the bench the same failure is a box, with the same words; the first write refused is still "Not written"
+    fakeFc(); CurrentView = RFSETUPVIEW; StartBasicsView(); run(); BasicsDirectionTapped(); confirmAnswer = true; failWrite = 250; boxes = 0; SaveBasics(); run(80);
+    CHECK(boxes == 1 && lastBox.find("Written, but NOT STORED - try again, or switch the model off and on") == 0);
+    fakeFc(); CurrentView = RFSETUPVIEW; StartBasicsView(); run(); BasicsDirectionTapped(); confirmAnswer = true; failWrite = 43; boxes = 0; SaveBasics(); run(80);
+    CHECK(boxes == 1 && lastBox.find("Not written (mixer)") == 0);
+    failWrite = 0;
     printf("test_basics: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

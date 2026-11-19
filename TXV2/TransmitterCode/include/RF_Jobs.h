@@ -27,6 +27,37 @@ enum { JOBS_IDLE = 0, JOBS_READ_SW, JOBS_READ_ADJ, JOBS_SAVE_SW, JOBS_SAVE_ADJ }
 static int JobsStep = JOBS_IDLE;           // the sequencer: a read or a save runs the switches' engine, then the adjustments'
 static int JobsPickFor = 0;                // the picker: 0 = the row showing, 1 = a new job (Add)
 static uint32_t JobsLiveMs = 0;
+// B211 (the eleventh review, 15 Nov 2026): THE PAGE IS BACK ON THE SCREEN AND THIS BOARD HAS NOT DRAWN IT - AND THE BAR IS THE CARD'S.
+// Whenever this page is loaded (opened; back from the keypad, the picker, a question, Help, the screen saver) the screen shows it as its
+// card has it: the typed boxes keep their texts, but the bar is the card's - kind 0, its dividers at 1500 and 1700. The page says
+// "ldrcadj" as it comes up, and JobsPageBack takes the typed values and draws the row and the bar again. B211 let JobsPageBack go back
+// with nothing done when a box of its gather had no answer - and a page that is slow in coming up is served its word while the screen
+// still owes an answer (no box has one); on a field screen the word itself can be cut by a line of the screen's other core. The bar
+// stayed the card's; a touch on it was read as the row's own bar, and 1500 and 1700 became the knob's ends (or a switch's ON zone).
+//  - THE BAR CARRIES THIS BOARD'S TOKEN: with every bar it draws, this board writes a number onto it ("bar.own": the screen keeps any
+//    attribute written to its bar, and a page loaded afresh has none - 0). A touch on the bar asks for it first (JobsBarMoved): another
+//    number, or no answer, and nothing of the bar is taken - the page is drawn instead (the values as typed first).
+//  - THE PAGE IS DUE until this board has drawn it: after a page command of this board's that was not followed by a draw (the count of
+//    page commands, as when the bar was last drawn), after a gather that lost a box, after a bar that was not ours. JobsPoll draws a due
+//    page when the screen can be asked again - a few tries, a second apart - and ticks no live marker onto a page that is due.
+static uint16_t JobsBarToken = 0;          // the number on the bar this board drew last (0: none drawn yet)
+static uint16_t JobsDrawnAtMark = 0;       // Nextion.h ScreenMarkCount - the count of this board's page commands - when the bar was last drawn
+static bool JobsPageDue = false;           // the page is not known to be as this board draws it (a gather lost a box, the bar was not ours)
+static uint32_t JobsDueMs = 0;             // when the main loop first saw the page due, or last tried to draw it (0: not seen due)
+static uint8_t JobsDueTries = 0;           // its tries so far
+#define JOBS_DUE_TRIES 3
+#define JOBS_DUE_EVERY_MS 1000
+static bool JobsIsDue() { return JobsPageDue || JobsDrawnAtMark != ScreenMarkCount; }
+static void JobsDue() { JobsPageDue = true; JobsDueMs = 0; }   // (the main loop's tries begin again)
+FLASHMEM static void JobsBarOwn() // the row and its bar have just been drawn by this board (SwShow, AdjShow, JobsShow with no job)
+{
+    char c[24];
+    JobsBarToken = ScreenCountAfter(JobsBarToken); // (never 0; the first from the clock: Utilities.h)
+    snprintf(c, sizeof(c), "bar.own=%u", (unsigned)JobsBarToken);
+    SendCommand(c);
+    JobsDrawnAtMark = ScreenMarkCount;
+    JobsPageDue = false;
+}
 
 // ---- the picker's rows (page 68's wheel, hmi/adjust_pages.py JOBS must agree): the two selectors, then the switch jobs
 // (RF_Switches.h SwModes), then the settings in the adjustments' order (RF_Adjust.h AdjOrder: 5..25, 3, 4, 26..81)
@@ -82,18 +113,27 @@ static const char *JOBS_NO_CABLE = "The selectors and knobs need the USB cable f
 FLASHMEM static void JobsShow()
 {
     JobsSync();
+    AdjShownAt = -1;   // (B211: no adjustment's row is on the screen until AdjShow has put one there - RF_Adjust.h)
     if (!JobsN())
     {
         JobsTitle();
         SendText((char *)"ltn0", (char *)"Does");
         AdjText("tn0", (char *)"(none yet: press Add)"); AdjText("tn3", (char *)""); AdjVis("tn3", false); AdjText("tn2", (char *)""); AdjText("tn1", (char *)""); AdjText("tn8", (char *)""); AdjText("hint", (char *)"");
         SendCommand((char *)"bar.n=1"); SendCommand((char *)"bar.kind=0"); SendCommand((char *)"bar.mk=-1"); AdjText("bar", (char *)"");
+        JobsBarOwn();   // (B211: the bar is this board's from here)
         return;
     }
     if (JobIsSw(JobAt)) SwShow(); else AdjShow();
     JobsTitle();
 }
 FLASHMEM static void JobsArrive() { JobsShow(); if (JobsN() && !JobIsSw(JobAt)) AdjAskNow(); }   // a row arrived at: a setting's present value is asked for
+FLASHMEM static bool JobsDrawDue() // B211: a page that is due (above) - the values as typed, then the page. false: a box had no answer - nothing taken, nothing drawn, still due
+{
+    if (AdjHave) AdjGather();
+    if (WorkLostABox()) return false;   // (still due: whoever calls this has said so - JobsDue, or the count of page commands)
+    JobsHead(); JobsShow();
+    return true;
+}
 // A present-value read (ADJ_NOW_*) is a nicety: anything the pilot does drops it rather than wait for it
 static void JobsDropNowRead() { if (AdjStep_ == ADJ_NOW_STATUS || AdjStep_ == ADJ_NOW_READ) AdjStep_ = ADJ_IDLE; }
 FLASHMEM static void JobsLive() { if (JobsStep != JOBS_IDLE || !JobsN()) return; if (JobIsSw(JobAt)) SwLive(); else AdjLive(); }
@@ -123,6 +163,20 @@ FLASHMEM static void JobsSaved() // both tables written and read back: say so, a
     JobsHead(); JobsShow();
     JobsNote("Saved, and read back the same.", 4000);
     RfSavedThenLeave(ADJUSTVIEW);
+}
+FLASHMEM static bool JobsDuePoll() // B211 (the eleventh review): THE PAGE IS DUE (above) - from the main loop, the page idle. true: due (drawn now, if the screen can be asked)
+{
+    if (!SwHave || !JobsIsDue()) { JobsDueMs = 0; return false; }   // (nothing read - the read failed, and its box left the page: there is nothing of this board's to draw; as JobsPageBack)
+    if (!JobsDueMs) { JobsDueMs = millis() | 1; JobsDueTries = 0; }   // (first seen: its own word may yet draw it - JobsPageBack)
+    else if (JobsDueTries < JOBS_DUE_TRIES && (int32_t)(millis() - JobsDueMs) >= JOBS_DUE_EVERY_MS && !BoxesHaveNoPage())   // (signed: "| 1" may be a millisecond AHEAD - unsigned, that read as 49 days gone, and the first try came at once)
+    {
+        ++JobsDueTries; JobsDueMs = millis() | 1;
+        const uint32_t lost = BoxesLost;
+        BoxesLostAtWork = BoxesLost;   // (the main loop's own work, counted as a button's is: Utilities.h CheckForNextionButtonPress - no question waits here)
+        JobsDrawDue();
+        if (BoxesLost != lost && JobsDueTries >= JOBS_DUE_TRIES) NoteBoxesLost();   // (the last try: said. The next touch of the page draws it)
+    }
+    return true;
 }
 FLASHMEM void JobsPoll()
 {
@@ -157,6 +211,7 @@ FLASHMEM void JobsPoll()
         JobsSaved();
         return;
     default:
+        if (JobsDuePoll()) return;   // (B211: the page is due - no live marker onto a page that is not drawn)
         if ((int32_t)(millis() - JobsLiveMs) >= 300) { JobsLiveMs = millis(); JobsLive(); }
         return;
     }
@@ -167,6 +222,7 @@ FLASHMEM void SaveJobs() // Save: the switch jobs that changed, then the selecto
     if (!Sw_Was_Edited && !Adj_Was_Edited) return;
     JobsDropNowRead();
     if (AdjHave) AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     if (Sw_Was_Edited)
     {
         JobsStep = JOBS_SAVE_SW;
@@ -188,6 +244,7 @@ FLASHMEM void EndJobsView() // OK
     if (JobsEditedFlag)
     {
         if (AdjHave) AdjGather();
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!RfSaveFirst("page AdjustView", "The edited switches and knobs are", JobsSaveNow, EndJobsView, &JobsEditedFlag)) return;   // B102
     }
     Sw_Was_Edited = false; Adj_Was_Edited = false; AdjStep_ = ADJ_IDLE;
@@ -197,8 +254,8 @@ FLASHMEM void EndJobsView() // OK
 FLASHMEM void JobsPageBack() // the page is back on the screen (its postinitialize prints "ldrcadj"): the values as typed, the bar again
 {
     if (CurrentView != ADJUSTVIEW || !SwHave) return;
-    if (AdjHave) AdjGather();
-    JobsHead(); JobsShow();
+    JobsDue();       // (B211, the eleventh review: loaded afresh - the bar is the card's until this board has drawn it; THE PAGE IS DUE, above)
+    JobsDrawDue();   // (a box with no answer: nothing was taken, nothing drawn - it stays due, and JobsPoll draws it when the screen can be asked)
 }
 
 // ---- the arrows, the boxes, the bar
@@ -207,6 +264,7 @@ FLASHMEM static void JobsMove(int to)
     if (!JobsN()) return;
     JobsDropNowRead();
     if (AdjHave) AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     JobAt = to;
     JobsArrive();
 }
@@ -239,8 +297,19 @@ FLASHMEM void JobsBarMoved()
 {
     if (!JobsN() || JobsStep != JOBS_IDLE) return;
     JobsDropNowRead();
+    if (!JobsIsDue())
+    { // B211 (the eleventh review): THE BAR CARRIES THIS BOARD'S TOKEN (above) - or it is not the bar this board drew, and nothing of it is taken
+        const int own = GetOtherValue((char *)"bar.own");
+        if (WorkLostABox() || !JobsBarToken || own != (int)JobsBarToken) JobsDue();
+    }
+    if (JobsIsDue())
+    { // the page is drawn first (the values as typed, then the row and its bar): this touch took nothing. With no answer from the screen, later (JobsPoll)
+        if (!WorkLostABox()) JobsDrawDue();
+        return;
+    }
     if (JobIsSw(JobAt)) { JobsSync(); SwitchBarMoved(); }
     else AdjustBarMoved();
+    if (WorkLostABox()) { JobsDue(); return; }   // (a box of the bar had no answer: nothing was taken - and what the bar shows now is drawn again as it is in hand)
     JobsHead(); JobsTitle();
 }
 FLASHMEM void JobsRemove()
@@ -273,6 +342,7 @@ FLASHMEM void JobsSettingTapped() // the job box: the picker, on the row's own j
     JobsDropNowRead();
     if (AdjStep_ != ADJ_IDLE) return;
     if (AdjHave) AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     JobsPickFor = 0;
     JobsSync();
     JobsOpenPicker(JobIsSw(JobAt) ? JobsPickIdxOfMode(SwNow[SwShown[SwAt]].perm) : JobsPickIdxOfFn(AdjRows[AdjAt].fn));
@@ -283,6 +353,7 @@ FLASHMEM void JobsAdd() // Add: choose what the new job does first (the picker, 
     JobsDropNowRead();
     if (AdjStep_ != ADJ_IDLE) return;
     if (AdjHave) AdjGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     JobsPickFor = 1;
     JobsOpenPicker(0);
 }

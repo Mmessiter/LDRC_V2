@@ -9,6 +9,8 @@ left or a bank change read afresh (the read's start time is the read-back's iden
 import os, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HDR = os.path.join(ROOT, 'TransmitterCode', 'include', 'RF_Verify.h')
+import re
+FLOOR = re.search(r'^#define RF_SAVE_HOLD_FLOOR_MS (\d+)', open(os.path.join(ROOT, 'TransmitterCode', 'include', '1Definitions.h'), encoding='utf-8', errors='replace').read(), re.M).group(1)   # (e101b)
 prog = r'''
 #include <cstdio>
 #include <cstdint>
@@ -34,12 +36,17 @@ prog = r'''
 #define Gray 33840
 #define Red 63488
 #define RF_VERIFY_WAIT_MS 4000
+#define RF_SAVE_HOLD_FLOOR_MS @FLOOR@   // (e101b: 1Definitions.h's own value - RF_Verify.h's static_assert holds it)
 #define RF_VERIFY_GOVCFG_WAIT_MS 8000
+#define MSP_WAIT_TIME 2500           // (e99d, 18 Nov 2026: RF_Verify.h's static_assert - 1Definitions.h's values)
+#define GOV_PROFILE_WAIT_TIME 2500
 enum { VK_NONE = 0, VK_RATES, VK_RATES_ADV, VK_PID, VK_PID_ADV, VK_GOV, VK_GOV_CFG };
 static uint32_t nowMs = 1000; static uint32_t millis() { return nowMs; }
 static bool bigScreen = false; static bool ScreenIsBig() { return bigScreen; }   // B195
 static int CurrentView = RATESVIEW_RF;
+static uint8_t Bank = 1, DualRateInUse = 1;   // (e99b, 17 Nov 2026: RfVerifyArm notes the bank and the rate a save was made on - VfBank, VfRate)
 static uint8_t PipeState = 2; static bool BoundFlag = true, ModelMatched = true, bakOffline = false; static bool BakOffline() { return bakOffline; }
+static bool BlockShown = false;   // (e99e, 18 Nov 2026: RfVerifyEnd's one more ask looks at it - transceiver.h's)
 static bool BlockBankChanges = false, RfValueWasCut = false, GOVS_GLOBAL_Were_Edited = false;
 static bool Reading_PIDS_Now = false, Reading_RATES_Now = false, Reading_RATES_Advanced_Now = false, Reading_PIDS_Advanced_Now = false, Reading_GOV_Now = false, Reading_GOV_Config_Now = false;
 static uint32_t RATES_Start_Time = 0, RATES_Advanced_Start_Time = 0, PID_Start_Time = 0, PID_Advanced_Start_Time = 0, GOV_Start_Time = 0, GOV_Global_Start_Time = 0;
@@ -97,11 +104,11 @@ static void PidAskValues() { ++asks; PID_Send_Duration = 2500; Reading_PIDS_Now 
 static void PidAdvAskValues() { ++asks; PID_Advanced_Send_Duration = 2500; Reading_PIDS_Advanced_Now = true; PID_Advanced_Start_Time = millis(); }
 static void GovAskValues() { ++asks; GOV_Send_Duration = 2500; Reading_GOV_Now = true; GOV_Start_Time = millis(); }
 static void RefusedAsk() { ++asks; }   // (the queue refused it: no pipe after all - the flag stays down)
-bool RfVerifyArm(uint8_t kind, void (*ask)()); bool RfVerifyPending(); int RfVerifySet(); bool RfVerifyEnd(uint8_t kind); void RfVerifyTick();
-''' + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
+bool RfVerifyArm(uint8_t kind, void (*ask)()); bool RfVerifyPending(); bool RfVerifyFollows(); bool RfSaveHoldsBank(); int RfVerifySet(); bool RfVerifyEnd(uint8_t kind); void RfVerifyTick();
+'''.replace('@FLOOR@', FLOOR) + open(HDR).read().replace('#include <Arduino.h>', '').replace('#include "1Definitions.h"', '') + r'''
 static int checks = 0, fails = 0;
 #define CHECK(c) do { ++checks; if (!(c)) { ++fails; fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #c); } } while (0)
-static void reset() { cmds.clear(); msgs.clear(); hides.clear(); displays.clear(); edited.clear(); reds.clear(); sounds.clear(); texts.clear(); boxes = leaves = cutNotes = asks = 0; lastBox.clear(); BlockBankChanges = false; RfValueWasCut = false;
+static void reset() { cmds.clear(); msgs.clear(); hides.clear(); displays.clear(); edited.clear(); reds.clear(); sounds.clear(); texts.clear(); boxes = leaves = cutNotes = asks = 0; lastBox.clear(); BlockBankChanges = false; BlockShown = false; RfValueWasCut = false;
     Reading_PIDS_Now = Reading_RATES_Now = Reading_RATES_Advanced_Now = Reading_PIDS_Advanced_Now = Reading_GOV_Now = Reading_GOV_Config_Now = false; }
 static bool has(const std::vector<std::string> &v, const char *s) { for (auto &x : v) if (x == s) return true; return false; }
 static int count(const std::vector<std::string> &v, const char *s) { int n = 0; for (auto &x : v) if (x == s) ++n; return n; }
@@ -147,9 +154,81 @@ int main() {
     // (10 Nov 2026, the code review) the safety turned off since the Save: no box (it would freeze the switches), a line in the log, the page as it is
     reset(); mayFly = true; quiet = 0; nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(EndNothing(VK_RATES) && boxes == 0 && quiet == 1 && has(edited, "rates")); mayFly = false;
     // 5. a bank change read afresh (a new start time) or the page left: nothing compared, nothing said, the page's own hide runs as ever
-    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty() && !RfVerifyEnd(VK_RATES)); Rate_Values[1] = 11;
-    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty()); CurrentView = RATESVIEW_RF;
-    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; CHECK(!RfVerifyEnd(VK_RATES) && !RfVerifyPending() && boxes == 0); CurrentView = RATESVIEW_RF;
+    // (e99b, 17 Nov 2026: a read asked afresh on the SAME bank and rate is now followed - below. This row is the bank change it names: the bank really changed)
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; Bank = 2; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty() && !RfVerifyEnd(VK_RATES)); Rate_Values[1] = 11; Bank = 1;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; DualRateInUse = 2; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && hides.empty() && !RfVerifyEnd(VK_RATES)); Rate_Values[1] = 11; DualRateInUse = 1;
+    // 5b. (e99b) A SAVE FOLLOWED BEHIND A FRESH ASK OF ITS OWN PAGE, the same bank and rate: a set that differs is no set (held, nothing said, pending);
+    //     what was sent ends it as a plain set (0: marked, freed, nothing said); the fresh read's window end drops it with nothing said
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 2 && RfVerifyPending() && boxes == 0 && hides.empty() && sounds.empty());
+    Rate_Values[1] = 11; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && sounds.empty());
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 2); nowMs = 7700; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 3 && VfKind == VK_RATES && RfVerifyPending() && boxes == 0 && sounds.empty()); Rate_Values[1] = 11;   // (e99e: the fresh read's window end no longer drops it with nothing: it asks ONCE more - G3; nothing said. e99f: the save 2.7 s old - that ask is FOLLOWED too)
+    // (e99d, 18 Nov 2026: G6) the page left, what was sent comes back: THE READ ENDS THERE - 1, its flag down, its Hide routine called (it frees the bank
+    // switch), nothing said, no sound, no "Saved" line, the page not closed. (Before e99d this row read 0 with nothing hidden: the flag stayed up.)
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; BlockBankChanges = true;
+    CHECK(RfVerifySet() == 1 && !RfVerifyPending() && !Reading_RATES_Now && has(hides, "rates") && !BlockBankChanges && boxes == 0 && sounds.empty() && texts["busy"] != "Saved, and confirmed by reading it back." && leaves == 0 && edited.empty()); CurrentView = RATESVIEW_RF;
+    // ... a set that differs off the page: no set (2), the read and the bank switch kept, nothing said
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; Rate_Values[1] = 0; CHECK(RfVerifySet() == 2 && RfVerifyPending() && Reading_RATES_Now && hides.empty() && BlockBankChanges && boxes == 0); Rate_Values[1] = 11; CurrentView = RATESVIEW_RF;
+    // (e99e, 18 Nov 2026 - replaces e99d's "flag down: let go" and its 1.5 s rows) ONE RULE: a save left behind is followed for RF_VERIFY_WAIT_MS (4 s) from the
+    // save. Its flag down (another page's ask): NOT pending (no read open), but KEPT (VfKind) until the save is 4 s old - then let go by RfVerifyPending, nothing said
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; Reading_RATES_Now = false; CHECK(!RfVerifyPending() && VfKind == VK_RATES && boxes == 0 && hides.empty() && sounds.empty());
+    nowMs = 8999; CHECK(!RfVerifyPending() && VfKind == VK_RATES); nowMs = 9000; CHECK(!RfVerifyPending() && VfKind == VK_NONE && boxes == 0 && hides.empty() && sounds.empty()); CurrentView = RATESVIEW_RF;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); Reading_RATES_Now = false; CHECK(!RfVerifyPending() && VfKind == VK_RATES && boxes == 0 && hides.empty()); nowMs = 9000; CHECK(!RfVerifyPending() && VfKind == VK_NONE);
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); Reading_PIDS_Now = true; CHECK(RfVerifyPending()); Reading_PIDS_Now = false;   // (another kind's flag is not its own)
+    // its OWN read still open off its page: kept past 4 s (to that read's window: RfVerifyEnd), not let go by the time
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; nowMs = 9050; CHECK(RfVerifyPending() && VfKind == VK_RATES); CurrentView = RATESVIEW_RF;
+    // kept on another page, its page asked afresh within the 4 s (PID + behind the PIDs page): followed again - a set that differs is no set
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = PIDVIEW; PidAskValues(); Reading_RATES_Now = false; nowMs = 6000; CHECK(!RfVerifyPending() && VfKind == VK_RATES);
+    Reading_PIDS_Now = false; CurrentView = RATESVIEW_RF; nowMs = 6500; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifyPending() && RfVerifySet() == 2 && boxes == 0 && sounds.empty()); Rate_Values[1] = 11;
+    CHECK(RfVerifySet() == 0 && VfKind == VK_NONE && boxes == 0 && sounds.empty());   // (what was sent: the write landed - a plain set)
+    // ... kept on another page, a bank change there: let go at once
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = PIDVIEW; PidAskValues(); Reading_RATES_Now = false; Bank = 2; CHECK(RfVerifySet() == 0 && VfKind == VK_NONE); Bank = 1; Reading_PIDS_Now = false; CurrentView = RATESVIEW_RF;
+    // behind a fresh ask of its own page: followed while the save is younger than 4 s - a set that differs at 3.999 s is no set (2); at 4 s a plain set (0), let go, nothing said
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; nowMs = 6599; CHECK(RfVerifySet() == 2 && RfVerifyPending()); nowMs = 8999; CHECK(RfVerifySet() == 2 && RfVerifyPending());
+    nowMs = 9000; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && VfKind == VK_NONE && Reading_RATES_Now && boxes == 0 && sounds.empty() && hides.empty()); Rate_Values[1] = 11;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); nowMs = 6599; CHECK(RfVerifySet() == 0 && !RfVerifyPending() && boxes == 0 && sounds.empty());   // (what was sent, early: a plain set, the write landed)
+    // (e99e: G3) THE ONE MORE ASK: a fresh read answered whole, never with what was sent, its window over -> the page's own read once more, plain (one ask, true);
+    // that read's end asks nothing more; nothing said
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 2); CHECK(asks == 2);
+    nowMs = 7700; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 3 && Reading_RATES_Now && VfAfresh == VK_NONE && boxes == 0 && sounds.empty());
+    // (e99f, 18 Nov 2026: e99e's own tests) the save only 2.7 s old: the read-back is KEPT (VfKind) and followed through this ask - pending, its window looked at
+    CHECK(VfKind == VK_RATES && RfVerifyPending());
+    // ... and THAT ask answered with the old block before the save is 4 s old: no set again (2) and the note again - a SECOND more ask at its window's end
+    nowMs = 7800; CHECK(RfVerifySet() == 2 && VfAfresh == VK_RATES && VfKind == VK_RATES && boxes == 0 && sounds.empty());
+    nowMs = 10300; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 4 && Reading_RATES_Now && VfKind == VK_NONE && VfAfresh == VK_NONE && boxes == 0 && sounds.empty());   // (the save 5.3 s old: let go, the ask plain)
+    CHECK(RfVerifySet() == 0); BlockShown = true;   // (the plain read: the old set shown, whole)
+    nowMs = 12900; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 4 && boxes == 0 && sounds.empty());   // (no third: the note is gone, the save let go)
+    BlockShown = false; Rate_Values[1] = 11;
+    // ... the more ask's old block coming AFTER the save's 4 s: a plain set, the note gone - one more ask only
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 2); nowMs = 7700; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 3);
+    nowMs = 9050; CHECK(RfVerifySet() == 0 && VfKind == VK_NONE && VfAfresh == VK_NONE); BlockShown = true; nowMs = 10300; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 3 && boxes == 0); BlockShown = false; Rate_Values[1] = 11;
+    // ... the write LANDING inside that more ask's window (before the save's 4 s): what was sent - the read-back ends, a plain set from here (shown), no more ask
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 2); nowMs = 7700; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 3);
+    Rate_Values[1] = 11; nowMs = 8200; CHECK(RfVerifySet() == 0 && VfKind == VK_NONE && VfAfresh == VK_NONE && boxes == 0 && sounds.empty()); BlockShown = true; nowMs = 10300; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 3); BlockShown = false;
+    // ... the more ask NOT answered at all (the controller fell silent): its window's end, the save 5.3 s old - let go, nothing asked, nothing said
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 2); nowMs = 7700; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 3);
+    nowMs = 10300; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 3 && boxes == 0 && sounds.empty()); RfVerifyPending(); CHECK(VfKind == VK_NONE && VfAfresh == VK_NONE); Rate_Values[1] = 11;
+    // ... not when the block was shown (BlockShown), not off its page, not when nothing came (no whole set: silent - the plain "nothing came back" line)
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; RfVerifySet(); BlockShown = true; nowMs = 7700; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 2 && VfKind == VK_RATES); nowMs = 9000; RfVerifyPending(); CHECK(VfKind == VK_NONE); BlockShown = false; Rate_Values[1] = 11;   // (e99f: kept to the save's 4 s, then let go by RfVerifyPending)
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; RfVerifySet(); CurrentView = ROTORFLIGHTVIEW; nowMs = 7700; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 2); CurrentView = RATESVIEW_RF; Rate_Values[1] = 11;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); nowMs = 7700; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 2 && boxes == 0);
+    // ... the save's 4 s over inside the fresh window: the next set is plain (shown), the note gone - no extra ask at the window's end
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 7000; RatesAskValues(); Rate_Values[1] = 0; nowMs = 8000; CHECK(RfVerifySet() == 2); nowMs = 9100; CHECK(RfVerifySet() == 0); BlockShown = true;
+    nowMs = 9600; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 2); Rate_Values[1] = 11;
+    // (round 25) the one more ask's note is taken away: by the write landing, by a plain set, by a new save - none asks at the window's end (BlockShown false: the asking condition left to the note alone)
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; RfVerifySet(); Rate_Values[1] = 11; CHECK(RfVerifySet() == 0 && VfAfresh == VK_NONE); nowMs = 7700; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 2);
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 7000; RatesAskValues(); Rate_Values[1] = 0; nowMs = 8000; RfVerifySet(); nowMs = 9100; CHECK(RfVerifySet() == 0 && VfAfresh == VK_NONE); nowMs = 9600; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && asks == 2); Rate_Values[1] = 11;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; RfVerifySet(); nowMs = 5200; CHECK(RfVerifyArm(VK_RATES, RatesAskValues) && VfAfresh == VK_NONE); nowMs = 9300; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && has(msgs, "rates:Reading back again (2 of 3) ...")); Rate_Values[1] = 11;
+    // (e99e) RfVerifyFollows: a bank page's read-back with its read open - not the Governor global page's
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(RfVerifyFollows()); Reading_RATES_Now = false; CHECK(!RfVerifyFollows());
+    CurrentView = RFGOVERNORVIEW_GLOBAL; reset(); nowMs = 5000; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); CHECK(RfVerifyPending() && !RfVerifyFollows()); CurrentView = RATESVIEW_RF;
+    // (e99g, 18 Nov 2026: e99f's tests, finding 1) ONLY THE READ THE READ-BACK ITSELF ASKED is followed at the motor switch: its own read off its page - yes;
+    // its own ask again on its page (B177, "Reading back again") - yes; a FRESH ask of the page behind the save (the pilot's) - no, though pending; the one more ask - no
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; nowMs = 6000; CHECK(RfVerifyPending() && RfVerifyFollows()); CurrentView = RATESVIEW_RF;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 9000; Reading_RATES_Now = false; Rate_Values[1] = 0; CHECK(RfVerifyEnd(VK_RATES) && Reading_RATES_Now && RfVerifyPending() && RfVerifyFollows()); Rate_Values[1] = 11;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); CHECK(RfVerifyPending() && VfKind == VK_RATES && !RfVerifyFollows());
+    nowMs = 8999; CHECK(RfVerifyPending() && !RfVerifyFollows());
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); nowMs = 5100; RatesAskValues(); Rate_Values[1] = 0; CHECK(RfVerifySet() == 2); nowMs = 7700; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && asks == 3 && VfKind == VK_RATES && RfVerifyPending() && !RfVerifyFollows()); Rate_Values[1] = 11;
+    reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CurrentView = ROTORFLIGHTVIEW; nowMs = 9001; Reading_RATES_Now = false; CHECK(!RfVerifyEnd(VK_RATES) && !RfVerifyPending() && VfKind == VK_NONE && boxes == 0); CurrentView = RATESVIEW_RF;   // (e99e: its own window's end off its page - the flag lowered first, as Hide_msg_if_needed does; before e99e the row called it at 0 s with the flag up)
     reset(); nowMs = 5000; RfVerifyArm(VK_RATES, RatesAskValues); CHECK(!RfVerifyEnd(VK_PID) && RfVerifyPending());   // (another kind's window: not ours)
     // 6. the PIDs: 17 words - the twelve, three boosts, two HSI offsets - on n0..n16; a boost that differs is n13
     CurrentView = PIDVIEW; for (int i = 0; i < MAX_PID_WORDS; ++i) PID_Values[i] = 100 + i; PID_Boost_Values[0] = 1; PID_Boost_Values[1] = 2; PID_Boost_Values[2] = 3; PID_HSI_Offset_Values[0] = 4; PID_HSI_Offset_Values[1] = 5;
@@ -213,6 +292,38 @@ int main() {
     reset(); nowMs = 90000; RfVerifyArm(VK_RATES, RatesAskValues); VfAskFn = RefusedAsk; nowMs = 94100; Reading_RATES_Now = false; CHECK(RfVerifyEnd(VK_RATES) && !RfVerifyPending() && boxes == 1 && lastBox.find("NOT CONFIRMED") == 0);
     // the governor's global page: its longer window at every ask
     reset(); CurrentView = RFGOVERNORVIEW_GLOBAL; nowMs = 100000; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); CHECK(GOV_Config_Send_Duration == 8000); nowMs = 108100; Reading_GOV_Config_Now = false; CHECK(RfVerifyEnd(VK_GOV_CFG) && asks == 2 && GOV_Config_Send_Duration == 8000 && has(msgs, "govcfg:Reading back again (2 of 3) ...")); CurrentView = RATESVIEW_RF;
+    // e101 (18 Nov 2026, the twenty-first review): THE SAVE ITSELF HOLDS THE BANK SWITCH (RfSaveHoldsBank; Switches.h asks it at the three places that move the bank)
+    Bank = 1; DualRateInUse = 1; CurrentView = PIDVIEW; for (int i = 0; i < MAX_PID_WORDS; ++i) PID_Values[i] = 100 + i;
+    reset(); nowMs = 300000; CHECK(!RfSaveHoldsBank());                                              // no save: nothing held
+    // a save of what the flight controller already holds: "what was sent" comes back at once (the old block) - held its 1.5 s all the same
+    nowMs = 310000; CHECK(RfVerifyArm(VK_PID, PidAskValues) && RfSaveHoldsBank()); nowMs = 310200; CHECK(RfVerifySet() == 1 && !RfVerifyPending() && RfSaveHoldsBank());
+    nowMs = 311499; CHECK(RfSaveHoldsBank()); nowMs = 311500; CHECK(!RfSaveHoldsBank()); nowMs = 313999; CHECK(!RfSaveHoldsBank());
+    // what was sent has not come back: held past the 1.5 s, to the save's own 4 s - and no longer
+    reset(); nowMs = 320000; RfVerifyArm(VK_PID, PidAskValues); PID_Values[0] = 55; CHECK(RfVerifySet() == 2); nowMs = 321600; CHECK(RfSaveHoldsBank()); nowMs = 323999; CHECK(RfSaveHoldsBank());
+    nowMs = 324000; CHECK(!RfSaveHoldsBank()); nowMs = 324001; CHECK(!RfSaveHoldsBank()); PID_Values[0] = 100;
+    // ... and it comes back at 2 s: free then
+    reset(); nowMs = 330000; RfVerifyArm(VK_PID, PidAskValues); PID_Values[0] = 55; CHECK(RfVerifySet() == 2); nowMs = 332000; CHECK(RfSaveHoldsBank()); PID_Values[0] = 100; CHECK(RfVerifySet() == 1 && !RfSaveHoldsBank());
+    // the page left (the menu, Help, another page): nothing is compared there - held to the save's 4 s wherever he is; the read's flag down changes nothing
+    reset(); nowMs = 340000; RfVerifyArm(VK_PID, PidAskValues); CurrentView = ROTORFLIGHTVIEW; Reading_PIDS_Now = false; nowMs = 342900; RfVerifyPending(); CHECK(RfSaveHoldsBank()); BlockBankChanges = false; CHECK(RfSaveHoldsBank());
+    nowMs = 343999; CHECK(RfSaveHoldsBank()); nowMs = 344000; RfVerifyPending(); CHECK(!RfSaveHoldsBank() && VfKind == VK_NONE); CurrentView = PIDVIEW;
+    // left, and what was sent comes back off its page (its own read still open): free after the 1.5 s
+    reset(); nowMs = 350000; RfVerifyArm(VK_PID, PidAskValues); CurrentView = ROTORFLIGHTVIEW; nowMs = 350400; CHECK(RfVerifySet() == 1 && RfSaveHoldsBank()); nowMs = 351500; CHECK(!RfSaveHoldsBank()); CurrentView = PIDVIEW;
+    // a second save begins its own time
+    reset(); nowMs = 360000; RfVerifyArm(VK_PID, PidAskValues); RfVerifySet(); nowMs = 361400; RfVerifyArm(VK_PID, PidAskValues); RfVerifySet(); nowMs = 361600; CHECK(RfSaveHoldsBank()); nowMs = 362900; CHECK(!RfSaveHoldsBank());
+    // a save that is not read back (no pipe) holds nothing; an earlier save's hold is not cut short by it
+    reset(); nowMs = 370000; PipeState = 1; CHECK(!RfVerifyArm(VK_PID, PidAskValues) && !RfSaveHoldsBank()); PipeState = 2;
+    reset(); nowMs = 380000; RfVerifyArm(VK_PID, PidAskValues); PID_Values[0] = 55; RfVerifySet(); nowMs = 380500; PipeState = 1; RfVerifyArm(VK_PID, PidAskValues); PipeState = 2; CHECK(RfSaveHoldsBank()); nowMs = 384000; CHECK(!RfSaveHoldsBank()); PID_Values[0] = 100;
+    // NOT the Governor global page: nothing of it is a bank's
+    reset(); CurrentView = RFGOVERNORVIEW_GLOBAL; nowMs = 390000; CHECK(RfVerifyArm(VK_GOV_CFG, GovCfgAskValues) && !RfSaveHoldsBank()); nowMs = 390100; CHECK(!RfSaveHoldsBank()); Reading_GOV_Config_Now = false;
+    // (e101b) a Governor global save does not take a bank page's hold away - inside the 1.5 s, and after them with nothing come back
+    reset(); CurrentView = PIDVIEW; nowMs = 400000; RfVerifyArm(VK_PID, PidAskValues); RfVerifySet(); CurrentView = RFGOVERNORVIEW_GLOBAL; nowMs = 400800; CHECK(RfVerifyArm(VK_GOV_CFG, GovCfgAskValues) && RfSaveHoldsBank()); nowMs = 401499; CHECK(RfSaveHoldsBank()); nowMs = 401500; CHECK(!RfSaveHoldsBank()); Reading_GOV_Config_Now = false;
+    reset(); CurrentView = PIDVIEW; nowMs = 410000; RfVerifyArm(VK_PID, PidAskValues); PID_Values[0] = 55; RfVerifySet(); PID_Values[0] = 100; CurrentView = RFGOVERNORVIEW_GLOBAL; nowMs = 412000; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); CHECK(RfSaveHoldsBank()); nowMs = 413999; CHECK(RfSaveHoldsBank()); nowMs = 414000; CHECK(!RfSaveHoldsBank()); Reading_GOV_Config_Now = false;
+    // (e101c; review 23, B) nor does the Governor global save's OWN MATCHING ANSWER: the bank page's write has not landed - held until its 4 s end
+    reset(); CurrentView = PIDVIEW; nowMs = 420000; RfVerifyArm(VK_PID, PidAskValues); PID_Values[0] = 55; RfVerifySet(); PID_Values[0] = 100; CurrentView = RFGOVERNORVIEW_GLOBAL; Reading_PIDS_Now = false; nowMs = 422000; RfVerifyArm(VK_GOV_CFG, GovCfgAskValues); CHECK(RfSaveHoldsBank()); nowMs = 422300; CHECK(RfVerifySet() == 1 && !RfVerifyPending() && RfSaveHoldsBank()); nowMs = 423999; CHECK(RfSaveHoldsBank()); nowMs = 424000; CHECK(!RfSaveHoldsBank()); Reading_GOV_Config_Now = false;
+    // ... while a bank page's own matching answer does end its hold after the 1.5 s (the row that keeps the guard from being "never")
+    reset(); CurrentView = PIDVIEW; nowMs = 430000; RfVerifyArm(VK_PID, PidAskValues); nowMs = 430400; CHECK(RfVerifySet() == 1 && RfSaveHoldsBank()); nowMs = 431500; CHECK(!RfSaveHoldsBank());
+    // the clock's wrap: a save 1 s before it is held across it, and let go
+    reset(); CurrentView = PIDVIEW; nowMs = 0xFFFFFC18u; RfVerifyArm(VK_PID, PidAskValues); PID_Values[0] = 55; RfVerifySet(); nowMs = 500; CHECK(RfSaveHoldsBank()); nowMs = 3001; CHECK(!RfSaveHoldsBank()); PID_Values[0] = 100;
     printf("test_verify: %d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

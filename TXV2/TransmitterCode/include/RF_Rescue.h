@@ -26,6 +26,14 @@ enum
     RSC_VERIFY      // 146 again (B51: a step of its own; B50 took the select's empty answer for the read-back and showed the old values)
 };
 static int RescueStep = RSC_IDLE, RescueReq = 0;
+// B211 (the sixteenth review; released code): THE BANK SWITCH IS HELD WHILE A SAVE RUNS - from the select that begins it to its read-back's end.
+// Nothing held it: the save chooses the bank (MSP 210) and writes behind it (147), each step from the poll - and a bank switch that moved in between
+// took the flight controller to the other bank: bank 1's values were written into bank 2, stored, and read back "the same"; bank 1 was not written.
+// (Moved while "Save now?" waited, or while the Save button gathered its boxes - no switch is read there, the main loop saw it a moment behind the
+// select - or while the save ran.) Held as the PIDs' and Easy tuning's pages hold it (Switches.h ReadBankSwitch): the bank's channel stays where it
+// was, the save lands in the bank the page shows, and the switch is read again when the save has ended - the new bank is then read, as at any change.
+// It cannot outlast the page (the poll ends the step when the page goes; no answer ends it in nine seconds - PipeHttp.h PipeReplyLate).
+bool RescueHoldsBanks() { return RescueStep >= RSC_W_SELECT && RescueStep <= RSC_VERIFY && (CurrentView == RESCUEVIEW || CurrentView == RESCUE2VIEW); }
 static uint32_t RescueMsgUntil = 0;        // a message shown over the fields goes by itself
 static uint8_t RescueWant[RESCUE_BYTES];   // what a save asked for
 
@@ -100,6 +108,20 @@ FLASHMEM static void RescueShowPage2()
 }
 FLASHMEM static void RescueShow()
 {
+    if (RfKeepTyped)
+    { // B211 (the fourteenth review): THE NUMBERS TYPED ARE THE PILOT'S until Save takes them - none is drawn, and what is in hand is not put back to
+      // what the last gather had (a switch tapped while a save ran was undone). The fifteenth review: THE PARTS THAT TURN BY THEMSELVES ARE WRITTEN
+      // AS THEY ARE IN HAND - the two switches, page 2's word. Nothing at all was drawn: a switch tapped as the failure's box came up - its tap not
+      // obeyed, its page gone - stayed turned on the screen and not in hand, and "Save again" wrote "rescue off" under a switch that showed ON.
+        if (CurrentView == RESCUEVIEW)
+        {
+            SendValue((char *)"tn0", RescueMode ? 1 : 0);
+            SendValue((char *)"tn1", RescueFlip ? 1 : 0);
+        }
+        else if (CurrentView == RESCUE2VIEW)
+            RescueField("tn0", RescueModeWords[RescueMode <= 2 ? RescueMode : 0]);
+        return;
+    }
     if (CurrentView == RESCUEVIEW)
         RescueShowPage1();
     else if (CurrentView == RESCUE2VIEW)
@@ -109,6 +131,7 @@ FLASHMEM static long FieldNumber(const char *name, long lo, long hi) // a field 
 {
     char t[24] = "";
     GetText((char *)name, t, sizeof(t) - 1);
+    TextMustBeNumber(name, t); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     long v = strtol(t, nullptr, 10);
     return v < lo ? lo : v > hi ? hi : v;
 }
@@ -116,6 +139,7 @@ FLASHMEM static int FieldTenths(const char *name, int lo, int hi) // "1.5" -> 15
 {
     char t[24] = "";
     GetText((char *)name, t, sizeof(t) - 1);
+    TextMustBeNumber(name, t); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     const float f = (float)atof(t);
     int v = (int)(f * 10.0f + (f >= 0 ? 0.5f : -0.5f));
     return v < lo ? lo : v > hi ? hi : v;
@@ -127,6 +151,7 @@ FLASHMEM static int FieldPercent(const char *name, int lo, int hi) // "45" or "6
 }
 FLASHMEM static void RescueGatherPage1()
 {
+    KEEP_WHOLE(want, RescueWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     RescueWant[0] = (uint8_t)RescueMode;
     RescueWant[1] = (uint8_t)RescueFlip;
     WrU16(RescueWant, 8, FieldPercent("tn2", 0, 1000));
@@ -143,9 +168,11 @@ FLASHMEM static void RescueGatherPage1()
 }
 FLASHMEM static void RescueGatherPage2()
 {
+    KEEP_WHOLE(want, RescueWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     RescueWant[0] = (uint8_t)RescueMode;
     char t[24] = "";
     GetText((char *)"tn1", t, sizeof(t) - 1);
+    TextMustBeNumber("tn1", t); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     float h = (float)atof(t);
     if (h < 0)
         h = 0;
@@ -171,10 +198,33 @@ FLASHMEM static void RescueFail(const char *what) // B54 (Malcolm: "the error ba
     RescueStep = RSC_IDLE;
     RescueBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), msg);
+    if (!RescueHave)
+    { // B211 (the fifteenth review; released code): THE READ FAILED - THE PAGE IS LEFT (RF_SaveNow.h RfLeaveNotRead says why). Here it was another
+      // BANK's numbers as well: the bank switch moved, the new bank's read failed, and the page said "Bank 2" over bank 1's values with Save open.
+        if (!RfLeaveNotRead(msg))
+        {
+            char b[16];
+            snprintf(b, sizeof(b), "Bank %d", Bank);
+            SendCommand((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"));
+            SendText((char *)"t11", ModelName);
+            SendText((char *)"t9", b);
+            SendCommand((char *)"vis b3,0");
+            RescueBusy(RF_NOT_READ_LINE); // (a standing line: whatever the screen still shows there is not in hand)
+        }
+        return;
+    }
+    const bool quiet = RfMayFly(); // (the seventeenth review: on the quiet road the page itself says that the save failed - below)
+    RfBoxOrQuiet((CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), msg); // (the sixteenth review: no box that waits while the model may fly - PipeHttp.h; then a line in the log)
     SendText((char *)"t11", ModelName);
     SendCommand((char *)(Rescue_Was_Edited ? "vis b3,1" : "vis b3,0"));
-    RescueShow(); // the page came back from the box: its fields again
+    RfKeepTyped = true; // B211 (the fourteenth review): the page came back from the box AS THE SCREEN HAS IT - a save runs for seconds, and what he typed
+    RescueShow();       // meanwhile was drawn over with what the save had gathered ("Save again" then wrote the earlier numbers)
+    RfKeepTyped = false;
+    if (quiet)
+    {
+        RescueBusy(RF_NOT_SAVED_LINE);
+        RescueMsgUntil = millis() + 6000;
+    }
 }
 static bool RescueRereadWanted = false;    // B54: the bank switch moved while a read or a save was under way
 static uint32_t RescueRereadAt = 0;        // B79: ... and not before this moment
@@ -189,8 +239,12 @@ FLASHMEM void RescueBankChanged()                   // from BankHasChanged (Swit
     {
         char NB[10];
         char Wmsg[120];
-        strcpy(Wmsg, "Rescue values for Bank ");
-        strcat(Wmsg, Str(NB, PreviousBank, 0));
+        strcpy(Wmsg, "Rescue values");
+        if (PreviousBank >= 1 && PreviousBank <= BANKS_USED)
+        { // (B211: only a bank is named - the motor switch's forced "254" was said here: "Rescue values for Bank 254 were edited")
+            strcat(Wmsg, " for Bank ");
+            strcat(Wmsg, Str(NB, PreviousBank, 0));
+        }
         strcat(Wmsg, " were edited \r\nbut not saved. (Too late now!)\r\nSo you may want to check them.");
         MsgBox((char *)(CurrentView == RESCUE2VIEW ? "page Rescue2View" : "page RescueView"), Wmsg);
         SendText((char *)"t11", ModelName);
@@ -198,6 +252,11 @@ FLASHMEM void RescueBankChanged()                   // from BankHasChanged (Swit
     }
     Rescue_Was_Edited = false;
     SendCommand((char *)"vis b3,0");
+    RescueHave = false;                    // B211 (the fifteenth review; released code): what is in hand is the OLD bank's from this moment - not from
+                                           // the moment the read begins, four tenths of a second on (a switch and Save tapped in between wrote it to the new bank)
+    if (RescueStep == RSC_SELECT || RescueStep == RSC_READ)
+        RescueStep = RSC_IDLE;             // (the sixteenth review) ... AND A READ UNDER WAY IS DROPPED: its answer - the old bank's block, or whichever the
+                                           // flight controller was on as it answered - put "in hand" back under the new bank's name until the read below
     RescueRereadWanted = true;             // B79: read in a moment, when the flight controller has moved to the new bank (the switch's channel reaches it a few tens of milliseconds after the move)
     RescueRereadAt = millis() + 400;
     RescueBusy("Loading the new bank ...");
@@ -214,8 +273,7 @@ FLASHMEM void RescuePoll()
     if (RescueMsgUntil && (int32_t)(millis() - RescueMsgUntil) >= 0)
     {
         RescueMsgUntil = 0;
-        RescueBusy("");
-        RescueShow(); // the fields the message lay over
+        RescueBusy(""); // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     }
     if (RescueStep == RSC_IDLE)
     {
@@ -229,7 +287,7 @@ FLASHMEM void RescuePoll()
     if (!PipeReplyReady(RescueReq))
     {
         if (PipeReplyLate())
-            RescueFail("No answer");
+            RescueFail(RfNoAnswerWords(RescueStep == RSC_WRITE || RescueStep == RSC_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -267,7 +325,7 @@ FLASHMEM void RescuePoll()
         RescueStep = RSC_STORE;
         return;
     case RSC_STORE:
-        if (!ok) { RescueFail("Not stored"); return; }
+        if (!ok) { RescueFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         RescueAskSelect(RSC_V_SELECT);
         return;
     case RSC_V_SELECT:
@@ -300,6 +358,7 @@ FLASHMEM void RescuePoll()
 }
 FLASHMEM static void RescueRead()
 {
+    RescueHave = false; // B211 (the fifteenth review; released code): NOTHING IS IN HAND UNTIL THIS READ HAS IT (RF_SaveNow.h RfLeaveNotRead)
     RescueBusy("Reading from the flight controller ...");
     RescueAskSelect(RSC_SELECT);
 }
@@ -335,10 +394,12 @@ FLASHMEM void EndRescueView() // OK, on either page (B53: page 2 has OK too; "< 
     }
     RescueStep = RSC_IDLE;
     Rescue_Was_Edited = false;
-    RotorFlightStart();
+    RfMenuFromPage(RescueHave);
 }
 FLASHMEM void RescueWasEdited() // a number was typed
 {
+    if (!RescueHave)
+        return; // B211 (the sixteenth review): with nothing in hand nothing is an edit - OK asked "Save now?" for it, the save returned at once, and "close when saved" stood
     SendCommand((char *)"vis b3,1");
     Rescue_Was_Edited = true;
 }
@@ -372,7 +433,10 @@ FLASHMEM void RescueMode2Tapped() // page 2, Rescue mode: Off -> Climb -> Hold h
 FLASHMEM void SaveRescue()
 {
     if (!RescueHave)
+    {
+        RfLeaveAfterSave = false; // (the sixteenth review: ... and OK's "close when saved" does not stand on for a later Save - RF_SaveNow.h)
         return;
+    }
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
@@ -391,7 +455,7 @@ FLASHMEM void SaveRescue()
 }
 FLASHMEM void StartRescue2View() // Next >
 {
-    if (CurrentView == RESCUEVIEW)
+    if (CurrentView == RESCUEVIEW && RescueHave) // (the sixteenth review: with nothing in hand nothing is gathered - the page below reads)
     {
         RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
         RescueGatherPage1(); // page 1's edits travel with us, unsaved: a save on page 2 writes both
@@ -411,17 +475,24 @@ FLASHMEM void StartRescue2View() // Next >
 }
 FLASHMEM void EndRescue2View() // < Previous: back to page 1 (its fields from the bytes in hand, edits kept)
 {
-    RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
-    RescueGatherPage2();
-    if (RfFieldsMissed("page Rescue2View")) return;   // B156: a box unanswered: the page is not left
-    memcpy(RescueRaw, RescueWant, RESCUE_BYTES); // (what page 1 shows next is the edited set; a save or a re-read settles it)
+    if (RescueHave)
+    { // (the sixteenth review: WITH NOTHING IN HAND - the standing "NOT READ" page, a read under way - nothing is gathered and nothing drawn: page 1
+      //  was drawn from the block of the read BEFORE, another bank's, under this bank's name, with no line and no read asked. As "Next >": it reads.)
+        RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
+        RescueGatherPage2();
+        if (RfFieldsMissed("page Rescue2View")) return;   // B156: a box unanswered: the page is not left
+        memcpy(RescueRaw, RescueWant, RESCUE_BYTES); // (what page 1 shows next is the edited set; a save or a re-read settles it)
+    }
     SendCommand((char *)"page RescueView");
     CurrentView = RESCUEVIEW;
     SendText((char *)"t11", ModelName);
     char b[16];
     snprintf(b, sizeof(b), "Bank %d", Bank);
     SendText((char *)"t9", b);
-    SendCommand((char *)(Rescue_Was_Edited ? "vis b3,1" : "vis b3,0"));
-    RescueShowPage1();
+    SendCommand((char *)(Rescue_Was_Edited && RescueHave ? "vis b3,1" : "vis b3,0"));
+    if (RescueHave)
+        RescueShowPage1();
+    else
+        RescueRead();
 }
 #endif

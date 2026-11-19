@@ -431,6 +431,9 @@ FLASHMEM void Collect_data_from_dialog() // and close it
         Which_Params |= DO_RATES_ADVANCED;
     if (GetValue((char *)"sw4") == 1 && (RotorFlight_Version > 2.25)) // floats might not be exactly 2.2 or 2.3
         Which_Params |= DO_GOV_PROFILES;
+    if (WorkLostABox())
+        Which_Params = 0; // B211 (the eleventh review's check of every routine that asks for more than one box): a tick with no answer - NOTHING is chosen, and
+                          // nothing done (it was: the ticks in front of it without those behind - the PIDs restored, say, and not the rates he had ticked too)
     SelectedItemCount = CountSelectedParams(Which_Params);
     if (SelectedItemCount > 0)
         OneProgressItem = 99 / SelectedItemCount;

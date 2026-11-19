@@ -145,7 +145,7 @@ check('CentreNotePending = true;' in boot and 'CentreNoteTick();' in boot, 'set 
 house = main[main.find('ClockMessageTick();        // B63'):][:200]
 check('CentreNoteTick();' in house, 'tried once a second with the housekeeping, for after a trial or a model chosen')
 mv = menu[menu.find('void ModelViewEnd()'):][:800]
-check("if (Confirmed[0] != 'Y')" in mv and 'else\n            CentreNotePending = true;' in mv and mv.index('ReadOneModel(ModelNumber);') < mv.index('CentreNotePending = true;') < mv.index('SaveAllParameters();'), 'a model chosen and confirmed sets the note pending; a refused choice does not')
+check("if (!GetConfirmation(pModelsView, buf))" in mv and 'else\n            CentreNotePending = true;' in mv and mv.index('ReadOneModel(ModelNumber);') < mv.index('CentreNotePending = true;') < mv.index('SaveAllParameters();'), 'a model chosen and confirmed sets the note pending; a refused choice does not')
 gn = lift('src/main.cpp', 'FASTRUN void GetNewChannelValues()')
 order = [s for s in ('GetAllInputs();', 'MixInputs();', 'CalculateAllOutputs();', 'SlowAnyServos();', 'MixOutputs();', 'DoTrimsAndSubtrims();', 'RerouteOutputs();', 'ServoReverse();') if s in gn]
 st = lift('src/main.cpp', 'static void StagesAfterInputs()')

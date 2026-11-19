@@ -29,14 +29,23 @@ FLASHMEM static void FsBusy(const char *msg)
     if (msg && *msg)
         SendText((char *)"busy", (char *)msg);
 }
-FLASHMEM static void FsNum(const char *name, long v) { char b[16]; snprintf(b, sizeof(b), "%ld", v); SendText((char *)name, b); }
-FLASHMEM static void FsHundredths(const char *name, long v) { char b[16]; snprintf(b, sizeof(b), "%ld.%02ld", v / 100, v % 100); SendText((char *)name, b); }
-FLASHMEM static void FsTenths(const char *name, long v) { char b[16]; snprintf(b, sizeof(b), "%s%ld.%ld", v < 0 ? "-" : "", labs(v) / 10, labs(v) % 10); SendText((char *)name, b); }
+// (B211: a typed field is written by these three - and left as the screen has it while RfKeepTyped is set: Nextion.h, WHAT THE PILOT TYPED STAYS ON THE PAGE)
+FLASHMEM static void FsNum(const char *name, long v) { if (RfKeepTyped) return; char b[16]; snprintf(b, sizeof(b), "%ld", v); SendText((char *)name, b); }
+FLASHMEM static void FsHundredths(const char *name, long v) { if (RfKeepTyped) return; char b[16]; snprintf(b, sizeof(b), "%ld.%02ld", v / 100, v % 100); SendText((char *)name, b); }
+FLASHMEM static void FsTenths(const char *name, long v) { if (RfKeepTyped) return; char b[16]; snprintf(b, sizeof(b), "%s%ld.%ld", v < 0 ? "-" : "", labs(v) / 10, labs(v) % 10); SendText((char *)name, b); }
+FLASHMEM static void FsShowKeepingTyped(void (*head)(), void (*show)()) // the page drawn afresh after a box - what was typed and not yet taken stays as the pilot typed it
+{
+    RfKeepTyped = true;
+    if (head) head();
+    show();
+    RfKeepTyped = false;
+}
 FLASHMEM static void FsVis(const char *name, bool on) { char c[28]; snprintf(c, sizeof(c), "vis %s,%d", name, on ? 1 : 0); SendCommand(c); }
 FLASHMEM static int FieldHundredths(const char *name, int lo, int hi) // "4.2" -> 420
 {
     char t[24] = "";
     GetText((char *)name, t, sizeof(t) - 1);
+    TextMustBeNumber(name, t); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     const float f = (float)atof(t);
     int v = (int)(f * 100.0f + (f >= 0 ? 0.5f : -0.5f));
     return v < lo ? lo : v > hi ? hi : v;
@@ -139,6 +148,9 @@ FLASHMEM static void BatShow()
 FLASHMEM static void BatGather()
 {
     if (!BatHave) return;
+    KEEP_WHOLE(want, BatWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    KEEP_WHOLE(vm, VmWant);    // (the tenth review: the sensors page writes THESE two - they had no keep, and "no answer" stayed in them as 0)
+    KEEP_WHOLE(cm, CmWant);
     if (CurrentView == BATTERYVIEW)
     {
         BatWant[2] = (uint8_t)FieldNumber("tn0", 0, 24);
@@ -153,11 +165,12 @@ FLASHMEM static void BatGather()
     if (BatVmShown()) WrU16(VmWant, 4, FieldNumber("tn8", 0, 65535));
     if (BatCmShown()) { WrS16(CmWant, 4, FieldNumber("tn9", -32768, 32767)); WrS16(CmWant, 6, FieldNumber("tn10", -32768, 32767)); }
 }
-FLASHMEM static void BatFail(const char *what) { BatStep = BAT_IDLE; FsFail(BatPage(), what); BatHead(); BatShow(); }
+FLASHMEM static void BatFail(const char *what) { BatStep = BAT_IDLE; FsFail(BatPage(), what); FsShowKeepingTyped(BatHead, BatShow); }   // (B211, the fourteenth review: a save runs for seconds and he types meanwhile - what was typed stays, as behind BbFail and CalFail)
 FLASHMEM static void BatGoTo(int view) // B90: the other of the two pages, the edits in hand
 {
     if (!BatHave || BatStep != BAT_IDLE) return;
     BatGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     SendCommand((char *)(view == BATSENSORSVIEW ? "page BatSensorsView" : "page BatteryView"));
     CurrentView = view;
     BatHead(); BatShow();
@@ -188,12 +201,12 @@ FLASHMEM static void BatWriteVm()
 FLASHMEM void BatteryPoll()
 {
     if (!BatOnPage()) { BatStep = BAT_IDLE; BatMsgUntil = 0; return; }
-    if (BatMsgUntil && (int32_t)(millis() - BatMsgUntil) >= 0) { BatMsgUntil = 0; FsBusy(""); BatShow(); }
+    if (BatMsgUntil && (int32_t)(millis() - BatMsgUntil) >= 0) { BatMsgUntil = 0; FsBusy(""); }   // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     if (BatStep == BAT_IDLE) return;
     if (!PipeReplyReady(BatReq))
     {
         if (!PipeReplyLate()) return;
-        BatFail("No answer");
+        BatFail(RfNoAnswerWords(BatStep >= BAT_WRITE && BatStep <= BAT_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -224,15 +237,15 @@ FLASHMEM void BatteryPoll()
         BatWriteVm();
         return;
     case BAT_WRITE_VM:
-        if (!ok) { BatFail("Not written (the voltage sensor)"); return; }
+        if (!ok) { BatFail("PART WRITTEN, NOT STORED (the voltage sensor failed) - try again, or switch the model off and on"); return; }
         BatWriteCm();
         return;
     case BAT_WRITE_CM:
-        if (!ok) { BatFail("Not written (the current sensor)"); return; }
+        if (!ok) { BatFail("PART WRITTEN, NOT STORED (the current sensor failed) - try again, or switch the model off and on"); return; }
         BatAfterWrites();
         return;
     case BAT_STORE:
-        if (!ok) { BatFail("Not stored"); return; }
+        if (!ok) { BatFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         BatReq = MspAsk(32, nullptr, 0); BatStep = BAT_VERIFY;
         return;
     case BAT_VERIFY:
@@ -292,6 +305,7 @@ FLASHMEM void EndBatteryView() // OK
     if (Bat_Was_Edited)
     {
         BatGather();
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!RfSaveFirst(BatPage(), "The edited battery values are", BatSaveNow, EndBatteryView, &Bat_Was_Edited)) return;   // B102
     }
     Bat_Was_Edited = false;
@@ -302,6 +316,7 @@ FLASHMEM static void BatSource(int i) // 3 voltage, 4 current: None -> FC pads -
 {
     if (!BatHave || BatStep != BAT_IDLE) return;
     BatGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     uint8_t s = BatWant[i];
     s = s == 0 ? 1 : s == 1 ? 2 : (s == 2 && BatRaw[i] == 3) ? 3 : 0;
     BatWant[i] = s;
@@ -313,7 +328,7 @@ FLASHMEM void BatteryCurrentSourceTapped() { BatSource(4); }
 FLASHMEM void SaveBattery()
 {
     if (!BatHave || BatStep != BAT_IDLE) return;
-    if (FsRefused(BatPage(), false)) { BatHead(); BatShow(); return; }
+    if (FsRefused(BatPage(), false)) { FsShowKeepingTyped(BatHead, BatShow); return; }   // (B211, the eleventh review: what was typed stays on the page - it has not been taken yet)
     RfGatherStart();   // B187 (was NextionTextMissed = false: now the screen is let finish its queue first)
     BatGather();
     if (RfFieldsMissed(BatPage())) return;   // B152: a box unanswered: nothing written
@@ -381,21 +396,41 @@ FLASHMEM static void BbShow()
     SendValue((char *)"tn4", BbWant[11] ? 1 : 0);
     BbShowMemory();
 }
-FLASHMEM static void BbGather() { if (CurrentView == BLACKBOXVIEW && BbHave) BbWant[12] = (uint8_t)FieldNumber("tn3", 0, 60); }
-FLASHMEM static void BbFail(const char *what) { BbStep = BB_IDLE; FsFail("page BlackboxView", what); BbHead(); BbShow(); }
-FLASHMEM static void BbDone(const char *msg, bool good)
+FLASHMEM static void BbGather()
+{
+    KEEP_WHOLE(want, BbWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    if (CurrentView == BLACKBOXVIEW && BbHave) BbWant[12] = (uint8_t)FieldNumber("tn3", 0, 60);
+}
+// B211 (the thirteenth review): A JOB'S END DOES NOT DRAW OVER WHAT WAS TYPED WHILE IT RAN. The twelfth review's cure took the page before Erase began - its
+// end then drew what was typed BEFORE; but an erase runs for up to two minutes, and the number typed MEANWHILE was the earlier one again at "Erased
+// in 1 s", the page still "edited", and Save wrote the earlier one. A failure's box and the erase's end leave the typed fields as the screen has them;
+// only a Save's own end (fromRead) draws them from what the flight controller read back.
+FLASHMEM static void BbFail(const char *what) { BbStep = BB_IDLE; FsFail("page BlackboxView", what); FsShowKeepingTyped(BbHead, BbShow); }
+FLASHMEM static void BbDone(const char *msg, bool good, bool fromRead)
 {
     BbStep = BB_IDLE;
-    BbHead(); BbShow();
+    if (fromRead) { BbHead(); BbShow(); }
+    else FsShowKeepingTyped(BbHead, BbShow);
     FsBusy(msg);
     BbMsgUntil = millis() + 5000;
     PlaySound(good ? BEEPCOMPLETE : WHAHWHAHMSG);
     if (good && !Bb_Was_Edited) RfSavedThenLeave(BLACKBOXVIEW); else RfLeaveAfterSave = false;   // B102: OK's "Save now?"
 }
+static bool BbEraseLeft = false;   // B211 (the nineteenth review): an erase was being watched when its page was covered (Help) - the watch goes on when the page is back
 FLASHMEM void BlackboxPoll()
 {
-    if (CurrentView != BLACKBOXVIEW) { BbStep = BB_IDLE; BbMsgUntil = 0; return; }
-    if (BbMsgUntil && (int32_t)(millis() - BbMsgUntil) >= 0) { BbMsgUntil = 0; FsBusy(""); BbShow(); }
+    if (CurrentView != BLACKBOXVIEW)
+    {
+        if (BbStep >= BB_ERASE) BbEraseLeft = true;   // (the flight controller erases by itself: nothing of it is cut - only the watch waits)
+        BbStep = BB_IDLE; BbMsgUntil = 0; return;
+    }
+    if (BbEraseLeft)
+    { // the page shows again. AS IT WAS (Help's way back): its line still says "Erasing ...: 7 s" - the watch is taken up. OPENED AFRESH (StartBlackboxView:
+      // its step is the read's, not idle): the page reads anew, and the note is only forgotten.
+        BbEraseLeft = false;
+        if (BbStep == BB_IDLE) { BbStep = BB_ERASE_WAIT; BbWaitUntil = millis(); }   // asked again at once: "Erased in N s", or the count goes on
+    }
+    if (BbMsgUntil && (int32_t)(millis() - BbMsgUntil) >= 0) { BbMsgUntil = 0; FsBusy(""); }   // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     if (BbStep == BB_IDLE) return;
     if (BbStep == BB_WAIT || BbStep == BB_ERASE_WAIT)
     {
@@ -412,7 +447,7 @@ FLASHMEM void BlackboxPoll()
         if (!PipeReplyLate()) return;
         if (BbStep == BB_VERIFY && BbTries < 5) { BbWaitUntil = millis() + 2500; BbStep = BB_WAIT; return; }   // (still restarting)
         if (BbStep == BB_ERASE_POLL) { BbWaitUntil = millis() + 1500; BbStep = BB_ERASE_WAIT; return; }
-        BbFail("No answer");
+        BbFail(RfNoAnswerWords(BbStep == BB_WRITE || BbStep == BB_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -454,7 +489,7 @@ FLASHMEM void BlackboxPoll()
         BbReq = MspAsk(250, nullptr, 0); BbStep = BB_STORE;
         return;
     case BB_STORE:
-        if (!ok) { BbFail("Not stored"); return; }
+        if (!ok) { BbFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         if (!BakOffline() && (BbWant[1] != BbRaw[1] || RdU16(BbWant, 3) != RdU16(BbRaw, 3)))
         { // where and how often apply when the flight controller boots (blackboxInit): restarted, as the filters' features are (not the backup's stand-in)
             FsBusy("Restarting the flight controller (where and how often apply at boot) ...");
@@ -475,7 +510,7 @@ FLASHMEM void BlackboxPoll()
         BbSame = memcmp(b + 1, BbWant + 1, 12) == 0;
         memcpy(BbRaw, b, sizeof(BbRaw)); memcpy(BbWant, b, sizeof(BbWant));
         Bb_Was_Edited = false;
-        BbDone(BbSame ? "Saved, and read back the same." : "Not all saved: the flight controller keeps its setup while it records or erases.", BbSame);
+        BbDone(BbSame ? "Saved, and read back the same." : "Not all saved: the flight controller keeps its setup while it records or erases.", BbSame, true);
         return;
     }
     case BB_ERASE:   // (asked once: a second 72 starts the erase again)
@@ -489,10 +524,10 @@ FLASHMEM void BlackboxPoll()
         if (ok && BbMemN >= 13 && (BbMem[0] & 1) && RdU32(BbMem, 9) == 0)
         {
             char m[60]; snprintf(m, sizeof(m), "Erased in %lu s: ready to record.", (unsigned long)secs);
-            BbDone(m, true);
+            BbDone(m, true, false);
             return;
         }
-        if (secs >= 120) { BbDone("Still not erased after 2 minutes: is Where set to FC memory, and restarted since?", false); return; }
+        if (secs >= 120) { BbDone("Still not erased after 2 minutes: is Where set to FC memory, and restarted since?", false, false); return; }
         BbWaitUntil = millis() + 1500; BbStep = BB_ERASE_WAIT;
         return;
     }
@@ -519,6 +554,7 @@ FLASHMEM void EndBlackboxView() // OK
     if (Bb_Was_Edited)
     {
         BbGather();
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!RfSaveFirst("page BlackboxView", "The edited black box setup is", BbSaveNow, EndBlackboxView, &Bb_Was_Edited)) return;   // B102
     }
     Bb_Was_Edited = false;
@@ -526,24 +562,38 @@ FLASHMEM void EndBlackboxView() // OK
 }
 FLASHMEM void BlackboxWasEdited() { Bb_Was_Edited = true; SendCommand((char *)"vis b3,1"); }
 FLASHMEM static int BbIndexOf(const uint8_t *order, uint8_t v) { for (int i = 0; i < 4; ++i) if (order[i] == v) return i; return 3; }
-FLASHMEM void BlackboxModeTapped() { if (!BbHave || BbStep != BB_IDLE) return; BbGather(); BbWant[2] = BB_MODE_ORDER[(BbIndexOf(BB_MODE_ORDER, BbWant[2]) + 1) % 4]; BlackboxWasEdited(); BbShow(); }
-FLASHMEM void BlackboxDeviceTapped() { if (!BbHave || BbStep != BB_IDLE) return; BbGather(); BbWant[1] = BB_DEV_ORDER[(BbIndexOf(BB_DEV_ORDER, BbWant[1]) + 1) % 4]; BlackboxWasEdited(); BbShow(); }
+FLASHMEM void BlackboxModeTapped() { if (!BbHave || BbStep != BB_IDLE) return; BbGather(); if (WorkLostABox()) return; BbWant[2] = BB_MODE_ORDER[(BbIndexOf(BB_MODE_ORDER, BbWant[2]) + 1) % 4]; BlackboxWasEdited(); BbShow(); }
+FLASHMEM void BlackboxDeviceTapped() { if (!BbHave || BbStep != BB_IDLE) return; BbGather(); if (WorkLostABox()) return; BbWant[1] = BB_DEV_ORDER[(BbIndexOf(BB_DEV_ORDER, BbWant[1]) + 1) % 4]; BlackboxWasEdited(); BbShow(); }
 FLASHMEM void BlackboxRateTapped()
 {
     if (!BbHave || BbStep != BB_IDLE) return;
     BbGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     const uint16_t d = RdU16(BbWant, 3);
     int k = 0;
     while (k < 8 && BB_DENOMS[k] <= d) ++k;   // the next one up, round to 1 after 128 (and from an odd number, the next of the list)
     WrU16(BbWant, 3, BB_DENOMS[k % 8]);
     BlackboxWasEdited(); BbShow();
 }
-FLASHMEM void BlackboxRollTapped() { if (!BbHave || BbStep != BB_IDLE) return; BbGather(); BbWant[11] = BbWant[11] ? 0 : 1; BlackboxWasEdited(); BbShow(); }
+FLASHMEM void BlackboxRollTapped()
+{
+    if (!BbHave || BbStep != BB_IDLE) return;
+    BbGather();
+    if (WorkLostABox())
+    { // B211 (the tenth review): nothing was taken - but the screen's own switch has turned under the finger: it is put back as it is in hand
+        FsShowKeepingTyped(nullptr, BbShow);
+        return;
+    }
+    BbWant[11] = BbWant[11] ? 0 : 1; BlackboxWasEdited(); BbShow();
+}
 FLASHMEM void SaveBlackbox()
 {
     if (!BbHave || BbStep != BB_IDLE) return;
-    if (FsRefused("page BlackboxView", false)) { BbHead(); BbShow(); return; }
+    if (FsRefused("page BlackboxView", false)) { FsShowKeepingTyped(BbHead, BbShow); return; }   // (B211, the tenth review: what was typed stays on the page - it has not been taken yet)
+    RfGatherStart();
     BbGather();
+    if (RfFieldsMissed("page BlackboxView")) { FsShowKeepingTyped(BbHead, BbShow); return; }   // B211 (the ninth review): a box unanswered - NOTHING is written.
+                                                                                              // (The tenth: ... and the typed number stays, for "Save again")
     if (BbWant[2] != 0 && BbWant[1] == 0)
     {
         PlaySound(WHAHWHAHMSG);
@@ -562,11 +612,18 @@ FLASHMEM void SaveBlackbox()
 FLASHMEM void BlackboxErase()
 {
     if (!BbHave || BbStep != BB_IDLE) return;
-    if (FsRefused("page BlackboxView", true)) { BbHead(); BbShow(); return; }
-    if (BbMemN >= 13 && !(BbMem[0] & 2)) { MsgBox((char *)"page BlackboxView", (char *)"No memory chip on this board to erase."); BbHead(); BbShow(); return; }
-    if (!GetConfirmation((char *)"page BlackboxView", (char *)"Erase every flight log on the flight\r\ncontroller? They cannot be recovered.")) { BbHead(); BbShow(); return; }
-    BbHead(); BbShow();
+    // (B211, the eleventh review: nothing is gathered here, so after each of these boxes the page is drawn with what was typed left as the screen has it)
+    if (FsRefused("page BlackboxView", true)) { FsShowKeepingTyped(BbHead, BbShow); return; }
+    if (BbMemN >= 13 && !(BbMem[0] & 2)) { MsgBox((char *)"page BlackboxView", (char *)"No memory chip on this board to erase."); FsShowKeepingTyped(BbHead, BbShow); return; }
+    if (!GetConfirmation((char *)"page BlackboxView", (char *)"Erase every flight log on the flight\r\ncontroller? They cannot be recovered.")) { FsShowKeepingTyped(BbHead, BbShow); return; }
+    // B211 (the twelfth review): THE PAGE IS TAKEN FIRST, as a Save takes it. The job's end ("Erased in 1 s") and its failure box draw the page from what
+    // is in hand: the number typed before Erase was the old one again there, and Save wrote that. In hand is what was typed, from here.
+    RfGatherStart();
+    BbGather();
+    if (RfFieldsMissed("page BlackboxView")) { FsShowKeepingTyped(BbHead, BbShow); return; }   // (a box unanswered: nothing is begun - he is told, and presses again)
+    FsShowKeepingTyped(BbHead, BbShow);
     FsBusy("Erasing the flight logs ...");
+    BbEraseStart = millis();   // B211 (the nineteenth review): counted from the button - a watch taken up again (BlackboxPoll) has its start even if Help came before the answer
     BbReq = MspAsk(72, nullptr, 0); BbStep = BB_ERASE;
 }
 
@@ -604,10 +661,11 @@ FLASHMEM static void CalShow()
 FLASHMEM static void CalGather()
 {
     if (CurrentView != LEVELVIEW || !CalHave) return;
+    KEEP_WHOLE(want, CalWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     WrS16(CalWant, 0, FieldTenths("tn2", -300, 300));
     WrS16(CalWant, 2, FieldTenths("tn3", -300, 300));
 }
-FLASHMEM static void CalFail(const char *what) { CalStep = CAL_IDLE; FsFail("page LevelView", what); CalHead(); CalShow(); }
+FLASHMEM static void CalFail(const char *what) { CalStep = CAL_IDLE; FsFail("page LevelView", what); FsShowKeepingTyped(CalHead, CalShow); }   // (B211, the thirteenth review: as BbFail, above - what was typed while the job ran stays)
 FLASHMEM static void CalTakeLevel(bool ok)
 {
     uint8_t b[16];
@@ -616,7 +674,7 @@ FLASHMEM static void CalTakeLevel(bool ok)
 FLASHMEM void CalibratePoll()
 {
     if (CurrentView != LEVELVIEW) { CalStep = CAL_IDLE; CalMsgUntil = 0; return; }
-    if (CalMsgUntil && (int32_t)(millis() - CalMsgUntil) >= 0) { CalMsgUntil = 0; FsBusy(""); CalShow(); }
+    if (CalMsgUntil && (int32_t)(millis() - CalMsgUntil) >= 0) { CalMsgUntil = 0; FsBusy(""); }   // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     if (CalStep == CAL_IDLE)
     { // the level, live, while the page is idle and the model is there (and no stale reading once it has gone)
         if (!(BoundFlag && ModelMatched) || BakOffline()) { if (CalLevelKnown) { CalLevelKnown = false; CalShowLevel(); } return; }
@@ -633,7 +691,7 @@ FLASHMEM void CalibratePoll()
     {
         if (!PipeReplyLate()) return;
         if (CalStep == CAL_ATT) { CalStep = CAL_IDLE; CalNextAtt = millis() + 2000; return; }   // (the level is a nicety)
-        CalFail("No answer");
+        CalFail(RfNoAnswerWords(CalStep == CAL_CAL_STORE || CalStep == CAL_WRITE || CalStep == CAL_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -659,10 +717,13 @@ FLASHMEM void CalibratePoll()
         CalReq = MspAsk(108, nullptr, 0); CalStep = CAL_CAL_ATT;
         return;
     case CAL_CAL_ATT:
-    {
+    { // (B211, the fourteenth review asked: does the calibration reset the flight controller's LEVEL TRIMS, as Betaflight's does - the page would go on
+      //  showing the old ones? Rotorflight's does NOT: in its sensors/acceleration_init.c, performAcclerationCalibration, the line
+      //  "resetRollAndPitchTrims(rollAndPitchTrims)" is commented out - looked at in the releases 4.3.0, 4.4.0, 4.4.1, 4.5.0, 4.5.1, 4.6.0 and the
+      //  master of 16 Nov 2026. The trims the page shows are still the flight controller's: only the attitude is read here.)
         CalTakeLevel(ok);
         CalStep = CAL_IDLE; CalNextAtt = millis() + 700;
-        CalHead(); CalShow();
+        FsShowKeepingTyped(CalHead, CalShow); // (B211, the thirteenth review: the trims typed while it calibrated stay - the level's own lines are drawn)
         char m[90];
         snprintf(m, sizeof(m), "Calibrated: roll %s%d.%d, pitch %s%d.%d degrees.", CalRoll < 0 ? "-" : "", abs(CalRoll) / 10, abs(CalRoll) % 10, CalPitch < 0 ? "-" : "", abs(CalPitch) / 10, abs(CalPitch) % 10);
         FsBusy(m);
@@ -675,7 +736,7 @@ FLASHMEM void CalibratePoll()
         CalReq = MspAsk(250, nullptr, 0); CalStep = CAL_STORE;
         return;
     case CAL_STORE:
-        if (!ok) { CalFail("Not stored"); return; }
+        if (!ok) { CalFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         CalReq = MspAsk(240, nullptr, 0); CalStep = CAL_VERIFY;
         return;
     case CAL_VERIFY:
@@ -700,7 +761,7 @@ FLASHMEM void CalibratePoll()
 FLASHMEM void StartCalibrateView() // the settings page's Calibrate ... (B104; the menu's before)
 {
     if (FsEntryRefused()) return;
-    if (CurrentView == RFSETUPVIEW) RFSettingsGather();   // B104: Calibrate moved to the settings page - its own edits kept, as First-time basics keeps them
+    if (CurrentView == RFSETUPVIEW && !RFSettingsGather()) return;   // B104: Calibrate moved to the settings page - its own edits kept, as First-time basics keeps them (B211: a box with no answer - the page stays)
     SendCommand((char *)"page LevelView");
     CurrentView = LEVELVIEW;
     CalHave = false; Cal_Was_Edited = false; CalLevelKnown = false;
@@ -717,6 +778,7 @@ FLASHMEM void EndCalibrateView() // OK
     if (Cal_Was_Edited)
     {
         CalGather();
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!RfSaveFirst("page LevelView", "The edited level trims are", CalSaveNow, EndCalibrateView, &Cal_Was_Edited)) return;   // B102
     }
     CalStep = CAL_IDLE; Cal_Was_Edited = false;
@@ -726,17 +788,26 @@ FLASHMEM void CalibrateWasEdited() { Cal_Was_Edited = true; SendCommand((char *)
 FLASHMEM void CalibrateNow()
 {
     if (!CalHave || (CalStep != CAL_IDLE && CalStep != CAL_ATT)) return;
-    if (FsRefused("page LevelView", true)) { CalHead(); CalShow(); return; }
-    if (!GetConfirmation((char *)"page LevelView", (char *)"Is the model level and perfectly still?\r\n(Best done on a flat desk, before\r\nthe board goes into the model.)")) { CalHead(); CalShow(); return; }
-    CalHead(); CalShow();
+    // (B211, the eleventh review: nothing is gathered here, so after each of these boxes the page is drawn with what was typed left as the screen has it)
+    if (FsRefused("page LevelView", true)) { FsShowKeepingTyped(CalHead, CalShow); return; }
+    if (!GetConfirmation((char *)"page LevelView", (char *)"Is the model level and perfectly still?\r\n(Best done on a flat desk, before\r\nthe board goes into the model.)")) { FsShowKeepingTyped(CalHead, CalShow); return; }
+    // B211 (the twelfth review): THE PAGE IS TAKEN FIRST, as a Save takes it. The job's end ("Calibrated: ...") and its failure box draw the page from
+    // what is in hand: the trims typed before Calibrate were the old ones again there - still "edited" - and Save wrote those. In hand is what was typed.
+    RfGatherStart();
+    CalGather();
+    if (RfFieldsMissed("page LevelView")) { FsShowKeepingTyped(CalHead, CalShow); return; }   // (a box unanswered: nothing is begun - he is told, and presses again)
+    FsShowKeepingTyped(CalHead, CalShow);
     FsBusy("Calibrating: keep it still ...");
     CalReq = MspAsk(205, nullptr, 0); CalStep = CAL_CAL;
 }
 FLASHMEM void SaveLevelTrims()
 {
     if (!CalHave || (CalStep != CAL_IDLE && CalStep != CAL_ATT)) return;
-    if (FsRefused("page LevelView", false)) { CalHead(); CalShow(); return; }
+    if (FsRefused("page LevelView", false)) { FsShowKeepingTyped(CalHead, CalShow); return; }   // (B211, the tenth review: what was typed stays on the page)
+    RfGatherStart();
     CalGather();
+    if (RfFieldsMissed("page LevelView")) { FsShowKeepingTyped(CalHead, CalShow); return; }   // B211 (the ninth review): a box unanswered - NOTHING is written (the trims went as 0 and 0).
+                                                                                            // (The tenth: the page was drawn afresh with the OLD trims, and "Save again" saved those)
     FsBusy("Writing to the flight controller ...");
     CalReq = MspAsk(239, CalWant, 4); CalStep = CAL_WRITE;
 }

@@ -50,11 +50,18 @@ FLASHMEM void RfCutNote(const char *page) // after a save whose values were cut:
 // ************************************************************************************************************/
 FLASHMEM void ReadEditedRateValues()
 {
+    // B211 (the eleventh review): THIS IS A GATHER - whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE). It took box by box, "no answer
+    // keeps the value in hand": right for a Save, which is refused then (RfFieldsMissed) - but the type's picker and the curves page were opened
+    // behind it with no question, and came back to a page drawn from the mixture: what he had typed in the boxes that answered, the old numbers in
+    // the others, and nothing said.
+    KEEP_WHOLE(rates, Rate_Values);
+    KEEP_WHOLE(cut, RfValueWasCut);
     const float *f = RatesFactors(Rate_Values[0]);
     for (int i = 1; i < MAX_RATES_BYTES; ++i) // start at 1 because 0 is Rates Type and not yet edited here
     {
         char temp[10];
         if (GetText(RatesWindows[i], temp, sizeof(temp)) == 0) continue;   // B152: a box the screen did not answer for keeps the value in hand (NextionTextMissed: a save stops)
+        if (!TextMustBeNumber(RatesWindows[i], temp)) continue; // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
         Rate_Values[i] = RfByteOf((float)atof(temp) / f[i]); // DIVIDE BY factor to get byte value (B07: cut, never wrapped)
     }
 }
@@ -62,6 +69,18 @@ FLASHMEM void ReadEditedRateValues()
 // ************************************************************************************************************/
 FLASHMEM void SaveRatesLocalBank()
 {
+    if (!KeptHasPlace(DualRateInUse))
+    { // B211 (the fourteenth review): the record has no place for a copy of banks 5 and 6 (RF_Kept.h) - "kept" was said, and marked, and nothing was.
+      // The fifteenth review: THE PAGE GOES BACK TO WHAT IT SHOWED (this is the save WITHOUT the model: no values, greyed, under its standing line
+      // "The card keeps copies of banks 1 to 4 only"). The refusal had a line of its own, which took the grey and that line away: six seconds on the
+      // bank stood there as 0 0 0 in black. What was typed over the zeros is let go - nothing can keep it - and the sound says so.
+        PlaySound(WHAHWHAHMSG);
+        RfLeaveAfterSave = false; // (as a box does: OK's "Save now?" does not close the page after a save that was not made)
+        Rates_Were_Edited = false;
+        ShowRatesLocalBank();
+        SendCommand((char *)"vis b3,0");
+        return;
+    }
     RatesMsg((char *)"Saving edited rates ...", Gray); // Show sending message
     Rates_Were_Edited = false;
     // (B08 took the saved bank's own type here - before, every local save made it "Actual". B106: the page's type, which
@@ -90,6 +109,8 @@ FLASHMEM static void RatesQueueWrite();   // (B102: below)
 FLASHMEM bool RatesTypeBad(const char *page);   // (B106: below)
 FLASHMEM void SendEditedRates()
 {
+    if (RfBlockNotLoaded(RATES_Loaded, "page RatesView", "rates")) // B211 (as B40): a set that never came whole is never written - nor kept
+        return;
     if (RatesTypeBad("page RatesView")) // B106: a type Rotorflight does not have is never sent, nor kept
         return;
     if (!RfLive()) // Model not connected so save to local RATES
@@ -239,6 +260,7 @@ FLASHMEM void ShowRatesLocalBank()
     else
         RatesMsg(KeptNoneText(DualRateInUse), Gray);
     SendCommand((char *)"vis b3,0"); // hide "Send" button
+    RATES_Loaded = true; // B211: (the model file's own copy: editable)
     BlockBankChanges = false;
 }
 // ******************************************************************************************************************************/
@@ -248,6 +270,7 @@ FLASHMEM static void RatesAskValues()
 {
     if (CurrentView != RATESVIEW_RF) { BlockBankChanges = false; return; }
     RATES_Send_Duration = MSP_WAIT_TIME;     // how many milliseconds to await RATES values
+    RfOtherReadsOver();                    // B211: a page's read is over when another page's begins (1Definitions.h) - the block on the bank switch is this read's now
     Reading_RATES_Now = true;                // This tells the Ack payload parser to get RATES values
     AddParameterstoQueue(SEND_RATES_VALUES); // Request RATES values from RX
     RATES_Start_Time = millis();             // record start time as it's not long
@@ -303,6 +326,7 @@ FLASHMEM void ShowRatesBank()
         RatesMsg(buf, Gray);
         BlockBankChanges = true;
         Rates_Were_Edited = false;               // reset edited flag
+        RATES_Loaded = false;                    // B211 (as B40): until the whole set has come (transceiver.h BlockItemSeen)
         RatesAskValues();
     }
 }
@@ -354,6 +378,8 @@ FLASHMEM void EndRFRatesView()
 // ************************************************************************************************************/
 FLASHMEM void RatesWereEdited()
 {
+    if (RfBlockNotLoaded(RATES_Loaded, "page RatesView", "rates")) // B211 (as B40): no edit, and no Save, on a set that never came whole
+        return;
     SendCommand((char *)"vis b3,1"); // show "Send" button
     Rates_Were_Edited = true;
 }
@@ -394,7 +420,10 @@ FLASHMEM void RatesTypeTapped() // the type tapped: the picker, at the bank's ow
 {
     if (CurrentView != RATESVIEW_RF || Reading_RATES_Now || ParametersToBeSentPointer)
         return; // (reading or sending: the page's note covers the type)
+    if (RfBlockNotLoaded(RATES_Loaded, "page RatesView", "rates")) // B211 (as B40): the picker's OK is an edit, and shows Save - not on a set that never came whole
+        return;
     ReadEditedRateValues(); // what the page shows (typed or not), kept through the picker - Cancel brings it back
+    if (WorkLostABox()) return; // B211 (the eleventh review): a box had no answer - nothing was taken, and the page is not left (he is told, and taps again)
     RatesAwayBank = DualRateInUse;
     SendCommand((char *)"page RatesTypeView");
     CurrentView = RATESTYPEVIEW;
@@ -775,14 +804,27 @@ FLASHMEM static void RcAskPoll() // the flight controller's map, then its centre
     RcAskStep = 3;
     RcDotLook = 0; // (the dots placed again, by the flight controller's own numbers)
 }
+// B211 (the eleventh review): THE PLOT IS BEGUN EVEN WHEN THE PAGE'S WORD NEVER CAME. The page says "ldrcrcv" as it comes up and the plot is drawn
+// then; on a field screen that word can be cut by a line of the screen's other core, and the page stood empty. The count of this board's page
+// commands (Nextion.h ScreenMarkCount) as it was when the plot was last begun tells that the page has been put up since: a second and a half
+// later the plot is begun without the word.
+static uint16_t RcDrawnAtMark = 0;
+static uint32_t RcDueMs = 0;
 FLASHMEM void RatesCurvePoll()
 {
     if (CurrentView != RATESCURVEVIEW)
     {
         RcStep = -1;
         RcDotNow = -1;
+        RcDueMs = 0;
         return;
     }
+    if (RcDrawnAtMark == ScreenMarkCount)
+        RcDueMs = 0;
+    else if (!RcDueMs)
+        RcDueMs = millis() | 1;
+    else if ((int32_t)(millis() - RcDueMs) >= 1500 && !ScreenMarkAwaited) // (signed: "| 1" may be a millisecond ahead)
+        RatesCurvesPageBack();
     RcAskPoll();
     if (RcStep >= 0) // the plot first
     {
@@ -831,6 +873,7 @@ FLASHMEM void RatesCurvesTapped() // "Curves ...": the page, its curves from wha
     if (CurrentView != RATESVIEW_RF || Reading_RATES_Now || ParametersToBeSentPointer)
         return; // (reading or sending: the page's note says so)
     ReadEditedRateValues(); // the numbers shown, typed or not (kept: OK brings them back)
+    if (WorkLostABox()) return; // B211 (the eleventh review): a box had no answer - nothing was taken, and the page is not left (he is told, and taps again)
     RatesAwayBank = DualRateInUse;
     SendCommand((char *)"page RatesCurveView");
     CurrentView = RATESCURVEVIEW;
@@ -858,6 +901,8 @@ FLASHMEM void RatesCurvesPageBack() // "ldrcrcv": the page is on the screen (ope
 {
     if (CurrentView != RATESCURVEVIEW)
         return;
+    RcDrawnAtMark = ScreenMarkCount; // (B211: the plot is begun for the page as it was last put up - RatesCurvePoll)
+    RcDueMs = 0;
     RcPrepare();
     RcStep = 0;
     RcDotNow = -1; // B108: the plot is drawn afresh, so are the dots after it

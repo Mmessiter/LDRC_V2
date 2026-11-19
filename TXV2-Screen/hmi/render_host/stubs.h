@@ -19,4 +19,4 @@ static void doorToggle() {}
 static void blePipeCommand(const std::string &) {}
 static void bleTxCommand(const std::string &) {}
 static void bleHttpCommand(const std::string &) {}
-static void openKeyboard(int, int) {}                                 // (1.11.36: a click from the main board opens a keyboard on the screen; not on the Mac)
+static void openKeyboard(int key, int compId);                        // (1.11.198: the real one, cut out of main.cpp behind the rest - hmi/test_keyboard)

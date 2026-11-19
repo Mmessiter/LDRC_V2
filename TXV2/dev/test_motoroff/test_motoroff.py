@@ -62,7 +62,8 @@ def check(ok, what):
     fl += 1
     if not ok: flfail = True; print('FAIL:', what)
 check('SendValue(Mvalue, MotorOffMicros());' in menu, 'the page shows microseconds')
-check('MotorChannelZero = MotorOffFromMicros(mv);' in menu and 'if (mv != 65535)' in menu and 'map(constrain(mv, -100, 100)' not in menu, 'the page reads microseconds back; a comms error keeps the old byte')
+check('MotorChannelZero = MotorOffFromMicros(mv);' in menu and 'if (mv >= -9999 && mv <= 9999)' in menu and 'if (mv != 65535)' not in menu and 'map(constrain(mv, -100, 100)' not in menu,
+      'the page reads microseconds back; a comms error (65535) keeps the old byte, and so does any number of more than four digits (B211: no typed value - a misread in the millions would be full throttle)')
 help_t = open(os.path.join(ROOT, 'Help files for SD', 'RXSETUP1.TXT')).read()
 check('microseconds' in help_t and '833 is the default' in help_t and '-67 is the default' not in help_t, 'RXSETUP1.TXT says microseconds and 833')
 P = os.path.join(ROOT, '..', 'ESP32-board2', 'board4', 'nextion-emulator', 'sd', 'hmi', 'pages', '9.json')

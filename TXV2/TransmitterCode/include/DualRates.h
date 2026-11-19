@@ -89,6 +89,8 @@ void CheckSelectedRatesMode()
     if (gvRate == 65535)   // B156: a reply that never came is not a rate
         return;
     uint8_t rateMode = gvRate;
+    if (rateMode != DualRateRate[Bank - 1] && ScreenSessionCheck() != 0)
+        return; // B211 (the eighth review): another rate in the box, and no button pressed - only a screen that is still the one this page was drawn on is believed (Nextion.h ScreenSessionCheck)
     if ((rateMode != DualRateRate[Bank - 1]) || (Bank != lastbank)) // if the rate has changed
     {
         TextIn[4] = rateMode;
@@ -236,14 +238,25 @@ void CheckDualRatesScreen(uint32_t RightNow)
     LastRatesPoll = RightNow;
     if (NEXTION.available())
         return;   // a button press is waiting — never poll over it
+    if (ScreenPageId != 0xFF && ScreenPageId != SCREEN_DUALRATES_PAGE)
+        return;   // B211 (the ninth review): the page the screen last put up for this board is not this page (main.cpp CheckModelName says more)
+    if (ScreenMarkAwaited)
+        return;   // (the eleventh review: nor while a page's marker is still awaited - the page is not known to be up)
+    bool asked = false;
     for (uint8_t i = 0; i < 8; ++i)
     {
         uint32_t gv = GetValue(CHn[i]);
         if (gv == 65535)
             continue;                          // comms hiccup — keep the previous value
+        if (ScreenPageId != 0xFF && ScreenPageId != SCREEN_DUALRATES_PAGE)
+            return;   // B211 (the eleventh review): the page's number looked at AGAIN - it may have been learned only with this answer (main.cpp CheckModelName)
         uint8_t v = CheckRange(gv, 0, 16);
         if (v != DualRateChannels[i])
         {
+            if (!asked && ScreenSessionCheck() != 0)
+                return; // B211 (the eighth review): a box has changed with no button pressed: before it is taken, the screen must be the one this page was drawn on
+                        // (Nextion.h ScreenSessionCheck - one that has started again unnoticed shows the page as the card has it)
+            asked = true;
             DualRateChannels[i] = v;
             ShowDualRateChannelsName(ChNames[i], v);
         }

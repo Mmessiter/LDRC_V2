@@ -27,8 +27,12 @@ out=$(./test_script/run.sh 2>&1); code=$?                     # (10 Nov 2026) th
 echo "script: $(echo "$out" | grep -E 'unit checks|^pages:' | tr '\n' ' ' | cut -c1-150)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
 out=$(python3 test_frames/check.py 2>&1); code=$?            # (1.11.174) the framed bursts: the enable answered in handle(), flushOut frames in one write
 echo "frames: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
+out=$(python3 test_b211/check.py 2>&1); code=$?              # (1.11.198) what the screen does for the main board's B211: the line in one push, the page under the keyboard, the quarter second, "sendme" behind a get
+echo "b211: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
 out=$(python3 test_linkpage/check.py 2>&1); code=$?          # (1.11.177 / B179) the link stays shut while the pilot is on a page: both sides, the same pages
 echo "linkpage: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
+out=$(./test_keyboard/run.sh 2>&1); code=$?                   # (1.11.198 / B211) the page under the keyboard: writes go to the page beneath; no finger within 250 ms of a page; the markers stay out of the notes
+echo "keyboard: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL | head -10; [ $code -ne 0 ] && bad=1
 gate="$HOME/Documents/GitHub/TXV1B/dev/test_release_gate.py"
 if [ -f "$gate" ]; then out=$(python3 "$gate" 2>&1); code=$?; echo "release gate: $(echo "$out" | tail -1)"; echo "$out" | grep FAIL; [ $code -ne 0 ] && bad=1; fi
 [ $bad -eq 0 ] && echo "ALL GOOD" || echo "SOMETHING FAILED"

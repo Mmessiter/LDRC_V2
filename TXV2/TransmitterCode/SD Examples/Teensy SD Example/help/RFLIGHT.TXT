@@ -127,6 +127,7 @@ it asks once to write them to the model.|
 To send them later: 'Send to model' on 'Backup & restore ...'.|
 With no backup, 'PIDs ...', 'Rates ...' and 'Governor ...'|
 show an older copy kept in the model's file.|
+(Banks 1 to 4 only: no copy of banks 5 and 6 is kept.)|
 A 'Save' there changes only that copy.|
 It is not offered to the model when it is next connected.|
 Most other pages need the model, or its backup.|

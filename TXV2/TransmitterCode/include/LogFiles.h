@@ -343,18 +343,126 @@ FASTRUN void LogModelNotFound() // Model Memory Log
     MMLog(TheText);
 }
 // ************************************************************************
+// B211 (the thirteenth review): WHAT THIS WORK SAYS OF THE SCREEN WHILE THE MODEL MAY FLY HAS A BUDGET. Such a line is kept for a quiet moment
+// (DeferLogText, below: 24 places for everything the transmitter keeps - and when they are full it writes them all at once, in the air: B47's "one
+// stall instead of twenty-four"). A screen that starts again and again, or a wire gone bad, says a line every few seconds: the store full, the card
+// written in flight, time after time. So between two quiet moments SCREEN_NOTES_MOST of these notes are kept, and SCREEN_REASONS_MOST of the reasons
+// the front page came up by itself (the screen's restart among them - the lines that matter most have places of their own); the rest are counted,
+// and the count is said when the kept lines are written (FlushDeferredLog). Fourteen at most - and with the six a test build's module may keep
+// beside them, twenty: these alone never fill the store.
+#define SCREEN_NOTES_MOST 8
+#define SCREEN_REASONS_MOST 6
+static uint8_t ScreenNotesKept = 0, ScreenReasonsKept = 0;
+static uint16_t ScreenNotesNotKept = 0;
+static char DeferredLast[48]; // (DeferLogText's, below: the text kept last - "not the same thing twice")
+FLASHMEM void KeepScreenNote(const char *line, bool reason) // line: 36 places are kept (DeferLogText)
+{
+    if (!strcmp(line, DeferredLast))
+        return; // the same line as the one kept last is not kept twice (DeferLogText) - AND TAKES NO PLACE HERE: eight times "No page marker from the
+                // screen" (kept once) used the budget up, and the note that mattered behind them found no room
+    uint8_t &kept = reason ? ScreenReasonsKept : ScreenNotesKept;
+    if (kept < (reason ? SCREEN_REASONS_MOST : SCREEN_NOTES_MOST))
+    {
+        ++kept;
+        DeferLogText(line, true);
+    }
+    else if (ScreenNotesNotKept < 65535)
+        ++ScreenNotesNotKept;
+}
+FLASHMEM void KeepScreenReason(const char *line, const char *more) // a reason the front page came up by itself: its line - and the second line some have
+{
+    if (more && ScreenReasonsKept + 2 > SCREEN_REASONS_MOST)
+    { // (the fourteenth review) THE TWO LINES TOGETHER, OR NEITHER: with five reasons kept, the first took the last place and the second - the one
+      // that says the restart's CAUSE - found none: the half that says nothing was on the card. Both are counted "not kept" instead.
+        ScreenNotesNotKept = (uint16_t)(ScreenNotesNotKept > 65533 ? 65535 : ScreenNotesNotKept + 2);
+        return;
+    }
+    KeepScreenNote(line, true);
+    if (more)
+        KeepScreenNote(more, true);
+}
+FLASHMEM static void ScreenNotesFlushed() // from FlushDeferredLog, the log's file open: the count of what found no place, and the budget begins again
+{
+    if (ScreenNotesNotKept)
+    {
+        char line[96], crlf[] = {'|', 13, 10, 0};
+        snprintf(line, sizeof(line), "               - %u more notes about the screen were not kept B211", (unsigned)ScreenNotesNotKept);
+        WriteToLogFile(line, strlen(line));
+        WriteToLogFile(crlf, strlen(crlf));
+    }
+    ScreenNotesKept = ScreenReasonsKept = 0;
+    ScreenNotesNotKept = 0;
+}
+// B211 (the fourteenth review; the released code had it): THE SCREEN'S OWN LINES WAIT FOR A QUIET MOMENT TOO. "LDRCLOG ..." - what the screen was
+// doing before its watchdog restart, said at its next start in parts 300 ms apart - and its panic handler's words went to the card AT ONCE: an
+// open-write-close a part, tens of milliseconds with no packet each, whatever flew. A screen that starts again IN FLIGHT is exactly when they come.
+// While the model may fly they are held here - WHOLE (they are what the log is read for afterwards: the kept lines' 36 places would cut them),
+// with their time - and written with the kept lines (FlushDeferredLog); what finds no place is counted, and the count said.
+#define SCREEN_LINES_MOST 28 // (the seventeenth review: 28, it was 16 - TWO restarts of the screen in one flight, now that the writing a full store forces leaves these lines be;
+                             //  the fifteenth review: one restart of the screen in flight can say fourteen - the other core's line, four of the panic handler's,
+                             //  the record in five parts of two lines less one; with twelve places the two not held were the record's END, its last commands)
+DMAMEM static char ScreenLinesHeld[SCREEN_LINES_MOST][224];
+static uint8_t ScreenLinesHeldN = 0;
+static uint16_t ScreenLinesNotHeld = 0;
+FLASHMEM static void ScreenLineOut(char *line, int n) // a line of the screen's for the log (LogScreenLine, ScreenDyingWords): at once - or held, while the model may fly
+{
+    if (!LogMustWait())
+    {
+        LogText(line, (uint16_t)n, true);
+        return;
+    }
+    if (ScreenLinesHeldN >= SCREEN_LINES_MOST)
+    {
+        if (ScreenLinesNotHeld < 65535)
+            ++ScreenLinesNotHeld;
+        return;
+    }
+    char s[22];
+    CreateTimeStamp(s);
+    snprintf(ScreenLinesHeld[ScreenLinesHeldN++], sizeof(ScreenLinesHeld[0]), "%s - %s", s, line);
+}
+FLASHMEM __attribute__((noinline)) static void ScreenLinesFlushed() // from FlushDeferredLog, the log's file open: the held lines, in their order, and the count of
+{                                                                // what found no place (noinline: its one caller is in the fast memory - this is not)
+    char crlf[] = {'|', 13, 10, 0};
+    for (uint8_t i = 0; i < ScreenLinesHeldN; ++i)
+    {
+        WriteToLogFile(ScreenLinesHeld[i], strlen(ScreenLinesHeld[i]));
+        WriteToLogFile(crlf, strlen(crlf));
+    }
+    if (ScreenLinesNotHeld)
+    {
+        char line[96];
+        snprintf(line, sizeof(line), "               - %u more lines of the screen's own were not kept B211", (unsigned)ScreenLinesNotHeld);
+        WriteToLogFile(line, strlen(line));
+        WriteToLogFile(crlf, strlen(crlf));
+    }
+    ScreenLinesHeldN = 0;
+    ScreenLinesNotHeld = 0;
+}
 // B172 (Malcolm, 2 Nov 2026: "several times when playing around on the models screen, it spontaneously returned to the front
 // screen rather to my surprise. I wonder what is doing this?"): every way the front page comes up BY ITSELF writes a line that
 // says which it was, and the page it left - the model connected (BindNow), the motor switch went on (Motor_sign.h), the screen
 // restarted and said "FrontView" (B92), the power button was pressed while connected (CheckPowerOffButton). Straight to LogText,
 // as B163's lines are: a few lines a session at most, on the ground. A restart of this board itself comes up on the front page
 // too: that is said at the next start (LogRestartCause, FlightGuard.h).
-FLASHMEM void LogFrontPageReason(const char *why)
+// brief: the reason in 17 letters at most, for the line that is kept while the model may fly; more: a second such line (36 places), or none.
+FLASHMEM void LogFrontPageReason(const char *why, const char *brief, const char *more)
 {
-    char line[120];
+    char line[220]; // (B211: was 120 - the screen's restart with its reason is longer, and lost its end: the page it was on)
+    FrontReasonLogged = true; // B177: GotoFrontView writes no second line
+    if (LogMustWait())
+    { // B211 (the twelfth review; the released code had it): the model may fly - "the motor switch went on" is said with it on. No card write now
+      // (B47: tens of milliseconds with no packet): kept for a quiet moment, and short.
+      // (The thirteenth review: that short line was "Front page: " and the reason's first 24 letters - and the screen's restart, whose reason begins
+      //  with 22 letters that say nothing, read "the screen restarted (rs" for every cause: its number, its meaning and the page were cut, and the
+      //  second restart of a flight, the same text again, was not kept at all. Every caller brings its reason in 17 letters now, the page that was
+      //  left is said in front of it, and the restart keeps a second line of its own: dev/test_stalepress holds each of them whole.)
+        snprintf(line, sizeof(line), "Page %u -> front: %.17s", (unsigned)CurrentView, brief);
+        KeepScreenReason(line, more); // (the two together, or neither: above)
+        return;
+    }
     snprintf(line, sizeof(line), "Front page by itself: %s (it was on page %u) B172", why, (unsigned)CurrentView);
     LogText(line, strlen(line), true);
-    FrontReasonLogged = true; // B177: GotoFrontView writes no second line
 }
 // B177: a frame of the screen's that was not obeyed - a split tail, a late reply, a burst that never completed (Nextion.h):
 // its first bytes and the page. One line in two seconds at most.
@@ -365,10 +473,173 @@ FLASHMEM void LogGhostFrame(const char *why, const uint8_t *f, uint16_t n)
         return;
     last = millis();
     char line[120];
+    if (LogMustWait())
+    { // B211 (the twelfth review; the released code had it): a cut line's tail on a field screen is such a frame - a card write from the main loop, in
+      // the air. Kept for a quiet moment, and short: why, and its first four bytes
+        // (the thirteenth review: nine letters made "an unframed word" and "an unframed code" one and the same - fourteen now, without the "an ")
+        int p = snprintf(line, sizeof(line), "Dropped (%.14s)", strncmp(why, "an ", 3) ? why : why + 3);
+        for (uint16_t i = 0; i < n && i < 4; ++i)
+            p += snprintf(line + p, sizeof(line) - p, " %02X", (unsigned)f[i]);
+        KeepScreenNote(line, false);
+        return;
+    }
     int p = snprintf(line, sizeof(line), "Screen frame dropped (%s):", why);
     for (uint16_t i = 0; i < n && i < 8 && p < (int)sizeof(line) - 24; ++i)
         p += snprintf(line + p, sizeof(line) - p, " %02X", (unsigned)f[i]);
     snprintf(line + p, sizeof(line) - p, " (page %u) B177", (unsigned)CurrentView);
+    LogText(line, strlen(line), true);
+}
+// B211 (Nextion.h: a press belongs to the page it was made on): a press that was not obeyed because its page had gone -
+// counted, and said in the log, once in two seconds at most. While the model may fly the line is kept for a quiet moment
+// (and short: a kept line has 36 places). (What is let go between the two markers - a page's own print as it comes up - is
+// not said here: Nextion.h DropUnconfirmedPress counts it.)
+uint16_t StalePressCount = 0;
+FLASHMEM void NoteStalePress(const uint8_t *f, uint16_t n)
+{
+    const bool word = n && f[0] >= 0x20 && f[0] < 0x7F;
+    if (!word && (n < 4 || !(f[0] >= 0x80 || f[1] || f[2])))
+        return; // (code 0 - the screen's empty burst - or a frame cut short: nothing was pressed)
+    if (StalePressCount < 65535)
+        ++StalePressCount;
+    static uint32_t last = 0;
+    if (last && (millis() - last) < 2000)
+        return;
+    last = millis();
+    char what[24], line[110];
+    if (word)
+    {
+        uint16_t i = 0;
+        for (; i < n && i < 18 && f[i] >= 0x20 && f[i] < 0x7F; ++i)
+            what[i] = (char)f[i];
+        what[i] = 0;
+    }
+    else
+        snprintf(what, sizeof(what), "%02X %02X %02X %02X", (unsigned)f[0], (unsigned)f[1], (unsigned)f[2], (unsigned)f[3]);
+    if (LogMustWait())
+    {
+        snprintf(line, sizeof(line), "Old press dropped: %.17s", what);
+        KeepScreenNote(line, false);
+        return;
+    }
+    snprintf(line, sizeof(line), "Screen press not obeyed (its page had gone): %s (page %u) B211", what, (unsigned)CurrentView);
+    LogText(line, strlen(line), true);
+}
+// B211: a page command went out while a box's answer was awaited (nothing of this board's should do that now): said, once in
+// ten seconds at most - the box named is "not answered" to the page that asked.
+FLASHMEM void NotePageChangedUnderGet(const char *cmd)
+{
+    static uint32_t last = 0;
+    if (last && (millis() - last) < 10000)
+        return;
+    last = millis();
+    char line[140];
+    if (LogMustWait())
+    {
+        snprintf(line, sizeof(line), "Page changed under %.17s", cmd);
+        KeepScreenNote(line, false);
+        return;
+    }
+    snprintf(line, sizeof(line), "The page was changed while the screen was asked '%.40s': its answer was not used B211", cmd);
+    LogText(line, strlen(line), true);
+}
+// B211: the screen was showing another page than this board's (its own keyboard, mostly: a number box touched while a page's OK
+// or Save was reading the boxes) when it answered for a box: said, once in a minute at most - that box and the rest of the
+// press's work have "no answer".
+// (unsaid: the screen did not say which page it was showing - the answer to the "sendme" asked with the box never came.)
+FLASHMEM void NoteBoxOffPage(const char *cmd, bool unsaid)
+{
+    static uint32_t last = 0;
+    if (last && (millis() - last) < 60000)
+        return;
+    last = millis();
+    char line[140];
+    if (LogMustWait())
+    {
+        snprintf(line, sizeof(line), unsaid ? "Page not said at %.19s" : "Other page shown at %.16s", cmd);
+        KeepScreenNote(line, false);
+        return;
+    }
+    if (unsaid)
+        snprintf(line, sizeof(line), "The screen did not say which page it showed when asked '%.40s': not used B211", cmd);
+    else
+        snprintf(line, sizeof(line), "The screen was showing another page (its keyboard?) when asked '%.40s': not used B211", cmd);
+    LogText(line, strlen(line), true);
+}
+// B211 (the eighth review, 15 Nov 2026): A BUTTON'S WORK ASKED FOR A BOX THAT HAD NO ANSWER (Nextion.h, NO ANSWER IS NOT A
+// NUMBER): the setting behind that box - and behind every box asked for after it - stayed as it was. The pilot hears it and
+// the log says which box. Once for each such work (a question box inside it tells for itself).
+FLASHMEM void NoteBoxesLost()
+{
+    static uint32_t told = 0;
+    if (told == BoxesLost)
+        return;
+    told = BoxesLost;
+    PlaySound(WHAHWHAHMSG);
+    char line[200];
+    if (LogMustWait())
+    {
+        snprintf(line, sizeof(line), BoxLostNoNumber ? "Box holds no number: %.15s" : "Box unanswered: %.15s", BoxLostName);
+        KeepScreenNote(line, false);
+        return;
+    }
+    // (the tenth review: the line named the LAST box counted - one that was never asked - and said "from there on" of pages that take all or nothing)
+    // (the twelfth review: "No answer from the screen for box X" was said also of a box that was never ASKED - the screen owed an answer, its page had
+    //  gone, a question waited. The line says what is known: the box has no answer, asked or not)
+    // (the thirteenth review: ... and of a box that DID answer, with a text that is no number - Nextion.h TextMustBeNumber)
+    if (BoxLostNoNumber)
+        snprintf(line, sizeof(line), "Box '%.20s' holds a text that is no number (%lu boxes not taken from there on): the page was NOT taken as it stood - please type it again B211", BoxLostName,
+                 (unsigned long)(BoxesLost - BoxesLostAtWork));
+    else
+        snprintf(line, sizeof(line), "Box '%.20s' has no answer from the screen, or could not be asked (%lu such from there on): the page was NOT taken as it stood - please look at it again B211", BoxLostName,
+                 (unsigned long)(BoxesLost - BoxesLostAtWork));
+    LogText(line, strlen(line), true);
+}
+// B211: a question box was closed unanswered ("No") because another page was put up over it from inside its own wait (0),
+// because the screen had started again under it (1), or because the screen had stopped answering (2) (Utilities.h GetYesOrNo)
+FLASHMEM void NoteQuestionClosed(uint8_t why)
+{
+    if (LogMustWait())
+    {
+        KeepScreenNote(why == 1 ? "Question closed: screen restart" : why == 2 ? "Question closed: screen silent" : "Question closed: page gone", false);
+        return;
+    }
+    char line[120]; // (the ninth review: a copy of its own - LogText empties what it is given, and given the words themselves it wrote each line ONCE)
+    strlcpy(line, why == 1   ? "A question box was closed as 'No': the screen had restarted and no longer showed it B211"
+                  : why == 2 ? "A question box was closed as 'No': the screen had stopped answering (the switches are read again) B211"
+                             : "A question box was closed as 'No': another page had been put up over it B211",
+            sizeof(line));
+    LogText(line, strlen(line), true);
+}
+// B211 (the ninth review; Nextion.h, A WORD WITH NO END MAY NOT BE OVER): a text box's answer came right behind a bare word of the
+// screen's that had no end, and was not believed - it may have been that word's second half. Said once in ten seconds at most.
+FLASHMEM void NoteTextDoubted(const char *cmd)
+{
+    static uint32_t last = 0;
+    if (last && (millis() - last) < 10000)
+        return;
+    last = millis();
+    char line[150];
+    if (LogMustWait())
+    {
+        snprintf(line, sizeof(line), "Text not believed: %.17s", cmd);
+        KeepScreenNote(line, false);
+        return;
+    }
+    snprintf(line, sizeof(line), "The screen's answer to '%.40s' came behind a word of its own that had no end: not used B211", cmd);
+    LogText(line, strlen(line), true);
+}
+FLASHMEM void NoteNoScreenMark() // B211: a page command's marker never came (lost on the wire; or a screen that says none): said once in a minute at most
+{
+    static uint32_t last = 0;
+    if (last && (millis() - last) < 60000)
+        return;
+    last = millis();
+    if (LogMustWait())
+    {
+        KeepScreenNote("No page marker from the screen", false);
+        return;
+    }
+    char line[] = "The screen did not confirm a page change (its marker never came) B211";
     LogText(line, strlen(line), true);
 }
 // B198 (Malcolm, 8 Nov 2026, the screen's interrupt watchdog twice on the way back to the front page, no core dump): a line
@@ -397,7 +668,7 @@ FLASHMEM void LogScreenLine(const char *t)
             line[n++] = (c >= 32 && c < 127) ? c : ' ';
         }
         line[n] = 0;
-        LogText(line, n, true);
+        ScreenLineOut(line, n); // (B211: at once on the ground; held for a quiet moment while the model may fly)
     }
 }
 // B198: the screen's panic handler writes on this wire - "Guru Meditation Error: Core  1 panic'ed (Interrupt wdt timeout on
@@ -440,7 +711,7 @@ FLASHMEM bool ScreenDyingWords(const char *t)
             }
         if (!want)
             continue;
-        LogText(line, n, true);
+        ScreenLineOut(line, n); // (B211: at once on the ground; held for a quiet moment while the model may fly)
         ++lines;
     }
     return true;
@@ -716,10 +987,12 @@ FASTRUN void LogNewBank()
 // this runs out of room (24 lines).
 static char DeferredLog[24][48];
 static uint8_t DeferredLogN = 0;
-static char DeferredLast[48];
+static bool DeferredFullOnly = false; // (the sixteenth review) THE WRITING FORCED BY A FULL STORE - in the air - IS THE 24 SHORT LINES ONLY, as it was before B211 (1.2 kB).
+                                      // It wrote the held lines of the screen's with them: up to sixteen of 223 places - 3.8 kB in one stall, measured, where it had been 0.5.
+                                      // Those wait for the quiet moment they were held for (the safety's change, the disconnect, power-off).
 FASTRUN void FlushDeferredLog()
 {
-    if (!DeferredLogN)
+    if (!DeferredLogN && !ScreenLinesHeldN && !ScreenLinesNotHeld)
         return;
     char crlf[] = {'|', 13, 10, 0};
     CheckLogFileIsOpen();
@@ -729,6 +1002,11 @@ FASTRUN void FlushDeferredLog()
         WriteToLogFile(crlf, strlen(crlf));
     }
     DeferredLogN = 0;
+    DeferredLast[0] = 0;  // B211 (the fourteenth review): "not the same thing twice" ends with the writing - the same note in the NEXT flight is a new event
+                          // (it was never kept again, hours later, and not counted)
+    if (!DeferredFullOnly)
+        ScreenLinesFlushed(); // B211: the screen's own lines that were held while the model might fly (above, at ScreenLineOut)
+    ScreenNotesFlushed(); // B211: the screen's notes that found no place are counted here, and their budget begins again (above, at KeepScreenNote)
     CloseLogWriteFile(); // B56
 }
 FASTRUN void DeferLogText(const char *text, bool stamp) // as LogText, but for later: the same line, the same "not the same thing twice"
@@ -737,9 +1015,13 @@ FASTRUN void DeferLogText(const char *text, bool stamp) // as LogText, but for l
         return;
     if (strcmp(text, DeferredLast) == 0)
         return;
-    strlcpy(DeferredLast, text, sizeof(DeferredLast));
     if (DeferredLogN >= 24)
+    {
+        DeferredFullOnly = true;
         FlushDeferredLog(); // (full: one stall instead of twenty-four)
+        DeferredFullOnly = false;
+    }
+    strlcpy(DeferredLast, text, sizeof(DeferredLast)); // (behind that writing, which forgets the line kept last)
     char *line = DeferredLog[DeferredLogN];
     if (stamp)
     {

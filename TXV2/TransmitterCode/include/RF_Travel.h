@@ -51,15 +51,24 @@ FLASHMEM static void TravBusy(const char *msg)
     if (msg && *msg)
         SendText((char *)"busy", (char *)msg);
 }
-FLASHMEM static void TravTenths(const char *name, long tenths) // -12.5
+// (B211, the twelfth review: a typed field is written by these two - and left as the screen has it while RfKeepTyped is set: Nextion.h, WHAT THE PILOT TYPED
+//  STAYS ON THE PAGE. The four direction switches and page 4's empty reading box ask the same below.)
+FLASHMEM static void TravTenthsOut(const char *name, long tenths) // -12.5, written whatever (a field this board tells: page 4's suggestion)
 {
     char b[16];
     const long a = tenths < 0 ? -tenths : tenths;
     snprintf(b, sizeof(b), "%s%ld.%ld", tenths < 0 ? "-" : "", a / 10, a % 10);
     SendText((char *)name, b);
 }
+FLASHMEM static void TravTenths(const char *name, long tenths) // ... a TYPED field
+{
+    if (!RfKeepTyped)
+        TravTenthsOut(name, tenths);
+}
 FLASHMEM static void TravNum(const char *name, long v)
 {
+    if (RfKeepTyped)
+        return;
     char b[16];
     snprintf(b, sizeof(b), "%ld", v);
     SendText((char *)name, b);
@@ -74,6 +83,15 @@ FLASHMEM static int TailScale() { return TailMotorised() ? 1 : 24; } // motorise
 // B66 (Malcolm, 8 Oct, the configurator's Mixer tab beside the transmitter: "the same names in the same places"): three
 // pages laid out as its four sections. Page 1 Main Rotor Settings (the swashplate type and the rotor direction told, the
 // three control directions as switches) and Swashplate Trims; page 2 Main Rotor Geometry; page 3 Tail Rotor Settings.
+// B211 (the fifteenth review): THE FOUR DIRECTION SWITCHES ARE WRITTEN AS THEY ARE IN HAND, ALWAYS - and what is in hand is taken from the block
+// only where the page is drawn from the block (a read's end, a save's end, a page come back from a question; NOT while what was typed stays:
+// RfKeepTyped). A switch is a part the screen turns by itself at the touch, and its tap turns the one in hand - while a save runs too. The
+// fourteenth review's "what was typed stays" left the switches alone and still put the ones in hand back to what the save had gathered: after a
+// save that failed the page showed the aileron REVERSED with Save offered, and "Save again" wrote it NORMAL ("Saved, and read back the same.").
+FLASHMEM static void TravDirectionsFromBlock() // the signs of the four inputs' rates
+{
+    TravRevAil = TravInWant[1][0] < 0; TravRevEle = TravInWant[2][0] < 0; TravRevColl = TravInWant[4][0] < 0; TravRevYaw = TravInWant[3][0] < 0;
+}
 FLASHMEM static void TravShowPage1()
 {
     char b[48];
@@ -81,7 +99,8 @@ FLASHMEM static void TravShowPage1()
     SendText((char *)"i0", b);
     snprintf(b, sizeof(b), "Main rotor direction: %s", TravCfgWant[0] ? "Anticlockwise" : "Clockwise");
     SendText((char *)"i1", b);
-    TravRevAil = TravInWant[1][0] < 0; TravRevEle = TravInWant[2][0] < 0; TravRevColl = TravInWant[4][0] < 0; TravRevYaw = TravInWant[3][0] < 0;
+    if (!RfKeepTyped)
+        TravDirectionsFromBlock();
     SendValue((char *)"tn6", TravRevAil ? 1 : 0);
     SendValue((char *)"tn7", TravRevEle ? 1 : 0);
     SendValue((char *)"tn8", TravRevColl ? 1 : 0);
@@ -107,7 +126,8 @@ FLASHMEM static void TravShowPage3()
     char b[48];
     snprintf(b, sizeof(b), "Tail rotor type: %s", TravCfgWant[1] < 3 ? TailTypeWords[TravCfgWant[1]] : "?");
     SendText((char *)"i0", b);
-    TravRevYaw = TravInWant[3][0] < 0;
+    if (!RfKeepTyped)
+        TravDirectionsFromBlock(); // (as page 1: in hand from the block only where the page is drawn from it - the switch always as it is in hand)
     SendValue((char *)"tn0", TravRevYaw ? 1 : 0);
     SendText((char *)"ltn1", (char *)(TailMotorised() ? "Tail centre trim (%)" : "Tail centre trim (deg)"));   // (15 Oct: the phone app's words)
     SendText((char *)"ltn3", (char *)(TailMotorised() ? "Tail motor min (%)" : "Tail travel, stick right (deg)"));   // input 3 min
@@ -136,9 +156,9 @@ FLASHMEM static void TravShowPage4()
 {
     SendText((char *)"tn0", (char *)(BenchAxis == 2 ? "Pitch (elevator)" : "Roll (aileron)"));
     TravTenths("tn1", BenchDegTenths);
-    if (BenchGaugeTenths > 0) TravTenths("tn2", BenchGaugeTenths); else SendText((char *)"tn2", (char *)"");
+    if (BenchGaugeTenths > 0) TravTenths("tn2", BenchGaugeTenths); else if (!RfKeepTyped) SendText((char *)"tn2", (char *)"");
     TravTenths("tn3", labs(TravInWant[1][0]));                      // the cyclic calibration as page 2 shows it (roll's; a save gives both axes the one value)
-    if (BenchSuggestTenths > 0) TravTenths("tn4", BenchSuggestTenths); else SendText((char *)"tn4", (char *)"tap");
+    if (BenchSuggestTenths > 0) TravTenthsOut("tn4", BenchSuggestTenths); else SendText((char *)"tn4", (char *)"tap");
     BenchStatus();
 }
 FLASHMEM static void TravShow()
@@ -159,12 +179,15 @@ FLASHMEM static long FieldTenthsL(const char *name, long lo, long hi) // "-12.5"
 {
     char t[24] = "";
     GetText((char *)name, t, sizeof(t) - 1);
+    TextMustBeNumber(name, t); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     const float f = (float)atof(t);
     long v = (long)(f * 10.0f + (f >= 0 ? 0.5f : -0.5f));
     return v < lo ? lo : v > hi ? hi : v;
 }
 FLASHMEM static void TravGatherPage1()
 {
+    KEEP_WHOLE(cfg, TravCfgWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    KEEP_WHOLE(in, TravInWant);
     PutS16(TravCfgWant, 11, FieldTenthsL("tn9", -1000, 1000));
     PutS16(TravCfgWant, 13, FieldTenthsL("tn10", -1000, 1000));
     PutS16(TravCfgWant, 15, FieldTenthsL("tn11", -1000, 1000));
@@ -172,6 +195,8 @@ FLASHMEM static void TravGatherPage1()
 }
 FLASHMEM static void TravGatherPage2()
 {
+    KEEP_WHOLE(cfg, TravCfgWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    KEEP_WHOLE(in, TravInWant);
     if (!TravPage2Edited) return;   // B49: a page only looked at changes nothing (it made roll and pitch the same)
     const long gCyc = FieldTenthsL("tn0", 0, 10000), gColl = FieldTenthsL("tn1", 0, 10000);   // (B67: "86.5" -> 865)
     if (gCyc != labs(TravInWant[1][0]))
@@ -196,6 +221,8 @@ FLASHMEM static void TravGatherPage2()
 }
 FLASHMEM static void TravGatherPage3()
 {
+    KEEP_WHOLE(cfg, TravCfgWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    KEEP_WHOLE(in, TravInWant);
     const int ts = TailScale();
     long tmin, tmax, ctr;
     if (TailMotorised()) { ctr = FieldTenthsL("tn1", -1000, 1000); tmin = FieldTenthsL("tn3", 0, 2500); tmax = FieldTenthsL("tn4", 0, 2500); }
@@ -208,6 +235,10 @@ FLASHMEM static void TravGatherPage3()
 }
 FLASHMEM static void TravGatherPage4()
 {
+    KEEP_WHOLE(cfg, TravCfgWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
+    KEEP_WHOLE(in, TravInWant);
+    KEEP_WHOLE(deg, BenchDegTenths);
+    KEEP_WHOLE(gauge, BenchGaugeTenths);
     BenchDegTenths = FieldTenthsL("tn1", -120, 120);
     BenchGaugeTenths = FieldTenthsL("tn2", 0, 300);
     if (!TravPage4Edited) return;   // (as page 2: a page only looked at changes nothing)
@@ -252,9 +283,27 @@ FLASHMEM static void TravFail(const char *what)
     TravStep = TRV_IDLE;
     TravBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)TravPageWord(), msg);
+    if (!TravHave)
+    { // B211 (the fifteenth review; released code): THE READ FAILED - THE PAGE IS LEFT (RF_SaveNow.h RfLeaveNotRead says why)
+        if (!RfLeaveNotRead(msg))
+        {
+            SendCommand((char *)TravPageWord());
+            TravPageHead();
+            TravBusy(RF_NOT_READ_LINE); // (a standing line: whatever the screen still shows there is not in hand)
+        }
+        return;
+    }
+    const bool quiet = RfMayFly(); // (the seventeenth review: on the quiet road the page itself says that the save failed - below)
+    RfBoxOrQuiet(TravPageWord(), msg); // (the sixteenth review: no box that waits while the model may fly - PipeHttp.h; then a line in the log)
+    RfKeepTyped = true; // B211 (the fourteenth review): a save runs for seconds and he types meanwhile - what was typed stays (as BenchReleaseFailed, below)
     TravPageHead();
     TravShow();
+    RfKeepTyped = false;
+    if (quiet)
+    {
+        TravBusy(RF_NOT_SAVED_LINE);
+        TravMsgUntil = millis() + 6000;
+    }
 }
 FLASHMEM static void BenchReleaseFailed() // the flight controller may still hold the swash: said on the page; the pages go on (a hold cannot fly: armed, the sticks rule)
 {
@@ -264,9 +313,13 @@ FLASHMEM static void BenchReleaseFailed() // the flight controller may still hol
     snprintf(msg, sizeof(msg), "Could not release the swash:\r\n%.60s\r\nIf it stays held, switch the flight\r\ncontroller off and on.", PipeRepCode ? PipeRepBody : "the screen could not ask (no Bluetooth)");
     TravBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)TravPageWord(), msg);
+    RfBoxOrQuiet(TravPageWord(), msg); // (the seventeenth review: the last box of these pages that waited while the model may fly)
+    // B211 (the twelfth review; released code): THE TYPED FIELDS ARE LEFT AS THE SCREEN HAS THEM. Nothing was gathered for a release: this drew the page
+    // from what is in hand, and the gauge's reading typed while the swash was held - the hold is there so that it can be typed - was wiped
+    RfKeepTyped = true;
     TravPageHead();
     TravShow();
+    RfKeepTyped = false;
 }
 FLASHMEM static void TravAskInput(int idx, int step)
 {
@@ -277,6 +330,7 @@ FLASHMEM static void TravAskInput(int idx, int step)
 }
 FLASHMEM static void TravRead()
 {
+    TravHave = false; // B211 (the fifteenth review; released code): NOTHING IS IN HAND UNTIL THIS READ HAS IT (RF_SaveNow.h RfLeaveNotRead)
     TravBusy("Reading from the flight controller ...");
     TravReq = MspAsk(42, nullptr, 0);
     TravStep = TRV_READ_CFG;
@@ -294,9 +348,9 @@ FLASHMEM void TravelPoll()
     // B98: a held swash lets go by itself after five minutes, whatever page is showing by then (a release runs on from any page)
     if (BenchHeld && BenchHeldUntil && TravStep == TRV_IDLE && (int32_t)(millis() - BenchHeldUntil) >= 0) { BenchHeldUntil = 0; BenchRelease(BENCH_AFTER_NONE); }
     if (!OnTravelPage() && TravStep != TRV_RELEASE) { TravStep = TRV_IDLE; TravMsgUntil = 0; return; }
-    if (TravMsgUntil && (int32_t)(millis() - TravMsgUntil) >= 0) { TravMsgUntil = 0; TravBusy(""); TravShow(); }
+    if (TravMsgUntil && (int32_t)(millis() - TravMsgUntil) >= 0) { TravMsgUntil = 0; TravBusy(""); }   // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     if (TravStep == TRV_IDLE) { if (TravReadAgainWanted) { TravReadAgainWanted = false; TravRead(); } return; }
-    if (!PipeReplyReady(TravReq)) { if (PipeReplyLate()) { if (TravStep == TRV_RELEASE) BenchReleaseFailed(); else TravFail("No answer"); } return; }
+    if (!PipeReplyReady(TravReq)) { if (PipeReplyLate()) { if (TravStep == TRV_RELEASE) BenchReleaseFailed(); else TravFail(RfNoAnswerWords(TravStep >= TRV_WRITE_CFG && TravStep <= TRV_STORE)); } return; }
     const bool ok = PipeRepCode == 200;
     static int16_t check[5][3];
     switch (TravStep)
@@ -316,6 +370,8 @@ FLASHMEM void TravelPoll()
         if (TravIdx < 4) { TravAskInput(TravIdx + 1, TRV_READ_IN); return; }
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
         TravHave = true; TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false; TravPage4Edited = false;
+        TravDirectionsFromBlock(); // (the fifteenth review) ... on WHICHEVER of the four pages the read ends: pages 2 and 4 show no switch, and their gathers
+                                   // sign the calibrations by what is in hand - which was the last visit's (another model's) when a read ended there
         TravBusy(""); SendCommand((char *)"vis b3,0"); TravShow();
         return;
     case TRV_WRITE_CFG:
@@ -324,12 +380,12 @@ FLASHMEM void TravelPoll()
         { uint8_t f[7]; f[0] = 1; PutS16(f, 1, TravInWant[1][0]); PutS16(f, 3, TravInWant[1][1]); PutS16(f, 5, TravInWant[1][2]); TravReq = MspAsk(171, f, 7); TravStep = TRV_WRITE_IN; }
         return;
     case TRV_WRITE_IN:
-        if (!ok) { TravFail("Not written (an input)"); return; }
+        if (!ok) { TravFail("PART WRITTEN, NOT STORED (an input failed) - try again, or switch the model off and on"); return; }
         if (TravIdx < 4) { ++TravIdx; uint8_t f[7]; f[0] = (uint8_t)TravIdx; PutS16(f, 1, TravInWant[TravIdx][0]); PutS16(f, 3, TravInWant[TravIdx][1]); PutS16(f, 5, TravInWant[TravIdx][2]); TravReq = MspAsk(171, f, 7); return; }
         TravReq = MspAsk(250, nullptr, 0); TravStep = TRV_STORE;
         return;
     case TRV_STORE:
-        if (!ok) { TravFail("Not stored"); return; }
+        if (!ok) { TravFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         TravReq = MspAsk(42, nullptr, 0); TravStep = TRV_VERIFY_CFG;
         return;
     case TRV_VERIFY_CFG:
@@ -350,6 +406,7 @@ FLASHMEM void TravelPoll()
         for (int i = 1; i <= 4 && same; ++i) for (int k = 0; k < 3; ++k) if (TravIn[i][k] != TravInWant[i][k]) same = false;
         memcpy(TravCfgWant, TravCfg, CFG_BYTES); memcpy(TravInWant, TravIn, sizeof(TravIn));
         TravStep = TRV_IDLE; Trav_Was_Edited = false; TravPage2Edited = false; TravPage4Edited = false;
+        TravDirectionsFromBlock(); // (as the read's end: what the flight controller now has, on whichever page)
         SendCommand((char *)"vis b3,0"); TravShow();
         TravBusy(same ? "Saved, and read back the same." : "Saved, but the flight controller adjusted some values.");
         TravMsgUntil = millis() + 4000;
@@ -373,9 +430,19 @@ FLASHMEM void TravelPoll()
         BenchAfter = BENCH_AFTER_NONE;
         if (!OnTravelPage()) return;
         TravBusy("");
-        if (after == BENCH_AFTER_LEAVE) { EndTravelView(); return; }
-        if (after == BENCH_AFTER_PREV) { StartTravel3View(); return; }
+        if (after == BENCH_AFTER_LEAVE || after == BENCH_AFTER_PREV)
+        { // B211 (the eleventh review): THIS IS THE MAIN LOOP, no button's work - and what is called here gathers the page. Its boxes are counted from
+          // here (Utilities.h CheckForNextionButtonPress does it for a button): a box that an EARLIER button's work had lost stopped the page being
+          // left, and one lost now was told by nothing.
+            const uint32_t lost = BoxesLost;
+            BoxesLostAtWork = BoxesLost;
+            if (after == BENCH_AFTER_LEAVE) EndTravelView(); else StartTravel3View();
+            if (BoxesLost != lost) NoteBoxesLost();
+            return;
+        }
+        RfKeepTyped = true; // B211 (the twelfth review): the swash is free - the told row and the button say so; WHAT WAS TYPED STAYS (BenchReleaseFailed says more)
         TravShow();
+        RfKeepTyped = false;
         return;
     }
     default:
@@ -414,13 +481,14 @@ FLASHMEM void EndTravelView() // OK on any of the four pages
     if (Trav_Was_Edited)
     {
         TravGather();   // (B59) before the question's page takes the fields away
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!RfSaveFirst(TravPageWord(), "The edited travel extents are", TravSaveNow, EndTravelView, &Trav_Was_Edited)) return;   // B102
     }
     TravStep = TRV_IDLE;
     Trav_Was_Edited = false;
-    RotorFlightStart();
+    RfMenuFromPage(TravHave);
 }
-FLASHMEM void TravelWasEdited() { SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true; if (CurrentView == TRAVEL2VIEW) TravPage2Edited = true; if (CurrentView == TRAVEL4VIEW) TravPage4Edited = true; }   // (B49, B98)
+FLASHMEM void TravelWasEdited() { if (!TravHave) return; SendCommand((char *)"vis b3,1"); Trav_Was_Edited = true; if (CurrentView == TRAVEL2VIEW) TravPage2Edited = true; if (CurrentView == TRAVEL4VIEW) TravPage4Edited = true; }   // (B49, B98)  // B211 (the sixteenth review): with nothing in hand nothing is an edit - OK asked "Save now?" for it, the save returned at once, and "close when saved" stood
 FLASHMEM void TravelAilTapped() { TravRevAil = !TravRevAil; SendValue((char *)"tn6", TravRevAil ? 1 : 0); TravelWasEdited(); }
 FLASHMEM void TravelEleTapped() { TravRevEle = !TravRevEle; SendValue((char *)"tn7", TravRevEle ? 1 : 0); TravelWasEdited(); }
 FLASHMEM void TravelCollTapped() { TravRevColl = !TravRevColl; SendValue((char *)"tn8", TravRevColl ? 1 : 0); TravelWasEdited(); }
@@ -428,7 +496,10 @@ FLASHMEM void TravelYawTapped() { TravRevYaw = !TravRevYaw; SendValue((char *)"t
 FLASHMEM void SaveTravel()
 {
     if (!TravHave)
+    {
+        RfLeaveAfterSave = false; // (the sixteenth review: ... and OK's "close when saved" does not stand on for a later Save - RF_SaveNow.h)
         return;
+    }
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
@@ -511,6 +582,7 @@ FLASHMEM static bool BenchHold() // the hold begun, or why not said
         return false;
     }
     TravGatherPage4();   // the angle typed
+    if (WorkLostABox()) return false; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     BenchHeldAxis = BenchAxis; BenchHeldDegTenths = BenchDegTenths;
     TravBusy("Holding the swash ...");
     BenchAskOverride(0, BenchValueFor(0), TRV_HOLD);
@@ -525,11 +597,16 @@ FLASHMEM void BenchHoldTapped() // the one button: Hold swash, or Release while 
 FLASHMEM void BenchAxisTapped() // Roll <-> Pitch; while held, the swash goes over to the other axis at once
 {
     if (TravStep != TRV_IDLE || !TravHave) return;
+    const int was = BenchAxis;
     BenchAxis = BenchAxis == 1 ? 2 : 1;
     BenchSuggestTenths = 0;
     SendText((char *)"tn0", (char *)(BenchAxis == 2 ? "Pitch (elevator)" : "Roll (aileron)"));
     SendText((char *)"tn4", (char *)"tap");
-    if (BenchHeld) BenchHold();
+    if (BenchHeld && !BenchHold())
+    { // B211 (the tenth review): the hold on the other axis was refused (its box said why): the swash is still held on the first - which is the one shown
+        BenchAxis = was;
+        SendText((char *)"tn0", (char *)(BenchAxis == 2 ? "Pitch (elevator)" : "Roll (aileron)"));
+    }
 }
 FLASHMEM void BenchWasEdited() // the angle or the gauge's reading tapped (the keypad follows): the old suggestion no longer holds
 {
@@ -540,7 +617,9 @@ FLASHMEM void BenchSuggestTapped() // the suggested calibration row: worked out,
 {
     if (!TravHave) return;
     TravGatherPage4();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     const long gain = FieldTenthsL("tn3", 0, 10000);   // (the box: an edit not yet saved counts)
+    if (WorkLostABox()) return; // B211: (as above: "no answer" read as a calibration of 0)
     const long held = BenchDegTenths < 0 ? -BenchDegTenths : BenchDegTenths;
     if (held == 0 || BenchGaugeTenths <= 0 || gain <= 0)
     {

@@ -19,7 +19,11 @@ void SystemPage1Start()
 
     FixDeltaGMTSign();
     if (CurrentView == OPTIONVIEW2)
-        DeltaGMT = GetValue(dGMT);
+    {
+        const uint32_t gv = GetValue(dGMT);
+        if (gv != 65535) // B211: no answer from the screen (65535) is not a time zone - see NO ANSWER IS NOT A NUMBER, Nextion.h
+            DeltaGMT = gv;
+    }
     SendCommand(pOptionsViewS); // TX options view
     SendValue(n0, SticksMode);
     SendValue(ScreenViewTimeout, ScreenTimeout);
@@ -57,7 +61,13 @@ void SystemPage1End()
     if (SticksMode != OldSticksMode)
         ResetAllTrims(); // B38: the trim levers follow the sticks (their map is built per stick mode)
     SendValue(Progress, 20);
-    GetText(TxNme, TxName, sizeof(TxName));  // ClaudeFix-2-7-2026
+    { // B211: the name into a copy first - no answer from the screen ("") is not a name (the transmitter's name was wiped, and saved)
+        char nm[sizeof(TxName)];
+        const uint32_t lost = BoxesLost;
+        GetText(TxNme, nm, sizeof(nm)); // ClaudeFix-2-7-2026
+        if (BoxesLost == lost)
+            strcpy(TxName, nm);
+    }
     SendValue(Progress, 40);
     gv = GetValue(lpm); if (gv != 65535) AutoModelSelect = gv;
     SendValue(Progress, 50);
@@ -65,7 +75,7 @@ void SystemPage1End()
     SendValue(Progress, 60);
     gv = GetValue(ScreenViewTimeout); if (gv != 65535) ScreenTimeout = gv;
     SendValue(Progress, 80);
-    Inactivity_Timeout = GetValue(Pto) * TICKSPERMINUTE;
+    gv = GetValue(Pto); if (gv != 65535) Inactivity_Timeout = gv * TICKSPERMINUTE; // B211: (no answer became the longest time there is)
     if (Inactivity_Timeout < INACTIVITYMINIMUM)
         Inactivity_Timeout = INACTIVITYMINIMUM;
     if (Inactivity_Timeout > INACTIVITYMAXIMUM)
@@ -260,7 +270,10 @@ void ShowChannelName()
 {
     char MoveToChannel[] = "Mch";
     char MacrosView_chM[] = "chM";
-    uint8_t ch = GetValue(MoveToChannel);
+    const uint32_t gv = GetValue(MoveToChannel);
+    if (gv == 65535)
+        return; // B211: no answer: the name shown stays
+    uint8_t ch = gv;
     if (ch > 0)
         --ch; // no zero
     if (ch > 15)
@@ -277,7 +290,7 @@ static uint8_t MacroValue(char *box, uint8_t old, int lo, int hi)
     return (uint8_t)constrain((int)v, lo, hi);
 }
 
-void ExitMacrosView()
+FLASHMEM void ExitMacrosView() // (B211: in flash, as the other pages' routines are)
 {
     char MacroNumber[] = "Mno";
     char TriggerChannel[] = "Tch";
@@ -285,14 +298,44 @@ void ExitMacrosView()
     char MoveToPosition[] = "Pos";
     char Delay[] = "Del";
     char Duration[] = "Dur";
-    uint8_t n = GetValue(MacroNumber) - 1;
-    if (n >= MAXMACROS)
-        return; // 0 or a comms-error 65535 ClaudeFix-2-7-2026 would write ~1.5 KB past MacrosBuffer[8][6]
+    // B211 (the eleventh review's check of every routine that asks for more than one box): A MACRO IS TAKEN WHOLE, OR NOT AT ALL. Its five boxes
+    // went in one by one, each keeping what it had when its box had no answer - a channel newly chosen with the POSITION of the channel before
+    // is another macro (the throttle's channel, say, with the position typed for the undercarriage). With a box unanswered nothing is taken,
+    // nothing saved, and the page stays (he is told, and presses again).
+    // AND ITS BOXES ARE TAKEN ONLY INTO THE MACRO WHOSE VALUES THIS BOARD PUT INTO THEM (PreviousMacroNumber: PopulateMacrosView). The page moves
+    // its number by itself and then says so; when that word never came, or the page was never filled (its first question had no answer), the
+    // number on the page stands over another macro's boxes - or the card's - and OK took them into the macro of that number. Then nothing is
+    // taken: the page is drawn as it is in hand (a sound says so) and stays.
+    KEEP_WHOLE(macros, MacrosBuffer);
+    const uint32_t shown = GetValue(MacroNumber);
+    if (shown == 65535)
+        return; // (no answer: he is told, and presses again)
+    if (PreviousMacroNumber >= MAXMACROS || shown != (uint32_t)PreviousMacroNumber + 1)
+    {
+        PlaySound(WHAHWHAHMSG);
+        if (PreviousMacroNumber < MAXMACROS)
+        {
+            const uint8_t was = PreviousMacroNumber;
+            SendValue(MacroNumber, was + 1);
+            SendValue(TriggerChannel, MacrosBuffer[was][MACROTRIGGERCHANNEL]);
+            SendValue(MoveToChannel, MacrosBuffer[was][MACROMOVECHANNEL]);
+            SendValue(MoveToPosition, MacrosBuffer[was][MACROMOVETOPOSITION]);
+            SendValue(Delay, MacrosBuffer[was][MACROSTARTTIME]);
+            SendValue(Duration, MacrosBuffer[was][MACRODURATION]);
+            ShowChannelName();
+        }
+        else
+            PopulateMacrosView(); // (never filled: now, for the number it shows)
+        return;
+    }
+    const uint8_t n = PreviousMacroNumber;
     MacrosBuffer[n][MACROTRIGGERCHANNEL] = MacroValue(TriggerChannel, MacrosBuffer[n][MACROTRIGGERCHANNEL], 0, 16);
     MacrosBuffer[n][MACROMOVECHANNEL] = MacroValue(MoveToChannel, MacrosBuffer[n][MACROMOVECHANNEL], 0, 16);
     MacrosBuffer[n][MACROMOVETOPOSITION] = MacroValue(MoveToPosition, MacrosBuffer[n][MACROMOVETOPOSITION], 0, 180);
     MacrosBuffer[n][MACROSTARTTIME] = MacroValue(Delay, MacrosBuffer[n][MACROSTARTTIME], 0, 255);
     MacrosBuffer[n][MACRODURATION] = MacroValue(Duration, MacrosBuffer[n][MACRODURATION], 0, 255);
+    if (WorkLostABox())
+        return;
     UseMacros = true;
     SaveOneModel(ModelNumber);
     SendCommand(pRXSetupView);
@@ -331,7 +374,7 @@ void StartWifiScan()
 
 /***************************************************** Populate Macros View ****************************************************************************/
 
-void PopulateMacrosView()
+FLASHMEM void PopulateMacrosView() // (B211: in flash, as the other pages' routines are)
 {
     char MacroNumber[] = "Mno";
     char TriggerChannel[] = "Tch";
@@ -339,6 +382,12 @@ void PopulateMacrosView()
     char MoveToPosition[] = "Pos";
     char Delay[] = "Del";
     char Duration[] = "Dur";
+    // B211 (the eleventh review's check of every routine that asks for more than one box): A MACRO IS TAKEN WHOLE, OR NOT AT ALL (ExitMacrosView says
+    // why) - AND THE PAGE'S NUMBER AND ITS BOXES STAY ONE MACRO. The page has moved to another macro's number by itself, and its five boxes still
+    // hold the macro before: this routine takes them into that macro, then writes the new macro's values into them. When it could not (the
+    // number had no answer - or, now, any box) it went back with the page on the NEW number over the OLD macro's boxes: OK then took those boxes
+    // into the macro of that number. The page's number is put back to the macro whose boxes it shows.
+    KEEP_WHOLE(macros, MacrosBuffer);
     uint8_t n = PreviousMacroNumber;
 
     if (n < 8)
@@ -349,9 +398,14 @@ void PopulateMacrosView()
         MacrosBuffer[n][MACROSTARTTIME] = MacroValue(Delay, MacrosBuffer[n][MACROSTARTTIME], 0, 255);
         MacrosBuffer[n][MACRODURATION] = MacroValue(Duration, MacrosBuffer[n][MACRODURATION], 0, 255);
     }
-    n = GetValue(MacroNumber) - 1;
-    if (n >= MAXMACROS)
-        return; // ClaudeFix-2-7-2026 same clamp as ExitMacrosView -- comms error must not index OOB
+    const uint32_t shown = GetValue(MacroNumber);
+    if (WorkLostABox() || shown < 1 || shown > MAXMACROS)
+    { // (a box with no answer: nothing was taken - the keep. He is told, and taps again)
+        if (PreviousMacroNumber < MAXMACROS)
+            SendValue(MacroNumber, PreviousMacroNumber + 1);
+        return;
+    }
+    n = (uint8_t)(shown - 1);
     SendValue(TriggerChannel, MacrosBuffer[n][MACROTRIGGERCHANNEL]);
     SendValue(MoveToChannel, MacrosBuffer[n][MACROMOVECHANNEL]);
     SendValue(MoveToPosition, MacrosBuffer[n][MACROMOVETOPOSITION]);
@@ -398,7 +452,6 @@ void GotoModelsView()
             return;
     }
 
-    SaveCurrentModel();
     CheckModelImageFileName(); // (before the page, not after: a page just loaded answers late)
     SendCommand(pModelsView);
     CurrentView = MODELSVIEW;
@@ -411,6 +464,29 @@ void GotoModelsView()
     ShowFileNumber();
     PreviousModelNumber = ModelNumber; // save number
     LoadModelSelector();
+}
+// B211 (Malcolm, 18 Nov 2026: "opening the models page while armed should be disabled. I.e. impossible, not merely discouraged."): THE SCREEN'S
+// MODELS BUTTON (function 4, main.cpp) DOES NOTHING WHILE THE MODEL MAY FLY. The page reads other models' memories into the one in use (its
+// list every slot, its wheel the row it rests on) - "Open Models anyway?" was a question, answered in a hurry. The test is the transmitter's
+// own, the one the Rotorflight pages refuse a save by: the safety off (no safety switch: the motor switch on), or an arming channel the
+// transmitter does not manage standing high. No box - a box that waits does not read the switches: the warning sound, a line for the log.
+// (GotoModelsView itself - the page's own returns to itself after a new name or a model exchange - is as it was.)
+// (e100b: with NO safety switch defined ModelSeemsArmed's own "the safety is off" stands for good for a Rotorflight model - the button was
+// refused on the bench at every start. It is asked only where a safety switch is defined; with none the motor switch decides, as everywhere.)
+FLASHMEM bool ModelsPageRefused()
+{
+    char why[128];
+    if (!RadiosMustBeOff() && !(SafetyIsDefined() && ModelSeemsArmed(why, sizeof(why))))
+        return false;
+    PlaySound(WHAHWHAHMSG);
+    KeepScreenNote("Models page not opened: it may fly", false);
+    return true;
+}
+FLASHMEM void GotoModelsViewAsked()
+{
+    if (ModelsPageRefused())
+        return;
+    GotoModelsView();
 }
 
 /******************************************************************************************************************************/
@@ -430,8 +506,7 @@ void ModelViewEnd()
         strcpy(buf, pr);
         strcat(buf, ModelName);
         strcat(buf, q);
-        GetConfirmation(pModelsView, buf);
-        if (Confirmed[0] != 'Y')
+        if (!GetConfirmation(pModelsView, buf)) // (B211: the answer as the question gave it - Confirmed may have been written over by a later box)
         {
             ModelNumber = PreviousModelNumber;
             ReadOneModel(ModelNumber);
@@ -718,7 +793,7 @@ void DeleteModel()
 
 // ********************************************************************************************************************************************
 
-void InputsViewEnd()
+FLASHMEM void InputsViewEnd() // (B211: in flash, as the other pages' routines are - the fast memory has under a kilobyte left before its next 32 kB block)
 {
     char ProgressStart[] = "vis Progress,1";
     char Progress[] = "Progress";
@@ -737,32 +812,45 @@ void InputsViewEnd()
     }
 
     SendCommand(ProgressStart);
+    // B211 (the eighth review, 15 Nov 2026): WHICH STICK DRIVES WHICH CHANNEL is taken whole, or not at all. Each box went
+    // straight into the map, and a box with no answer (65535: a missed reply, the screen's keyboard up, the page gone) was
+    // "checked" into a channel: a stick on another channel, saved. Now the page is read into copies, and the copies become the
+    // map only when every box asked for has answered (the pilot is told otherwise: Utilities.h CheckForNextionButtonPress).
+    uint8_t in[16], out[16], trim[4];
+    memcpy(in, InPutStick, sizeof(in));
+    memcpy(out, ChannelOutPut, sizeof(out));
+    memcpy(trim, InputTrim, sizeof(trim));
+    const uint32_t lost = BoxesLost;
     for (uint8_t i = 0; i < 16; ++i)
     {
         if (InStrng(InputStick_Labels[i], changes)) // if this input stick has changed
         {
-            InPutStick[i] = CheckRange((GetValue(InputStick_Labels[i]) - 1), 0, 15); // get the value and check it
-            Altered = true;                                                          // set the flag
+            in[i] = CheckRange((GetValue(InputStick_Labels[i]) - 1), 0, 15); // get the value and check it
+            Altered = true;                                                  // set the flag
         }
         if (InStrng(OutputStick_Labels[i], changes)) // if this output channel has changed
         {
-            ChannelOutPut[i] = CheckRange((GetValue(OutputStick_Labels[i]) - 1), 0, 15); // get the value and check it
-            Altered = true;                                                              // set the flag
+            out[i] = CheckRange((GetValue(OutputStick_Labels[i]) - 1), 0, 15); // get the value and check it
+            Altered = true;                                                    // set the flag
         }
         if (i < 4)
         {
             if (InStrng(InputTrim_labels[i], changes)) // if this  trim output has changed
             {
-                InputTrim[i] = CheckRange((GetValue(InputTrim_labels[i]) - 1), 0, 15); // get the value and check it
-                Altered = true;                                                        // set the flag
+                trim[i] = CheckRange((GetValue(InputTrim_labels[i]) - 1), 0, 15); // get the value and check it
+                Altered = true;                                                  // set the flag
             }
         }
         if (Altered)
             SendValue(Progress, (((i + 1) * 100) / 16) - 1);
     }
-
+    if (BoxesLost != lost)
+        Altered = false; // a box gave no answer: nothing of this page is taken
     if (Altered)
     {
+        memcpy(InPutStick, in, sizeof(in));
+        memcpy(ChannelOutPut, out, sizeof(out));
+        memcpy(InputTrim, trim, sizeof(trim));
         SendValue(Progress, 95);
         SendText(changes_label, ChangesCleared);
         CheckOutPutChannels();
@@ -917,9 +1005,12 @@ void LoadModelSelector()
         strcat(buf, rb);
         strcat(buf, crlf);
     }
-    SendOtherText(MMemsp, buf);
+    // B211 (the eleventh review; released code had it): THE PILOT'S MODEL IS BACK IN MEMORY BEFORE ANYTHING IS SENT. The list was sent first - and
+    // every send waits, flying a connected model (Nextion.h EndSend): from the settings of the LAST slot read for the list, whatever that model is
+    // (the Models page is opened with a model connected only after "Open Models anyway?" - which says nothing of another model's mixes).
     ModelNumber = SavedModelNumber;
     ReadOneModel(ModelNumber);
+    SendOtherText(MMemsp, buf);
     SendValue(MMems, ModelNumber - 1);
     SendText(mn, ModelName);
 }
@@ -938,7 +1029,11 @@ void Options2End()
 { // back to setup?
     char dGMT[] = "dGMT";
     char pTXSetupView[] = "page TXSetupView";
-    DeltaGMT = GetValue(dGMT);
+    {
+        const uint32_t gv = GetValue(dGMT);
+        if (gv != 65535) // B211: no answer is not a time zone
+            DeltaGMT = gv;
+    }
     SaveTransmitterParameters();
     CurrentView = TXSETUPVIEW;
     SendCommand(pTXSetupView);
@@ -946,7 +1041,7 @@ void Options2End()
 }
 /******************************************************************************************************************************/
 
-void OptionView3End() //
+FLASHMEM void OptionView3End() //
 {
     char TxVCorrextion[] = "t2";
     char n1[] = "n1";
@@ -960,21 +1055,19 @@ void OptionView3End() //
     char sw1[] = "sw1";
     char n0[] = "n0";
 
-    TxVoltageCorrection = GetValue(TxVCorrextion);
-    PowerOffWarningSeconds = GetValue(n2);
-    PowerOffWarningSeconds = CheckRange(PowerOffWarningSeconds, 1, 10);
-    Qnh = (uint16_t)GetValue(QNH);
-    if (LEDBrightness != GetValue(n1))
-        UpdateLED();
-    ConnectionAssessSeconds = GetValue(n3);
-    ConnectionAssessSeconds = CheckRange(ConnectionAssessSeconds, 1, 6);
-    ScanSensitivity = GetValue(n4);
-    ScanSensitivity = CheckRange(ScanSensitivity, 1, 255);
-    MinimumGap = GetValue(n0);
-    if (MinimumGap < 10)
-        MinimumGap = 10;
-    UseLog = GetValue(sw0);
-    LogRXSwaps = GetValue(sw1);
+    // B211 (the eighth review, 15 Nov 2026): NO ANSWER IS NOT A NUMBER (Nextion.h). Every box here went straight into its
+    // setting: with no answer from the screen (65535) the pressure at sea level became 65535 and was SENT TO THE RECEIVER,
+    // the log was switched on, the gap became 255 ... Each setting now stays as it is when its box has no answer.
+    uint32_t gv;
+    gv = GetValue(TxVCorrextion); if (gv != 65535) TxVoltageCorrection = gv;
+    gv = GetValue(n2);            if (gv != 65535) { PowerOffWarningSeconds = gv; PowerOffWarningSeconds = CheckRange(PowerOffWarningSeconds, 1, 10); }
+    gv = GetValue(QNH);           if (gv != 65535) Qnh = (uint16_t)gv;
+    gv = GetValue(n1);            if (gv != 65535 && LEDBrightness != gv) UpdateLED();
+    gv = GetValue(n3);            if (gv != 65535) { ConnectionAssessSeconds = gv; ConnectionAssessSeconds = CheckRange(ConnectionAssessSeconds, 1, 6); }
+    gv = GetValue(n4);            if (gv != 65535) { ScanSensitivity = gv; ScanSensitivity = CheckRange(ScanSensitivity, 1, 255); }
+    gv = GetValue(n0);            if (gv != 65535) { MinimumGap = gv; if (MinimumGap < 10) MinimumGap = 10; }
+    gv = GetValue(sw0);           if (gv <= 1) UseLog = gv;
+    gv = GetValue(sw1);           if (gv <= 1) LogRXSwaps = gv;
     SaveTransmitterParameters();
     CloseModelsFile();
     AddParameterstoQueue(QNH_SETTING); // 2
@@ -1032,13 +1125,11 @@ void OptionView2Start()
     if (CurrentView == OPTIONVIEW3)
     { //  TODO: And what if was Options 1??
 
-        TxVoltageCorrection = GetValue(TxVCorrextion);
-        PowerOffWarningSeconds = GetValue(n2);
-        PowerOffWarningSeconds = CheckRange(PowerOffWarningSeconds, 1, 10);
-        if (LEDBrightness != GetValue(n1))
-            UpdateLED();
-        ConnectionAssessSeconds = GetValue(n3);
-        ConnectionAssessSeconds = CheckRange(ConnectionAssessSeconds, 1, 6);
+        uint32_t gv; // B211: no answer (65535) is not a number - each setting stays as it is (as OptionView3End)
+        gv = GetValue(TxVCorrextion); if (gv != 65535) TxVoltageCorrection = gv;
+        gv = GetValue(n2);            if (gv != 65535) { PowerOffWarningSeconds = gv; PowerOffWarningSeconds = CheckRange(PowerOffWarningSeconds, 1, 10); }
+        gv = GetValue(n1);            if (gv != 65535 && LEDBrightness != gv) UpdateLED();
+        gv = GetValue(n3);            if (gv != 65535) { ConnectionAssessSeconds = gv; ConnectionAssessSeconds = CheckRange(ConnectionAssessSeconds, 1, 6); }
         SaveAllParameters();
     }
 
@@ -1107,27 +1198,30 @@ void BuddyChViewEnd()
         chgs[i + 1] = 0;
     }
     SendCommand(ProgressStart);
+    // B211 (the eighth review, 15 Nov 2026): a tick is 0 or 1. No answer from the screen (65535) counted as ticked: "the pupil
+    // has all switches", and every channel named in the change list given to the pupil - saved.
     if (InStrng(mSwi, chgs))
     {
-        if (GetValue(mSwitch))
-            BuddyHasAllSwitches = true;
-        else
-            BuddyHasAllSwitches = false;
-        Altered = true;
+        const uint32_t gv = GetValue(mSwitch);
+        if (gv <= 1)
+        {
+            BuddyHasAllSwitches = (gv == 1);
+            Altered = true;
+        }
     }
     for (int i = 0; i < 16; ++i)
     {
         if (InStrng(fs[i], chgs))
         {
-            if (GetValue(fs[i]))
+            const uint32_t gv = GetValue(fs[i]);
+            if (gv <= 1)
             {
-                BuddyControlled |= 1 << i;
+                if (gv)
+                    BuddyControlled |= 1 << i;
+                else
+                    BuddyControlled &= ~(1 << i);
+                Altered = true;
             }
-            else
-            {
-                BuddyControlled &= ~(1 << i);
-            }
-            Altered = true;
         }
         SendValue(Progress, i * (100 / 16));
     }
@@ -1194,13 +1288,16 @@ void RXOptionsViewStart() // model Options screen
     SendValue((char *)"sw0", 1); // redundant
     snprintf(Vbuf, 15, "%d", Max_Safe_Amps); // V1B B23: was "%3.0d", which prints nothing for 0 (the box was blank)
     SendText(Max_Amps, Vbuf);
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: "ELRS receiver (off: LDRC)" - the page hides it unless it is shown here (ElrsCrsf.h)
+    ElrsOptionShow();
+#endif
     ShowModelImage();
     UpdateModelsNameEveryWhere();
 }
 
 /******************************************************************************************************************************/
 
-void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd reads them and leaves; Help, Model picture and Servos read them and stay)
+FLASHMEM void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd reads them and leaves; Help, Model picture and Servos read them and stay)
 {
     char UseKill[] = "c0";
     char Mchannel[] = "n1";
@@ -1221,6 +1318,22 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
     // off centre then drove its channel to the end of its travel until the model was next loaded -, a missed motor channel
     // became channel 3 (the motor's real channel then followed its stick), and a missed 'Stop flying volts' became 0 (no
     // low-battery warning).
+    // B211 (the ninth review, 15 Nov 2026): ... AND THE PAGE IS TAKEN WHOLE, OR NOT AT ALL (Nextion.h KEEP_WHOLE). After the first box
+    // with no answer every box behind it has none either - so the page was taken in part: the motor-off value typed, say, and
+    // not the motor's channel typed with it. Each of these goes back to what it was when a box asked for here had no answer;
+    // and the two that are more than a number (six banks; a test build's receiver switch) are asked for LAST, so that nothing can be lost
+    // behind them.
+    KEEP_WHOLE(trims, CopyTrimsToAll);
+    KEEP_WHOLE(step, TrimMultiplier);
+    KEEP_WHOLE(volts, StopFlyingVoltsPerCell);
+    KEEP_WHOLE(amps, Max_Safe_Amps);
+    KEEP_WHOLE(sfv, SFV);
+    KEEP_WHOLE(zero, MotorChannelZero);
+    KEEP_WHOLE(corr, RxVoltageCorrection);
+    KEEP_WHOLE(kill, UseMotorKill);
+    KEEP_WHOLE(motor, MotorChannel);
+    KEEP_WHOLE(down, TimerDownwards);
+    KEEP_WHOLE(timer, TimerStartTime);
     SendCommand(ProgressStart);
     {
         const uint32_t v = GetValue(c1);
@@ -1235,11 +1348,13 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
     }
     NextionTextMissed = false;
     GetText(t10, fbuf, sizeof(fbuf));  // ClaudeFix-2-7-2026
+    TextMustBeNumber(t10, fbuf); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     if (!NextionTextMissed)
         StopFlyingVoltsPerCell = atof(fbuf);
 
     NextionTextMissed = false;
     GetText((char *)"t12", fbuf, sizeof(fbuf)); // MCMFix-2-7-2026
+    TextMustBeNumber("t12", fbuf); // B211: A NUMBER FIELD'S TEXT THAT IS NO NUMBER IS NO ANSWER (Nextion.h)
     if (!NextionTextMissed)
         Max_Safe_Amps = atoi(fbuf);
     NextionTextMissed = false;
@@ -1248,7 +1363,9 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
     SendValue(Progress, 15);
     {
         int32_t mv = (int32_t)GetValue(Mvalue); // B04: below -100 the byte wrapped round to full throttle
-        if (mv != 65535)                        // (a comms error keeps the old value)
+        if (mv >= -9999 && mv <= 9999)          // B211: only a number someone could have typed is taken (four digits; held to 500..2500 as ever, B129).
+                                                // A comms error (65535) keeps the old value, as before - and so does any other number that is no typed
+                                                // one: a misread in the millions would have made 'motor off' 2500 us, which is full throttle
             MotorChannelZero = MotorOffFromMicros(mv); // B129: microseconds, 500 to 2500, to the byte's 0 to 180
     }
     SendValue(Progress, 30);
@@ -1275,16 +1392,27 @@ void ReadRXOptionsView() // B23: the page's values into memory (RXOptionsViewEnd
         if (v <= 1)
             TimerDownwards = (v == 1);
     }
-    {
-        const int six = GetValue((char *)"c3"); // B130: six banks (a comms error, 65535, keeps it as it was)
-        if (six == 0 || six == 1)
-            SixBanksSet(six == 1);
-    }
     SendValue(Progress, 70);
     {
         const uint32_t v = GetValue(n4);
         if (v != 65535)
             TimerStartTime = (uint16_t)(v * 60);
+    }
+    { // (B211: these two last - see above. The tenth review: BOTH are asked before either is applied - six banks was set, and then a test build's
+      //  box behind it had no answer: the eleven settings above went back, six banks did not)
+        const uint32_t lostBefore = BoxesLost;
+        const uint32_t six = GetValue((char *)"c3"); // B130: six banks (a comms error, 65535, keeps it as it was)
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY: "ELRS receiver (off: LDRC)" (ElrsCrsf.h)
+        const uint32_t elrs = GetValue((char *)"c4");
+#endif
+        if (BoxesLost == lostBefore)
+        {
+            if (six <= 1)
+                SixBanksSet(six == 1);
+#ifdef ELRS_TEST // ELRS, TEST BUILDS ONLY
+            ElrsOptionSet(elrs);
+#endif
+        }
     }
 
 }
@@ -1352,19 +1480,41 @@ void EndServoTypeView()
         chgs[i + 1] = 0;
     }
     SendCommand(ProgressStart);
+    { // B211 (the twelfth review): A CHANNEL'S FREQUENCY AND ITS CENTRE PULSE ARE A PAIR - and the page's whole list is one change: taken whole, or not
+      // at all (it was: box by box, "no answer keeps the one in hand" - half a pair saved, and sent to the receiver). (The keeps end with this block:
+      // what is done below - the save, the way to the front page - is behind them.)
+    KEEP_WHOLE(freq, ServoFrequency);
+    KEEP_WHOLE(pulse, ServoCentrePulse);
     for (int i = 0; i < 11; ++i)
     {
         if (InStrng(n_labels[i], chgs))
-        {
-            ServoFrequency[i] = GetValue(n_labels[i]);
-            Altered = true;
+        { // B211 (the eighth review, 15 Nov 2026): no answer from the screen (65535) is not a frequency. It was stored as one,
+          // saved, and SENT TO THE RECEIVER - 65535 Hz, and a centre pulse of 65535 us (found by a run: OK, then a touch on a
+          // number box - the screen's keyboard came up, and the boxes still to be read had no answer)
+            const uint32_t gv = GetValue(n_labels[i]);
+            if (gv != 65535)
+            {
+                ServoFrequency[i] = gv;
+                Altered = true;
+            }
         }
         if (InStrng(n_labels[i + 11], chgs))
         {
-            ServoCentrePulse[i] = GetValue(n_labels[i + 11]);
-            Altered = true;
+            const uint32_t gv = GetValue(n_labels[i + 11]);
+            if (gv != 65535)
+            {
+                ServoCentrePulse[i] = gv;
+                Altered = true;
+            }
         }
         SendValue(Progress, (i + 1) * (100 / 11));
+    }
+    if (WorkLostABox())
+    { // a box had no answer: nothing is taken, nothing saved, nothing sent - and the page is not left (he is told, and presses again; the page's list of
+      // what was changed still stands)
+        SendCommand(ProgressEnd);
+        return;
+    }
     }
     if (ServoFrequency[3] != ServoFrequency[2] || ServoFrequency[9] != ServoFrequency[6])
     { // B51: channel 4 shares channel 3's timer and channel 10 channel 7's (the page shows them in grey; they never came through the change list)

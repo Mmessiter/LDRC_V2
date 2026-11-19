@@ -158,11 +158,13 @@ static void SendCommand(char *c) { cmds.push_back(c); if (strncmp(c, "ldrcreq ",
 static void SendText(char *n, char *t) { fields[n] = t; }
 static void SendValue(char *n, int v) { char b[16]; snprintf(b, sizeof b, "%d", v); fields[n] = b; }
 static void MsgBox(char *page, const char *msg) { ++boxes; lastBox = msg; lastBoxPage = page; cmds.push_back(page); }
+static bool RfHomeNotRead = false;   // (B211, the sixteenth review: RF_SaveNow.h RfLeaveNotRead sets it - the guide does not tick a page that could not be read)
 static bool GetConfirmation(char *page, char *prompt) { ++asked; lastBox = prompt; cmds.push_back(page); return confirmAnswer; }
 static void PlaySound(int) { ++sounds; }
 static bool ModelSeemsArmed(char *why, size_t n) { if (armedFake) snprintf(why, n, "armed"); return armedFake; }
 static bool safetyOff = false; static bool RadiosMustBeOff() { return safetyOff; }
 static std::string lastLog; static int logs = 0; static void LogText(char *t, uint16_t, bool) { lastLog = t; ++logs; }
+static bool logMustWait = false; static bool LogMustWait() { return logMustWait; } static int notesKept = 0; static std::string lastKept; static void KeepScreenNote(const char *l, bool) { ++notesKept; lastKept = l; }   // (B211, the seventeenth review: PipeHttp.h RfSayQuietly)
 static bool RfLeaveAfterSave = false; static uint32_t SilenceMsgUntil = 0; static int SilenceMsgView = -1, pageHides = 0;
 void HidePIDMsg() { ++pageHides; } void HideRATESMsg() { ++pageHides; } void Hide_Advanced_Rates_Msg() { ++pageHides; } void HidePID_Advanced_Msg() { ++pageHides; } void HideGOVMsg() { ++pageHides; }
 static bool RfPipeBlocked(char *, size_t) { return false; }
@@ -647,7 +649,19 @@ problems = []
 rf = src('RF_RotorFlight.h')
 i_gate, i_undo, i_home, i_page = rf.find('if (MotorEnabled ||'), rf.find('UndoNewVisit();'), rf.find('if (RfHomeBack()) return;'), rf.find('SendCommand((char *)"page RFView");')
 if not (0 <= i_gate < i_undo < i_home < i_page): problems.append('RotorFlightStart: after its gate, UndoNewVisit then RfHomeBack, before the menu')
-main = open(os.path.join(ROOT, 'TransmitterCode', 'src', 'main.cpp')).read()
+def as_release(text):
+    """main.cpp as a RELEASE's compiler sees it: the lines of '#ifdef ELRS_TEST ... #endif' (test builds only) taken out, and an
+    #else's lines - the transmitter as it was - kept. (14 Nov 2026: the ELRS test builds add eight entries at the function table's end.)"""
+    out, state = [], None
+    for l in text.split('\n'):
+        t = l.strip()
+        if state is None and t.startswith('#ifdef ELRS_TEST'): state = 'test'; continue
+        if state == 'test' and t.startswith('#else'): state = 'else'; continue
+        if state is not None and t.startswith('#endif'): state = None; continue
+        if state == 'test': continue
+        out.append(l)
+    return '\n'.join(out)
+main = as_release(open(os.path.join(ROOT, 'TransmitterCode', 'src', 'main.cpp')).read())
 t0 = main.index('void (*NumberedFunctions1[LASTFUNCTION1])(){'); body = main[t0:main.index('};', t0)]
 entries = [l for l in body.split('\n')[1:] if l.strip() and not l.strip().startswith('//')]
 table = {}

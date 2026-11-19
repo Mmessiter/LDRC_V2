@@ -47,8 +47,10 @@ FLASHMEM static void FltBusy(const char *msg)
     if (msg && *msg)
         SendText((char *)"busy", (char *)msg);
 }
-FLASHMEM static void FltNum(const char *name, long v)
+FLASHMEM static void FltNum(const char *name, long v) // (a typed field: left as the screen has it while RfKeepTyped is set - Nextion.h)
 {
+    if (RfKeepTyped)
+        return;
     char b[16];
     snprintf(b, sizeof(b), "%ld", v);
     SendText((char *)name, b);
@@ -73,7 +75,7 @@ FLASHMEM static void FltShowPage1()
     FltNum("tn5", FltWant[26]);
     FltYesNo("tn6", DynNotchOn()); FltRows(DynNotchOn(), 7, 10);
     FltNum("tn7", FltWant[19]);
-    { char b[16]; snprintf(b, sizeof(b), "%d.%d", FltWant[20] / 10, FltWant[20] % 10); SendText((char *)"tn8", b); }   // Q: the configurator shows 25 as 2.5
+    if (!RfKeepTyped) { char b[16]; snprintf(b, sizeof(b), "%d.%d", FltWant[20] / 10, FltWant[20] % 10); SendText((char *)"tn8", b); }   // Q: the configurator shows 25 as 2.5
     FltNum("tn9", RdU16(FltWant, 21));
     FltNum("tn10", RdU16(FltWant, 23));
 }
@@ -100,6 +102,7 @@ FLASHMEM static void FltShow()
 // The typed numbers of the page showing, into FltWant (only the rows that show: a section at No keeps its zeros)
 FLASHMEM static void FltGather()
 {
+    KEEP_WHOLE(want, FltWant); // B211: whole, or not at all (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     if (CurrentView == FILTERVIEW)
     {
         if (Lpf1On()) WrU16(FltWant, 2, FieldNumber("tn2", 0, 1000));
@@ -141,12 +144,31 @@ FLASHMEM static void FltFail(const char *what)
     FltStep = FLT_IDLE;
     FltBusy("");
     PlaySound(WHAHWHAHMSG);
-    MsgBox((char *)FltPageWord(), msg);
+    if (!FltHave)
+    { // B211 (the fifteenth review; released code): THE READ FAILED - THE PAGE IS LEFT (RF_SaveNow.h RfLeaveNotRead says why)
+        if (!RfLeaveNotRead(msg))
+        {
+            SendCommand((char *)FltPageWord());
+            FltHead();
+            FltBusy(RF_NOT_READ_LINE); // (a standing line: whatever the screen still shows there is not in hand)
+        }
+        return;
+    }
+    const bool quiet = RfMayFly(); // (the seventeenth review: on the quiet road the page itself says that the save failed - below)
+    RfBoxOrQuiet(FltPageWord(), msg); // (the sixteenth review: no box that waits while the model may fly - PipeHttp.h; then a line in the log)
+    RfKeepTyped = true; // B211 (the fourteenth review): a save runs for seconds and he types meanwhile - what was typed stays
     FltHead();
     FltShow();
+    RfKeepTyped = false;
+    if (quiet)
+    {
+        FltBusy(RF_NOT_SAVED_LINE);
+        FltMsgUntil = millis() + 6000;
+    }
 }
 FLASHMEM static void FltRead()
 {
+    FltHave = false; // B211 (the fifteenth review; released code): NOTHING IS IN HAND UNTIL THIS READ HAS IT (RF_SaveNow.h RfLeaveNotRead)
     FltBusy("Reading from the flight controller ...");
     FltReq = MspAsk(36, nullptr, 0);
     FltStep = FLT_READ_FEAT;
@@ -166,7 +188,7 @@ FLASHMEM static void FltAskFeaturesAgain() // after the restart: the flight cont
 FLASHMEM void FilterPoll()
 {
     if (CurrentView != FILTERVIEW && CurrentView != FILTER2VIEW) { FltStep = FLT_IDLE; FltMsgUntil = 0; return; }
-    if (FltMsgUntil && (int32_t)(millis() - FltMsgUntil) >= 0) { FltMsgUntil = 0; FltBusy(""); FltShow(); }
+    if (FltMsgUntil && (int32_t)(millis() - FltMsgUntil) >= 0) { FltMsgUntil = 0; FltBusy(""); }   // (B211, the eleventh review: the message goes and NOTHING is drawn - what was typed since stays; the screen draws what lay under the message)
     if (FltStep == FLT_IDLE) return;
     if (FltStep == FLT_WAIT)
     {
@@ -178,7 +200,7 @@ FLASHMEM void FilterPoll()
     {
         if (!PipeReplyLate()) return;
         if (FltStep == FLT_VERIFY_FEAT) { if (FltTries < 5) { FltAskFeaturesAgain(); return; } FltFail("The flight controller has not come back"); return; }
-        FltFail("No answer");
+        FltFail(RfNoAnswerWords(FltStep >= FLT_WRITE && FltStep <= FLT_STORE));
         return;
     }
     const bool ok = PipeRepCode == 200;
@@ -211,11 +233,11 @@ FLASHMEM void FilterPoll()
         FltReq = MspAsk(250, nullptr, 0); FltStep = FLT_STORE;
         return;
     case FLT_FEAT:
-        if (!ok) { FltFail("Not written (the Enable)"); return; }
+        if (!ok) { FltFail("PART WRITTEN, NOT STORED (the Enable failed) - try again, or switch the model off and on"); return; }
         FltReq = MspAsk(250, nullptr, 0); FltStep = FLT_STORE;
         return;
     case FLT_STORE:
-        if (!ok) { FltFail("Not stored"); return; }
+        if (!ok) { FltFail("Written, but NOT STORED - try again, or switch the model off and on"); return; }
         if (FeatWant != FeatRaw)
         { // an Enable of the Dynamic or the RPM filter changed: it applies only when the flight controller boots (as the configurator, which restarts it on every save)
             FltBusy("Restarting the flight controller to apply the Enable ...");
@@ -281,15 +303,17 @@ FLASHMEM void EndFilterView() // OK on either page
     if (Flt_Was_Edited)
     {
         FltGather(); // (B59) before the question's page takes the fields away
+        if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
         if (!RfSaveFirst(FltPageWord(), "The edited filter values are", FltSaveNow, EndFilterView, &Flt_Was_Edited)) return;   // B102
     }
     FltStep = FLT_IDLE;
     Flt_Was_Edited = false;
-    RotorFlightStart();
+    RfMenuFromPage(FltHave);
 }
 FLASHMEM void StartFilter2View() // Next >
 {
     if (CurrentView == FILTERVIEW) FltGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     SendCommand((char *)"page Filter2View");
     CurrentView = FILTER2VIEW;
     FltHead();
@@ -298,13 +322,30 @@ FLASHMEM void StartFilter2View() // Next >
 FLASHMEM void EndFilter2View() // < Previous
 {
     if (CurrentView == FILTER2VIEW) FltGather();
+    if (WorkLostABox()) return; // B211: a box had no answer - nothing was taken, nothing is done (Nextion.h, A PAGE'S FIELDS ARE TAKEN WHOLE)
     SendCommand((char *)"page FilterView");
     CurrentView = FILTERVIEW;
     FltHead();
     if (FltHave) FltShowPage1(); else FltRead();
 }
-FLASHMEM void FilterWasEdited() { SendCommand((char *)"vis b3,1"); Flt_Was_Edited = true; }
-FLASHMEM static void FltEdited() { FltGather(); FilterWasEdited(); }   // a tap on an Enable or a type: the typed numbers first, so none is lost
+FLASHMEM void FilterWasEdited() { if (!FltHave) return; SendCommand((char *)"vis b3,1"); Flt_Was_Edited = true; }  // B211 (the sixteenth review): with nothing in hand nothing is an edit - OK asked "Save now?" for it, the save returned at once, and "close when saved" stood
+FLASHMEM static bool FltEdited() // a tap on an Enable or a type: the typed numbers first, so none is lost. False (B211): a box had no answer - the tap does nothing
+{
+    if (!FltHave)
+        return false; // (the fifteenth review) a read runs, nothing is in hand: the tap does nothing - the features just read are not turned over under
+                      // the read that follows them (its end draws the page, and the switches, from what was read)
+    FltGather();
+    if (WorkLostABox())
+    { // (the tenth review: nothing was taken - but a switch on the screen has turned under the finger: the page's switches and words are put
+      //  back as they are in hand; what was typed stays as typed)
+        RfKeepTyped = true;
+        FltShow();
+        RfKeepTyped = false;
+        return false;
+    }
+    FilterWasEdited();
+    return true;
+}
 // A type: the configurator offers 1st order and 2nd order, and keeps another type only while it is the one set
 FLASHMEM static uint8_t FltNextType(uint8_t t, uint8_t orig)
 {
@@ -312,14 +353,14 @@ FLASHMEM static uint8_t FltNextType(uint8_t t, uint8_t orig)
     if (t == 2) return (orig > 2) ? orig : 1;
     return 1;
 }
-FLASHMEM void FilterLpf1Tapped() { if (!Lpf1On()) return; FltEdited(); FltWant[1] = FltNextType(FltWant[1], FltRaw[1]); FltShow(); }
-FLASHMEM void FilterLpf2Tapped() { if (!Lpf2On()) return; FltEdited(); FltWant[4] = FltNextType(FltWant[4], FltRaw[4]); FltShow(); }
-FLASHMEM void FilterPresetTapped() { FltEdited(); FltWant[25] = (uint8_t)((FltWant[25] + 1) % 4); FltShow(); }
+FLASHMEM void FilterLpf1Tapped() { if (!Lpf1On()) return; if (!FltEdited()) return; FltWant[1] = FltNextType(FltWant[1], FltRaw[1]); FltShow(); }
+FLASHMEM void FilterLpf2Tapped() { if (!Lpf2On()) return; if (!FltEdited()) return; FltWant[4] = FltNextType(FltWant[4], FltRaw[4]); FltShow(); }
+FLASHMEM void FilterPresetTapped() { if (!FltEdited()) return; FltWant[25] = (uint8_t)((FltWant[25] + 1) % 4); FltShow(); }
 // A Yes takes the value that is there if it is not 0, else what was remembered, else the configurator's default (its loadValue)
 FLASHMEM static uint16_t FltPick(uint16_t cur, uint16_t prev, uint16_t def) { return cur ? cur : prev ? prev : def; }
 FLASHMEM void FilterLpf1EnableTapped()
 {
-    FltEdited();
+    if (!FltEdited()) return;
     if (Lpf1On())
     { // the configurator's No: type and cutoff to 0, and the dynamic cutoff with them
         PrevLpf1Type = FltWant[1]; PrevLpf1Hz = RdU16(FltWant, 2);
@@ -336,14 +377,14 @@ FLASHMEM void FilterLpf1EnableTapped()
 }
 FLASHMEM void FilterLpf2EnableTapped()
 {
-    FltEdited();
+    if (!FltEdited()) return;
     if (Lpf2On()) { PrevLpf2Type = FltWant[4]; PrevLpf2Hz = RdU16(FltWant, 5); FltWant[4] = 0; WrU16(FltWant, 5, 0); }
     else { FltWant[4] = (uint8_t)FltPick(0, PrevLpf2Type, 1); WrU16(FltWant, 5, FltPick(RdU16(FltWant, 5), PrevLpf2Hz, 500)); }
     FltShow();
 }
 FLASHMEM void FilterDynCutoffTapped()
 {
-    FltEdited();
+    if (!FltEdited()) return;
     if (DynLpfOn()) { PrevDynMin = RdU16(FltWant, 15); PrevDynMax = RdU16(FltWant, 17); WrU16(FltWant, 15, 0); WrU16(FltWant, 17, 0); }
     else
     {
@@ -354,24 +395,27 @@ FLASHMEM void FilterDynCutoffTapped()
 }
 FLASHMEM void FilterNotch1Tapped()
 {
-    FltEdited();
+    if (!FltEdited()) return;
     if (N1On()) { PrevN1Hz = RdU16(FltWant, 7); PrevN1Cut = RdU16(FltWant, 9); WrU16(FltWant, 7, 0); WrU16(FltWant, 9, 0); }
     else { WrU16(FltWant, 7, FltPick(RdU16(FltWant, 7), PrevN1Hz, 400)); WrU16(FltWant, 9, FltPick(RdU16(FltWant, 9), PrevN1Cut, 300)); }
     FltShow();
 }
 FLASHMEM void FilterNotch2Tapped()
 {
-    FltEdited();
+    if (!FltEdited()) return;
     if (N2On()) { PrevN2Hz = RdU16(FltWant, 11); PrevN2Cut = RdU16(FltWant, 13); WrU16(FltWant, 11, 0); WrU16(FltWant, 13, 0); }
     else { WrU16(FltWant, 11, FltPick(RdU16(FltWant, 11), PrevN2Hz, 200)); WrU16(FltWant, 13, FltPick(RdU16(FltWant, 13), PrevN2Cut, 100)); }
     FltShow();
 }
-FLASHMEM void FilterDynNotchEnableTapped() { FltEdited(); FeatWant ^= FEAT_DYN_NOTCH; FltShow(); }
-FLASHMEM void FilterRpmEnableTapped() { FltEdited(); FeatWant ^= FEAT_RPM_FILTER; FltShow(); }
+FLASHMEM void FilterDynNotchEnableTapped() { if (!FltEdited()) return; FeatWant ^= FEAT_DYN_NOTCH; FltShow(); }
+FLASHMEM void FilterRpmEnableTapped() { if (!FltEdited()) return; FeatWant ^= FEAT_RPM_FILTER; FltShow(); }
 FLASHMEM void SaveFilters()
 {
     if (!FltHave)
+    {
+        RfLeaveAfterSave = false; // (the sixteenth review: ... and OK's "close when saved" does not stand on for a later Save - RF_SaveNow.h)
         return;
+    }
     char why[120];
     if (ModelSeemsArmed(why, sizeof(why)) || RfPipeBlocked(why, sizeof(why)))
     {
@@ -379,7 +423,15 @@ FLASHMEM void SaveFilters()
         MsgBox((char *)FltPageWord(), why);
         return;
     }
+    RfGatherStart();
     FltGather();
+    if (RfFieldsMissed(FltPageWord())) // B211 (the ninth review): a box unanswered - NOTHING is written (10 Hz went to the flight controller for 250)
+    { // (the tenth review: the page was drawn afresh with the OLD numbers, and "Please press Save again" saved those. What was typed stays)
+        RfKeepTyped = true;
+        FltHead(); FltShow();
+        RfKeepTyped = false;
+        return;
+    }
     if (DynNotchOn() && RdU16(FltWant, 23) <= RdU16(FltWant, 21))
     {
         PlaySound(WHAHWHAHMSG);

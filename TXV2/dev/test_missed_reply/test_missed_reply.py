@@ -19,7 +19,7 @@ def lift(text, head):
     """The function whose first line starts with `head` (column 0, Allman style): from there to the next line that is just '}'."""
     lines = text.split('\n')
     for i, l in enumerate(lines):
-        if l.startswith(head):
+        if (l.startswith(head) or l.startswith('FLASHMEM ' + head)):
             for j in range(i + 1, len(lines)):
                 if lines[j] == '}':
                     return '\n'.join(lines[i:j + 1]) + '\n'
@@ -40,12 +40,29 @@ PRE = r'''
 #include <set>
 #include <vector>
 #define FLASHMEM
+#ifndef B211_HOST_STUBS   // (B211, Nextion.h / Utilities.h: NO ANSWER IS NOT A NUMBER; A PAGE'S FIELDS ARE TAKEN WHOLE - dev/test_noanswer and dev/test_wholepage are their tests)
+#define B211_HOST_STUBS
+#include <cstring>
+#include <cstdint>
+#include <cstddef>
+extern uint32_t BoxesLost;
+uint32_t BoxesLostAtWork = 0; static bool WorkLostABox() { return BoxesLost != BoxesLostAtWork; }
+template <size_t N> struct BoxesWhole { uint8_t *what; uint32_t lost; uint8_t was[N]; explicit BoxesWhole(void *p) : what((uint8_t *)p), lost(BoxesLost) { memcpy(was, what, N); } ~BoxesWhole() { if (BoxesLost != lost) memcpy(what, was, N); } };
+#define KEEP_WHOLE(id, thing) BoxesWhole<sizeof(thing)> keepWhole_##id(&(thing))
+bool QuestionClosedItself = false, QuestionOvertaken = false;
+static bool BoxesHaveNoPage() { return false; }   // (Nextion.h: the page gone, the screen restarted, an answer owed)
+#endif
 #define CRUMB(x)
 #define MAX_PID_WORDS %(MAX_PID_WORDS)s
 #define GOV_PROFILE_PAYLOAD_SIZE %(GOV_PROFILE_PAYLOAD_SIZE)s
 #define GOV_CONFIG_PAYLOAD_SIZE %(GOV_CONFIG_PAYLOAD_SIZE)s
 #define GOV_ACK_PAYLOAD_SIZE %(GOV_ACK_PAYLOAD_SIZE)s
 #define BANKS_USED 6
+#define KEPT_BANKS_ON_CARD 4
+#define PIDVIEW 44
+#define RFGOVERNORVIEW_PROFILE 54
+static std::vector<std::string> pageSaid; static void RfWordPageSays(int, const char *why) { pageSaid.push_back(why); }   // (PipeHttp.h: the page's own line for six seconds - nothing waits)
+static bool RfLeaveAfterSave = false; static int localShown = 0; static void ShowLocalBank() { ++localShown; } static void ShowLocalGovBank() { ++localShown; }   // (the fifteenth review: the refusal "banks 5 and 6 have no place" puts the page back as it showed - dev/test_wholepage/scene_kept_copies runs the real ones)
 #define SEND_GOV_WRITE_CONFIG1 31
 #define SEND_GOV_WRITE_CONFIG2 32
 #define SEND_GOV_WRITE_CONFIG3 33
@@ -66,7 +83,9 @@ static uint32_t getvalue(char *nbox)   // (Nextion.h's own: 'q' + four bytes, or
     return values.count(n) ? (uint32_t) values[n] : 0;
 }
 static bool NextionTextMissed = false;
-char NextionMissedBox[12] = {0}; bool NextionSettledOk = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+bool RfSettleAsked = false, PageLeftUnderWork = false;   // (B211, Nextion.h: the look before the boxes was really asked; this board put another page up under the work)
+char NextionMissedBox[12] = {0}; bool NextionSettledOk = false, NextionMissedNoNumber = false; static void RfGatherStart() { NextionTextMissed = false; }   // (B187)
+uint32_t BoxesLost = 0; static void BoxWasLost(const char *) { ++BoxesLost; }   // (B211, Nextion.h: NO ANSWER IS NOT A NUMBER - the boxes with no answer, counted)
 static std::string loggedMiss; static void LogText(char *t, uint16_t, bool) { loggedMiss = t; }   // (B187: the miss is logged with its box)
 static std::vector<int> sounds; static int boxes = 0; static std::string lastBox;
 static void PlaySound(int s) { sounds.push_back(s); }
@@ -161,12 +180,19 @@ int main() {
     CHECK(pidWrites == 0); CHECK(bankChecks == 0); CHECK(boxes == 1); CHECK(said("did not answer")); CHECK(said("NOTHING was sent"));
     CHECK(PIDS_Were_Edited); CHECK(!BlockBankChanges); CHECK(noMissFlag());
     CHECK(std::find(sounds.begin(), sounds.end(), WHAHWHAHMSG) != sounds.end());
+    { bool sane = true; for (int i = 0; i < MAX_PID_WORDS; ++i) if (PID_Values[i] == 65535) sane = false;   // (B211, the eighth review: ... and the page's numbers in hand hold no 65535 -
+      CHECK(sane && PID_Boost_Values[0] != 65535 && PID_Boost_Values[2] != 65535 && PID_HSI_Offset_Values[1] != 65535); }   //  the box with no answer keeps the value it had)
     // the next Save, every box answering, goes
     silent.clear(); SendEditedPIDs(); CHECK(pidWrites == 1); CHECK(boxes == 1);
     // ---- PIDs, no model: the bank on the card is NOT written with a 65535
     live = false; screen(); silent.insert("n0"); SendEditedPIDs();
     CHECK(saves == 0); CHECK(pidWrites == 0); CHECK(boxes == 1); CHECK(storedNo65535()); CHECK(PIDS_Were_Edited);
     screen(); SendEditedPIDs(); CHECK(saves == 1); CHECK(Saved_PID_Values[0][Bank - 1] == 10); CHECK(Saved_PID_Values[16][Bank - 1] == 26); CHECK(!PIDS_Were_Edited);
+    // (the fifteenth review) not connected, BANK 5: the record has no place for its copy - refused at once: the sound, the page put back as it showed
+    // (ShowLocalBank: no values, greyed, under its standing line), its edits let go; nothing asked of the screen, nothing put into memory, nothing saved
+    { Bank = 5; screen(); RfLeaveAfterSave = true; const int shown0 = localShown; SendEditedPIDs();
+      CHECK(localShown == shown0 + 1 && !PIDS_Were_Edited && !RfLeaveAfterSave); CHECK(saves == 0 && asks.empty() && boxes == 0 && sounds.size() == 1 && sounds.back() == WHAHWHAHMSG);
+      CHECK(Saved_PID_Values[0][4] == 0 && pageSaid.empty()); Bank = 2; }
 
     // ---- Governor profile, connected: every box answers -> queued, head speed 2100 in bytes 1-2, the bytes as the boxes
     live = true; screen(); govScreen(); SendEditedGovValues();
@@ -188,6 +214,9 @@ int main() {
     live = false; screen(); govScreen(); silent.insert("n9"); SendEditedGovValues();
     CHECK(saves == 0); CHECK(boxes == 1); CHECK(Saved_GOV_Profiles_Values[11][Bank - 1] == 0); CHECK(GOVS_PROFILE_Were_Edited);
     screen(); govScreen(); SendEditedGovValues(); CHECK(saves == 1); CHECK(Saved_GOV_Profiles_Values[11][Bank - 1] == 9); CHECK(!GOVS_PROFILE_Were_Edited);
+    { Bank = 6; screen(); govScreen(); RfLeaveAfterSave = true; const int shown0 = localShown; SendEditedGovValues();                          // (the fifteenth review: as the PIDs' - bank 6)
+      CHECK(localShown == shown0 + 1 && !GOVS_PROFILE_Were_Edited && !RfLeaveAfterSave); CHECK(saves == 0 && asks.empty() && boxes == 0 && sounds.size() == 1 && sounds.back() == WHAHWHAHMSG);
+      CHECK(Saved_GOV_Profiles_Values[11][5] == 0 && pageSaid.empty()); Bank = 2; }
 
     // ---- Governor global, connected: every box answers -> the three writes queued; a silent box -> none, and B103's choice check still runs after
     live = true; screen(); govScreen(); SendEditedGovConfigValues();

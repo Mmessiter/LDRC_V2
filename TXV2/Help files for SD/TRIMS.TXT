@@ -24,15 +24,13 @@ Subtrims act in every bank alike, so this bank flies as before.|
 Other banks lose any trims of their own.|
 Other channels' subtrims do not change.|
 A subtrim already set is added to.|
+If a subtrim would pass its limit (117), nothing is moved|
+and the screen says which channel: adjust its linkage instead.|
 Subtrims always use a multiplier of 5. The move allows for|
 any other 'Trim multiplier', so the servos stay where they were.||
 TAKE CARE:|
-Each trim goes only into the subtrim of its 'Trim out' channel|
-('Model setup', 'Inputs').|
-A second servo on the same stick (two aileron servos, say)|
-loses that trim: set its subtrim by hand.|
-In Mode 2, do not use it for now: the elevator and throttle|
-trims would go into each other's subtrim.|
+Each trim goes into the subtrim of every channel it moves|
+(two aileron servos: both).|
 Check each control before you fly.||
 TRIM LEVERS:|
 If a trim lever moves its trim the wrong way, set the|

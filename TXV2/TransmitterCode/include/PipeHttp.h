@@ -155,6 +155,16 @@ static void RfSayQuietly(const char *why)
     char l[220];
     snprintf(l, sizeof(l), "Rotorflight (no box: it may fly): %s", why);
     for (char *p = l; *p; ++p) if (*p == '\r' || *p == '\n') *p = ' ';
+    if (LogMustWait())
+    { // (the seventeenth review) ... AND NO WRITING TO THE CARD EITHER while a line must wait: since this release six more places come here, each
+      // while the model may fly - an open-write-close with no new copy of the sticks. Kept for a quiet moment, as every other note of this release:
+      // its first words (the page's own line says the rest to the pilot who is there).
+        char k[40];
+        snprintf(k, sizeof(k), "RF, no box: %.24s", why);
+        for (char *p = k; *p; ++p) if (*p == '\r' || *p == '\n') *p = ' ';
+        KeepScreenNote(k, false);
+        return;
+    }
     LogText(l, (uint16_t)strlen(l), true);
 }
 // The word page whose save was refused, if it is still the one showing: its "Sending ..." taken away (the labels, Advanced and
@@ -187,7 +197,12 @@ static void RfWordPageSays(int view, const char *why)
 // A message from the loop or a state machine (not the pilot's own tap): a box on the bench, a log line while it may fly
 static void RfBoxOrQuiet(const char *page, const char *msg)
 {
-    if (RfMayFly()) { RfSayQuietly(msg); return; }
+    if (RfMayFly())
+    {
+        RfLeaveAfterSave = false; // (the seventeenth review: as a box does - OK's "close when saved" does not stand on for a LATER Save behind a save that failed)
+        RfSayQuietly(msg);
+        return;
+    }
     MsgBox((char *)page, (char *)msg);
 }
 static int BcReq = 0, BcStep = 0, BcWant = 0, BcView = -1;

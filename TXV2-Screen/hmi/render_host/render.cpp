@@ -206,6 +206,17 @@ int main(int argc, char **argv) {
             redraw(*c);
             continue;
         }
+        // (1.11.198, hmi/test_keyboard) "@finger NAME": a tap on a part of the page showing, as the touch code makes it - its press,
+        // its release (a box with a keyboard opens it); "@say page" and "@say [PAGE.]NAME.ATTR": what the screen holds, on stdout
+        if (s.rfind("@finger ", 0) == 0) { const std::string nm = s.substr(8); host.click("", nm, true); host.click("", nm, false); continue; }
+        if (s == "@say page") { printf("page %s\n", page.name.c_str()); continue; }
+        if (s.rfind("@say ", 0) == 0) {
+            const std::string ref = s.substr(5); const size_t dot = ref.rfind('.');
+            if (dot == std::string::npos) { fprintf(stderr, "render: @say [PAGE.]NAME.ATTR\n"); return 1; }
+            std::string pg, nm; splitRef(ref.substr(0, dot), pg, nm); const std::string attr = ref.substr(dot + 1);
+            if (attr == "txt") printf("%s = \"%s\"\n", ref.c_str(), host.getTxt(pg, nm).c_str()); else printf("%s = %ld\n", ref.c_str(), (long) host.getInt(pg, nm, attr));
+            continue;
+        }
         if (s[0] == '@' && ownCommand(s)) continue;
         handle(unescape(s));
     }
