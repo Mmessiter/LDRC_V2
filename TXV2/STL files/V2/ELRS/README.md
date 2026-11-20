@@ -8,14 +8,13 @@ There is one set of parts: the module sits high in the back, and it clicks into 
 
 <img src="elrs-case-parts.png" width="800" alt="The new case back seen from behind in two views, drawn from the design files: the module and charger bay in its longer, higher opening; the module in its pocket under two straps, its aerial going up through the taller handle; the charger's USB-C lead plugged in from the right.">
 
-<sub>The new back with the module and charger bay and the taller handle. Drawn from the design files. This picture shows the first bay, which held the module with two screws: the bay here holds it with two click arms, and everything else is where the picture shows it.</sub>
+<sub>The new back with the module and charger bay. Drawn from the design files. Two things in this picture have changed. It shows the first bay, which held the module with two screws: the bay here holds it with two click arms. And it shows a taller handle: that proved unnecessary, and the standard handle is used.</sub>
 
 | File | What it is |
 |---|---|
-| `BACK_ELRS_HIGH.step` / `.stl` | **The case back.** Print it instead of `TXV12a_BACK_V2.step`: only its opening differs, longer and higher. The module's aerial goes up through the handle, and its tip stands above the top of the transmitter. |
+| `BACK_ELRS_HIGH.step` / `.stl` | **The case back.** Print it instead of `TXV12a_BACK_V2.step`: only its opening differs, longer and higher. The module's aerial goes up through the standard handle ([`TX_HANDLE.stl`](../../TX_HANDLE.stl)), and its tip stands above the top of the transmitter. |
 | `ELRS_CHARGER_BAY_CLICK_SWITCHBOARD.step` | **The module and charger bay**, for editing. The module clicks in. Inside the case it has a place for the small board that switches the module's power. |
 | `ELRS_CHARGER_BAY_CLICK_SWITCHBOARD_PRINT.stl` | The same bay lying as it prints: flange down, supports off. |
-| `TX_HANDLE_TALL.step` / `.stl` | **A taller handle:** its legs are 10 mm longer, so your fingers pass above the aerial. It fits the same two pockets in the back. Turn it for printing as you would the standard handle. |
 | `PIN_STRIP_JIG.step` | **The jig** that holds the pin strip while its glue sets, for editing. |
 | `PIN_STRIP_JIG_PRINT.stl` | The jig lying as it prints: on its side, supports off. About 8 g. |
 | `ELRS_MODULE_DUMMY.step` | **A dummy module**, for editing. It fills the bay and covers the pins when the module is out. |
